@@ -14,9 +14,18 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Сборка выполняет код из ветки (postinstall-скрипты, next build) и при этом
+    # видит VERCEL_TOKEN. Для PR из форков это чужой код — такие PR не деплоим.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       fail-fast: false
       matrix:
@@ -30,6 +39,9 @@ jobs:
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets[matrix.project_id_secret] }}
+      # CLI читает токен отсюда — в аргументах командной строки он был бы виден
+      # в списке процессов раннера и мог утечь в логи.
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       IS_PROD: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
@@ -52,23 +64,23 @@ jobs:
       - name: Pull Vercel environment
         run: |
           TARGET=$([ "$IS_PROD" = "true" ] && echo production || echo preview)
-          vercel pull --yes --environment="$TARGET" --token="${{ secrets.VERCEL_TOKEN }}" --cwd "${{ matrix.dir }}"
+          vercel pull --yes --environment="$TARGET" --cwd "${{ matrix.dir }}"
 
       - name: Build
         run: |
           if [ "$IS_PROD" = "true" ]; then
-            vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}" --cwd "${{ matrix.dir }}"
+            vercel build --prod --cwd "${{ matrix.dir }}"
           else
-            vercel build --token="${{ secrets.VERCEL_TOKEN }}" --cwd "${{ matrix.dir }}"
+            vercel build --cwd "${{ matrix.dir }}"
           fi
 
       - name: Deploy
         id: deploy
         run: |
           if [ "$IS_PROD" = "true" ]; then
-            URL=$(vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}" --cwd "${{ matrix.dir }}")
+            URL=$(vercel deploy --prebuilt --prod --cwd "${{ matrix.dir }}")
           else
-            URL=$(vercel deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}" --cwd "${{ matrix.dir }}")
+            URL=$(vercel deploy --prebuilt --cwd "${{ matrix.dir }}")
           fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "$URL"
