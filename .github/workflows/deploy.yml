@@ -31,10 +31,8 @@ jobs:
       matrix:
         include:
           - name: landing
-            dir: apps/landing
             project_id_secret: VERCEL_PROJECT_ID_LANDING
           - name: app
-            dir: apps/app
             project_id_secret: VERCEL_PROJECT_ID_APP
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -55,38 +53,29 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Install Vercel CLI
         run: pnpm add -g vercel@latest
 
       - name: Pull Vercel environment
         run: |
           TARGET=$([ "$IS_PROD" = "true" ] && echo production || echo preview)
-          vercel pull --yes --environment="$TARGET" --cwd "${{ matrix.dir }}"
+          vercel pull --yes --environment="$TARGET"
 
       - name: Build
         run: |
           if [ "$IS_PROD" = "true" ]; then
-            vercel build --prod --cwd "${{ matrix.dir }}"
+            vercel build --prod
           else
-            vercel build --cwd "${{ matrix.dir }}"
+            vercel build
           fi
-
-      # Сборка уже лежит в .vercel/output. Дерево node_modules от pnpm состоит
-      # из симлинков в корневой store — при загрузке CLI идёт по ним наружу
-      # рабочей папки и падает. Для prebuilt-деплоя оно больше не нужно.
-      - name: Drop node_modules before upload
-        run: rm -rf "${{ matrix.dir }}/node_modules"
 
       - name: Deploy
         id: deploy
         run: |
           if [ "$IS_PROD" = "true" ]; then
-            URL=$(vercel deploy --prebuilt --prod --cwd "${{ matrix.dir }}")
+            URL=$(vercel deploy --prebuilt --prod)
           else
-            URL=$(vercel deploy --prebuilt --cwd "${{ matrix.dir }}")
+            URL=$(vercel deploy --prebuilt)
           fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "$URL"
