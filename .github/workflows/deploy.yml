@@ -74,6 +74,12 @@ jobs:
             vercel build --cwd "${{ matrix.dir }}"
           fi
 
+      # Сборка уже лежит в .vercel/output. Дерево node_modules от pnpm состоит
+      # из симлинков в корневой store — при загрузке CLI идёт по ним наружу
+      # рабочей папки и падает. Для prebuilt-деплоя оно больше не нужно.
+      - name: Drop node_modules before upload
+        run: rm -rf "${{ matrix.dir }}/node_modules"
+
       - name: Deploy
         id: deploy
         run: |
