@@ -616,105 +616,204 @@ input:focus {
   width: min(680px, 100%);
 }
 
-/* Макет профиля X с продаваемыми местами */
-
-.xp {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+/* Макет профиля X: светлый, но с настоящими пропорциями.
+   Баннер 3:1, аватарка - 22% ширины профиля и наезжает на баннер половиной,
+   шапка и полоса табов по 53 пикселя, как в самом твиттере. */
 
 .xp-mock {
-  border: 1px solid var(--line);
+  border: 1px solid #eff3f4;
   border-radius: 12px;
   overflow: hidden;
-  background: #fbfbf9;
+  background: #fff;
+  color: #0f1419;
+  font-size: 13px;
+}
+
+.xp-topline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 53px;
+  padding: 0 14px;
+}
+
+.xp-arrow {
+  font-size: 17px;
+  color: #0f1419;
+}
+
+.xp-topname {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.xp-posts {
+  color: #536471;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.xp-badge {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #1d9bf0;
+  display: inline-block;
 }
 
 .spot {
   position: relative;
-  border: 1px dashed #cfcfc8;
-  background: transparent;
-  border-radius: 8px;
+  border: 1px dashed #9bcdf0;
+  background: rgba(29, 155, 240, 0.07);
+  border-radius: 6px;
   font: inherit;
-  font-size: 11.5px;
-  color: var(--muted);
+  font-size: 11px;
+  color: #1a6ca8;
   cursor: pointer;
-  padding: 6px 9px;
-  /* Подсветка только по цвету и тени: ни размеров, ни координат, чтобы
-     наведение не двигало лэйаут. */
+  padding: 4px 8px;
+  /* Только цвет и граница: размеры и координаты не трогаем, чтобы наведение
+     не пересчитывало лэйаут. */
   transition: background 0.13s, border-color 0.13s, color 0.13s;
 }
 
 .spot:hover {
-  background: rgba(29, 78, 216, 0.09);
-  border-color: var(--accent);
-  color: var(--fg);
+  background: rgba(29, 155, 240, 0.16);
+  border-color: #1d9bf0;
+  color: #0f1419;
 }
 
 .spot.on {
-  background: rgba(29, 78, 216, 0.14);
+  background: rgba(29, 155, 240, 0.24);
   border-style: solid;
-  border-color: var(--accent);
-  color: var(--fg);
+  border-color: #1d9bf0;
+  color: #0f1419;
 }
 
 .xp-banner {
   display: block;
   width: 100%;
-  height: 92px;
+  aspect-ratio: 3 / 1;
   border-radius: 0;
-  border-width: 0 0 1px;
-  border-style: dashed;
+  border-width: 1px 0;
 }
 
-.xp-head {
-  padding: 0 16px;
-  height: 34px;
+.xp-avatar-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0 14px;
+  /* Половина аватарки свисает на баннер, вторая половина занимает эту строку */
+  height: 11%;
+  min-height: 40px;
 }
 
 .xp-avatar {
-  width: 76px;
-  height: 76px;
+  width: 22%;
+  aspect-ratio: 1;
   border-radius: 50%;
-  transform: translateY(-38px);
+  transform: translateY(-50%);
+  border: 4px solid #fff;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 6px;
-  font-size: 11px;
+}
+
+.xp-editbtn {
+  margin-top: 10px;
+  border: 1px solid #cfd9de;
+  border-radius: 999px;
+  padding: 6px 15px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f1419;
 }
 
 .xp-lines {
-  padding: 4px 16px 18px;
+  padding: 4px 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 8px;
 }
 
-.xp-row {
+.xp-nameline {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.xp-fake-name {
-  width: 104px;
-  height: 13px;
-  border-radius: 4px;
-  background: #e6e6e0;
+.xp-name {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.xp-handle {
+  color: #536471;
+  margin-top: -6px;
+  font-size: 14px;
 }
 
 .xp-wide {
   text-align: left;
 }
 
-.xp-pinned {
-  height: 72px;
-  text-align: left;
+.xp-meta {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #536471;
+}
+
+.xp-joined {
+  font-size: 13px;
+}
+
+.xp-counts {
+  display: flex;
+  gap: 18px;
+  color: #536471;
+  font-size: 13px;
+}
+
+.xp-counts strong {
+  color: #0f1419;
+}
+
+.xp-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid #eff3f4;
+  color: #536471;
+  font-size: 13px;
+  font-weight: 500;
+  height: 53px;
+}
+
+.xp-tabs span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.xp-tabs .on {
+  color: #0f1419;
+  font-weight: 700;
+  box-shadow: inset 0 -4px 0 #1d9bf0;
+}
+
+.xp-pinned {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 12px 14px 14px;
+  height: 84px;
+  text-align: left;
+  padding: 8px 10px;
 }
 
 .xp-offers {
@@ -769,13 +868,16 @@ a.primary {
     width: 100%;
   }
 
-  .xp-banner {
-    height: 72px;
+  .xp-topline {
+    height: 46px;
   }
 
-  .xp-avatar {
-    width: 64px;
-    height: 64px;
-    transform: translateY(-32px);
+  .xp-tabs {
+    font-size: 12px;
+    height: 46px;
+  }
+
+  .xp-pinned {
+    height: 68px;
   }
 }

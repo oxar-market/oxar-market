@@ -70,8 +70,6 @@ export const FILES: DesktopFile[] = [
 export type DesktopApp = {
   slug: string;
   name: string;
-  href: string;
-  external: boolean;
   x: number;
   y: number;
 };
@@ -80,8 +78,6 @@ export const APPS: DesktopApp[] = [
   {
     slug: "x",
     name: "X placements",
-    href: "https://app.oxar.app",
-    external: true,
     x: 16,
     y: 70,
   },

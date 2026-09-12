@@ -163,11 +163,24 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
       const rect = state.element.getBoundingClientRect();
       const x = clamp(((rect.left - box.left) / box.width) * 100, 0, 92);
       const y = clamp(((rect.top - box.top) / box.height) * 100, 0, 88);
-      reset();
+
+      // Новые координаты пишем в DOM в том же кадре, в котором убираем
+      // transform. Если сначала стереть transform и ждать ре-рендер React,
+      // иконка на один кадр прыгает на старое место и это видно как рывок.
+      state.element.style.left = `${x}%`;
+      state.element.style.top = `${y}%`;
+      state.element.style.transform = "";
+      state.element.style.zIndex = "";
 
       const next = { ...positions, [state.slug]: { x, y } };
       setPositions(next);
       persist({ positions: next, order });
+
+      // Переход возвращаем только со следующего кадра, иначе он подхватит
+      // сброс transform и анимирует его.
+      requestAnimationFrame(() => {
+        state.element.style.transition = "";
+      });
     },
     [order, positions, persist],
   );
