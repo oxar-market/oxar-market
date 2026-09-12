@@ -1218,6 +1218,48 @@ a.primary {
   margin-bottom: 9px;
 }
 
+/* Сколько дней берёт покупатель, когда цена назначена за сутки */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+}
+
+.stepper button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+
+.stepper button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.stepper button:disabled {
+  color: #c3c3bd;
+  cursor: not-allowed;
+}
+
+.stepper-value {
+  min-width: 46px;
+  text-align: center;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

@@ -223,7 +223,11 @@ export function XProfile({ role }: { role: Role }) {
                   </span>
                   <span className="xp-offer-right">
                     <span className="price">{formatUsd(offer.price_cents)}</span>
-                    <span className="muted small"> / {offer.term_days}d</span>
+                    <span className="muted small">
+                      {offer.pricing === "daily"
+                        ? " / day"
+                        : ` / ${offer.term_days}d`}
+                    </span>
                   </span>
                 </button>
               ))}
