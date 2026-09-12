@@ -10,6 +10,7 @@ import {
   parseFollowers,
 } from "@oxar/core";
 import { submitWaitlist } from "@/lib/waitlist";
+import { Notice } from "./Notice";
 
 type Side = "seller" | "buyer";
 type Status = "idle" | "sending" | "done" | "already" | "error";
@@ -67,12 +68,12 @@ export function Waitlist() {
   if (status === "done" || status === "already") {
     return (
       <div className="card" id="waitlist">
-        <h2>
-          {status === "done" ? "You're on the list." : "You're already on the list."}
-        </h2>
-        <p>
-          We&apos;ll reach out on X to <strong>@{cleanHandle}</strong> before launch.
-        </p>
+        <Notice
+          tone="success"
+          title={status === "done" ? "You're on the list" : "You're already on the list"}
+        >
+          We&apos;ll reach out on X to @{cleanHandle} before launch.
+        </Notice>
         {preview && (
           <p className="estimate">
             Based on {(followerCount ?? 0).toLocaleString("en-US")} followers, your profile
@@ -153,7 +154,7 @@ export function Waitlist() {
         </p>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {error && <Notice tone="error">{error}</Notice>}
 
       <button type="submit" className="primary" disabled={status === "sending"}>
         {status === "sending" ? "Sending…" : "Join the waitlist"}
