@@ -9,11 +9,12 @@ import {
   minDaysFor,
   normalizeHandle,
   orderTotalCents,
+  placementSpec,
   splitPayout,
   type DayRange,
 } from "@oxar/core";
 import { busyRanges, requestPlacement, type Offer } from "@/lib/listings";
-import { Calendar } from "./Calendar";
+import { Calendar, monthSpan } from "./Calendar";
 import { CreativeDrop } from "./CreativeDrop";
 import { Notice } from "./Notice";
 import { MAX_BYTES, uploadCreative } from "@/lib/upload";
@@ -26,6 +27,15 @@ const DAYS_AHEAD = 28;
 const MAX_DAYS = DAYS_AHEAD;
 
 type Status = "loading" | "idle" | "sending" | "done" | "error";
+
+/** Sep 13 вместо 2026-09-13: даты читает человек, а не машина. */
+function humanDay(date: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 /** Окно начинается с завтра: сегодняшний день продавец уже не успеет поставить. */
 function tomorrow(): string {
@@ -149,7 +159,7 @@ export function RequestPlacement({
           either approves it or turns it down. Nothing is charged until they approve.
         </Notice>
         <p className="muted small">
-          {chosen} to {endDate(chosen, term)} · {formatUsd(total)}
+          {humanDay(chosen)} - {humanDay(endDate(chosen, term))} · {formatUsd(total)}
         </p>
         <button type="button" className="primary" onClick={onBack}>
           Back to placements
@@ -164,22 +174,20 @@ export function RequestPlacement({
         Back
       </button>
 
-      <h2>
-        @{offer.seller.x_handle} · {formatUsd(offer.price_cents)}
-        {offer.pricing === "daily" ? " / day" : ` / ${offer.term_days}d`}
-      </h2>
-      <p className="muted small">
-        {offer.pricing === "daily" && `${term} days · ${formatUsd(total)} total. `}
-        Seller receives {formatUsd(payout.netCents)}, platform fee{" "}
-        {formatUsd(payout.feeCents)}. Escrow releases money only for time the
-        placement actually ran.
-      </p>
+      <header className="req-head">
+        <h2>{placementSpec(offer.kind).label}</h2>
+        <p className="req-sub">
+          @{offer.seller.x_handle} ·{" "}
+          {offer.pricing === "daily"
+            ? `${formatUsd(offer.price_cents)} a day`
+            : `${formatUsd(offer.price_cents)} for ${offer.term_days} days`}
+        </p>
+      </header>
 
       {offer.pricing === "daily" && (
-        <div>
+        <div className="req-row">
           <span className="field-label">
-            How many days{" "}
-            {offer.term_days > 1 && `· from ${offer.term_days}`}
+            How many days{offer.term_days > 1 && ` · from ${offer.term_days}`}
           </span>
           <div className="stepper">
             <button
@@ -203,24 +211,41 @@ export function RequestPlacement({
         </div>
       )}
 
-      <div>
-        <span className="field-label">Start date · {term} days</span>
+      <div className="req-row">
         {status === "loading" ? (
           <p className="muted small">Checking the calendar…</p>
         ) : (
-          <Calendar
-            days={calendar}
-            termDays={term}
-            chosen={chosen}
-            onPick={setStart}
-          />
-        )}
-        {chosen && (
-          <p className="muted small">
-            {chosen} to {endDate(chosen, term)}
-          </p>
+          <>
+            <div className="cal-head">
+              <span className="cal-month">{monthSpan(calendar)}</span>
+              <span className="cal-legend">
+                <span className="cal-dot" aria-hidden /> booked
+              </span>
+            </div>
+            <Calendar
+              days={calendar}
+              termDays={term}
+              chosen={chosen}
+              onPick={setStart}
+            />
+          </>
         )}
       </div>
+
+      {chosen && (
+        <div className="req-total">
+          <span>
+            {humanDay(chosen)} - {humanDay(endDate(chosen, term))}
+            <span className="req-days"> · {term} days</span>
+          </span>
+          <strong>{formatUsd(total)}</strong>
+        </div>
+      )}
+      <p className="req-fine">
+        Seller gets {formatUsd(payout.netCents)}, our fee{" "}
+        {formatUsd(payout.feeCents)}. Escrow pays out only for the time the
+        placement actually runs.
+      </p>
 
       <label>
         Your X handle

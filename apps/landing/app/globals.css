@@ -1211,11 +1211,22 @@ a.primary {
   color: var(--fg);
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
 .field-label {
   display: block;
   font-size: 13.5px;
   color: var(--muted);
   margin-bottom: 9px;
+}
+
+/* Поля тянутся на всю ширину и вне label: там их растягивал флекс-контейнер. */
+.field input {
+  width: 100%;
 }
 
 /* Сколько дней берёт покупатель, когда цена назначена за сутки */
@@ -1260,18 +1271,64 @@ a.primary {
   font-variant-numeric: tabular-nums;
 }
 
-/* Календарь: сетка по дням недели, круглые ячейки. Плоская лента из 28 кнопок
-   не давала понять, свободны ли выходные. */
+/* Экран заявки */
+
+.req-head h2 {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.req-sub {
+  margin-top: 3px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Секции разделены тонкой линией, а не воздухом: без неё поля, календарь и
+   сумма читаются одним сплошным списком. */
+.req-row {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.req-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+}
+
+.req-total strong {
+  font-size: 19px;
+  letter-spacing: -0.015em;
+}
+
+.req-days {
+  color: var(--muted);
+}
+
+.req-fine {
+  margin-top: -6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #9a9a95;
+}
+
+/* Календарь. Свободные дни без подложки: двадцать восемь залитых кружков рябят
+   и прячут то, что нужно увидеть - границы выбранного срока. */
 
 .cal-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .cal-month {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -1285,83 +1342,125 @@ a.primary {
 }
 
 .cal-dot {
-  width: 9px;
-  height: 9px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-}
-
-.cal-dot.busy {
-  background: #e8b9c6;
+  background: #c08a98;
 }
 
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px 4px;
-  justify-items: center;
+  /* По горизонтали зазора нет: выбранный отрезок должен идти одной полосой,
+     а не рассыпаться на кружки. */
+  row-gap: 2px;
 }
 
 .cal-weekday {
+  padding-bottom: 6px;
   font-size: 11px;
-  color: var(--muted);
-  padding-bottom: 2px;
+  text-align: center;
+  color: #a5a5a0;
 }
 
 .cal-day {
-  width: 34px;
-  height: 34px;
+  position: relative;
+  height: 40px;
   border: none;
-  border-radius: 50%;
-  background: #f1f1ee;
+  background: transparent;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   color: var(--fg);
   cursor: pointer;
-  transition: background 0.14s, color 0.14s, transform 0.14s var(--spring);
 }
 
-.cal-day.free:hover {
-  background: #e3e3de;
-  transform: translateY(-1px);
+.cal-num {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 0 auto;
+  border-radius: 50%;
+  transition: background 0.14s, color 0.14s;
 }
 
-/* Занято. Кем - не показываем: это чужая сделка, а не публичная запись. */
+.cal-day:hover:not(:disabled) .cal-num {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Выбранный отрезок - непрерывная полоса со скруглёнными концами */
+.cal-day.in::before {
+  content: "";
+  position: absolute;
+  inset: 3px 0;
+  background: rgba(0, 113, 227, 0.1);
+}
+
+.cal-day.start::before {
+  border-radius: 999px 0 0 999px;
+}
+
+.cal-day.end::before {
+  border-radius: 0 999px 999px 0;
+}
+
+.cal-day.start.end::before {
+  border-radius: 999px;
+}
+
+.cal-day.start .cal-num {
+  background: #0071e3;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Занято. Точка под числом, как отметка события в системном календаре - кем
+   занято, не показываем: это чужая сделка, а не публичная запись. */
 .cal-day.taken {
-  background: #f4dbe2;
-  color: #a8697d;
   cursor: not-allowed;
+}
+
+.cal-day.taken .cal-num {
+  color: #b9b0b2;
+}
+
+.cal-day.taken::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: #c08a98;
 }
 
 /* Свободно, но срок с этого дня не влезает - до чужой брони не хватает дней. */
 .cal-day.tight {
-  background: transparent;
-  color: #c3c3bd;
   cursor: not-allowed;
 }
 
-.cal-day.start {
-  background: var(--accent);
-  color: #fff;
-  font-weight: 600;
+.cal-day.tight .cal-num {
+  color: #cdcdc7;
 }
 
-.cal-day.span {
-  background: rgba(29, 78, 216, 0.14);
-  color: #1b3a8f;
+/* Внутри выбранного отрезка число читается в полную силу: там уже не важно,
+   годится ли этот день под старт. */
+.cal-day.in .cal-num {
+  color: var(--fg);
+}
+
+.cal-day.in.start .cal-num {
+  color: #fff;
 }
 
 .cal-pad {
-  width: 34px;
-  height: 34px;
-}
-
-/* Прикрепление файла к заявке */
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+  height: 40px;
 }
 
 /* Зона для креатива. Рамка сплошная, не пунктирная: пунктир на светлом фоне
