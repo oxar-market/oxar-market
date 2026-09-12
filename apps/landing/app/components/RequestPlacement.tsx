@@ -2,21 +2,18 @@
 
 import { useEffect, useState } from "react";
 import {
+  calendarDays,
+  endDate,
   formatUsd,
   isValidHandle,
   minDaysFor,
   normalizeHandle,
   orderTotalCents,
   splitPayout,
+  type DayRange,
 } from "@oxar/core";
-import {
-  busyRanges,
-  endDate,
-  requestPlacement,
-  upcomingDays,
-  type BusyRange,
-  type Offer,
-} from "@/lib/listings";
+import { busyRanges, requestPlacement, type Offer } from "@/lib/listings";
+import { Calendar } from "./Calendar";
 import { Notice } from "./Notice";
 import { MAX_BYTES, uploadCreative } from "@/lib/upload";
 
@@ -28,6 +25,14 @@ const DAYS_AHEAD = 28;
 const MAX_DAYS = DAYS_AHEAD;
 
 type Status = "loading" | "idle" | "sending" | "done" | "error";
+
+/** Окно начинается с завтра: сегодняшний день продавец уже не успеет поставить. */
+function tomorrow(): string {
+  const at = new Date();
+  at.setUTCHours(0, 0, 0, 0);
+  at.setUTCDate(at.getUTCDate() + 1);
+  return at.toISOString().slice(0, 10);
+}
 
 export function RequestPlacement({
   offer,
@@ -45,7 +50,7 @@ export function RequestPlacement({
   };
   const minDays = minDaysFor(listing);
 
-  const [busy, setBusy] = useState<BusyRange[] | null>(null);
+  const [busy, setBusy] = useState<DayRange[] | null>(null);
   const [start, setStart] = useState("");
   // Пакет продаётся целиком, у ставки за сутки срок выбирает покупатель.
   const [days, setDays] = useState(minDays);
@@ -70,8 +75,10 @@ export function RequestPlacement({
   }, [offer.id]);
 
   const term = offer.pricing === "daily" ? days : offer.term_days;
-  const calendar = busy ? upcomingDays(DAYS_AHEAD, term, busy) : [];
-  const chosen = start || calendar.find((day) => day.free)?.date || "";
+  const calendar = busy
+    ? calendarDays({ from: tomorrow(), count: DAYS_AHEAD, termDays: term, busy })
+    : [];
+  const chosen = start || calendar.find((day) => day.canStart)?.date || "";
   const total = orderTotalCents(listing, term);
   const payout = splitPayout(total);
 
@@ -181,22 +188,12 @@ export function RequestPlacement({
         {status === "loading" ? (
           <p className="muted small">Checking the calendar…</p>
         ) : (
-          <div className="calendar">
-            {calendar.map((day) => (
-              <button
-                key={day.date}
-                type="button"
-                disabled={!day.free}
-                className={
-                  day.date === chosen ? "day on" : day.free ? "day" : "day busy"
-                }
-                onClick={() => setStart(day.date)}
-                title={day.free ? day.date : `${day.date} - taken`}
-              >
-                {day.label}
-              </button>
-            ))}
-          </div>
+          <Calendar
+            days={calendar}
+            termDays={term}
+            chosen={chosen}
+            onPick={setStart}
+          />
         )}
         {chosen && (
           <p className="muted small">

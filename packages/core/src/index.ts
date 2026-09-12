@@ -22,6 +22,14 @@ export {
 } from "./money.ts";
 
 export {
+  calendarDays,
+  endDate,
+  isWithin,
+  type CalendarDay,
+  type DayRange,
+} from "./calendar.ts";
+
+export {
   minDaysFor,
   orderTotalCents,
   type Listing,
