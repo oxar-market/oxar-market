@@ -4,12 +4,28 @@ import { useEffect, useState } from "react";
 import { formatUsd, placementSpec, type PlacementKind } from "@oxar/core";
 import { offersFor, type Offer } from "@/lib/listings";
 import { RequestPlacement } from "./RequestPlacement";
+import {
+  ArrowLeft,
+  Calendar,
+  Dots,
+  Envelope,
+  Heart,
+  LinkIcon,
+  Pin,
+  Reply,
+  Repost,
+  Share,
+  Verified,
+} from "./icons";
 
 /**
- * Макет профиля X - настоящая раскладка, а не схема: шапка со счётчиком постов,
- * баннер, аватарка внахлёст, кнопка профиля, имя с галочкой, био, строка с
- * ссылкой и локацией, счётчики и табы. Узнаваемость тут и есть смысл: человек
- * видит свой профиль и понимает, что именно продаётся.
+ * Макет профиля X, собранный по настоящей странице: шапка с именем и числом
+ * постов в две строки, баннер, круглая аватарка внахлёст с белой обводкой,
+ * кнопки справа, имя с галочкой, хэндл, био, строка со ссылкой, локацией и
+ * датой, счётчики, табы и пост под ними.
+ *
+ * Узнаваемость тут и есть смысл: человек видит свой профиль и понимает, что
+ * именно продаётся, без единого слова объяснений.
  *
  * Что показывать под выбранным местом, зависит от роли. Покупателю - кто это
  * место сдаёт и по какой цене. Продавцу чужие предложения не нужны: ему нужно
@@ -50,38 +66,42 @@ export function XProfile({ role }: { role: Role }) {
     className: `${picked === kind ? "spot on" : "spot"} ${className}`.trim(),
     onClick: () => setPicked(kind),
     type: "button" as const,
+    title: `${placementSpec(kind).label} - for sale`,
   });
 
   return (
     <div className="xp">
       <div className="xp-mock">
         <div className="xp-topline">
-          <span className="xp-arrow" aria-hidden>
-            &#8592;
+          <ArrowLeft className="xp-arrow" />
+          <span className="xp-topstack">
+            <span className="xp-topname">
+              Account name
+              <Verified className="xp-badge" />
+            </span>
+            <span className="xp-posts">96 posts</span>
           </span>
-          <span className="xp-topname">
-            Account name
-            <span className="xp-badge" aria-hidden />
-          </span>
-          <span className="xp-posts">96 posts</span>
         </div>
 
         <button {...spot("banner", "xp-banner")}>Banner</button>
 
-        {/* Аватарка стоит в своей строке и не налезает на баннер: два
-            соседних места, наложенных друг на друга, читаются как ошибка
-            вёрстки, а не как профиль. */}
         <div className="xp-avatar-row">
           <button {...spot("avatar", "xp-avatar")}>Avatar</button>
-          <span className="xp-editbtn" aria-hidden>
-            Edit profile
+          <span className="xp-actions" aria-hidden>
+            <span className="xp-round">
+              <Dots />
+            </span>
+            <span className="xp-round">
+              <Envelope />
+            </span>
+            <span className="xp-follow">Follow</span>
           </span>
         </div>
 
         <div className="xp-lines">
           <div className="xp-nameline">
             <span className="xp-name">Account name</span>
-            <span className="xp-badge" aria-hidden />
+            <Verified className="xp-badge" />
             <button {...spot("name_suffix")}>Name suffix</button>
           </div>
           <span className="xp-handle">@handle</span>
@@ -89,17 +109,26 @@ export function XProfile({ role }: { role: Role }) {
           <button {...spot("bio_text", "xp-wide")}>Bio text</button>
 
           <div className="xp-meta">
-            <button {...spot("location")}>Location</button>
-            <button {...spot("bio_link")}>Bio link</button>
-            <span className="xp-joined">Joined April 2026</span>
+            <span className="xp-meta-item">
+              <LinkIcon className="xp-ico" />
+              <button {...spot("bio_link")}>Bio link</button>
+            </span>
+            <span className="xp-meta-item">
+              <Pin className="xp-ico" />
+              <button {...spot("location")}>Location</button>
+            </span>
+            <span className="xp-meta-item xp-joined">
+              <Calendar className="xp-ico" />
+              Joined April 2026
+            </span>
           </div>
 
           <div className="xp-counts">
             <span>
-              <strong>110</strong> Following
+              <strong>2,191</strong> Following
             </span>
             <span>
-              <strong>117</strong> Followers
+              <strong>984K</strong> Followers
             </span>
           </div>
         </div>
@@ -107,11 +136,36 @@ export function XProfile({ role }: { role: Role }) {
         <div className="xp-tabs" aria-hidden>
           <span className="on">Posts</span>
           <span>Replies</span>
-          <span>Reposts</span>
           <span>Media</span>
+          <span>Likes</span>
         </div>
 
-        <button {...spot("pinned_post", "xp-pinned")}>Pinned post</button>
+        <div className="xp-post">
+          <span className="xp-post-avatar" aria-hidden />
+          <div className="xp-post-body">
+            <span className="xp-post-head" aria-hidden>
+              <strong>Account name</strong> @handle · 22h
+            </span>
+            <button {...spot("pinned_post", "xp-pinned")}>Pinned post</button>
+            <span className="xp-post-actions" aria-hidden>
+              <span>
+                <Reply className="xp-ico" />
+                76
+              </span>
+              <span>
+                <Repost className="xp-ico" />
+                59
+              </span>
+              <span>
+                <Heart className="xp-ico" />
+                159
+              </span>
+              <span>
+                <Share className="xp-ico" />
+              </span>
+            </span>
+          </div>
+        </div>
       </div>
 
       {!picked && (
