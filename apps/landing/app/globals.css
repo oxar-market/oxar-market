@@ -1260,41 +1260,100 @@ a.primary {
   font-variant-numeric: tabular-nums;
 }
 
-.calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 9px;
+/* Календарь: сетка по дням недели, круглые ячейки. Плоская лента из 28 кнопок
+   не давала понять, свободны ли выходные. */
+
+.cal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 
-.day {
-  border: 1px solid var(--line);
-  background: var(--card);
-  border-radius: 9px;
-  padding: 10px 0;
-  font: inherit;
+.cal-month {
   font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cal-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.cal-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.cal-dot.busy {
+  background: #e8b9c6;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px 4px;
+  justify-items: center;
+}
+
+.cal-weekday {
+  font-size: 11px;
+  color: var(--muted);
+  padding-bottom: 2px;
+}
+
+.cal-day {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: #f1f1ee;
+  font: inherit;
+  font-size: 13.5px;
   font-variant-numeric: tabular-nums;
   color: var(--fg);
   cursor: pointer;
-  transition: border-color 0.14s, background 0.14s;
+  transition: background 0.14s, color 0.14s, transform 0.14s var(--spring);
 }
 
-.day:hover:not(:disabled) {
-  border-color: #b9c4cc;
+.cal-day.free:hover {
+  background: #e3e3de;
+  transform: translateY(-1px);
 }
 
-.day.on {
-  border-color: var(--accent);
-  background: rgba(29, 78, 216, 0.08);
+/* Занято. Кем - не показываем: это чужая сделка, а не публичная запись. */
+.cal-day.taken {
+  background: #f4dbe2;
+  color: #a8697d;
+  cursor: not-allowed;
+}
+
+/* Свободно, но срок с этого дня не влезает - до чужой брони не хватает дней. */
+.cal-day.tight {
+  background: transparent;
+  color: #c3c3bd;
+  cursor: not-allowed;
+}
+
+.cal-day.start {
+  background: var(--accent);
+  color: #fff;
   font-weight: 600;
 }
 
-.day.busy {
-  color: #c3c3bd;
-  background: #f7f7f5;
-  cursor: not-allowed;
-  text-decoration: line-through;
+.cal-day.span {
+  background: rgba(29, 78, 216, 0.14);
+  color: #1b3a8f;
+}
+
+.cal-pad {
+  width: 34px;
+  height: 34px;
 }
 
 /* Прикрепление файла к заявке */

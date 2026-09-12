@@ -1,4 +1,4 @@
-import type { PlacementKind, Pricing } from "@oxar/core";
+import type { DayRange, PlacementKind, Pricing } from "@oxar/core";
 
 // Витрина публичная: RLS отдаёт анониму только проверенных продавцов, активные
 // листинги и занятые даты без данных покупателя. Заявку он может только
@@ -44,9 +44,10 @@ export async function offersFor(kind: PlacementKind): Promise<Offer[]> {
   return (await response.json()) as Offer[];
 }
 
-export type BusyRange = { start_date: string; end_date: string };
+type BusyRow = { start_date: string; end_date: string };
 
-export async function busyRanges(listingId: string): Promise<BusyRange[]> {
+/** Занятые отрезки листинга, без данных покупателя: их не отдаёт и сама view. */
+export async function busyRanges(listingId: string): Promise<DayRange[]> {
   if (!url || !anonKey) return [];
 
   const response = await fetch(
@@ -55,7 +56,8 @@ export async function busyRanges(listingId: string): Promise<BusyRange[]> {
   );
 
   if (!response.ok) return [];
-  return (await response.json()) as BusyRange[];
+  const rows = (await response.json()) as BusyRow[];
+  return rows.map((row) => ({ startDate: row.start_date, endDate: row.end_date }));
 }
 
 export type PlacementRequest = {
@@ -83,59 +85,4 @@ export async function requestPlacement(
   });
 
   return response.ok ? "created" : "error";
-}
-
-/** Конец срока включительно: старт 10-го на 7 дней - это по 16-е. */
-export function endDate(start: string, days: number): string {
-  const date = new Date(`${start}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days - 1);
-  return date.toISOString().slice(0, 10);
-}
-
-/**
- * Дни, с которых можно начать. День свободен, если весь срок от него не
- * пересекается ни с одной занятой бронью.
- */
-export function upcomingDays(
-  count: number,
-  termDays: number,
-  busy: BusyRange[],
-): { date: string; label: string; free: boolean }[] {
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-
-  const taken = new Set<string>();
-  for (const range of busy) {
-    for (
-      const day = new Date(`${range.start_date}T00:00:00Z`);
-      day <= new Date(`${range.end_date}T00:00:00Z`);
-      day.setUTCDate(day.getUTCDate() + 1)
-    ) {
-      taken.add(day.toISOString().slice(0, 10));
-    }
-  }
-
-  const days = [];
-  for (let i = 1; i <= count; i += 1) {
-    const date = new Date(today);
-    date.setUTCDate(date.getUTCDate() + i);
-
-    let free = true;
-    for (let offset = 0; offset < termDays; offset += 1) {
-      const inTerm = new Date(date);
-      inTerm.setUTCDate(inTerm.getUTCDate() + offset);
-      if (taken.has(inTerm.toISOString().slice(0, 10))) {
-        free = false;
-        break;
-      }
-    }
-
-    days.push({
-      date: date.toISOString().slice(0, 10),
-      label: String(date.getUTCDate()),
-      free,
-    });
-  }
-
-  return days;
 }
