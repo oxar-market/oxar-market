@@ -61,3 +61,180 @@ footer {
 a {
   color: var(--fg);
 }
+
+/* Платформа */
+
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.back {
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: 8px;
+}
+
+.small {
+  font-size: 14px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 13px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.chip.on {
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
+.listings {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.listings a {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+.listings a:hover {
+  border-color: var(--muted);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Макет профиля */
+
+.mock {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.mock-banner {
+  height: 104px;
+  background: #17171b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mock-avatar {
+  width: 88px;
+  height: 88px;
+  margin: -44px 0 0 20px;
+  border-radius: 50%;
+  border: 3px solid var(--card);
+  background: #17171b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 11px;
+  padding: 6px;
+}
+
+.mock-body {
+  padding: 12px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mock-name {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mock-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.slot {
+  font-size: 12px;
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  padding: 4px 8px;
+  color: var(--fg);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.slot.off {
+  border-color: var(--line);
+  border-style: dashed;
+  color: var(--muted);
+}
+
+/* Календарь */
+
+.field-label {
+  font-size: 14px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.day {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 0;
+  color: var(--fg);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.day.on {
+  border-color: var(--accent);
+  background: rgba(200, 247, 81, 0.1);
+}
+
+.day.busy {
+  color: var(--line);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
