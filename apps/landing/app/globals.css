@@ -206,7 +206,8 @@ body {
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 4px;
+  /* Зазор задают сами слоты: у дока он добавлялся бы и вокруг схлопнутых. */
+  gap: 0;
   padding: 8px;
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid var(--line);
@@ -250,6 +251,20 @@ body {
   background: var(--line);
 }
 
+.dock-slot {
+  display: flex;
+  padding: 0 2px;
+  max-width: 240px;
+  overflow: hidden;
+  transition: max-width 0.26s var(--spring), opacity 0.18s ease, padding 0.26s var(--spring);
+}
+
+.dock-slot.off {
+  max-width: 0;
+  padding: 0;
+  opacity: 0;
+}
+
 .dock-item {
   border: none;
   background: transparent;
@@ -265,6 +280,25 @@ body {
 
 .dock-item:hover {
   background: rgba(0, 0, 0, 0.06);
+}
+
+/* Вход в доке нужен редко - только одобренному продавцу на новом устройстве,
+   поэтому он тише соседей и не тянет на себя внимание. */
+.dock-quiet {
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.dock-quiet:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--fg);
 }
 
 /* Окна */

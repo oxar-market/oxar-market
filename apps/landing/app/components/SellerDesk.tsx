@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatUsd, PLACEMENTS, placementSpec, type PlacementKind } from "@oxar/core";
-import { currentSession, onSessionChange, sendLink, signOut } from "@/lib/auth";
+import { sendLink, signOut } from "@/lib/auth";
+import type { SellerAccount } from "@/lib/use-seller-account";
 import {
   addListing,
   decide,
@@ -21,36 +22,53 @@ import { SellerLots } from "./SellerLots";
 // Онбординг ручной: войти может любой, но местами владеет только тот, чей адрес
 // мы завели в базе.
 
-type State =
-  | { step: "loading" }
-  | { step: "guest" }
-  | { step: "sent"; email: string }
-  | { step: "stranger"; email: string }
-  | { step: "desk"; seller: MySeller };
+export function SellerDesk({
+  account,
+}: {
+  account: SellerAccount & { reload: () => void };
+}) {
+  const [sentTo, setSentTo] = useState("");
 
-export function SellerDesk() {
-  const [state, setState] = useState<State>({ step: "loading" });
+  if (account.status === "loading") {
+    return <p className="muted small">Checking…</p>;
+  }
+
+  if (account.status === "guest") {
+    return sentTo ? (
+      <LinkSent email={sentTo} onAgain={() => setSentTo("")} />
+    ) : (
+      <SignIn onSent={setSentTo} />
+    );
+  }
+
+  if (account.status === "stranger") {
+    return (
+      <div className="card">
+        <Notice tone="error" title="No spots on this account">
+          You are signed in as {account.email}, but no seller is attached to it.
+          Onboarding is by hand - book a call and we will set it up.
+        </Notice>
+        <button
+          type="button"
+          className="link-back"
+          onClick={async () => {
+            await signOut();
+            account.reload();
+          }}
+        >
+          Sign out
+        </button>
+      </div>
+    );
+  }
+
+  return <Desk seller={account.seller} />;
+}
+
+function SignIn({ onSent }: { onSent: (email: string) => void }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-
-  const load = useCallback(async () => {
-    const session = await currentSession();
-    if (!session) {
-      setState({ step: "guest" });
-      return;
-    }
-    const seller = await mySeller();
-    setState(
-      seller
-        ? { step: "desk", seller }
-        : { step: "stranger", email: session.user.email ?? "" },
-    );
-  }, []);
-
-  useEffect(() => {
-    load();
-    return onSessionChange(() => load());
-  }, [load]);
+  const [sending, setSending] = useState(false);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -60,75 +78,88 @@ export function SellerDesk() {
       setError("Enter the email we onboarded you with.");
       return;
     }
+    setSending(true);
     const result = await sendLink(address);
+    setSending(false);
     if (result === "sent") {
-      setState({ step: "sent", email: address });
+      onSent(address);
       return;
     }
     setError("Could not send the link. Try again in a minute.");
   }
 
-  if (state.step === "loading") {
-    return <p className="muted small">Checking…</p>;
-  }
+  return (
+    <form className="card" onSubmit={submit} noValidate>
+      <h2>Sign in</h2>
+      <p className="muted small">
+        Sellers are onboarded by hand, so use the address we agreed on. No
+        password - we send a link.
+      </p>
+      <label>
+        Email
+        <input
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@mail.com"
+          autoComplete="email"
+        />
+      </label>
+      {error && <Notice tone="error">{error}</Notice>}
+      <button type="submit" className="primary" disabled={sending}>
+        {sending ? "Sending…" : "Send the link"}
+      </button>
+    </form>
+  );
+}
 
-  if (state.step === "sent") {
-    return (
-      <div className="card">
-        <Notice tone="success" title="Check your inbox">
-          A sign-in link is on its way to {state.email}. Open it on this device.
-        </Notice>
-      </div>
-    );
-  }
+/**
+ * Письмо ушло. Повторить можно, но не сразу: у встроенной почты Supabase есть
+ * свой предел, и второе письмо в ту же секунду просто не уйдёт.
+ */
+function LinkSent({ email, onAgain }: { email: string; onAgain: () => void }) {
+  const [wait, setWait] = useState(60);
+  const [again, setAgain] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
-  if (state.step === "guest") {
-    return (
-      <form className="card" onSubmit={submit} noValidate>
-        <h2>Sign in</h2>
-        <p className="muted small">
-          Sellers are onboarded by hand, so use the address we agreed on. No
-          password - we send a link.
-        </p>
-        <label>
-          Email
-          <input
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@mail.com"
-            autoComplete="email"
-          />
-        </label>
-        {error && <Notice tone="error">{error}</Notice>}
-        <button type="submit" className="primary">
-          Send the link
-        </button>
-      </form>
-    );
-  }
+  useEffect(() => {
+    if (wait === 0) return;
+    const timer = window.setTimeout(() => setWait((left) => left - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [wait]);
 
-  if (state.step === "stranger") {
-    return (
-      <div className="card">
-        <Notice tone="error" title="No spots on this account">
-          You are signed in as {state.email}, but no seller is attached to it.
-          Onboarding is by hand - book a call and we will set it up.
-        </Notice>
+  return (
+    <div className="card">
+      <Notice tone="success" title="Check your inbox">
+        A sign-in link is on its way to {email}. Open it on this device.
+      </Notice>
+
+      {again === "error" && (
+        <Notice tone="error">Could not send it again. Try in a minute.</Notice>
+      )}
+
+      <div className="desk-acts">
         <button
           type="button"
-          className="link-back"
+          className="desk-no"
+          disabled={wait > 0 || again === "sending"}
           onClick={async () => {
-            await signOut();
-            setState({ step: "guest" });
+            setAgain("sending");
+            const result = await sendLink(email);
+            setAgain(result === "sent" ? "sent" : "error");
+            setWait(60);
           }}
         >
-          Sign out
+          {again === "sending"
+            ? "Sending…"
+            : wait > 0
+              ? `Send again in ${wait}s`
+              : "Send again"}
+        </button>
+        <button type="button" className="desk-no" onClick={onAgain}>
+          Other email
         </button>
       </div>
-    );
-  }
-
-  return <Desk seller={state.seller} />;
+    </div>
+  );
 }
 
 function Desk({ seller }: { seller: MySeller }) {
