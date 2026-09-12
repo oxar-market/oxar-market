@@ -5,26 +5,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * Перетаскивание иконок по рабочему столу.
  *
- * На большом экране иконка ложится туда, куда её отпустили: позиция хранится в
+ * Иконка ложится туда, куда её отпустили, и на телефоне тоже: сетка со сменой
+ * порядка вела себя не как рабочий стол, а как список. Позиция хранится в
  * процентах от размера стола, поэтому раскладка не разъезжается на другом
- * разрешении. На телефоне свободных координат нет - там сетка, и перетаскивание
- * меняет порядок иконок, как на домашнем экране телефона.
+ * разрешении.
  *
  * Пока палец или мышь двигаются, transform пишется прямо в DOM. Через состояние
  * это был бы ре-рендер на каждый кадр и заметное дёрганье.
  */
 
-const STORAGE_KEY = "oxar.desktop.layout.v1";
+const STORAGE_KEY = "oxar.desktop.layout.v2";
 const MOBILE_QUERY = "(max-width: 760px)";
 /** Меньше этого считаем не перетаскиванием, а нажатием. */
 const CLICK_SLOP = 6;
-/** На телефоне драг начинается после удержания, иначе ломается прокрутка. */
-const HOLD_MS = 260;
+/** Иконка на телефоне шире по площади, поэтому промах пальцем больше. */
+const TOUCH_SLOP = 10;
 
 export type Point = { x: number; y: number };
 export type Layout = Record<string, Point>;
 
-type Stored = { positions: Layout; order: string[] };
+type Stored = { positions: Layout };
 
 type DragState = {
   slug: string;
@@ -33,13 +33,10 @@ type DragState = {
   startY: number;
   element: HTMLElement;
   moved: boolean;
-  active: boolean;
-  holdTimer: number | null;
 };
 
-export function useIconLayout(slugs: string[], defaults: Layout) {
+export function useIconLayout(defaults: Layout, mobileDefaults: Layout) {
   const [positions, setPositions] = useState<Layout>(defaults);
-  const [order, setOrder] = useState<string[]>(slugs);
   const surface = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
 
@@ -48,14 +45,16 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as Stored;
-      if (saved.positions) setPositions({ ...defaults, ...saved.positions });
-      if (saved.order?.length) {
-        const known = saved.order.filter((slug) => slugs.includes(slug));
-        const missing = slugs.filter((slug) => !known.includes(slug));
-        setOrder([...known, ...missing]);
+      if (raw) {
+        const saved = JSON.parse(raw) as Stored;
+        if (saved.positions) {
+          setPositions({ ...defaults, ...saved.positions });
+          return;
+        }
       }
+      // Раскладки нет: на узком экране проценты от десктопа положили бы иконки
+      // друг на друга и за правый край.
+      if (isMobile()) setPositions(mobileDefaults);
     } catch {
       // Повреждённая запись не должна ломать страницу.
     }
@@ -88,26 +87,14 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
     // туда, куда её отпустили.
     element.style.transition = "none";
 
-    const state: DragState = {
+    drag.current = {
       slug,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       element,
       moved: false,
-      active: !isMobile(),
-      holdTimer: null,
     };
-
-    if (isMobile()) {
-      state.holdTimer = window.setTimeout(() => {
-        if (drag.current?.slug !== slug) return;
-        drag.current.active = true;
-        element.classList.add("lifted");
-      }, HOLD_MS);
-    }
-
-    drag.current = state;
   }, []);
 
   const onPointerMove = useCallback((event: React.PointerEvent) => {
@@ -116,8 +103,12 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
 
     const dx = event.clientX - state.startX;
     const dy = event.clientY - state.startY;
-    if (Math.abs(dx) > CLICK_SLOP || Math.abs(dy) > CLICK_SLOP) state.moved = true;
-    if (!state.active) return;
+    const slop = event.pointerType === "mouse" ? CLICK_SLOP : TOUCH_SLOP;
+    if (Math.abs(dx) > slop || Math.abs(dy) > slop) {
+      state.moved = true;
+      state.element.classList.add("lifted");
+    }
+    if (!state.moved) return;
 
     state.element.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
     state.element.style.zIndex = "4";
@@ -128,10 +119,9 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
       const state = drag.current;
       if (!state || state.pointerId !== event.pointerId) return;
       drag.current = null;
-      if (state.holdTimer) window.clearTimeout(state.holdTimer);
       state.element.classList.remove("lifted");
 
-      const wasDrag = state.moved && state.active;
+      const wasDrag = state.moved;
       const reset = () => {
         state.element.style.transform = "";
         state.element.style.zIndex = "";
@@ -141,7 +131,7 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
       if (!wasDrag) {
         reset();
         // Нажатие без движения - это открытие иконки.
-        if (!state.moved) onClick(state.slug);
+        onClick(state.slug);
         return;
       }
 
@@ -151,17 +141,9 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
         return;
       }
 
-      if (isMobile()) {
-        // Сетка: переставляем иконку туда, куда её отнесли.
-        const next = reorder(order, state.slug, state.element, box, event);
-        reset();
-        setOrder(next);
-        persist({ positions, order: next });
-        return;
-      }
-
       const rect = state.element.getBoundingClientRect();
-      const x = clamp(((rect.left - box.left) / box.width) * 100, 0, 92);
+      const maxX = isMobile() ? 74 : 92;
+      const x = clamp(((rect.left - box.left) / box.width) * 100, 0, maxX);
       const y = clamp(((rect.top - box.top) / box.height) * 100, 0, 88);
 
       // Новые координаты пишем в DOM в том же кадре, в котором убираем
@@ -174,7 +156,7 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
 
       const next = { ...positions, [state.slug]: { x, y } };
       setPositions(next);
-      persist({ positions: next, order });
+      persist({ positions: next });
 
       // Переход возвращаем только со следующего кадра, иначе он подхватит
       // сброс transform и анимирует его.
@@ -182,31 +164,10 @@ export function useIconLayout(slugs: string[], defaults: Layout) {
         state.element.style.transition = "";
       });
     },
-    [order, positions, persist],
+    [positions, persist],
   );
 
-  return { positions, order, surface, onPointerDown, onPointerMove, onPointerUp };
-}
-
-/** Индекс слота под пальцем, пересчитанный в новый порядок иконок. */
-function reorder(
-  order: string[],
-  slug: string,
-  element: HTMLElement,
-  box: DOMRect,
-  event: React.PointerEvent,
-): string[] {
-  const columns = 4;
-  const cellWidth = box.width / columns;
-  const cellHeight = element.offsetHeight + 22;
-
-  const column = clamp(Math.floor((event.clientX - box.left) / cellWidth), 0, columns - 1);
-  const row = Math.max(0, Math.floor((event.clientY - box.top) / cellHeight));
-  const target = clamp(row * columns + column, 0, order.length - 1);
-
-  const next = order.filter((item) => item !== slug);
-  next.splice(target, 0, slug);
-  return next;
+  return { positions, surface, onPointerDown, onPointerMove, onPointerUp };
 }
 
 function clamp(value: number, min: number, max: number): number {

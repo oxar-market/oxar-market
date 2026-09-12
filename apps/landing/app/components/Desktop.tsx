@@ -35,27 +35,29 @@ const DEFAULT_POSITIONS: Layout = Object.fromEntries([
   ...APPS.map((app) => [app.slug, { x: app.x, y: app.y }]),
 ]);
 
+/** Стартовая раскладка для узкого экрана: два столбца, тот же свободный стол. */
+const MOBILE_POSITIONS: Layout = {
+  "who-we-are": { x: 6, y: 3 },
+  "how-it-works": { x: 52, y: 3 },
+  "why-us": { x: 6, y: 22 },
+  pricing: { x: 52, y: 22 },
+  x: { x: 6, y: 41 },
+};
+
 export function Desktop() {
   const [role, setRole] = useState<Role>("creator");
   // При первом заходе одно окно уже открыто: рабочий стол без подсказки
   // заставляет человека догадываться, а оффер должен читаться сразу.
   const [open, setOpen] = useState<Open>({ kind: "file", file: FILES[0]! });
 
-  const { positions, order, surface, onPointerDown, onPointerMove, onPointerUp } =
-    useIconLayout(
-      ITEMS.map((item) => item.slug),
-      DEFAULT_POSITIONS,
-    );
+  const { positions, surface, onPointerDown, onPointerMove, onPointerUp } =
+    useIconLayout(DEFAULT_POSITIONS, MOBILE_POSITIONS);
 
   function activate(slug: string) {
     const item = ITEMS.find((candidate) => candidate.slug === slug);
     if (!item) return;
     setOpen(item.kind === "file" ? { kind: "file", file: item.file } : { kind: "x" });
   }
-
-  const sorted = order
-    .map((slug) => ITEMS.find((item) => item.slug === slug))
-    .filter((item): item is Item => Boolean(item));
 
   return (
     <div className="desktop">
@@ -85,7 +87,7 @@ export function Desktop() {
       </header>
 
       <div className="icons" ref={surface}>
-        {sorted.map((item) => {
+        {ITEMS.map((item) => {
           const at = positions[item.slug] ?? { x: 5, y: 8 };
           return (
             <button

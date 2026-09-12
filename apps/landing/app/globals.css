@@ -474,17 +474,11 @@ input:focus {
     position: absolute;
     inset: calc(46px + env(safe-area-inset-top)) 0
       calc(104px + env(safe-area-inset-bottom));
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 22px 0;
-    align-content: start;
-    padding: 24px 10px;
-    overflow-y: auto;
+    padding: 0;
   }
 
   .icon {
-    position: static;
-    width: auto;
+    width: 84px;
     gap: 8px;
   }
 
