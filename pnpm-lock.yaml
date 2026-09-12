@@ -17,6 +17,9 @@ importers:
 
   apps/app:
     dependencies:
+      '@oxar/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       next:
         specifier: ^15.1.0
         version: 15.5.25(@types/node@22.20.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
