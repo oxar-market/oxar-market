@@ -1,4 +1,4 @@
-import type { PlacementKind } from "@oxar/core";
+import type { PlacementKind, Pricing } from "@oxar/core";
 
 // Витрина публичная: RLS отдаёт анониму только проверенных продавцов, активные
 // листинги и занятые даты без данных покупателя. Заявку он может только
@@ -18,6 +18,8 @@ function headers() {
 export type Offer = {
   id: string;
   kind: PlacementKind;
+  /** term - цена за весь срок, daily - за сутки. См. @oxar/core. */
+  pricing: Pricing;
   price_cents: number;
   term_days: number;
   seller: {
@@ -32,7 +34,7 @@ export async function offersFor(kind: PlacementKind): Promise<Offer[]> {
   if (!url || !anonKey) return [];
 
   const select =
-    "id,kind,price_cents,term_days,seller:sellers(x_handle,display_name,follower_count,is_org)";
+    "id,kind,pricing,price_cents,term_days,seller:sellers(x_handle,display_name,follower_count,is_org)";
   const response = await fetch(
     `${url}/rest/v1/listings?select=${select}&active=is.true&kind=eq.${kind}&order=price_cents.desc`,
     { headers: headers() },

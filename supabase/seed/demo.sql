@@ -30,6 +30,22 @@ join (values
 ) as v (handle, kind, price_cents, term_days) on v.handle = s.x_handle
 on conflict do nothing;
 
+-- Часть демо-мест продаётся по ставке за сутки: цена за день, срок выбирает
+-- покупатель, term_days работает минимумом. Отдельным обновлением, потому что
+-- вставка выше уже могла пройти раньше и её on conflict do nothing пропустит.
+update public.listings l
+set pricing = 'daily', price_cents = v.price_cents, term_days = v.min_days
+from public.sellers s,
+  (values
+    ('demo_kira', 'bio_link', 1200, 3),
+    ('demo_lowkey', 'avatar', 900, 2),
+    ('demo_superteam', 'pinned_post', 14000, 1)
+  ) as v (handle, kind, price_cents, min_days)
+where l.seller_id = s.id
+  and s.x_handle = v.handle
+  and l.kind = v.kind::placement_kind
+  and l.pricing = 'term';
+
 -- Одна занятая неделя, чтобы календарь не выглядел пустым макетом
 insert into public.bookings (listing_id, buyer_handle, buyer_contact, creative_text, start_date, end_date, price_cents, status)
 select l.id, 'demo_buyer', null, 'demo campaign', current_date + 2, current_date + 8, l.price_cents, 'approved'

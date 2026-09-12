@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatUsd, isValidHandle, normalizeHandle, splitPayout } from "@oxar/core";
+import {
+  formatUsd,
+  isValidHandle,
+  minDaysFor,
+  normalizeHandle,
+  orderTotalCents,
+  splitPayout,
+} from "@oxar/core";
 import {
   busyRanges,
   endDate,
@@ -17,6 +24,8 @@ import { MAX_BYTES, uploadCreative } from "@/lib/upload";
 // покупателя больше нет.
 
 const DAYS_AHEAD = 28;
+/** Дальше окна календаря продавать нечего: занятость за его пределами неизвестна. */
+const MAX_DAYS = DAYS_AHEAD;
 
 type Status = "loading" | "idle" | "sending" | "done" | "error";
 
@@ -27,8 +36,19 @@ export function RequestPlacement({
   offer: Offer;
   onBack: () => void;
 }) {
+  // Правила цены живут в core и знают поля в своём написании, витрина отдаёт их
+  // как в базе - переводим здесь, в одном месте.
+  const listing = {
+    pricing: offer.pricing,
+    priceCents: offer.price_cents,
+    termDays: offer.term_days,
+  };
+  const minDays = minDaysFor(listing);
+
   const [busy, setBusy] = useState<BusyRange[] | null>(null);
   const [start, setStart] = useState("");
+  // Пакет продаётся целиком, у ставки за сутки срок выбирает покупатель.
+  const [days, setDays] = useState(minDays);
   const [handle, setHandle] = useState("");
   const [contact, setContact] = useState("");
   const [creative, setCreative] = useState("");
@@ -49,9 +69,11 @@ export function RequestPlacement({
     };
   }, [offer.id]);
 
-  const days = busy ? upcomingDays(DAYS_AHEAD, offer.term_days, busy) : [];
-  const chosen = start || days.find((day) => day.free)?.date || "";
-  const payout = splitPayout(offer.price_cents);
+  const term = offer.pricing === "daily" ? days : offer.term_days;
+  const calendar = busy ? upcomingDays(DAYS_AHEAD, term, busy) : [];
+  const chosen = start || calendar.find((day) => day.free)?.date || "";
+  const total = orderTotalCents(listing, term);
+  const payout = splitPayout(total);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -80,8 +102,8 @@ export function RequestPlacement({
       creative_url: file?.url ?? null,
       creative_text: creative.trim() || null,
       start_date: chosen,
-      end_date: endDate(chosen, offer.term_days),
-      price_cents: offer.price_cents,
+      end_date: endDate(chosen, term),
+      price_cents: total,
     });
 
     if (result === "created") {
@@ -100,8 +122,7 @@ export function RequestPlacement({
           either approves it or turns it down. Nothing is charged until they approve.
         </Notice>
         <p className="muted small">
-          {chosen} to {endDate(chosen, offer.term_days)} ·{" "}
-          {formatUsd(offer.price_cents)}
+          {chosen} to {endDate(chosen, term)} · {formatUsd(total)}
         </p>
         <button type="button" className="primary" onClick={onBack}>
           Back to placements
@@ -117,24 +138,51 @@ export function RequestPlacement({
       </button>
 
       <h2>
-        @{offer.seller.x_handle} · {formatUsd(offer.price_cents)} /{" "}
-        {offer.term_days}d
+        @{offer.seller.x_handle} · {formatUsd(offer.price_cents)}
+        {offer.pricing === "daily" ? " / day" : ` / ${offer.term_days}d`}
       </h2>
       <p className="muted small">
+        {offer.pricing === "daily" && `${term} days · ${formatUsd(total)} total. `}
         Seller receives {formatUsd(payout.netCents)}, platform fee{" "}
         {formatUsd(payout.feeCents)}. Escrow releases money only for time the
         placement actually ran.
       </p>
 
+      {offer.pricing === "daily" && (
+        <div>
+          <span className="field-label">
+            How many days{" "}
+            {offer.term_days > 1 && `· from ${offer.term_days}`}
+          </span>
+          <div className="stepper">
+            <button
+              type="button"
+              onClick={() => setDays((d) => Math.max(minDays, d - 1))}
+              disabled={days <= minDays}
+              aria-label="One day less"
+            >
+              -
+            </button>
+            <span className="stepper-value">{days}</span>
+            <button
+              type="button"
+              onClick={() => setDays((d) => Math.min(MAX_DAYS, d + 1))}
+              disabled={days >= MAX_DAYS}
+              aria-label="One day more"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
-        <span className="field-label">
-          Start date · {offer.term_days} days
-        </span>
+        <span className="field-label">Start date · {term} days</span>
         {status === "loading" ? (
           <p className="muted small">Checking the calendar…</p>
         ) : (
           <div className="calendar">
-            {days.map((day) => (
+            {calendar.map((day) => (
               <button
                 key={day.date}
                 type="button"
@@ -152,7 +200,7 @@ export function RequestPlacement({
         )}
         {chosen && (
           <p className="muted small">
-            {chosen} to {endDate(chosen, offer.term_days)}
+            {chosen} to {endDate(chosen, term)}
           </p>
         )}
       </div>
@@ -242,7 +290,7 @@ export function RequestPlacement({
       <button type="submit" className="primary" disabled={status === "sending"}>
         {status === "sending"
           ? "Sending…"
-          : `Request · ${formatUsd(offer.price_cents)}`}
+          : `Request · ${formatUsd(total)}`}
       </button>
       <p className="muted small">
         Sending a request charges nothing. The seller approves first.
