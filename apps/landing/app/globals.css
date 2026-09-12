@@ -41,9 +41,10 @@ body {
   position: absolute;
   inset: -12%;
   z-index: 0;
-  background: url("/icons/light-green.png") center / 72% auto no-repeat;
-  filter: blur(46px) saturate(1.25);
-  opacity: 0.8;
+  background: url("/icons/light-blue.svg") center / 62% auto no-repeat;
+  /* Размытие поменьше: сильнее размыть - и логотип перестаёт быть логотипом */
+  filter: blur(18px) saturate(1.1);
+  opacity: 0.85;
   pointer-events: none;
 }
 
@@ -54,9 +55,9 @@ body {
   z-index: 0;
   /* Лёгкая пелена, чтобы иконки и окна читались поверх обоев */
   background: radial-gradient(
-    75% 65% at 50% 42%,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(244, 244, 242, 0.62) 72%
+    72% 62% at 50% 42%,
+    rgba(255, 255, 255, 0.34) 0%,
+    rgba(244, 244, 242, 0.7) 74%
   );
   pointer-events: none;
 }
@@ -473,9 +474,9 @@ input:focus {
   .desktop::before {
     inset: 0;
     /* На узком экране логотип должен попадать в кадр целиком */
-    background-size: 116% auto;
-    background-position: center 30%;
-    filter: blur(34px) saturate(1.25);
+    background-size: 92% auto;
+    background-position: center 28%;
+    filter: blur(14px) saturate(1.1);
   }
 
   .topbar {
@@ -1217,4 +1218,95 @@ a.primary {
   background: #f7f7f5;
   cursor: not-allowed;
   text-decoration: line-through;
+}
+
+/* Прикрепление файла к заявке */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.attach {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.attach input[type="file"] {
+  display: none;
+}
+
+.attach-button {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 14px;
+  background: var(--card);
+  color: var(--fg);
+  font-size: 14px;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.attach:hover .attach-button {
+  border-color: #b9c4cc;
+  background: #fbfcfd;
+}
+
+.attach-hint {
+  font-size: 12.5px;
+  color: #a5a5a0;
+}
+
+.attached {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+}
+
+.attached-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex: none;
+  background: #eef1f3;
+}
+
+.attached-preview.file {
+  display: block;
+}
+
+.attached-name {
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.attached-remove {
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  line-height: 1;
+  color: #56565e;
+  cursor: pointer;
+  flex: none;
+}
+
+.attached-remove:hover {
+  background: rgba(0, 0, 0, 0.09);
 }
