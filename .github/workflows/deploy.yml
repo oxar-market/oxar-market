@@ -1,13 +1,13 @@
 name: Deploy
 
-# Репозиторий приватный и принадлежит организации, поэтому встроенная
-# Git-интеграция Vercel на Hobby недоступна. Собираем здесь и отправляем
-# в Vercel готовую сборку через `vercel deploy --prebuilt`.
+# Лендинг - статика: серверного кода в нём нет, данные берутся из браузера.
+# Поэтому сборка идёт здесь, а на Cloudflare Pages уезжает уже готовый каталог.
 #
-# На бесплатном плане Vercel разрешает сто деплоев в сутки. Пара приложений на
-# каждый PR плюс прод съедали этот лимит за день работы, и прогоны начинали
-# падать не из-за кода. Поэтому PR только проверяется — тесты и сборка, — а
-# деплоится лишь то, что попало в main.
+# Такой деплой (direct upload) не расходует месячную квоту сборок Pages - её
+# тратят только проекты, которые Cloudflare собирает у себя из Git. Прежний
+# путь через Vercel упирался в сто деплоев в сутки и на этом останавливал работу.
+#
+# PR по-прежнему только проверяется: тесты и сборка.
 
 on:
   push:
@@ -46,20 +46,6 @@ jobs:
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: landing
-            project_id_secret: VERCEL_PROJECT_ID_LANDING
-          - name: app
-            project_id_secret: VERCEL_PROJECT_ID_APP
-    env:
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets[matrix.project_id_secret] }}
-      # CLI читает токен отсюда — в аргументах командной строки он был бы виден
-      # в списке процессов раннера и мог утечь в логи.
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -70,14 +56,19 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
 
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production
+      # Ключи публичные - они и так уезжают в браузер, - но в статику их
+      # вписывает сборка, поэтому без них сайт остался бы без данных.
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      - name: Build
-        run: vercel build --prod
-
-      - name: Deploy
-        run: vercel deploy --prebuilt --prod
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/landing/out --project-name=oxar-landing --branch=main
