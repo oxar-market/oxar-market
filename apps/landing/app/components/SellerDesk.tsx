@@ -15,6 +15,7 @@ import {
   type MySeller,
 } from "@/lib/seller";
 import { Notice } from "./Notice";
+import { SellerLots } from "./SellerLots";
 
 // Кабинет продавца. Вход по ссылке на почту, дальше свои места и заявки на них.
 // Онбординг ручной: войти может любой, но местами владеет только тот, чей адрес
@@ -271,6 +272,8 @@ function Desk({ seller }: { seller: MySeller }) {
         taken={(listings ?? []).map((listing) => listing.kind)}
         onAdded={reload}
       />
+
+      <SellerLots listings={listings ?? []} />
 
       <button
         type="button"

@@ -113,3 +113,69 @@ export async function setActive(
   const { error } = await auth.from("listings").update({ active }).eq("id", listingId);
   return error ? "error" : "done";
 }
+
+export type MyLot = {
+  id: string;
+  listing_id: string;
+  start_date: string;
+  end_date: string;
+  reserve_cents: number;
+  closes_at: string;
+  status: string;
+};
+
+export async function myLots(): Promise<MyLot[]> {
+  if (!auth) return [];
+  const { data } = await auth
+    .from("auctions")
+    .select("id,listing_id,start_date,end_date,reserve_cents,closes_at,status")
+    .order("closes_at", { ascending: false });
+  return (data ?? []) as MyLot[];
+}
+
+export type LotBid = {
+  id: string;
+  created_at: string;
+  bidder_handle: string;
+  bidder_contact: string | null;
+  amount_cents: number;
+  creative_url: string | null;
+  creative_text: string | null;
+};
+
+/** Ставки со контактом и креативом - только по своему лоту, отбор в базе. */
+export async function lotBidsForSeller(lotId: string): Promise<LotBid[]> {
+  if (!auth) return [];
+  const { data } = await auth.rpc("bids_for_my_auction", { lot: lotId });
+  return (data ?? []) as LotBid[];
+}
+
+export type LotDraft = {
+  listing_id: string;
+  start_date: string;
+  end_date: string;
+  reserve_cents: number;
+  closes_at: string;
+};
+
+export async function openLot(
+  draft: LotDraft,
+): Promise<"done" | "overlap" | "too_late" | "error"> {
+  if (!auth) return "error";
+  const { error } = await auth.from("auctions").insert(draft);
+
+  if (!error) return "done";
+  if (error.code === "23505") return "overlap";
+  // Торг обязан кончиться не позже, чем за сутки до начала размещения.
+  if (error.message.includes("auctions_closes_before_start")) return "too_late";
+  return "error";
+}
+
+export async function cancelLot(lotId: string): Promise<"done" | "error"> {
+  if (!auth) return "error";
+  const { error } = await auth
+    .from("auctions")
+    .update({ status: "cancelled" })
+    .eq("id", lotId);
+  return error ? "error" : "done";
+}
