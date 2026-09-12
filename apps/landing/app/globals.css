@@ -616,10 +616,10 @@ input:focus {
   width: min(680px, 100%);
 }
 
-/* Макет профиля X: светлый, с настоящими пропорциями и с воздухом.
-   Аватарка стоит в своей строке и не налезает на баннер: наложенные друг на
-   друга места читаются как сломанная вёрстка. Места - сплошные плашки, а не
-   пунктир: пунктирные рамки рядом сливаются в рябь. */
+/* Макет профиля X, собранный по настоящей странице.
+   Аватарка внахлёст, как в жизни, но с широкой белой обводкой - именно она
+   отделяет её от баннера, без обводки два места сливались в кашу.
+   Места - сплошные плашки: рядом стоящие пунктирные рамки дают рябь. */
 
 .xp-mock {
   border: 1px solid #e6eaee;
@@ -633,10 +633,8 @@ input:focus {
 .xp-topline {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 52px;
-  padding: 0 18px;
-  border-bottom: 1px solid #f1f4f6;
+  gap: 14px;
+  padding: 10px 18px;
 }
 
 .xp-arrow {
@@ -644,18 +642,23 @@ input:focus {
   color: #536471;
 }
 
+.xp-topstack {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
 .xp-topname {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 15px;
 }
 
 .xp-posts {
   color: #8b98a5;
   font-size: 12px;
-  margin-left: auto;
 }
 
 .xp-badge {
@@ -680,8 +683,8 @@ input:focus {
   color: #4a7fa5;
   cursor: pointer;
   padding: 6px 9px;
-  /* Только цвет и рамка: размеры и координаты не трогаем, чтобы наведение
-     не пересчитывало лэйаут. */
+  /* Только цвет и рамка: размеры не трогаем, чтобы наведение не
+     пересчитывало лэйаут. */
   transition: background 0.14s, border-color 0.14s, color 0.14s;
 }
 
@@ -700,24 +703,28 @@ input:focus {
 
 .xp-banner {
   display: block;
-  width: calc(100% - 24px);
-  margin: 12px;
+  width: 100%;
   aspect-ratio: 3 / 1;
-  border-radius: 10px;
+  border-radius: 0;
+  border-width: 1px 0;
 }
 
 .xp-avatar-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 2px 18px 0;
+  padding: 0 18px;
+  /* Ровно столько, сколько занимает нижняя половина аватарки */
+  height: 46px;
 }
 
 .xp-avatar {
-  width: 84px;
-  height: 84px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
+  transform: translateY(-46px);
+  border: 4px solid #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -725,18 +732,36 @@ input:focus {
   flex: none;
 }
 
-.xp-editbtn {
+.xp-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.xp-round {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
   border: 1px solid #cfd9de;
-  border-radius: 999px;
-  padding: 7px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
+  color: #536471;
+}
+
+.xp-follow {
+  border-radius: 999px;
+  background: #0f1419;
+  color: #fff;
+  padding: 7px 17px;
+  font-size: 12.5px;
   font-weight: 700;
-  color: #0f1419;
-  white-space: nowrap;
 }
 
 .xp-lines {
-  padding: 14px 18px 16px;
+  padding: 6px 18px 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -763,7 +788,7 @@ input:focus {
 
 .xp-wide {
   text-align: left;
-  padding: 10px 10px;
+  padding: 10px;
 }
 
 .xp-meta {
@@ -783,7 +808,6 @@ input:focus {
   gap: 20px;
   color: #8b98a5;
   font-size: 13px;
-  padding-top: 2px;
 }
 
 .xp-counts strong {
@@ -798,7 +822,7 @@ input:focus {
   color: #8b98a5;
   font-size: 13px;
   font-weight: 500;
-  height: 48px;
+  height: 46px;
 }
 
 .xp-tabs span {
@@ -813,13 +837,52 @@ input:focus {
   box-shadow: inset 0 -3px 0 #1d9bf0;
 }
 
+/* Пост под табами: закреплённое место продаётся вместе с ним */
+
+.xp-post {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px 16px;
+}
+
+.xp-post-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #eef3f6;
+  flex: none;
+}
+
+.xp-post-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.xp-post-head {
+  font-size: 13px;
+  color: #8b98a5;
+}
+
+.xp-post-head strong {
+  color: #0f1419;
+}
+
 .xp-pinned {
   display: block;
-  width: calc(100% - 24px);
-  margin: 12px;
-  height: 70px;
+  width: 100%;
+  height: 92px;
   text-align: left;
   padding: 10px 12px;
+}
+
+.xp-post-actions {
+  display: flex;
+  gap: 42px;
+  color: #8b98a5;
+  font-size: 12px;
 }
 
 .xp {
@@ -902,12 +965,22 @@ a.primary {
   }
 
   .xp-avatar-row {
-    padding: 2px 14px 0;
+    padding: 0 14px;
+    height: 36px;
   }
 
   .xp-avatar {
-    width: 68px;
-    height: 68px;
+    width: 72px;
+    height: 72px;
+    transform: translateY(-36px);
+  }
+
+  .xp-post {
+    padding: 12px 14px 14px;
+  }
+
+  .xp-post-actions {
+    gap: 28px;
   }
 
   .xp-lines {
