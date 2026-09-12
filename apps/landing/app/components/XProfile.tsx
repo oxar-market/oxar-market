@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { formatUsd, placementSpec, type PlacementKind } from "@oxar/core";
 import { offersFor, type Offer } from "@/lib/listings";
+import { closeDueLots, openLots, type Lot } from "@/lib/auctions";
+import { AuctionLot } from "./AuctionLot";
 import { RequestPlacement } from "./RequestPlacement";
 import {
   ArrowLeft,
@@ -39,6 +41,7 @@ type Role = "creator" | "advertiser";
 export function XProfile({ role }: { role: Role }) {
   const [picked, setPicked] = useState<PlacementKind | null>(null);
   const [offers, setOffers] = useState<Offer[] | null>(null);
+  const [lots, setLots] = useState<Lot[] | null>(null);
   const [requesting, setRequesting] = useState<Offer | null>(null);
 
   useEffect(() => {
@@ -46,9 +49,17 @@ export function XProfile({ role }: { role: Role }) {
     if (!picked || role !== "advertiser") return;
     let live = true;
     setOffers(null);
+    setLots(null);
     offersFor(picked).then((rows) => {
       if (live) setOffers(rows);
     });
+    // Сначала закрываем лоты с истёкшим сроком, потом читаем: иначе в списке
+    // висел бы торг, который по времени уже кончился.
+    closeDueLots()
+      .then(() => openLots(picked))
+      .then((rows) => {
+        if (live) setLots(rows);
+      });
     return () => {
       live = false;
     };
@@ -199,12 +210,18 @@ export function XProfile({ role }: { role: Role }) {
             <>
               {offers === null && <p className="muted small">Loading…</p>}
 
-              {offers?.length === 0 && (
+              {offers?.length === 0 && lots?.length === 0 && (
                 <p className="muted small">
                   Nobody is selling this spot yet. Join the waitlist and you get it
                   first.
                 </p>
               )}
+
+              {/* Торг идёт первым: у него есть срок, а цены на полке никуда не
+                  денутся. */}
+              {lots?.map((lot) => (
+                <AuctionLot key={lot.id} lot={lot} />
+              ))}
 
               {offers?.map((offer) => (
                 <button
