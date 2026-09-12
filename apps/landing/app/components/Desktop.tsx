@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { APPS, FILES, type DesktopFile } from "@/lib/desktop";
 import { useIconLayout, type Layout } from "@/lib/use-icon-layout";
+import { useSellerAccount } from "@/lib/use-seller-account";
 import { SellerDesk } from "./SellerDesk";
 import { Waitlist } from "./Waitlist";
 import { Window } from "./Window";
@@ -52,6 +53,21 @@ const MOBILE_POSITIONS: Layout = {
   x: { x: 14, y: 38 },
 };
 
+/** Слот кнопки в доке: скрытый схлопывается по ширине, а не исчезает рывком. */
+function DockSlot({ show, children }: { show: boolean; children: React.ReactNode }) {
+  return (
+    <span
+      className={show ? "dock-slot" : "dock-slot off"}
+      aria-hidden={!show}
+      // inert убирает скрытую кнопку из фокуса и из-под курсора: видимой её нет,
+      // и нажать её нельзя ни мышью, ни табом.
+      inert={!show}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function Desktop() {
   const [role, setRole] = useState<Role>("creator");
   // При первом заходе одно окно уже открыто: рабочий стол без подсказки
@@ -60,6 +76,11 @@ export function Desktop() {
 
   const { positions, surface, onPointerDown, onPointerMove, onPointerUp } =
     useIconLayout(DEFAULT_POSITIONS, MOBILE_POSITIONS);
+
+  // Кабинет и звонок - две стороны одной дороги. Есть свои места - значит
+  // разговор уже был, и предлагать его снова незачем. Мест нет - значит
+  // начинать надо с разговора, а не с пустого кабинета.
+  const account = useSellerAccount();
 
   function activate(slug: string) {
     const item = ITEMS.find((candidate) => candidate.slug === slug);
@@ -133,23 +154,41 @@ export function Desktop() {
           <img src="/icons/purple.png" alt="" draggable={false} />
         </button>
         <span className="dock-line" aria-hidden />
-        <button className="dock-item" onClick={() => setOpen({ kind: "waitlist" })}>
-          Join waitlist
-        </button>
-        {role === "creator" ? (
-          <>
-            <button className="dock-item" onClick={() => setOpen({ kind: "desk" })}>
-              My spots
-            </button>
-            <a className="dock-item" href={CALL_URL} target="_blank" rel="noreferrer">
-              Book a call
-            </a>
-          </>
-        ) : (
+
+        {/* Кнопки не появляются и не исчезают рывком: каждая живёт в слоте,
+            который схлопывается по ширине. Док центрирован, поэтому остальные
+            съезжают к середине сами. */}
+        <DockSlot show>
+          <button className="dock-item" onClick={() => setOpen({ kind: "waitlist" })}>
+            Join waitlist
+          </button>
+        </DockSlot>
+
+        <DockSlot show={role === "creator" && account.status === "seller"}>
+          <button className="dock-item" onClick={() => setOpen({ kind: "desk" })}>
+            My spots
+          </button>
+        </DockSlot>
+
+        <DockSlot show={role === "creator" && account.status !== "seller"}>
+          <a className="dock-item" href={CALL_URL} target="_blank" rel="noreferrer">
+            Book a call
+          </a>
+        </DockSlot>
+
+        {/* Одобренный продавец с другого телефона выглядит как гость, и без
+            этой кнопки войти ему было бы нечем. */}
+        <DockSlot show={role === "creator" && account.status === "guest"}>
+          <button className="dock-quiet" onClick={() => setOpen({ kind: "desk" })}>
+            Sign in
+          </button>
+        </DockSlot>
+
+        <DockSlot show={role === "advertiser"}>
           <button className="dock-item" onClick={() => setOpen({ kind: "x" })}>
             Browse placements
           </button>
-        )}
+        </DockSlot>
       </nav>
 
       {open?.kind === "file" && (
@@ -174,7 +213,7 @@ export function Desktop() {
 
       {open?.kind === "desk" && (
         <Window title="My spots" onClose={() => setOpen(null)}>
-          <SellerDesk />
+          <SellerDesk account={account} />
         </Window>
       )}
 
