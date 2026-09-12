@@ -34,8 +34,18 @@ export function Waitlist() {
     event.preventDefault();
     setError("");
 
+    if (!cleanHandle) {
+      setError("Your X handle goes here, without the @.");
+      return;
+    }
     if (!isValidHandle(cleanHandle)) {
-      setError("Handle should be letters, numbers or underscores, up to 15.");
+      setError("A handle is letters, numbers or underscores, up to 15 of them.");
+      return;
+    }
+    // Продавцу без числа подписчиков нечего показать покупателю, поэтому
+    // здесь поле обязательное. Покупателю оно не нужно вовсе.
+    if (side === "seller" && !followers.trim()) {
+      setError("How many followers does the account have?");
       return;
     }
     if (followers.trim() && followerCount === null) {
@@ -43,7 +53,9 @@ export function Waitlist() {
       return;
     }
     if (contact.trim() && !isValidContact(contact)) {
-      setError("Leave an email or a Telegram handle, or leave it empty.");
+      setError(
+        "Use an email with a domain, like you@mail.com, or a Telegram handle with the @.",
+      );
       return;
     }
 
@@ -86,7 +98,7 @@ export function Waitlist() {
   }
 
   return (
-    <form className="card" id="waitlist" onSubmit={submit}>
+    <form className="card" id="waitlist" onSubmit={submit} noValidate>
       <h2>Join the waitlist</h2>
 
       <div className="sides">
@@ -118,13 +130,13 @@ export function Waitlist() {
             placeholder="yourhandle"
             autoComplete="off"
             spellCheck={false}
-            required
           />
         </span>
       </label>
 
       <label>
-        Followers
+        Followers{" "}
+        {side === "buyer" && <span className="optional">optional</span>}
         <input
           value={followers}
           onChange={(e) => setFollowers(e.target.value.replace(/[^\d.,\skmKM]/g, ""))}
@@ -138,7 +150,7 @@ export function Waitlist() {
         <input
           value={contact}
           onChange={(e) => setContact(e.target.value)}
-          placeholder="you@example.com"
+          placeholder="you@mail.com or @telegram"
           autoComplete="off"
         />
       </label>
