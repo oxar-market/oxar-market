@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { estimate } from "@/lib/estimate";
-import { HANDLE_PATTERN, normalizeHandle, submitWaitlist } from "@/lib/waitlist";
+import { estimate, isValidHandle, normalizeHandle } from "@oxar/core";
+import { submitWaitlist } from "@/lib/waitlist";
 
 type Side = "seller" | "buyer";
 type Status = "idle" | "sending" | "done" | "already" | "error";
@@ -24,7 +24,7 @@ export function Waitlist() {
     event.preventDefault();
     setError("");
 
-    if (!HANDLE_PATTERN.test(cleanHandle)) {
+    if (!isValidHandle(cleanHandle)) {
       setError("Handle should be letters, numbers or underscores, up to 15.");
       return;
     }

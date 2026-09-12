@@ -7,13 +7,6 @@
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-/** Правила X: латиница, цифры, подчёркивание, до 15 символов. */
-export const HANDLE_PATTERN = /^[A-Za-z0-9_]{1,15}$/;
-
-export function normalizeHandle(input: string): string {
-  return input.trim().replace(/^@/, "");
-}
-
 export type WaitlistEntry = {
   x_handle: string;
   side: "seller" | "buyer";
