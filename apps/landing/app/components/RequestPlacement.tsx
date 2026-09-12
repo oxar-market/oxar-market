@@ -11,6 +11,7 @@ import {
   type Offer,
 } from "@/lib/listings";
 import { Notice } from "./Notice";
+import { MAX_BYTES, uploadCreative } from "@/lib/upload";
 
 // Заявка на размещение живёт здесь же, в окне приложения: отдельного сайта для
 // покупателя больше нет.
@@ -31,6 +32,8 @@ export function RequestPlacement({
   const [handle, setHandle] = useState("");
   const [contact, setContact] = useState("");
   const [creative, setCreative] = useState("");
+  const [file, setFile] = useState<{ name: string; url: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState("");
 
@@ -64,11 +67,17 @@ export function RequestPlacement({
       return;
     }
 
+    if (uploading) {
+      setError("The file is still uploading.");
+      return;
+    }
+
     setStatus("sending");
     const result = await requestPlacement({
       listing_id: offer.id,
       buyer_handle: buyer,
       buyer_contact: contact.trim() || null,
+      creative_url: file?.url ?? null,
       creative_text: creative.trim() || null,
       start_date: chosen,
       end_date: endDate(chosen, offer.term_days),
@@ -159,14 +168,64 @@ export function RequestPlacement({
         />
       </label>
 
-      <label>
-        What goes up <span className="optional">link or text</span>
+      <div className="field">
+        <span className="field-label">What goes up</span>
         <input
           value={creative}
           onChange={(event) => setCreative(event.target.value)}
           placeholder="https://… or the exact text"
         />
-      </label>
+        <label className="attach">
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quicktime"
+            onChange={async (event) => {
+              const picked = event.target.files?.[0];
+              event.target.value = "";
+              if (!picked) return;
+              setError("");
+              setUploading(true);
+              const result = await uploadCreative(picked);
+              setUploading(false);
+              if (result.ok) {
+                setFile({ name: picked.name, url: result.url });
+                return;
+              }
+              setError(
+                result.reason === "type"
+                  ? "Attach an image or an mp4."
+                  : result.reason === "size"
+                    ? `Keep the file under ${Math.round(MAX_BYTES / 1024 / 1024)} MB.`
+                    : "Could not upload that file. Try again.",
+              );
+            }}
+          />
+          <span className="attach-button">
+            {uploading ? "Uploading…" : "Attach a file"}
+          </span>
+          <span className="attach-hint">image or mp4, up to 8 MB</span>
+        </label>
+
+        {file && (
+          <div className="attached">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {file.url.match(/\.(png|jpe?g|webp|gif)$/i) ? (
+              <img src={file.url} alt="" className="attached-preview" />
+            ) : (
+              <span className="attached-preview file" aria-hidden />
+            )}
+            <span className="attached-name">{file.name}</span>
+            <button
+              type="button"
+              className="attached-remove"
+              onClick={() => setFile(null)}
+              aria-label="Remove file"
+            >
+              ×
+            </button>
+          </div>
+        )}
+      </div>
 
       <label>
         Email or Telegram <span className="optional">optional</span>

@@ -60,6 +60,7 @@ export type PlacementRequest = {
   listing_id: string;
   buyer_handle: string;
   buyer_contact: string | null;
+  creative_url: string | null;
   creative_text: string | null;
   start_date: string;
   end_date: string;

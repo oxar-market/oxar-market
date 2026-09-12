@@ -62,7 +62,7 @@ export const FILES: DesktopFile[] = [
   {
     slug: "pricing",
     name: "What it costs",
-    icon: "/icons/light-blue.svg",
+    icon: "/icons/green-icon.png",
     title: "Pricing",
     x: 84,
     y: 44,
