@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { APPS, FILES, type DesktopFile } from "@/lib/desktop";
 import { useIconLayout, type Layout } from "@/lib/use-icon-layout";
+import { SellerDesk } from "./SellerDesk";
 import { Waitlist } from "./Waitlist";
 import { Window } from "./Window";
 import { XProfile } from "./XProfile";
@@ -12,6 +13,7 @@ type Open =
   | { kind: "file"; file: DesktopFile }
   | { kind: "waitlist" }
   | { kind: "x" }
+  | { kind: "desk" }
   | null;
 
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
@@ -135,9 +137,14 @@ export function Desktop() {
           Join waitlist
         </button>
         {role === "creator" ? (
-          <a className="dock-item" href={CALL_URL} target="_blank" rel="noreferrer">
-            Book a call
-          </a>
+          <>
+            <button className="dock-item" onClick={() => setOpen({ kind: "desk" })}>
+              My spots
+            </button>
+            <a className="dock-item" href={CALL_URL} target="_blank" rel="noreferrer">
+              Book a call
+            </a>
+          </>
         ) : (
           <button className="dock-item" onClick={() => setOpen({ kind: "x" })}>
             Browse placements
@@ -162,6 +169,12 @@ export function Desktop() {
       {open?.kind === "waitlist" && (
         <Window title="waitlist" onClose={() => setOpen(null)}>
           <Waitlist />
+        </Window>
+      )}
+
+      {open?.kind === "desk" && (
+        <Window title="My spots" onClose={() => setOpen(null)}>
+          <SellerDesk />
         </Window>
       )}
 
