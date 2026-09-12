@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { estimate, isValidHandle, normalizeHandle } from "@oxar/core";
+import {
+  estimate,
+  isValidContact,
+  isValidHandle,
+  normalizeContact,
+  normalizeHandle,
+  parseFollowers,
+} from "@oxar/core";
 import { submitWaitlist } from "@/lib/waitlist";
 
 type Side = "seller" | "buyer";
@@ -16,9 +23,11 @@ export function Waitlist() {
   const [error, setError] = useState("");
 
   const cleanHandle = normalizeHandle(handle);
-  const followerCount = Number.parseInt(followers.replace(/\D/g, ""), 10);
+  const followerCount = parseFollowers(followers);
   const preview =
-    side === "seller" && followerCount >= 100 ? estimate(followerCount) : null;
+    side === "seller" && followerCount !== null && followerCount >= 100
+      ? estimate(followerCount)
+      : null;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -28,13 +37,21 @@ export function Waitlist() {
       setError("Handle should be letters, numbers or underscores, up to 15.");
       return;
     }
+    if (followers.trim() && followerCount === null) {
+      setError("Followers should be a number, like 12400 or 12.4k.");
+      return;
+    }
+    if (contact.trim() && !isValidContact(contact)) {
+      setError("Leave an email or a Telegram handle, or leave it empty.");
+      return;
+    }
 
     setStatus("sending");
     const result = await submitWaitlist({
       x_handle: cleanHandle,
       side,
-      follower_count: Number.isNaN(followerCount) ? null : followerCount,
-      contact: contact.trim() || null,
+      follower_count: followerCount,
+      contact: contact.trim() ? normalizeContact(contact) : null,
     });
 
     if (result === "created") {
@@ -58,7 +75,7 @@ export function Waitlist() {
         </p>
         {preview && (
           <p className="estimate">
-            Based on {followerCount.toLocaleString("en-US")} followers, your profile
+            Based on {(followerCount ?? 0).toLocaleString("en-US")} followers, your profile
             could bring <strong>${preview.monthlyLow}-${preview.monthlyHigh}</strong>{" "}
             a month. Estimate, not a promise.
           </p>
@@ -90,21 +107,27 @@ export function Waitlist() {
 
       <label>
         Your X handle
-        <input
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          placeholder="@yourhandle"
-          autoComplete="off"
-          required
-        />
+        <span className="prefixed">
+          <span className="prefix" aria-hidden>
+            @
+          </span>
+          <input
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            placeholder="yourhandle"
+            autoComplete="off"
+            spellCheck={false}
+            required
+          />
+        </span>
       </label>
 
       <label>
         Followers
         <input
           value={followers}
-          onChange={(e) => setFollowers(e.target.value)}
-          placeholder="12000"
+          onChange={(e) => setFollowers(e.target.value.replace(/[^\d.,\skmKM]/g, ""))}
+          placeholder="12400"
           inputMode="numeric"
         />
       </label>
@@ -121,7 +144,7 @@ export function Waitlist() {
 
       {preview && (
         <p className="estimate">
-          At {followerCount.toLocaleString("en-US")} followers, renting out your
+          At {(followerCount ?? 0).toLocaleString("en-US")} followers, renting out your
           avatar, banner and bio link could bring{" "}
           <strong>
             ${preview.monthlyLow}-${preview.monthlyHigh}

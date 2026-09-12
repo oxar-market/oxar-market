@@ -32,7 +32,7 @@ import {
  * выставить своё, а это у нас идёт через живой разговор.
  */
 
-const CALL_URL = "https://cal.com/oxar";
+const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
 type Role = "creator" | "advertiser";
 

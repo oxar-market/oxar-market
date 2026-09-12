@@ -22,6 +22,15 @@ export {
 } from "./money.ts";
 
 export {
+  contactKind,
+  isValidContact,
+  normalizeContact,
+  type ContactKind,
+} from "./contact.ts";
+
+export { MAX_FOLLOWERS, parseFollowers } from "./followers.ts";
+
+export {
   estimate,
   type Estimate,
   type PlacementEstimate,
