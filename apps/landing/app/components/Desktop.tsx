@@ -63,7 +63,8 @@ export function Desktop() {
   return (
     <div className="desktop">
       <header className="topbar">
-        <span className="brand">OXAR</span>
+        {/* Переключатель подписан действием, а не ролью: «Creator» рядом с
+            «Advertiser» ничего не объясняет, а «I'm selling» объясняет. */}
         <div className="roles" role="tablist" aria-label="Your side">
           <button
             role="tab"
@@ -71,7 +72,7 @@ export function Desktop() {
             className={role === "creator" ? "role on" : "role"}
             onClick={() => setRole("creator")}
           >
-            Creator
+            I&apos;m selling
           </button>
           <button
             role="tab"
@@ -79,12 +80,9 @@ export function Desktop() {
             className={role === "advertiser" ? "role on" : "role"}
             onClick={() => setRole("advertiser")}
           >
-            Advertiser
+            I&apos;m buying
           </button>
         </div>
-        <span className="hint">
-          {role === "creator" ? "Selling space" : "Buying space"}
-        </span>
       </header>
 
       <div className="icons" ref={surface}>
@@ -120,6 +118,14 @@ export function Desktop() {
       </div>
 
       <nav className="dock">
+        {/* Логотип работает как Home: закрывает окно и возвращает на стол.
+            Крестик в окне остался - на телефоне лист занимает весь экран и
+            перекрывает док, там закрывает он. */}
+        <button className="dock-home" onClick={() => setOpen(null)} aria-label="Home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/purple.png" alt="" draggable={false} />
+        </button>
+        <span className="dock-line" aria-hidden />
         <button className="dock-item" onClick={() => setOpen({ kind: "waitlist" })}>
           Join waitlist
         </button>

@@ -62,37 +62,34 @@ body {
   pointer-events: none;
 }
 
+/* Панели сверху больше нет - только переключатель, висящий над столом. Полоса
+   во всю ширину занимала место и ничего в себе не держала. */
 .topbar {
   position: relative;
   z-index: 3;
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 38px;
-  padding: 0 14px;
-  background: rgba(255, 255, 255, 0.72);
-  border-bottom: 1px solid var(--line);
+  justify-content: center;
+  height: 58px;
   font-size: 13px;
-}
-
-.brand {
-  font-weight: 600;
-  letter-spacing: 0.02em;
 }
 
 .roles {
   display: flex;
   gap: 2px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
-  padding: 2px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
 }
 
 .role {
   border: none;
   background: transparent;
-  border-radius: 6px;
-  padding: 4px 12px;
+  border-radius: 999px;
+  padding: 6px 15px;
   font: inherit;
   color: var(--muted);
   cursor: pointer;
@@ -105,16 +102,11 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-.hint {
-  margin-left: auto;
-  color: var(--muted);
-}
-
 /* Иконки */
 
 .icons {
   position: absolute;
-  inset: 38px 0 92px;
+  inset: 58px 0 92px;
   z-index: 1;
 }
 
@@ -214,6 +206,42 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
+/* Логотип как кнопка Home. Прижат к левому краю дока и отделён линией: это не
+   такое же действие, как соседние кнопки. */
+.dock-home {
+  width: 40px;
+  height: 40px;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: transform 0.14s var(--spring), background 0.14s;
+}
+
+.dock-home img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.dock-home:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.dock-home:active {
+  transform: scale(0.94);
+}
+
+.dock-line {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: var(--line);
+}
+
 .dock-item {
   border: none;
   background: transparent;
@@ -235,7 +263,7 @@ body {
 
 .window-layer {
   position: absolute;
-  inset: 38px 0 92px;
+  inset: 58px 0 92px;
   z-index: 2;
   display: flex;
   align-items: center;
@@ -480,24 +508,13 @@ input:focus {
   }
 
   .topbar {
-    height: 46px;
-    padding: 0 12px;
-    gap: 10px;
     padding-top: env(safe-area-inset-top);
-    height: calc(46px + env(safe-area-inset-top));
-  }
-
-  .brand {
-    font-size: 14px;
-  }
-
-  .hint {
-    display: none;
+    height: calc(58px + env(safe-area-inset-top));
   }
 
   .icons {
     position: absolute;
-    inset: calc(46px + env(safe-area-inset-top)) 0
+    inset: calc(58px + env(safe-area-inset-top)) 0
       calc(104px + env(safe-area-inset-bottom));
     padding: 0;
   }
@@ -520,14 +537,22 @@ input:focus {
   .dock {
     bottom: calc(10px + env(safe-area-inset-bottom));
     width: calc(100% - 20px);
-    justify-content: space-around;
     border-radius: 18px;
     padding: 6px;
   }
 
+  /* Home слева, остальное делит остаток - иначе кнопки разъезжаются */
+  .dock-home {
+    width: 44px;
+    height: 44px;
+    flex: none;
+  }
+
   .dock-item {
-    padding: 12px 10px;
+    flex: 1;
+    padding: 12px 8px;
     font-size: 13.5px;
+    text-align: center;
   }
 
   /* Лист поверх всего, включая верхнюю панель: иначе её кнопки перекрывают
