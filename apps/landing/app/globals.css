@@ -536,15 +536,16 @@ input:focus {
   .window-bar {
     position: relative;
     cursor: default;
-    padding: 10px 12px 12px;
-    padding-top: calc(10px + env(safe-area-inset-top));
+    /* Заголовку листа нужен воздух: прижатый к статусбару, он читается как
+       часть системной панели, а не как шапка окна. */
+    padding: calc(24px + env(safe-area-inset-top)) 14px 18px;
     justify-content: center;
   }
 
   .sheet-grab {
     display: block;
     position: absolute;
-    top: calc(7px + env(safe-area-inset-top));
+    top: calc(10px + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     width: 36px;
@@ -568,8 +569,8 @@ input:focus {
     align-items: center;
     justify-content: center;
     position: absolute;
-    right: 10px;
-    top: calc(6px + env(safe-area-inset-top));
+    right: 12px;
+    top: calc(20px + env(safe-area-inset-top));
     width: 30px;
     height: 30px;
     /* Цель под палец больше самого круга: ловим промахи, не раздувая кнопку */
@@ -593,7 +594,11 @@ input:focus {
   }
 
   .window-body {
-    padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
+    padding: 22px 16px calc(28px + env(safe-area-inset-bottom));
+  }
+
+  .window-title {
+    font-size: 15px;
   }
 }
 
