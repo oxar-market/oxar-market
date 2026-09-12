@@ -4,6 +4,19 @@ import { useEffect, useState } from "react";
 import { formatUsd, placementSpec, type PlacementKind } from "@oxar/core";
 import { offersFor, type Offer } from "@/lib/listings";
 import { RequestPlacement } from "./RequestPlacement";
+import {
+  ArrowLeft,
+  Calendar,
+  Dots,
+  Envelope,
+  Heart,
+  LinkIcon,
+  Pin,
+  Reply,
+  Repost,
+  Share,
+  Verified,
+} from "./icons";
 
 /**
  * Макет профиля X, собранный по настоящей странице: шапка с именем и числом
@@ -60,13 +73,11 @@ export function XProfile({ role }: { role: Role }) {
     <div className="xp">
       <div className="xp-mock">
         <div className="xp-topline">
-          <span className="xp-arrow" aria-hidden>
-            &#8592;
-          </span>
+          <ArrowLeft className="xp-arrow" />
           <span className="xp-topstack">
             <span className="xp-topname">
               Account name
-              <span className="xp-badge" aria-hidden />
+              <Verified className="xp-badge" />
             </span>
             <span className="xp-posts">96 posts</span>
           </span>
@@ -77,8 +88,12 @@ export function XProfile({ role }: { role: Role }) {
         <div className="xp-avatar-row">
           <button {...spot("avatar", "xp-avatar")}>Avatar</button>
           <span className="xp-actions" aria-hidden>
-            <span className="xp-round">···</span>
-            <span className="xp-round">✉</span>
+            <span className="xp-round">
+              <Dots />
+            </span>
+            <span className="xp-round">
+              <Envelope />
+            </span>
             <span className="xp-follow">Follow</span>
           </span>
         </div>
@@ -86,7 +101,7 @@ export function XProfile({ role }: { role: Role }) {
         <div className="xp-lines">
           <div className="xp-nameline">
             <span className="xp-name">Account name</span>
-            <span className="xp-badge" aria-hidden />
+            <Verified className="xp-badge" />
             <button {...spot("name_suffix")}>Name suffix</button>
           </div>
           <span className="xp-handle">@handle</span>
@@ -94,9 +109,18 @@ export function XProfile({ role }: { role: Role }) {
           <button {...spot("bio_text", "xp-wide")}>Bio text</button>
 
           <div className="xp-meta">
-            <button {...spot("bio_link")}>Bio link</button>
-            <button {...spot("location")}>Location</button>
-            <span className="xp-joined">Joined April 2026</span>
+            <span className="xp-meta-item">
+              <LinkIcon className="xp-ico" />
+              <button {...spot("bio_link")}>Bio link</button>
+            </span>
+            <span className="xp-meta-item">
+              <Pin className="xp-ico" />
+              <button {...spot("location")}>Location</button>
+            </span>
+            <span className="xp-meta-item xp-joined">
+              <Calendar className="xp-ico" />
+              Joined April 2026
+            </span>
           </div>
 
           <div className="xp-counts">
@@ -124,9 +148,21 @@ export function XProfile({ role }: { role: Role }) {
             </span>
             <button {...spot("pinned_post", "xp-pinned")}>Pinned post</button>
             <span className="xp-post-actions" aria-hidden>
-              <span>76</span>
-              <span>59</span>
-              <span>159</span>
+              <span>
+                <Reply className="xp-ico" />
+                76
+              </span>
+              <span>
+                <Repost className="xp-ico" />
+                59
+              </span>
+              <span>
+                <Heart className="xp-ico" />
+                159
+              </span>
+              <span>
+                <Share className="xp-ico" />
+              </span>
             </span>
           </div>
         </div>

@@ -996,3 +996,40 @@ a.primary {
     height: 64px;
   }
 }
+
+/* Иконки макета */
+
+.xp-arrow {
+  width: 19px;
+  height: 19px;
+  color: #0f1419;
+  flex: none;
+}
+
+.xp-badge {
+  width: 15px;
+  height: 15px;
+}
+
+.xp-ico {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.xp-round svg {
+  width: 17px;
+  height: 17px;
+}
+
+.xp-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.xp-post-actions span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
