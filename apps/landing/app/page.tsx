@@ -15,8 +15,8 @@ export default function Home() {
           You&apos;re just not charging rent.
         </h1>
         <p className="lead">
-          Sell a specific spot on your X profile — avatar, banner, bio link,
-          pinned post — for a specific number of days. Paid in USDC on Solana.
+          Sell a specific spot on your X profile - avatar, banner, bio link,
+          pinned post - for a specific number of days. Paid in USDC on Solana.
           Escrow releases the money only for time the placement actually ran.
         </p>
         <a href="#waitlist" className="primary link-button">
@@ -105,7 +105,7 @@ export default function Home() {
         <p className="slots">
           Avatar · Banner · Name suffix · Bio text · Bio link · Location · Pinned post
         </p>
-        <p className="muted">X first. More platforms — and physical space — later.</p>
+        <p className="muted">X first. More platforms - and physical space - later.</p>
       </section>
 
       <Waitlist />

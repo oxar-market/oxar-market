@@ -59,7 +59,7 @@ export function Waitlist() {
         {preview && (
           <p className="estimate">
             Based on {followerCount.toLocaleString("en-US")} followers, your profile
-            could bring <strong>${preview.monthlyLow}–${preview.monthlyHigh}</strong>{" "}
+            could bring <strong>${preview.monthlyLow}-${preview.monthlyHigh}</strong>{" "}
             a month. Estimate, not a promise.
           </p>
         )}
@@ -124,7 +124,7 @@ export function Waitlist() {
           At {followerCount.toLocaleString("en-US")} followers, renting out your
           avatar, banner and bio link could bring{" "}
           <strong>
-            ${preview.monthlyLow}–${preview.monthlyHigh}
+            ${preview.monthlyLow}-${preview.monthlyHigh}
           </strong>{" "}
           a month. Estimate, not a promise.
         </p>

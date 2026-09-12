@@ -1,10 +1,10 @@
-# OXAR — текст лендинга (oxar.app)
+# OXAR - текст лендинга (oxar.app)
 
-Язык: английский. Аудитория — крипто-твиттер и стартапы Colosseum, русский тут только помешает.
+Язык: английский. Аудитория - крипто-твиттер и стартапы Colosseum, русский тут только помешает.
 Тон: коротко, конкретно, без «unlock/empower/revolutionize».
 
 ⚠️ Всё, что помечено `[VERIFY]`, нельзя публиковать без подтверждения первоисточником.
-Сайт пушит Superteam Ukraine — одна неподтверждённая цифра стоит дороже, чем весь трафик.
+Сайт пушит Superteam Ukraine - одна неподтверждённая цифра стоит дороже, чем весь трафик.
 
 ---
 
@@ -18,7 +18,7 @@
 
 **Подзаголовок:**
 
-> Sell a specific spot on your X profile — avatar, banner, bio link, pinned post — for a specific number of days.
+> Sell a specific spot on your X profile - avatar, banner, bio link, pinned post - for a specific number of days.
 > Paid in USDC on Solana. Escrow releases the money only for time the placement actually ran.
 
 **CTA:** `Join the waitlist` → поле для X handle
@@ -30,8 +30,8 @@
 
 Строчка над блоком: `Nobody built the market for it. People just do it in DMs.`
 
-- `[VERIFY]` Solana sold ad space on its own logo — **$167,000** raised for Nepal flood relief
-- `[VERIFY]` @FabianoSolana sells space on his X banner — **$1,600** and counting
+- `[VERIFY]` Solana sold ad space on its own logo - **$167,000** raised for Nepal flood relief
+- `[VERIFY]` @FabianoSolana sells space on his X banner - **$1,600** and counting
 - `[VERIFY]` Jurassic Fi paid Superteam members to run its avatar on their profiles
 - TikTokers rent out their foreheads
 
@@ -44,21 +44,21 @@
 Ввод: X handle (или число подписчиков вручную).
 Вывод: **диапазон**, не одно число, с подписью `estimate, not a promise`.
 
-Честная формула (пока нет реальных ставок — после медиакита Superteam пересчитать):
+Честная формула (пока нет реальных ставок - после медиакита Superteam пересчитать):
 
 ```
 monthly_potential = Σ (base_rate(slot_type, follower_band) × 30 days × occupancy)
 occupancy = 0.3   // консервативно: место занято треть месяца
 ```
 
-Показывать три строки, а не одну сумму — так виднее, что именно продаётся:
+Показывать три строки, а не одну сумму - так виднее, что именно продаётся:
 
 ```
-Avatar        7 days   $ — 
-Banner        7 days   $ —
-Bio link     30 days   $ —
+Avatar        7 days   $ - 
+Banner        7 days   $ -
+Bio link     30 days   $ -
 ────────────────────────────
-Your account could earn    $X – $Y / month
+Your account could earn    $X - $Y / month
 ```
 
 **Правило:** лучше занизить. Человек, который поверил в $1,000 и заработал $80, не вернётся
@@ -71,20 +71,20 @@ Your account could earn    $X – $Y / month
 **For creators**
 
 1. **Get verified.** We check the account is yours and that the audience is real. Manual, one-time.
-2. **List your spots.** Pick what you're willing to sell — avatar, banner, bio, pinned post — set your price and your calendar.
+2. **List your spots.** Pick what you're willing to sell - avatar, banner, bio, pinned post - set your price and your calendar.
 3. **Approve and get paid.** Every request comes to you with the exact creative attached. Reject anything you don't want on your profile. Money is already in escrow before you say yes.
 
 **For advertisers**
 
 1. **Pick a spot.** Browse by placement type, audience size and price. See what's free and when.
-2. **Pay into escrow.** USDC on Solana. Funds are locked, not sent — the creator can't touch them until the placement runs.
+2. **Pay into escrow.** USDC on Solana. Funds are locked, not sent - the creator can't touch them until the placement runs.
 3. **Get proof.** We check the profile on a schedule and log it. If the placement comes down early, you get the unused time back.
 
 ---
 
 ## 5. Why this isn't a DM with extra steps
 
-- **Escrow, not trust.** The money sits in an on-chain escrow. Nobody can pull it — including us.
+- **Escrow, not trust.** The money sits in an on-chain escrow. Nobody can pull it - including us.
 - **Proof of placement.** We record that the spot was actually up, for the whole term.
 - **Pro-rata refunds.** Placement removed on day 3 of 5? You pay for 3.
 - **Creator control.** Every request is approved manually. Your profile, your call.
@@ -95,7 +95,7 @@ Your account could earn    $X – $Y / month
 
 `Avatar · Banner · Name suffix · Bio text · Bio link · Location · Pinned post`
 
-Подпись: `X first. More platforms — and physical space — later.`
+Подпись: `X first. More platforms - and physical space - later.`
 
 ---
 
@@ -110,7 +110,7 @@ Your account could earn    $X – $Y / month
 - follower count (автоматически, если сможем; иначе вручную)
 - email или telegram
 
-После отправки — сразу показать персональную оценку из калькулятора. Это и есть причина
+После отправки - сразу показать персональную оценку из калькулятора. Это и есть причина
 оставить handle, а не почту.
 
 ---
