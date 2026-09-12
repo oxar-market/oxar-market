@@ -106,7 +106,7 @@ function Slot({
   const label = PLACEMENTS.find((p) => p.kind === kind)?.label ?? kind;
 
   if (!listing) {
-    return <span className="slot off">{label} — not for sale</span>;
+    return <span className="slot off">{label} - not for sale</span>;
   }
 
   return (

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PLACEMENTS, formatUsd, type PlacementKind } from "@oxar/core";
 import { listings } from "@/lib/db";
 
-export const metadata = { title: "OXAR — available placements" };
+export const metadata = { title: "OXAR - available placements" };
 
 export default async function Marketplace({
   searchParams,

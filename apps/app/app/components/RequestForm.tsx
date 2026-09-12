@@ -95,7 +95,7 @@ export function RequestForm({
                 day.date === start ? "day on" : day.free ? "day" : "day busy"
               }
               onClick={() => setStart(day.date)}
-              title={day.free ? day.date : `${day.date} — taken`}
+              title={day.free ? day.date : `${day.date} - taken`}
             >
               {day.label}
             </button>
