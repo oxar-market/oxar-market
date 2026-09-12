@@ -1032,3 +1032,33 @@ a.primary {
   align-items: center;
   gap: 6px;
 }
+
+/* Поле с постоянным префиксом: хэндл вводится без @ */
+
+.prefixed {
+  display: flex;
+  align-items: center;
+  background: #fbfbf9;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding-left: 11px;
+}
+
+.prefixed:focus-within {
+  border-color: var(--accent);
+}
+
+.prefix {
+  color: #9a9a94;
+  font-size: 15px;
+}
+
+.prefixed input {
+  border: none;
+  background: transparent;
+  padding-left: 2px;
+}
+
+.prefixed input:focus {
+  outline: none;
+}

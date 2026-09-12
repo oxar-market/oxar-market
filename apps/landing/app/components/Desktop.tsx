@@ -14,7 +14,7 @@ type Open =
   | { kind: "x" }
   | null;
 
-const CALL_URL = "https://cal.com/oxar";
+const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
 type Item =
   | { slug: string; kind: "file"; name: string; file: DesktopFile }
