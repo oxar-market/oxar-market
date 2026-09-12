@@ -1062,3 +1062,72 @@ a.primary {
 .prefixed input:focus {
   outline: none;
 }
+
+/* Сообщения формы в стиле системных уведомлений: плашка, иконка, спокойный цвет */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 13px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  animation: notice-in 0.2s var(--spring);
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notice-ico {
+  flex: none;
+  display: flex;
+  margin-top: 1px;
+}
+
+.notice-ico svg {
+  width: 17px;
+  height: 17px;
+}
+
+.notice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notice-text strong {
+  font-weight: 600;
+}
+
+.notice.error {
+  background: rgba(255, 59, 48, 0.08);
+  color: #b3261e;
+}
+
+.notice.error .notice-ico {
+  color: #ff3b30;
+}
+
+.notice.success {
+  background: rgba(52, 199, 89, 0.1);
+  color: #1d6b35;
+}
+
+.notice.success .notice-ico {
+  color: #34c759;
+}
+
+.notice.success .notice-text strong,
+.notice.error .notice-text strong {
+  color: inherit;
+}

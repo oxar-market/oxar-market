@@ -10,6 +10,7 @@ import {
   type BusyRange,
   type Offer,
 } from "@/lib/listings";
+import { Notice } from "./Notice";
 
 // Заявка на размещение живёт здесь же, в окне приложения: отдельного сайта для
 // покупателя больше нет.
@@ -85,12 +86,10 @@ export function RequestPlacement({
   if (status === "done") {
     return (
       <div className="card">
-        <h2>Request sent</h2>
-        <p>
-          @{offer.seller.x_handle} sees your request with the creative attached
-          and either approves it or turns it down. Nothing is charged until they
-          approve.
-        </p>
+        <Notice tone="success" title="Request sent">
+          @{offer.seller.x_handle} sees your request with the creative attached and
+          either approves it or turns it down. Nothing is charged until they approve.
+        </Notice>
         <p className="muted small">
           {chosen} to {endDate(chosen, offer.term_days)} ·{" "}
           {formatUsd(offer.price_cents)}
@@ -179,7 +178,7 @@ export function RequestPlacement({
         />
       </label>
 
-      {error && <p className="error">{error}</p>}
+      {error && <Notice tone="error">{error}</Notice>}
 
       <button type="submit" className="primary" disabled={status === "sending"}>
         {status === "sending"
