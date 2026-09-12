@@ -116,8 +116,19 @@ body {
   transform: translateY(-1px);
 }
 
+.icon {
+  touch-action: none;
+}
+
 .icon:active {
-  transform: scale(0.97);
+  cursor: grabbing;
+}
+
+/* Иконка в руке: приподнята и полупрозрачна, как в мобильных системах */
+.icon.lifted {
+  opacity: 0.85;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .icon-art {
@@ -559,18 +570,32 @@ input:focus {
   }
 
   .sheet-done {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: absolute;
-    right: 6px;
-    top: calc(4px + env(safe-area-inset-top));
-    min-width: 64px;
-    min-height: 44px;
+    right: 10px;
+    top: calc(6px + env(safe-area-inset-top));
+    width: 30px;
+    height: 30px;
+    /* Цель под палец больше самого круга: ловим промахи, не раздувая кнопку */
+    padding: 0;
     border: none;
-    background: transparent;
-    font: inherit;
-    font-size: 15px;
-    color: var(--accent);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.06);
+    color: #56565e;
     cursor: pointer;
+  }
+
+  .sheet-done::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
+
+  .sheet-done svg {
+    width: 17px;
+    height: 17px;
   }
 
   .window-body {

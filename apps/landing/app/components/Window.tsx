@@ -109,9 +109,21 @@ export function Window({
           />
           <span className="window-title">{title}</span>
           {/* На телефоне точка в углу не читается как кнопка и попадает под
-              палец плохо - нужна настоящая цель размером с палец. */}
-          <button type="button" className="sheet-done" onClick={onClose}>
-            Done
+              палец плохо - нужен крестик в круге размером с палец. */}
+          <button
+            type="button"
+            className="sheet-done"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path
+                d="M7.5 7.5l9 9m0-9l-9 9"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
         </div>
         <div className="window-body">{children}</div>
