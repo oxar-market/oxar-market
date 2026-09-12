@@ -39,6 +39,10 @@ export function Window({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  function isSheet() {
+    return window.matchMedia("(max-width: 760px)").matches;
+  }
+
   function startDrag(event: React.PointerEvent) {
     // Тянуть можно только за заголовок, и только основной кнопкой.
     if (event.button !== 0) return;
@@ -53,15 +57,37 @@ export function Window({
   function onDrag(event: React.PointerEvent) {
     const state = drag.current;
     if (!state || state.pointerId !== event.pointerId || !frame.current) return;
+
+    // На телефоне это не окно, а лист: он ходит только вниз и только чтобы
+    // закрыться. Вверх не тянем, иначе контент уедет под статусбар.
+    const sheet = isSheet();
     offset.current = {
-      x: event.clientX - state.startX,
-      y: event.clientY - state.startY,
+      x: sheet ? 0 : event.clientX - state.startX,
+      y: sheet
+        ? Math.max(0, event.clientY - state.startY)
+        : event.clientY - state.startY,
     };
     frame.current.style.transform = `translate3d(${offset.current.x}px, ${offset.current.y}px, 0)`;
   }
 
   function endDrag(event: React.PointerEvent) {
-    if (drag.current?.pointerId === event.pointerId) drag.current = null;
+    if (drag.current?.pointerId !== event.pointerId) return;
+    drag.current = null;
+
+    if (!isSheet() || !frame.current) return;
+
+    // Утянул лист вниз больше чем на 110 пикселей - закрываем, как в
+    // мобильных системах. Иначе возвращаем на место.
+    if (offset.current.y > 110) {
+      onClose();
+      return;
+    }
+    frame.current.style.transition = "transform 0.18s var(--spring)";
+    frame.current.style.transform = "translate3d(0, 0, 0)";
+    offset.current = { x: 0, y: 0 };
+    window.setTimeout(() => {
+      if (frame.current) frame.current.style.transition = "";
+    }, 200);
   }
 
   return (
@@ -74,6 +100,7 @@ export function Window({
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
+          <span className="sheet-grab" aria-hidden />
           <button
             type="button"
             className="window-close"
@@ -81,6 +108,11 @@ export function Window({
             aria-label="Close"
           />
           <span className="window-title">{title}</span>
+          {/* На телефоне точка в углу не читается как кнопка и попадает под
+              палец плохо - нужна настоящая цель размером с палец. */}
+          <button type="button" className="sheet-done" onClick={onClose}>
+            Done
+          </button>
         </div>
         <div className="window-body">{children}</div>
       </div>

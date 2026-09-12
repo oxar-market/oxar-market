@@ -276,6 +276,11 @@ body {
   color: var(--muted);
 }
 
+.sheet-grab,
+.sheet-done {
+  display: none;
+}
+
 .window-body {
   padding: 24px;
   overflow-y: auto;
@@ -436,25 +441,71 @@ input:focus {
 /* Телефон: свободного стола нет, иконки идут сеткой, окна - на весь экран */
 
 @media (max-width: 760px) {
+  /* Домашний экран: иконки сеткой, как в мобильной системе */
+
+  .topbar {
+    height: 46px;
+    padding: 0 12px;
+    gap: 10px;
+    padding-top: env(safe-area-inset-top);
+    height: calc(46px + env(safe-area-inset-top));
+  }
+
+  .brand {
+    font-size: 14px;
+  }
+
+  .hint {
+    display: none;
+  }
+
   .icons {
-    inset: 38px 0 96px;
     position: absolute;
+    inset: calc(46px + env(safe-area-inset-top)) 0
+      calc(104px + env(safe-area-inset-bottom));
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px 0;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px 0;
     align-content: start;
-    padding: 20px 12px;
+    padding: 24px 10px;
     overflow-y: auto;
   }
 
   .icon {
     position: static;
     width: auto;
+    gap: 8px;
   }
 
+  .icon-art {
+    width: 58px;
+    height: 58px;
+    border-radius: 14px;
+  }
+
+  .icon-name {
+    font-size: 11px;
+  }
+
+  .dock {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    width: calc(100% - 20px);
+    justify-content: space-around;
+    border-radius: 18px;
+    padding: 6px;
+  }
+
+  .dock-item {
+    padding: 12px 10px;
+    font-size: 13.5px;
+  }
+
+  /* Лист поверх всего, включая верхнюю панель: иначе её кнопки перекрывают
+     заголовок листа и до закрытия не дотянуться. */
   .window-layer {
     inset: 0;
     padding: 0;
+    z-index: 5;
   }
 
   .window {
@@ -463,28 +514,67 @@ input:focus {
     max-height: none;
     border: none;
     border-radius: 0;
-    animation: sheet-in 0.22s var(--spring);
+    animation: sheet-in 0.24s var(--spring);
   }
 
   @keyframes sheet-in {
     from {
-      opacity: 0.4;
-      transform: translateY(14px);
+      opacity: 0.6;
+      transform: translate3d(0, 18px, 0);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate3d(0, 0, 0);
     }
   }
 
   .window-bar {
+    position: relative;
     cursor: default;
+    padding: 10px 12px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top));
+    justify-content: center;
   }
 
-  .dock {
-    bottom: 14px;
-    width: calc(100% - 24px);
-    justify-content: center;
+  .sheet-grab {
+    display: block;
+    position: absolute;
+    top: calc(7px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: #d6d6d0;
+  }
+
+  .window-close {
+    display: none;
+  }
+
+  .window-title {
+    font-size: 14px;
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  .sheet-done {
+    display: block;
+    position: absolute;
+    right: 6px;
+    top: calc(4px + env(safe-area-inset-top));
+    min-width: 64px;
+    min-height: 44px;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 15px;
+    color: var(--accent);
+    cursor: pointer;
+  }
+
+  .window-body {
+    padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
   }
 }
 
