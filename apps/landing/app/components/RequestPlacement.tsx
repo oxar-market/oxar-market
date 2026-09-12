@@ -14,6 +14,7 @@ import {
 } from "@oxar/core";
 import { busyRanges, requestPlacement, type Offer } from "@/lib/listings";
 import { Calendar } from "./Calendar";
+import { CreativeDrop } from "./CreativeDrop";
 import { Notice } from "./Notice";
 import { MAX_BYTES, uploadCreative } from "@/lib/upload";
 
@@ -81,6 +82,25 @@ export function RequestPlacement({
   const chosen = start || calendar.find((day) => day.canStart)?.date || "";
   const total = orderTotalCents(listing, term);
   const payout = splitPayout(total);
+
+  async function upload(picked: File) {
+    setError("");
+    setUploading(true);
+    const result = await uploadCreative(picked);
+    setUploading(false);
+
+    if (result.ok) {
+      setFile({ name: picked.name, url: result.url });
+      return;
+    }
+    setError(
+      result.reason === "type"
+        ? "Attach an image or an mp4."
+        : result.reason === "size"
+          ? `Keep the file under ${Math.round(MAX_BYTES / 1024 / 1024)} MB.`
+          : "Could not upload that file. Try again.",
+    );
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -220,56 +240,12 @@ export function RequestPlacement({
           onChange={(event) => setCreative(event.target.value)}
           placeholder="https://… or the exact text"
         />
-        <label className="attach">
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quicktime"
-            onChange={async (event) => {
-              const picked = event.target.files?.[0];
-              event.target.value = "";
-              if (!picked) return;
-              setError("");
-              setUploading(true);
-              const result = await uploadCreative(picked);
-              setUploading(false);
-              if (result.ok) {
-                setFile({ name: picked.name, url: result.url });
-                return;
-              }
-              setError(
-                result.reason === "type"
-                  ? "Attach an image or an mp4."
-                  : result.reason === "size"
-                    ? `Keep the file under ${Math.round(MAX_BYTES / 1024 / 1024)} MB.`
-                    : "Could not upload that file. Try again.",
-              );
-            }}
-          />
-          <span className="attach-button">
-            {uploading ? "Uploading…" : "Attach a file"}
-          </span>
-          <span className="attach-hint">image or mp4, up to 8 MB</span>
-        </label>
-
-        {file && (
-          <div className="attached">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {file.url.match(/\.(png|jpe?g|webp|gif)$/i) ? (
-              <img src={file.url} alt="" className="attached-preview" />
-            ) : (
-              <span className="attached-preview file" aria-hidden />
-            )}
-            <span className="attached-name">{file.name}</span>
-            <button
-              type="button"
-              className="attached-remove"
-              onClick={() => setFile(null)}
-              aria-label="Remove file"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        <CreativeDrop
+          file={file}
+          uploading={uploading}
+          onPick={upload}
+          onClear={() => setFile(null)}
+        />
       </div>
 
       <label>
