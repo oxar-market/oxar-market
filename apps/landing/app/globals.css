@@ -223,7 +223,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 16px;
   pointer-events: none;
 }
 
@@ -293,7 +293,7 @@ body {
 }
 
 .window-body {
-  padding: 24px;
+  padding: 22px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -616,13 +616,14 @@ input:focus {
   width: min(680px, 100%);
 }
 
-/* Макет профиля X: светлый, но с настоящими пропорциями.
-   Баннер 3:1, аватарка - 22% ширины профиля и наезжает на баннер половиной,
-   шапка и полоса табов по 53 пикселя, как в самом твиттере. */
+/* Макет профиля X: светлый, с настоящими пропорциями и с воздухом.
+   Аватарка стоит в своей строке и не налезает на баннер: наложенные друг на
+   друга места читаются как сломанная вёрстка. Места - сплошные плашки, а не
+   пунктир: пунктирные рамки рядом сливаются в рябь. */
 
 .xp-mock {
-  border: 1px solid #eff3f4;
-  border-radius: 12px;
+  border: 1px solid #e6eaee;
+  border-radius: 14px;
   overflow: hidden;
   background: #fff;
   color: #0f1419;
@@ -632,26 +633,27 @@ input:focus {
 .xp-topline {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 53px;
-  padding: 0 14px;
+  gap: 12px;
+  height: 52px;
+  padding: 0 18px;
+  border-bottom: 1px solid #f1f4f6;
 }
 
 .xp-arrow {
   font-size: 17px;
-  color: #0f1419;
+  color: #536471;
 }
 
 .xp-topname {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-weight: 700;
   font-size: 15px;
 }
 
 .xp-posts {
-  color: #536471;
+  color: #8b98a5;
   font-size: 12px;
   margin-left: auto;
 }
@@ -662,87 +664,88 @@ input:focus {
   border-radius: 50%;
   background: #1d9bf0;
   display: inline-block;
+  flex: none;
 }
+
+/* Продаваемое место */
 
 .spot {
   position: relative;
-  border: 1px dashed #9bcdf0;
-  background: rgba(29, 155, 240, 0.07);
-  border-radius: 6px;
+  border: 1px solid #cfe4f5;
+  background: #f3f9fe;
+  border-radius: 8px;
   font: inherit;
   font-size: 11px;
-  color: #1a6ca8;
+  line-height: 1;
+  color: #4a7fa5;
   cursor: pointer;
-  padding: 4px 8px;
-  /* Только цвет и граница: размеры и координаты не трогаем, чтобы наведение
+  padding: 6px 9px;
+  /* Только цвет и рамка: размеры и координаты не трогаем, чтобы наведение
      не пересчитывало лэйаут. */
-  transition: background 0.13s, border-color 0.13s, color 0.13s;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
 }
 
 .spot:hover {
-  background: rgba(29, 155, 240, 0.16);
-  border-color: #1d9bf0;
+  background: #e4f2fd;
+  border-color: #8ec6ee;
   color: #0f1419;
 }
 
 .spot.on {
-  background: rgba(29, 155, 240, 0.24);
-  border-style: solid;
+  background: #d8ebfb;
   border-color: #1d9bf0;
   color: #0f1419;
+  box-shadow: inset 0 0 0 1px #1d9bf0;
 }
 
 .xp-banner {
   display: block;
-  width: 100%;
+  width: calc(100% - 24px);
+  margin: 12px;
   aspect-ratio: 3 / 1;
-  border-radius: 0;
-  border-width: 1px 0;
+  border-radius: 10px;
 }
 
 .xp-avatar-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  /* Половина аватарки свисает на баннер, вторая половина занимает эту строку */
-  height: 11%;
-  min-height: 40px;
+  gap: 16px;
+  padding: 2px 18px 0;
 }
 
 .xp-avatar {
-  width: 22%;
-  aspect-ratio: 1;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  transform: translateY(-50%);
-  border: 4px solid #fff;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-bottom: 6px;
+  padding: 0;
+  flex: none;
 }
 
 .xp-editbtn {
-  margin-top: 10px;
   border: 1px solid #cfd9de;
   border-radius: 999px;
-  padding: 6px 15px;
+  padding: 7px 16px;
   font-size: 12px;
   font-weight: 700;
   color: #0f1419;
+  white-space: nowrap;
 }
 
 .xp-lines {
-  padding: 4px 14px 12px;
+  padding: 14px 18px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .xp-nameline {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -753,21 +756,22 @@ input:focus {
 }
 
 .xp-handle {
-  color: #536471;
-  margin-top: -6px;
+  color: #8b98a5;
+  margin-top: -8px;
   font-size: 14px;
 }
 
 .xp-wide {
   text-align: left;
+  padding: 10px 10px;
 }
 
 .xp-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  color: #536471;
+  color: #8b98a5;
 }
 
 .xp-joined {
@@ -776,9 +780,10 @@ input:focus {
 
 .xp-counts {
   display: flex;
-  gap: 18px;
-  color: #536471;
+  gap: 20px;
+  color: #8b98a5;
   font-size: 13px;
+  padding-top: 2px;
 }
 
 .xp-counts strong {
@@ -788,11 +793,12 @@ input:focus {
 .xp-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-bottom: 1px solid #eff3f4;
-  color: #536471;
+  border-top: 1px solid #f1f4f6;
+  border-bottom: 1px solid #f1f4f6;
+  color: #8b98a5;
   font-size: 13px;
   font-weight: 500;
-  height: 53px;
+  height: 48px;
 }
 
 .xp-tabs span {
@@ -804,28 +810,41 @@ input:focus {
 .xp-tabs .on {
   color: #0f1419;
   font-weight: 700;
-  box-shadow: inset 0 -4px 0 #1d9bf0;
+  box-shadow: inset 0 -3px 0 #1d9bf0;
 }
 
 .xp-pinned {
   display: block;
-  width: calc(100% - 28px);
-  margin: 12px 14px 14px;
-  height: 84px;
+  width: calc(100% - 24px);
+  margin: 12px;
+  height: 70px;
   text-align: left;
-  padding: 8px 10px;
+  padding: 10px 12px;
+}
+
+.xp {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .xp-offers {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 
 .xp-offers-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 12px;
+}
+
+.xp-offers-head strong {
+  font-size: 15px;
 }
 
 .xp-clear {
@@ -842,11 +861,20 @@ input:focus {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 11px 13px;
+  padding: 13px 14px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 11px;
   background: var(--card);
+  font: inherit;
   font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.xp-offer:hover {
+  border-color: #b9c4cc;
+  background: #fbfcfd;
 }
 
 .xp-offer-right {
@@ -870,14 +898,28 @@ a.primary {
 
   .xp-topline {
     height: 46px;
+    padding: 0 14px;
+  }
+
+  .xp-avatar-row {
+    padding: 2px 14px 0;
+  }
+
+  .xp-avatar {
+    width: 68px;
+    height: 68px;
+  }
+
+  .xp-lines {
+    padding: 12px 14px 14px;
   }
 
   .xp-tabs {
     font-size: 12px;
-    height: 46px;
+    height: 44px;
   }
 
   .xp-pinned {
-    height: 68px;
+    height: 64px;
   }
 }

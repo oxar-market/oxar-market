@@ -68,6 +68,9 @@ export function XProfile({ role }: { role: Role }) {
 
         <button {...spot("banner", "xp-banner")}>Banner</button>
 
+        {/* Аватарка стоит в своей строке и не налезает на баннер: два
+            соседних места, наложенных друг на друга, читаются как ошибка
+            вёрстки, а не как профиль. */}
         <div className="xp-avatar-row">
           <button {...spot("avatar", "xp-avatar")}>Avatar</button>
           <span className="xp-editbtn" aria-hidden>
