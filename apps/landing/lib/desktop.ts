@@ -4,7 +4,10 @@
 
 export type DesktopFile = {
   slug: string;
+  /** Подпись под иконкой. Без .txt: расширение ничего не добавляет. */
   name: string;
+  /** Своя иконка на каждый файл, чтобы стол читался с первого взгляда. */
+  icon: string;
   title: string;
   body: string[];
   x: number;
@@ -14,7 +17,8 @@ export type DesktopFile = {
 export const FILES: DesktopFile[] = [
   {
     slug: "who-we-are",
-    name: "who-we-are.txt",
+    name: "What OXAR is",
+    icon: "/icons/blue.svg",
     title: "Who we are",
     x: 5,
     y: 8,
@@ -26,7 +30,8 @@ export const FILES: DesktopFile[] = [
   },
   {
     slug: "how-it-works",
-    name: "how-it-works.txt",
+    name: "How it works",
+    icon: "/icons/breeze.svg",
     title: "How it works",
     x: 5,
     y: 44,
@@ -43,7 +48,8 @@ export const FILES: DesktopFile[] = [
   },
   {
     slug: "why-us",
-    name: "why-us.txt",
+    name: "Why rent your profile",
+    icon: "/icons/black-green.svg",
     title: "Why us",
     x: 84,
     y: 8,
@@ -55,7 +61,8 @@ export const FILES: DesktopFile[] = [
   },
   {
     slug: "pricing",
-    name: "pricing.txt",
+    name: "What it costs",
+    icon: "/icons/light-blue.svg",
     title: "Pricing",
     x: 84,
     y: 44,

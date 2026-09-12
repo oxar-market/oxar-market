@@ -17,7 +17,7 @@ type Open =
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
 type Item =
-  | { slug: string; kind: "file"; name: string; file: DesktopFile }
+  | { slug: string; kind: "file"; name: string; icon: string; file: DesktopFile }
   | { slug: string; kind: "app"; name: string };
 
 const ITEMS: Item[] = [
@@ -25,6 +25,7 @@ const ITEMS: Item[] = [
     slug: file.slug,
     kind: "file",
     name: file.name,
+    icon: file.icon,
     file,
   })),
   ...APPS.map<Item>((app) => ({ slug: app.slug, kind: "app", name: app.name })),
@@ -103,7 +104,14 @@ export function Desktop() {
                 className={item.kind === "file" ? "icon-art file" : "icon-art app"}
                 aria-hidden
               >
-                {item.kind === "app" ? "𝕏" : null}
+                {item.kind === "file" ? (
+                  // Логотипы лежат в public и не меняются, оптимизатор картинок
+                  // тут только добавил бы работы.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.icon} alt="" draggable={false} />
+                ) : (
+                  "𝕏"
+                )}
               </span>
               <span className="icon-name">{item.name}</span>
             </button>

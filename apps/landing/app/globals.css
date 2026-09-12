@@ -31,11 +31,34 @@ body {
   position: relative;
   min-height: 100dvh;
   overflow: hidden;
-  /* Обои: очень мягкое пятно, чтобы белое поле не выглядело пустым листом */
-  background:
-    radial-gradient(60% 50% at 70% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
-    radial-gradient(40% 40% at 15% 90%, #eceae4 0%, rgba(236, 234, 228, 0) 70%),
-    var(--bg);
+  background: var(--bg);
+}
+
+/* Обои: наш логотип, крупно и сильно размыто. Размытие живёт на отдельном
+   слое - фон размыть нельзя, а размывать сам стол значило бы размыть иконки. */
+.desktop::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  z-index: 0;
+  background: url("/icons/light-green.png") center / 72% auto no-repeat;
+  filter: blur(46px) saturate(1.25);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.desktop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* Лёгкая пелена, чтобы иконки и окна читались поверх обоев */
+  background: radial-gradient(
+    75% 65% at 50% 42%,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(244, 244, 242, 0.62) 72%
+  );
+  pointer-events: none;
 }
 
 .topbar {
@@ -91,6 +114,7 @@ body {
 .icons {
   position: absolute;
   inset: 38px 0 92px;
+  z-index: 1;
 }
 
 .icon {
@@ -132,9 +156,9 @@ body {
 }
 
 .icon-art {
-  width: 52px;
-  height: 52px;
-  border-radius: 10px;
+  width: 58px;
+  height: 58px;
+  border-radius: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -144,32 +168,24 @@ body {
 
 .icon-art.file {
   background: var(--card);
-  border: 1px solid var(--line);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  padding: 0;
 }
 
-.icon-art.file::before,
-.icon-art.file::after {
-  content: "";
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  height: 1px;
-  background: var(--line);
-}
-
-.icon-art.file::before {
-  top: 20px;
-}
-
-.icon-art.file::after {
-  top: 28px;
+.icon-art.file img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .icon-art.app {
-  background: var(--fg);
+  background: #0f1419;
   color: #fff;
+  font-size: 24px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 .icon-name {
@@ -453,6 +469,14 @@ input:focus {
 
 @media (max-width: 760px) {
   /* Домашний экран: иконки сеткой, как в мобильной системе */
+
+  .desktop::before {
+    inset: 0;
+    /* На узком экране логотип должен попадать в кадр целиком */
+    background-size: 116% auto;
+    background-position: center 30%;
+    filter: blur(34px) saturate(1.25);
+  }
 
   .topbar {
     height: 46px;
