@@ -22,6 +22,17 @@ export {
 } from "./money.ts";
 
 export {
+  BID_STEP_RATE,
+  EXTEND_MS,
+  MIN_STEP_CENTS,
+  closesAfterBid,
+  isOpen,
+  minBidCents,
+  winner,
+  type Bid,
+} from "./auction.ts";
+
+export {
   calendarDays,
   endDate,
   isWithin,
