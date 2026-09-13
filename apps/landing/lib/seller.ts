@@ -179,3 +179,20 @@ export async function cancelLot(lotId: string): Promise<"done" | "error"> {
     .eq("id", lotId);
   return error ? "error" : "done";
 }
+
+/** Правка цены своего места. Тип места не меняем: это уже другое место. */
+export async function updateListing(
+  listingId: string,
+  draft: Omit<ListingDraft, "kind">,
+): Promise<"done" | "error"> {
+  if (!auth) return "error";
+  const { error } = await auth
+    .from("listings")
+    .update({
+      pricing: draft.pricing,
+      price_cents: draft.price_cents,
+      term_days: draft.term_days,
+    })
+    .eq("id", listingId);
+  return error ? "error" : "done";
+}

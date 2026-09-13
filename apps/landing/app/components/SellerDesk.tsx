@@ -11,11 +11,13 @@ import {
   myListings,
   mySeller,
   setActive,
+  updateListing,
   type MyBooking,
   type MyListing,
   type MySeller,
 } from "@/lib/seller";
 import { Notice } from "./Notice";
+import { usePriceFields } from "./PriceFields";
 import { SellerLots } from "./SellerLots";
 
 // Кабинет продавца. Вход по ссылке на почту, дальше свои места и заявки на них.
@@ -269,30 +271,9 @@ function Desk({ seller }: { seller: MySeller }) {
         <span className="field-label">Your spots</span>
         {listings === null && <p className="muted small">Loading…</p>}
         {listings?.map((listing) => (
-          <div key={listing.id} className="desk-item">
-            <div className="desk-lines">
-              <strong>{placementSpec(listing.kind).label}</strong>
-              <span className="muted small">
-                {listing.pricing === "daily"
-                  ? `${formatUsd(listing.price_cents)} a day · from ${listing.term_days} days`
-                  : `${formatUsd(listing.price_cents)} for ${listing.term_days} days`}
-                {listing.active ? "" : " · off sale"}
-              </span>
-            </div>
-            <div className="desk-acts">
-              <button
-                type="button"
-                className="desk-no"
-                onClick={async () => {
-                  await setActive(listing.id, !listing.active);
-                  reload();
-                }}
-              >
-                {listing.active ? "Take off sale" : "Put back"}
-              </button>
-            </div>
-          </div>
+          <Spot key={listing.id} listing={listing} onChanged={reload} />
         ))}
+
         {listings?.length === 0 && (
           <p className="muted small">Nothing listed yet. Add your first spot below.</p>
         )}
@@ -319,6 +300,95 @@ function Desk({ seller }: { seller: MySeller }) {
   );
 }
 
+/** Место продавца: цену можно поправить здесь же, не пересоздавая место. */
+function Spot({
+  listing,
+  onChanged,
+}: {
+  listing: MyListing;
+  onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const price = usePriceFields(listing.kind, {
+    pricing: listing.pricing,
+    price_cents: listing.price_cents,
+    term_days: listing.term_days,
+  });
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    const read = price.read();
+    if ("error" in read) {
+      setError(read.error);
+      return;
+    }
+
+    const result = await updateListing(listing.id, read.value);
+    if (result === "error") {
+      setError("Could not save that. Try again.");
+      return;
+    }
+    setEditing(false);
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 4000);
+    onChanged();
+  }
+
+  return (
+    <div className="desk-spot">
+      <div className="desk-item">
+        <div className="desk-lines">
+          <strong>{placementSpec(listing.kind).label}</strong>
+          <span className="muted small">
+            {listing.pricing === "daily"
+              ? `${formatUsd(listing.price_cents)} a day · from ${listing.term_days} days`
+              : `${formatUsd(listing.price_cents)} for ${listing.term_days} days`}
+            {listing.active ? "" : " · off sale"}
+          </span>
+          {saved && <span className="desk-saved">Price updated</span>}
+        </div>
+        <div className="desk-acts">
+          <button
+            type="button"
+            className="desk-no"
+            onClick={() => setEditing(!editing)}
+          >
+            {editing ? "Cancel" : "Edit price"}
+          </button>
+          <button
+            type="button"
+            className="desk-no"
+            onClick={async () => {
+              await setActive(listing.id, !listing.active);
+              onChanged();
+            }}
+          >
+            {listing.active ? "Take off sale" : "Put back"}
+          </button>
+        </div>
+      </div>
+
+      {editing && (
+        <form className="desk-edit" onSubmit={save}>
+          {price.fields}
+          {error && <Notice tone="error">{error}</Notice>}
+          <button type="submit" className="primary">
+            Save the price
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Выставить место. В списке все места профиля, а занятые помечены и не
+ * выбираются: короткий список из трёх пунктов выглядел так, будто остальные
+ * места пропали, хотя они просто уже выставлены.
+ */
 function AddSpot({
   sellerId,
   taken,
@@ -330,10 +400,11 @@ function AddSpot({
 }) {
   const free = PLACEMENTS.filter((spec) => !taken.includes(spec.kind));
   const [kind, setKind] = useState<PlacementKind | "">("");
-  const [daily, setDaily] = useState(false);
-  const [price, setPrice] = useState("");
-  const [days, setDays] = useState("");
   const [error, setError] = useState("");
+  const [listed, setListed] = useState("");
+
+  const chosen = (kind || free[0]?.kind) as PlacementKind | undefined;
+  const price = usePriceFields(chosen ?? "avatar");
 
   if (free.length === 0) {
     return (
@@ -344,36 +415,23 @@ function AddSpot({
     );
   }
 
-  const chosen = kind || free[0]!.kind;
-  const spec = placementSpec(chosen);
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    setListed("");
+    if (!chosen) return;
 
-    // Цену считаем в центах: доллары с копейками разошлись бы с выплатой.
-    const dollars = Number(price.replace(",", "."));
-    if (!Number.isFinite(dollars) || dollars <= 0) {
-      setError("Enter the price in dollars, like 250.");
-      return;
-    }
-    const term = days.trim() ? Number(days) : daily ? 1 : spec.defaultDays;
-    if (!Number.isInteger(term) || term < 1 || term > 90) {
-      setError(daily ? "Minimum days: a whole number, 1 to 90." : "Term: 1 to 90 days.");
+    const read = price.read();
+    if ("error" in read) {
+      setError(read.error);
       return;
     }
 
-    const result = await addListing(sellerId, {
-      kind: chosen,
-      pricing: daily ? "daily" : "term",
-      price_cents: Math.round(dollars * 100),
-      term_days: term,
-    });
-
+    const result = await addListing(sellerId, { kind: chosen, ...read.value });
     if (result === "done") {
-      setPrice("");
-      setDays("");
+      price.reset();
       setKind("");
+      setListed(placementSpec(chosen).label);
       onAdded();
       return;
     }
@@ -388,53 +446,33 @@ function AddSpot({
     <form className="req-row desk-add" onSubmit={submit} noValidate>
       <span className="field-label">Add a spot</span>
 
+      {/* Молча созданное место читается как сбой: человек не понимает, сделалось
+          ли что-нибудь вообще. */}
+      {listed && (
+        <Notice tone="success" title={`${listed} is listed`}>
+          It shows up in Your spots above, and buyers see it in the marketplace.
+        </Notice>
+      )}
+
       <label>
         Spot
-        <select value={chosen} onChange={(event) => setKind(event.target.value as PlacementKind)}>
-          {free.map((option) => (
-            <option key={option.kind} value={option.kind}>
-              {option.label}
-            </option>
-          ))}
+        <select
+          value={chosen ?? ""}
+          onChange={(event) => setKind(event.target.value as PlacementKind)}
+        >
+          {PLACEMENTS.map((option) => {
+            const busy = taken.includes(option.kind);
+            return (
+              <option key={option.kind} value={option.kind} disabled={busy}>
+                {option.label}
+                {busy ? " - listed already" : ""}
+              </option>
+            );
+          })}
         </select>
       </label>
 
-      <div className="sides">
-        <button
-          type="button"
-          className={daily ? "side" : "side active"}
-          onClick={() => setDaily(false)}
-        >
-          Price for a term
-        </button>
-        <button
-          type="button"
-          className={daily ? "side active" : "side"}
-          onClick={() => setDaily(true)}
-        >
-          Price per day
-        </button>
-      </div>
-
-      <label>
-        {daily ? "Price per day, $" : "Price for the whole term, $"}
-        <input
-          value={price}
-          onChange={(event) => setPrice(event.target.value.replace(/[^\d.,]/g, ""))}
-          placeholder="250"
-          inputMode="decimal"
-        />
-      </label>
-
-      <label>
-        {daily ? "Minimum days" : "Term in days"}
-        <input
-          value={days}
-          onChange={(event) => setDays(event.target.value.replace(/\D/g, ""))}
-          placeholder={daily ? "1" : String(spec.defaultDays)}
-          inputMode="numeric"
-        />
-      </label>
+      {price.fields}
 
       {error && <Notice tone="error">{error}</Notice>}
 

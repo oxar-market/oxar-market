@@ -1706,6 +1706,31 @@ a.primary {
   background: #f7f7f5;
 }
 
+.desk-spot {
+  border-bottom: 1px solid #f0f0ec;
+}
+
+.desk-spot:last-of-type {
+  border-bottom: none;
+}
+
+.desk-spot .desk-item {
+  border-bottom: none;
+}
+
+/* Правка цены раскрывается под самим местом, а не уводит на другой экран */
+.desk-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 16px;
+}
+
+.desk-saved {
+  font-size: 12.5px;
+  color: #2f7d55;
+}
+
 .desk-add {
   display: flex;
   flex-direction: column;
