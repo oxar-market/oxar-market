@@ -84,6 +84,10 @@ export function FlappyJosip({
     const ctx = node.getContext("2d");
     if (!ctx) return;
 
+    // Тот же шрифт, что у всей страницы. Имя семейства у next/font хэшированное,
+    // поэтому в канвас его можно передать только вычисленным значением.
+    const family = getComputedStyle(document.body).fontFamily;
+
     let raf = 0;
     let last = performance.now();
     let running = true;
@@ -154,10 +158,10 @@ export function FlappyJosip({
             ctx.rotate(-Math.PI / 2);
             ctx.textAlign = "center";
             ctx.fillStyle = "#9aa0b4";
-            ctx.font = "600 8.5px ui-sans-serif, system-ui, sans-serif";
+            ctx.font = `600 8.5px ${family}`;
             ctx.fillText("YOUR AD HERE", 0, -3);
             ctx.fillStyle = "#6b7186";
-            ctx.font = "700 9.5px ui-sans-serif, system-ui, sans-serif";
+            ctx.font = `700 9.5px ${family}`;
             ctx.fillText(`$${priceFor(height)}`, 0, 8);
             ctx.restore();
           }

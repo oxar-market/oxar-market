@@ -26,7 +26,10 @@ body {
   max-width: 100%;
   background: var(--bg);
   color: var(--fg);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Anybody подключается в layout.tsx и приходит сюда переменной. Системный
+     набор рядом - на случай, если шрифт ещё не загрузился. */
+  font-family: var(--font-anybody), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
