@@ -1,22 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { endDate, formatUsd, placementSpec } from "@oxar/core";
+import { useState } from "react";
+import { endDate, formatUsd } from "@oxar/core";
 import {
   cancelLot,
   lotBidsForSeller,
-  myLots,
   openLot,
   type LotBid,
   type MyListing,
   type MyLot,
 } from "@/lib/seller";
-import { closeDueLots } from "@/lib/auctions";
+import { Ban } from "./icons";
 import { Notice } from "./Notice";
 
-// Аукционы продавца: что выставлено на торг, какие ставки пришли и чем кончилось.
+// Торги по одному месту. Раньше это был отдельный список внизу кабинета, и
+// продавцу приходилось держать в голове, какой лот к какому месту относится.
+// Теперь торг живёт внутри своего места: там же, где его цена и кнопки.
 //
-// Ставки со контактом и креативом отдаёт база через функцию, которая проверяет,
+// Ставки с контактом и креативом отдаёт база через функцию, которая проверяет,
 // чей это лот: публично видны только сумма и хэндл.
 
 const DEFAULT_TERM_DAYS = 7;
@@ -38,69 +39,64 @@ function moment(iso: string): string {
   });
 }
 
-export function SellerLots({ listings }: { listings: MyListing[] }) {
-  const [lots, setLots] = useState<MyLot[] | null>(null);
+/** Торги этого места: что идёт сейчас, чем кончились прошлые, как открыть новый. */
+export function SpotAuctions({
+  listing,
+  lots,
+  onChanged,
+}: {
+  listing: MyListing;
+  lots: MyLot[];
+  onChanged: () => void;
+}) {
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState("");
 
-  const reload = useCallback(async () => {
-    // Сначала закрываем то, у чего вышел срок: продавец должен видеть исход,
-    // а не висящий торг.
-    await closeDueLots();
-    setLots(await myLots());
-  }, []);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
-
-  const byId = new Map(listings.map((listing) => [listing.id, listing]));
+  const open = lots.filter((lot) => lot.status === "open");
+  const past = lots.filter((lot) => lot.status !== "open");
 
   return (
-    <>
-      <section className="req-row">
-        <span className="field-label">Auctions</span>
-        {lots === null && <p className="muted small">Loading…</p>}
-        {lots?.length === 0 && (
-          <p className="muted small">
-            Nothing on auction. Put a week up for bidding below.
-          </p>
-        )}
-        {error && <Notice tone="error">{error}</Notice>}
-        {lots?.map((lot) => (
-          <Lot
-            key={lot.id}
-            lot={lot}
-            label={
-              byId.has(lot.listing_id)
-                ? placementSpec(byId.get(lot.listing_id)!.kind).label
-                : "Spot"
-            }
-            onChanged={reload}
-            onError={setError}
-          />
-        ))}
-      </section>
+    <div className="desk-auction">
+      {open.map((lot) => (
+        <Running key={lot.id} lot={lot} onChanged={onChanged} onError={setError} />
+      ))}
 
-      <OpenLot listings={listings} onOpened={reload} />
-    </>
+      {past.map((lot) => (
+        <Finished key={lot.id} lot={lot} />
+      ))}
+
+      {error && <Notice tone="error">{error}</Notice>}
+
+      {opening ? (
+        <OpenLot
+          listing={listing}
+          onOpened={() => {
+            setOpening(false);
+            onChanged();
+          }}
+          onCancel={() => setOpening(false)}
+        />
+      ) : (
+        <button type="button" className="desk-more" onClick={() => setOpening(true)}>
+          Put dates up for bidding
+        </button>
+      )}
+    </div>
   );
 }
 
-function Lot({
+/** Идущий торг: срок приёма ставок, резерв и сами ставки по запросу. */
+function Running({
   lot,
-  label,
   onChanged,
   onError,
 }: {
   lot: MyLot;
-  label: string;
   onChanged: () => void;
   onError: (message: string) => void;
 }) {
   const [bids, setBids] = useState<LotBid[] | null>(null);
   const [shown, setShown] = useState(false);
-
-  const running = lot.status === "open";
 
   async function show() {
     setShown(!shown);
@@ -108,19 +104,14 @@ function Lot({
   }
 
   return (
-    <div className="desk-item">
+    <div className="desk-lot">
       <div className="desk-lines">
-        <strong>
-          {label} · {day(lot.start_date)} - {day(lot.end_date)}
+        <strong className="small">
+          On auction: {day(lot.start_date)} - {day(lot.end_date)}
         </strong>
         <span className="muted small">
-          {running
-            ? `bidding until ${moment(lot.closes_at)} · reserve ${formatUsd(lot.reserve_cents)}`
-            : lot.status === "sold"
-              ? "sold - the winner has the spot"
-              : lot.status === "unsold"
-                ? `closed without a bid above ${formatUsd(lot.reserve_cents)}`
-                : "cancelled"}
+          bidding until {moment(lot.closes_at)} · reserve{" "}
+          {formatUsd(lot.reserve_cents)}
         </span>
 
         {shown && bids?.length === 0 && (
@@ -148,48 +139,58 @@ function Lot({
         <button type="button" className="desk-no" onClick={show}>
           {shown ? "Hide bids" : "Bids"}
         </button>
-        {running && (
-          <button
-            type="button"
-            className="desk-no"
-            onClick={async () => {
-              const result = await cancelLot(lot.id);
-              if (result === "error") onError("Could not cancel that lot.");
-              onChanged();
-            }}
-          >
-            Cancel
-          </button>
-        )}
+        {/* «Cancel» здесь ничего не говорило: отменяется не правка, а сам торг,
+            и ставки при этом пропадают. Поэтому подпись прямая. */}
+        <button
+          type="button"
+          className="desk-icon"
+          aria-label="Stop the bidding"
+          title="Stop the bidding - bids are dropped"
+          onClick={async () => {
+            const result = await cancelLot(lot.id);
+            if (result === "error") onError("Could not stop that auction.");
+            onChanged();
+          }}
+        >
+          <Ban />
+        </button>
       </div>
     </div>
   );
 }
 
+/** Закрытый торг: одна строка истории, без кнопок. */
+function Finished({ lot }: { lot: MyLot }) {
+  return (
+    <p className="muted small">
+      {day(lot.start_date)} - {day(lot.end_date)}:{" "}
+      {lot.status === "sold"
+        ? "sold, the winner has the spot"
+        : lot.status === "unsold"
+          ? `closed without a bid above ${formatUsd(lot.reserve_cents)}`
+          : "bidding stopped"}
+    </p>
+  );
+}
+
+/**
+ * Открыть торг на это место. Выбора места здесь нет: форма раскрывается внутри
+ * него, и селект был бы вторым способом сказать то же самое.
+ */
 function OpenLot({
-  listings,
+  listing,
   onOpened,
+  onCancel,
 }: {
-  listings: MyListing[];
+  listing: MyListing;
   onOpened: () => void;
+  onCancel: () => void;
 }) {
-  const [listingId, setListingId] = useState("");
   const [start, setStart] = useState("");
   const [days, setDays] = useState(String(DEFAULT_TERM_DAYS));
   const [reserve, setReserve] = useState("");
   const [closes, setCloses] = useState("");
   const [error, setError] = useState("");
-
-  if (listings.length === 0) {
-    return (
-      <section className="req-row">
-        <span className="field-label">Put a spot up for bidding</span>
-        <p className="muted small">List a spot first, then it can go to auction.</p>
-      </section>
-    );
-  }
-
-  const chosen = listingId || listings[0]!.id;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -215,7 +216,7 @@ function OpenLot({
     }
 
     const result = await openLot({
-      listing_id: chosen,
+      listing_id: listing.id,
       start_date: start,
       end_date: endDate(start, term),
       reserve_cents: Math.round(dollars * 100),
@@ -223,9 +224,6 @@ function OpenLot({
     });
 
     if (result === "done") {
-      setReserve("");
-      setStart("");
-      setCloses("");
       onOpened();
       return;
     }
@@ -239,20 +237,7 @@ function OpenLot({
   }
 
   return (
-    <form className="req-row desk-add" onSubmit={submit} noValidate>
-      <span className="field-label">Put a spot up for bidding</span>
-
-      <label>
-        Spot
-        <select value={chosen} onChange={(event) => setListingId(event.target.value)}>
-          {listings.map((listing) => (
-            <option key={listing.id} value={listing.id}>
-              {placementSpec(listing.kind).label}
-            </option>
-          ))}
-        </select>
-      </label>
-
+    <form className="desk-edit" onSubmit={submit} noValidate>
       <label>
         Placement starts
         <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
@@ -288,9 +273,15 @@ function OpenLot({
 
       {error && <Notice tone="error">{error}</Notice>}
 
-      <button type="submit" className="primary">
-        Open the lot
-      </button>
+      <div className="desk-acts">
+        <button type="submit" className="primary">
+          Open the lot
+        </button>
+        <button type="button" className="desk-no" onClick={onCancel}>
+          Never mind
+        </button>
+      </div>
+
       <p className="muted small">
         The winner gets the spot for these dates. You agreed to sell by opening
         the lot, so bidding cannot end in a change of mind - only the creative is
