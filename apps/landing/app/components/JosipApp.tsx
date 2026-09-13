@@ -52,12 +52,9 @@ export function JosipApp() {
         Read the original post
       </a>
 
-      {lastScore === null && <Leaderboard score={0} played={false} />}
-
-      {/* Кнопка с его лицом: обычная чёрная кнопка не сообщала, что за ней игра. */}
-      {/* Сыграл - отправь результат: таблица живёт здесь, а не поверх игры. */}
-      {lastScore !== null && <Leaderboard score={lastScore} played />}
-
+      {/* Кнопка с его лицом: обычная чёрная кнопка не сообщала, что за ней игра.
+          Стоит над таблицей - сначала играют, а список смотрят потом. Внизу её
+          приходилось искать за списком из десяти строк. */}
       <button type="button" className="play" onClick={() => setPlaying(true)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icons/josip.png" alt="" className="play-face" />
@@ -69,6 +66,13 @@ export function JosipApp() {
           ▶
         </span>
       </button>
+
+      {/* Сыграл - отправь результат: таблица живёт здесь, а не поверх игры. */}
+      {lastScore === null ? (
+        <Leaderboard score={0} played={false} />
+      ) : (
+        <Leaderboard score={lastScore} played />
+      )}
     </div>
   );
 }
