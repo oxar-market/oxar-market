@@ -5,6 +5,7 @@ import { formatUsd, placementSpec, type PlacementKind } from "@oxar/core";
 import { offersFor, type Offer } from "@/lib/listings";
 import { closeDueLots, openLots, type Lot } from "@/lib/auctions";
 import { AuctionLot } from "./AuctionLot";
+import { LockedOffers } from "./LockedOffers";
 import { RequestPlacement } from "./RequestPlacement";
 import {
   ArrowLeft,
@@ -32,13 +33,25 @@ import {
  * Что показывать под выбранным местом, зависит от роли. Покупателю - кто это
  * место сдаёт и по какой цене. Продавцу чужие предложения не нужны: ему нужно
  * выставить своё, а это у нас идёт через живой разговор.
+ *
+ * Цены и торги видит только одобренный аккаунт. Остальным на их месте стоит
+ * барьер, и запроса за данными мы не делаем вовсе: блюр в стилях прячет цифры
+ * от глаза, но не от вкладки «сеть».
  */
 
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
 type Role = "creator" | "advertiser";
 
-export function XProfile({ role }: { role: Role }) {
+export function XProfile({
+  role,
+  access,
+  onWaitlist,
+}: {
+  role: Role;
+  access: "loading" | "locked" | "open";
+  onWaitlist: () => void;
+}) {
   const [picked, setPicked] = useState<PlacementKind | null>(null);
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [lots, setLots] = useState<Lot[] | null>(null);
@@ -46,7 +59,7 @@ export function XProfile({ role }: { role: Role }) {
 
   useEffect(() => {
     // Продавцу список чужих предложений не показываем, значит и не грузим.
-    if (!picked || role !== "advertiser") return;
+    if (!picked || role !== "advertiser" || access !== "open") return;
     let live = true;
     setOffers(null);
     setLots(null);
@@ -63,7 +76,7 @@ export function XProfile({ role }: { role: Role }) {
     return () => {
       live = false;
     };
-  }, [picked, role]);
+  }, [picked, role, access]);
 
   useEffect(() => {
     setRequesting(null);
@@ -206,6 +219,13 @@ export function XProfile({ role }: { role: Role }) {
                 Book a call to list it
               </a>
             </>
+          ) : access === "loading" ? (
+            // Одобренный продавец, зашедший с другого устройства, секунду
+            // выглядит как гость. Барьер вместо загрузки он прочитал бы как
+            // «меня не пустили».
+            <p className="muted small">Loading…</p>
+          ) : access === "locked" ? (
+            <LockedOffers onWaitlist={onWaitlist} />
           ) : (
             <>
               {offers === null && <p className="muted small">Loading…</p>}

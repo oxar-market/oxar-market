@@ -243,7 +243,20 @@ export function Desktop() {
 
       {open?.kind === "x" && (
         <Window title="X placements" onClose={() => setOpen(null)} wide>
-          <XProfile role={role} />
+          {/* Смотреть витрину может кто угодно, а цены и торги - только
+              одобренный аккаунт: заводим мы их руками, и до вейтлиста человек
+              всё равно ничего не купит. */}
+          <XProfile
+            role={role}
+            access={
+              account.status === "loading"
+                ? "loading"
+                : account.status === "seller"
+                  ? "open"
+                  : "locked"
+            }
+            onWaitlist={() => setOpen({ kind: "waitlist" })}
+          />
         </Window>
       )}
     </div>
