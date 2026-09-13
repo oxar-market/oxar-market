@@ -529,9 +529,6 @@ label {
   color: var(--muted);
 }
 
-.optional {
-  color: #b6b6b0;
-}
 
 input {
   background: #fbfbf9;

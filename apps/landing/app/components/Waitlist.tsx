@@ -42,9 +42,7 @@ export function Waitlist() {
       setError("A handle is letters, numbers or underscores, up to 15 of them.");
       return;
     }
-    // Продавцу без числа подписчиков нечего показать покупателю, поэтому
-    // здесь поле обязательное. Покупателю оно не нужно вовсе.
-    if (side === "seller" && !followers.trim()) {
+    if (!followers.trim()) {
       setError("How many followers does the account have?");
       return;
     }
@@ -52,7 +50,14 @@ export function Waitlist() {
       setError("Followers should be a number, like 12400 or 12.4k.");
       return;
     }
-    if (contact.trim() && !isValidContact(contact)) {
+    // Связаться с человеком нам нечем, если он не оставил ни почты, ни
+    // телеграма: хэндл в X - это не канал связи, в личку к нам он не пишет.
+    // Поэтому контакт обязателен, и одинаково для обеих сторон.
+    if (!contact.trim()) {
+      setError("Leave an email or a Telegram so we can reach you.");
+      return;
+    }
+    if (!isValidContact(contact)) {
       setError(
         "Use an email with a domain, like you@mail.com, or a Telegram handle with the @.",
       );
@@ -64,7 +69,7 @@ export function Waitlist() {
       x_handle: cleanHandle,
       side,
       follower_count: followerCount,
-      contact: contact.trim() ? normalizeContact(contact) : null,
+      contact: normalizeContact(contact),
     });
 
     if (result === "created") {
@@ -135,8 +140,7 @@ export function Waitlist() {
       </label>
 
       <label>
-        Followers{" "}
-        {side === "buyer" && <span className="optional">optional</span>}
+        Followers
         <input
           value={followers}
           onChange={(e) => setFollowers(e.target.value.replace(/[^\d.,\skmKM]/g, ""))}
@@ -146,7 +150,7 @@ export function Waitlist() {
       </label>
 
       <label>
-        Email or Telegram <span className="optional">optional</span>
+        Email or Telegram
         <input
           value={contact}
           onChange={(e) => setContact(e.target.value)}
