@@ -1,8 +1,12 @@
-// Загрузка креатива в Supabase Storage. Ключ публичный, но политика пускает
-// только в bucket creatives, а сам bucket ограничен по размеру и типу файла.
+"use client";
+
+// Загрузка креатива в Supabase Storage. Класть файлы может тот же, кто может
+// подать заявку, - политика пускает только одобренный аккаунт и только в
+// bucket creatives, а сам bucket ограничен по размеру и типу файла.
+
+import { auth } from "./auth";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const BUCKET = "creatives";
 
@@ -25,24 +29,17 @@ export type UploadResult =
 export async function uploadCreative(file: File): Promise<UploadResult> {
   if (!ALLOWED_TYPES.includes(file.type)) return { ok: false, reason: "type" };
   if (file.size > MAX_BYTES) return { ok: false, reason: "size" };
-  if (!url || !anonKey) return { ok: false, reason: "failed" };
+  if (!auth || !url) return { ok: false, reason: "failed" };
 
   const extension = file.name.includes(".") ? file.name.split(".").pop() : "bin";
   // Имя случайное: одинаковые "banner.png" от разных людей не должны
   // затирать друг друга.
   const path = `${crypto.randomUUID()}.${extension}`;
 
-  const response = await fetch(`${url}/storage/v1/object/${BUCKET}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
-      "Content-Type": file.type,
-      "x-upsert": "false",
-    },
-    body: file,
-  });
+  const { error } = await auth.storage
+    .from(BUCKET)
+    .upload(path, file, { contentType: file.type, upsert: false });
 
-  if (!response.ok) return { ok: false, reason: "failed" };
+  if (error) return { ok: false, reason: "failed" };
   return { ok: true, url: `${url}/storage/v1/object/public/${BUCKET}/${path}` };
 }
