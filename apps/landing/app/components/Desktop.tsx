@@ -4,6 +4,7 @@ import { useState } from "react";
 import { APPS, FILES, type DesktopFile } from "@/lib/desktop";
 import { useIconLayout, type Layout } from "@/lib/use-icon-layout";
 import { useSellerAccount } from "@/lib/use-seller-account";
+import { JosipApp } from "./JosipApp";
 import { SellerDesk } from "./SellerDesk";
 import { Waitlist } from "./Waitlist";
 import { Window } from "./Window";
@@ -15,13 +16,14 @@ type Open =
   | { kind: "waitlist" }
   | { kind: "x" }
   | { kind: "desk" }
+  | { kind: "josip" }
   | null;
 
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
 type Item =
   | { slug: string; kind: "file"; name: string; icon: string; file: DesktopFile }
-  | { slug: string; kind: "app"; name: string };
+  | { slug: string; kind: "app"; name: string; icon?: string };
 
 const ITEMS: Item[] = [
   ...FILES.map<Item>((file) => ({
@@ -31,7 +33,12 @@ const ITEMS: Item[] = [
     icon: file.icon,
     file,
   })),
-  ...APPS.map<Item>((app) => ({ slug: app.slug, kind: "app", name: app.name })),
+  ...APPS.map<Item>((app) => ({
+    slug: app.slug,
+    kind: "app",
+    name: app.name,
+    icon: app.icon,
+  })),
 ];
 
 const DEFAULT_POSITIONS: Layout = Object.fromEntries([
@@ -51,6 +58,7 @@ const MOBILE_POSITIONS: Layout = {
   "why-us": { x: 14, y: 20 },
   pricing: { x: 64, y: 20 },
   x: { x: 14, y: 38 },
+  josip: { x: 64, y: 38 },
 };
 
 /** Слот кнопки в доке: скрытый схлопывается по ширине, а не исчезает рывком. */
@@ -85,7 +93,11 @@ export function Desktop() {
   function activate(slug: string) {
     const item = ITEMS.find((candidate) => candidate.slug === slug);
     if (!item) return;
-    setOpen(item.kind === "file" ? { kind: "file", file: item.file } : { kind: "x" });
+    if (item.kind === "file") {
+      setOpen({ kind: "file", file: item.file });
+      return;
+    }
+    setOpen(item.slug === "josip" ? { kind: "josip" } : { kind: "x" });
   }
 
   return (
@@ -127,10 +139,16 @@ export function Desktop() {
               onPointerCancel={(event) => onPointerUp(event, () => {})}
             >
               <span
-                className={item.kind === "file" ? "icon-art file" : "icon-art app"}
+                className={
+                  item.kind === "file"
+                    ? "icon-art file"
+                    : item.icon
+                      ? "icon-art photo"
+                      : "icon-art app"
+                }
                 aria-hidden
               >
-                {item.kind === "file" ? (
+                {item.icon ? (
                   // Логотипы лежат в public и не меняются, оптимизатор картинок
                   // тут только добавил бы работы.
                   // eslint-disable-next-line @next/next/no-img-element
@@ -214,6 +232,12 @@ export function Desktop() {
       {open?.kind === "desk" && (
         <Window title="My spots" onClose={() => setOpen(null)}>
           <SellerDesk account={account} />
+        </Window>
+      )}
+
+      {open?.kind === "josip" && (
+        <Window title="Josip called it" onClose={() => setOpen(null)}>
+          <JosipApp />
         </Window>
       )}
 
