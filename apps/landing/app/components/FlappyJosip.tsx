@@ -24,7 +24,12 @@ import {
  * плотность экрана, поэтому физика одинакова на любом устройстве.
  */
 
-export function FlappyJosip({ onScore }: { onScore?: (score: number) => void }) {
+export function FlappyJosip({
+  onScore,
+}: {
+  /** null - начата новая попытка, прошлый результат больше не актуален. */
+  onScore?: (score: number | null) => void;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const world = useRef<World>(fresh());
   const face = useRef<HTMLImageElement | null>(null);
@@ -41,7 +46,8 @@ export function FlappyJosip({ onScore }: { onScore?: (score: number) => void }) 
     world.current = fresh();
     setScore(0);
     setPhase("ready");
-  }, []);
+    onScore?.(null);
+  }, [onScore]);
 
   // Лицо рисуем картинкой: держим её в ref, чтобы не грузить на каждый кадр.
   useEffect(() => {
