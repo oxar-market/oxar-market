@@ -128,6 +128,16 @@ export function Share(props: Props) {
   );
 }
 
+export function SignOut(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M9.5 19.5H6A1.5 1.5 0 014.5 18V6A1.5 1.5 0 016 4.5h3.5" />
+      <path d="M14 8.5l3.5 3.5-3.5 3.5" />
+      <path d="M17.5 12H9" />
+    </Svg>
+  );
+}
+
 export function Lock(props: Props) {
   return (
     <Svg {...props}>
