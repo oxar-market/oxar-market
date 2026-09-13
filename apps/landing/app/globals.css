@@ -1754,33 +1754,52 @@ a.primary {
   opacity: 0.9;
 }
 
-/* Игра */
+/* Игра: во весь экран, поверх всего. В рамке внутри окна она выглядела
+   вставкой, а на телефоне от поля оставалась полоска посреди пустоты. */
 
 .flap {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.flap-field {
-  position: relative;
-  width: 100%;
-  /* На узком телефоне поле не должно быть шире экрана - иначе появляется
-     горизонтальная прокрутка. */
-  max-width: min(340px, 100%);
-  margin: 0 auto;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-  /* Палец по полю не должен скроллить страницу - это управление, а не прокрутка */
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #f7f7f5;
+  /* Палец по полю - это управление, а не прокрутка */
   touch-action: none;
-  cursor: pointer;
   user-select: none;
+  cursor: pointer;
 }
 
 .flap-canvas {
   display: block;
   width: 100%;
+  height: 100%;
+}
+
+.flap-score {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #16161a;
+  pointer-events: none;
+}
+
+.flap-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  font-size: 15px;
+  color: #56565e;
+  cursor: pointer;
 }
 
 .flap-over {
@@ -1790,15 +1809,22 @@ a.primary {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(2px);
+  gap: 8px;
+  background: rgba(247, 247, 245, 0.78);
+  backdrop-filter: blur(3px);
   text-align: center;
+  padding: 0 24px;
 }
 
 .flap-over strong {
-  font-size: 20px;
-  letter-spacing: -0.015em;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+/* .primary прижата влево по умолчанию - в игре она по центру, как и всё */
+.flap-over .primary {
+  align-self: center;
+  margin-top: 8px;
 }
 
 /* Таблица игроков */

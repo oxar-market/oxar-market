@@ -4,8 +4,14 @@
  * попытками попасть пальцем в нужный момент.
  */
 
-export const W = 340;
+/**
+ * Высота поля постоянна: от неё зависит вся физика, и прыжок должен быть
+ * одинаковым на любом экране. Ширина приходит снаружи, по пропорциям экрана -
+ * на широком видно дальше вперёд, но сложность от этого не меняется.
+ */
 export const H = 480;
+/** Ширина по умолчанию, если пропорции ещё неизвестны. */
+export const W = 340;
 
 const GRAVITY = 1150;
 export const LIFT = -350;
@@ -36,13 +42,13 @@ export type World = {
   dead: boolean;
 };
 
-export function fresh(): World {
+export function fresh(width = W): World {
   return {
     y: H / 2,
     vy: 0,
     boards: [
-      { x: W + 40, gapY: H / 2, passed: false },
-      { x: W + 40 + SPACING, gapY: H / 2 - 60, passed: false },
+      { x: width + 40, gapY: H / 2, passed: false },
+      { x: width + 40 + SPACING, gapY: H / 2 - 60, passed: false },
     ],
     score: 0,
     dead: false,
@@ -50,7 +56,12 @@ export function fresh(): World {
 }
 
 /** Шаг мира. Чистый, поэтому его поведение видно без канваса. */
-export function step(world: World, dt: number, pick: () => number): World {
+export function step(
+  world: World,
+  dt: number,
+  pick: () => number,
+  width = W,
+): World {
   if (world.dead) return world;
 
   const vy = world.vy + GRAVITY * dt;
@@ -67,9 +78,13 @@ export function step(world: World, dt: number, pick: () => number): World {
   });
 
   while (boards.length && boards[0]!.x + BOARD_W < -20) boards.shift();
+  // Интервал считается от последнего щита, а не от края поля: на вертикальном
+  // экране поле по игровым единицам уже, чем интервал, и щиты выходили рвано.
   const last = boards[boards.length - 1];
-  if (!last || last.x < W - SPACING) {
-    boards.push({ x: W + 40, gapY: pick(), passed: false });
+  if (!last) {
+    boards.push({ x: width + 40, gapY: pick(), passed: false });
+  } else if (last.x <= width + 40 - SPACING) {
+    boards.push({ x: last.x + SPACING, gapY: pick(), passed: false });
   }
 
   // Пол и потолок - тоже столкновение: иначе можно улететь наверх и ждать.

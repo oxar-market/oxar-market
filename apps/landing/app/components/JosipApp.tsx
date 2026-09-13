@@ -16,18 +16,10 @@ export function JosipApp() {
   // Последний доигранный счёт: его и предлагаем отправить в таблицу.
   const [lastScore, setLastScore] = useState<number | null>(null);
 
+  // Игра выходит из окна на весь экран: в рамке она читалась как вставка.
   if (playing) {
     return (
-      <div className="josip">
-        <button type="button" className="link-back" onClick={() => setPlaying(false)}>
-          Back
-        </button>
-        <FlappyJosip onScore={setLastScore} />
-        <p className="muted small">
-          Every board in the way is ad space nobody bought yet.
-        </p>
-        <Leaderboard score={lastScore ?? 0} played={lastScore !== null} />
-      </div>
+      <FlappyJosip onScore={setLastScore} onExit={() => setPlaying(false)} />
     );
   }
 
@@ -60,12 +52,17 @@ export function JosipApp() {
         Read the original post
       </a>
 
+      {lastScore === null && <Leaderboard score={0} played={false} />}
+
       {/* Кнопка с его лицом: обычная чёрная кнопка не сообщала, что за ней игра. */}
+      {/* Сыграл - отправь результат: таблица живёт здесь, а не поверх игры. */}
+      {lastScore !== null && <Leaderboard score={lastScore} played />}
+
       <button type="button" className="play" onClick={() => setPlaying(true)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icons/josip.png" alt="" className="play-face" />
         <span className="play-text">
-          <strong>Play Flappy Josip</strong>
+          <strong>{lastScore === null ? "Play Flappy Josip" : "Play again"}</strong>
           <span>Fly him between the empty ad boards</span>
         </span>
         <span className="play-go" aria-hidden>
