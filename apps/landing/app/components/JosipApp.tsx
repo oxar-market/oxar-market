@@ -60,8 +60,17 @@ export function JosipApp() {
         Read the original post
       </a>
 
-      <button type="button" className="primary" onClick={() => setPlaying(true)}>
-        Play Flappy Josip
+      {/* Кнопка с его лицом: обычная чёрная кнопка не сообщала, что за ней игра. */}
+      <button type="button" className="play" onClick={() => setPlaying(true)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icons/josip.png" alt="" className="play-face" />
+        <span className="play-text">
+          <strong>Play Flappy Josip</strong>
+          <span>Fly him between the empty ad boards</span>
+        </span>
+        <span className="play-go" aria-hidden>
+          ▶
+        </span>
       </button>
     </div>
   );

@@ -9,7 +9,7 @@ import {
   GAP,
   H,
   LIFT,
-  PRICES,
+  priceFor,
   step,
   W,
   type World,
@@ -105,18 +105,19 @@ export function FlappyJosip({
           ctx.strokeRect(board.x + 4, y0 + 4, BOARD_W - 8, height - 8);
           ctx.setLineDash([]);
 
-          // Подпись только если щит достаточно высок, иначе текст налезает
-          if (height > 74) {
+          // Подпись только если щит достаточно высок, иначе текст налезает.
+          // Цена своя у каждой половины: она зависит от её площади.
+          if (height > 64) {
             ctx.save();
             ctx.translate(board.x + BOARD_W / 2, y0 + height / 2);
             ctx.rotate(-Math.PI / 2);
-            ctx.fillStyle = "#8a90a6";
-            ctx.font = "600 11px ui-sans-serif, system-ui, sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("YOUR AD HERE", 0, -4);
-            ctx.fillStyle = "#5b6178";
-            ctx.font = "700 12px ui-sans-serif, system-ui, sans-serif";
-            ctx.fillText(`$${board.price}`, 0, 12);
+            ctx.fillStyle = "#9aa0b4";
+            ctx.font = "600 8.5px ui-sans-serif, system-ui, sans-serif";
+            ctx.fillText("YOUR AD HERE", 0, -3);
+            ctx.fillStyle = "#6b7186";
+            ctx.font = "700 9.5px ui-sans-serif, system-ui, sans-serif";
+            ctx.fillText(`$${priceFor(height)}`, 0, 8);
             ctx.restore();
           }
         }
@@ -153,10 +154,11 @@ export function FlappyJosip({
       last = now;
 
       if (phase === "playing") {
-        world.current = step(world.current, dt, () => ({
-          gapY: 90 + Math.random() * (H - 180),
-          price: PRICES[Math.floor(Math.random() * PRICES.length)]!,
-        }));
+        world.current = step(
+          world.current,
+          dt,
+          () => 100 + Math.random() * (H - 200),
+        );
 
         if (world.current.score !== score) setScore(world.current.score);
         if (world.current.dead) {
