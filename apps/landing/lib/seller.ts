@@ -49,6 +49,16 @@ export async function mySeller(): Promise<MySeller | null> {
   return rows[0] ?? null;
 }
 
+/**
+ * Пустили ли этот аккаунт дальше вейтлиста. Решает база: список адресов ведём
+ * мы руками, и продавец в нём не нужен - его пускает собственная строка.
+ */
+export async function hasAccess(): Promise<boolean> {
+  if (!auth) return false;
+  const { data } = await auth.rpc("has_access");
+  return data === true;
+}
+
 /** Свои места. Фильтр по продавцу обязателен: витрина отдаёт и чужие активные. */
 export async function myListings(sellerId: string): Promise<MyListing[]> {
   if (!auth) return [];
