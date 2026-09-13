@@ -15,12 +15,22 @@ export const W = 340;
 
 const GRAVITY = 1150;
 export const LIFT = -350;
-const SPEED = 138;
+const SPEED = 118;
 export const GAP = 186;
 export const BOARD_W = 66;
 const SPACING = 235;
 export const BIRD_R = 17;
-export const BIRD_X = 92;
+
+/**
+ * Йосип летит по середине поля, а не у левого края. Позиция считается от ширины
+ * экрана: на широком он стоит дальше от края, но всегда в центре кадра.
+ *
+ * Плата за это - время реакции: щиту теперь лететь до него половину поля, а не
+ * почти всё. Поэтому скорость снижена, чтобы игра не стала вдвое злее.
+ */
+export function birdX(width = W): number {
+  return width / 2;
+}
 
 /**
  * Цена щита зависит от его размера, как и в жизни: маленькая площадь стоит
@@ -72,7 +82,7 @@ export function step(
     const x = board.x - SPEED * dt;
     // Очко засчитываем, когда щит остался позади: так счёт не растёт, пока
     // игрок ещё в зазоре.
-    const passed = board.passed || x + BOARD_W < BIRD_X - BIRD_R;
+    const passed = board.passed || x + BOARD_W < birdX(width) - BIRD_R;
     if (passed && !board.passed) score += 1;
     return { ...board, x, passed };
   });
@@ -90,7 +100,8 @@ export function step(
   // Пол и потолок - тоже столкновение: иначе можно улететь наверх и ждать.
   let dead = y + BIRD_R > H || y - BIRD_R < 0;
   for (const board of boards) {
-    const withinX = BIRD_X + BIRD_R > board.x && BIRD_X - BIRD_R < board.x + BOARD_W;
+    const nose = birdX(width);
+    const withinX = nose + BIRD_R > board.x && nose - BIRD_R < board.x + BOARD_W;
     if (!withinX) continue;
     const inGap = y - BIRD_R > board.gapY - GAP / 2 && y + BIRD_R < board.gapY + GAP / 2;
     if (!inGap) dead = true;
