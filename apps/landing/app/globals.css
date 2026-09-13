@@ -30,6 +30,9 @@ body {
      набор рядом - на случай, если шрифт ещё не загрузился. */
   font-family: var(--font-anybody), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", sans-serif;
+  /* Шрифт вариативный, поэтому базовый вес выбирается свободно. Обычные 400 у
+     Anybody выглядят тоньше системного набора, и текст читался бледно. */
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -436,8 +439,11 @@ body {
   gap: 14px;
 }
 
+/* Заголовки идут на ступень выше базового веса: иначе при тексте в 500 они
+   перестают читаться как заголовки. */
 .window-body h1 {
   font-size: 24px;
+  font-weight: 800;
   letter-spacing: -0.02em;
 }
 
@@ -460,6 +466,7 @@ body {
 
 .page h1 {
   font-size: 30px;
+  font-weight: 800;
   letter-spacing: -0.025em;
 }
 
@@ -553,7 +560,7 @@ input:focus {
   border-radius: 9px;
   padding: 12px 16px;
   font-size: 14.5px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   align-self: flex-start;
