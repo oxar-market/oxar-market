@@ -47,7 +47,9 @@ body {
   position: absolute;
   inset: -12%;
   z-index: 0;
-  background: url("/icons/wallpaper.svg") center / 62% auto no-repeat;
+  /* Крупнее, чем помещается по ширине телефона, поэтому размер ограничен и по
+     высоте: иначе на узком экране от логотипа видно только середину. */
+  background: url("/icons/wallpaper.svg") center / min(78%, 78vh) auto no-repeat;
   opacity: 1;
   pointer-events: none;
 }
@@ -57,11 +59,12 @@ body {
   position: absolute;
   inset: 0;
   z-index: 0;
-  /* Лёгкая пелена, чтобы иконки и окна читались поверх обоев */
+  /* Пелена только по краям: в середине обои видно как есть, а к краям они
+     растворяются в фоне, чтобы подписи иконок и док читались. */
   background: radial-gradient(
-    72% 62% at 50% 42%,
-    rgba(255, 255, 255, 0.34) 0%,
-    rgba(244, 244, 242, 0.7) 74%
+    76% 66% at 50% 44%,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(244, 244, 242, 0.62) 78%
   );
   pointer-events: none;
 }
