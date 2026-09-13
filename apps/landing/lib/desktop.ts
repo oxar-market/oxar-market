@@ -19,12 +19,17 @@ export const FILES: DesktopFile[] = [
     slug: "who-we-are",
     name: "What OXAR is",
     icon: "/icons/blue.svg",
-    title: "Who we are",
+    title: "You already own a billboard. You're just not charging rent.",
     x: 5,
     y: 8,
     body: [
-      "OXAR is a marketplace for ad space on personal profiles.",
-      "A creator sells one specific spot - avatar, banner, bio link, pinned post - for a specific number of days. An advertiser buys that spot for that time. Payment is USDC on Solana, held in escrow.",
+      "If people look at it, it's ad space.",
+      "OXAR is a marketplace for ad space on anything people look at. List a surface you control with a price and a date range, and buyers book it in USDC escrow that pays out only for the time it is actually up.",
+      // Узкий старт назван выбором, а не потолком: иначе категория читается как
+      // «сервис для твиттера», и всё, что мы будем делать дальше, выглядит
+      // прыжком в сторону.
+      "Any surface someone owns can be rented for a stretch of time. We start with the ones that prove themselves - a profile can be checked automatically, a wall cannot. Profiles first, then every other digital surface, then the physical world.",
+      "Today that means one spot on an X profile - avatar, banner, bio link, pinned post - for a set number of days.",
       "We sell space and time, not the creator's work. That is the whole difference between us and every influencer platform out there.",
     ],
   },
@@ -38,12 +43,14 @@ export const FILES: DesktopFile[] = [
     body: [
       "If you have an audience:",
       "1. Get verified. We check the account is yours. One time, by hand.",
-      "2. List your spots. Pick what you are willing to sell, set your price and your calendar.",
+      "2. List your spots. Pick what you are willing to sell, set a price for a whole term or a day rate, and put a spot up for bids if you would rather run an auction.",
       "3. Approve and get paid. Every request arrives with the exact creative attached. Reject anything you do not want on your profile.",
       "If you need attention:",
-      "1. Pick a spot. Browse by placement type, audience size and price.",
-      "2. Pay into escrow. Funds are locked, not sent.",
-      "3. Get proof. We check the profile on a schedule and keep the log. If the placement comes down early, you get the unused days back.",
+      "1. Pick a spot. Browse by placement type, audience size and price, or bid on a lot with a deadline.",
+      // Право продавца отказать стояло только в его половине, и покупатель
+      // узнавал о нём уже после оплаты.
+      "2. Pay into escrow. Funds are locked, not sent. The seller approves the request or turns it down, and a rejected request comes straight back to you.",
+      "3. Get proof. We check the profile on a schedule and keep the log. Escrow pays out for the time the placement was up, so if it comes down early the unused days come back.",
     ],
   },
   {
@@ -54,7 +61,12 @@ export const FILES: DesktopFile[] = [
     x: 84,
     y: 8,
     body: [
-      "This already happens in DMs. Solana sold ad space on its own logo for a charity campaign. Creators rent out their banners one conversation at a time. Communities get paid to run a project's avatar for a week. TikTokers rent out their foreheads.",
+      // Про логотип Solana здесь стояло «for a charity campaign» - размыто, и
+      // расходилось с формулировкой в приложении Йосипа. Это был аукцион девяти
+      // зон на аватарке в пользу пострадавших от паводка в Непале, $166 946 в
+      // USDC за сутки, ставки возвращались проигравшим. Проверяемо по посту
+      // @solana от 1 сентября.
+      "This already happens in DMs. Solana auctioned nine zones on its own logo for Nepal flood relief and took $167k in USDC in a day. Creators rent out their banners one conversation at a time. Communities get paid to run a project's avatar for a week. TikTokers rent out their foreheads.",
       "The behaviour exists. The infrastructure does not.",
       "What we add is the boring part nobody wants to do by hand: a price, a calendar, escrow that releases money only for time the placement actually ran, and a log that proves it stood there.",
     ],
