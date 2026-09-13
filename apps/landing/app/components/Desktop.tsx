@@ -56,9 +56,8 @@ const MOBILE_POSITIONS: Layout = {
   "who-we-are": { x: 14, y: 2 },
   "how-it-works": { x: 64, y: 2 },
   "why-us": { x: 14, y: 20 },
-  pricing: { x: 64, y: 20 },
-  x: { x: 14, y: 38 },
-  josip: { x: 64, y: 38 },
+  x: { x: 64, y: 20 },
+  josip: { x: 14, y: 38 },
 };
 
 /** Слот кнопки в доке: скрытый схлопывается по ширине, а не исчезает рывком. */
@@ -199,7 +198,15 @@ export function Desktop() {
         </DockSlot>
 
         <DockSlot show={role === "creator" && account.status !== "seller"}>
-          <a className="dock-item" href={CALL_URL} target="_blank" rel="noreferrer">
+          {/* Подсказка объясняет, зачем звонок: сама надпись не говорит, что
+              это единственный путь к проверке аккаунта и к своим местам. */}
+          <a
+            className="dock-item"
+            href={CALL_URL}
+            target="_blank"
+            rel="noreferrer"
+            title="We check the account is yours, then your spots go live"
+          >
             Book a call
           </a>
         </DockSlot>

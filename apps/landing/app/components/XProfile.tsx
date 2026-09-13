@@ -215,7 +215,13 @@ export function XProfile({
                 Set your own price and your own calendar for this spot. Onboarding is
                 manual for now: we check the account is yours, then your spot goes live.
               </p>
-              <a className="primary" href={CALL_URL} target="_blank" rel="noreferrer">
+              <a
+                className="primary"
+                href={CALL_URL}
+                target="_blank"
+                rel="noreferrer"
+                title="We check the account is yours, then your spots go live"
+              >
                 Book a call to list it
               </a>
             </>
