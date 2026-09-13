@@ -28,23 +28,66 @@ export async function topScores(limit = 10): Promise<Score[]> {
 }
 
 /**
- * Отправить счёт. Имя занимает тот, кто вписал его первым: занятое база не
- * обновляет, потому что владение телеграм-именем мы проверить не можем.
+ * Своё имя в таблице: ключ, которым мы его заняли, и лучший результат под ним.
+ *
+ * Ключ придумывает браузер и держит у себя - в базе лежит только его sha256.
+ * Поэтому улучшить свой результат можно с того же устройства, а чужое имя не
+ * перепишешь, даже зная его. Другого способа подтвердить владение телеграм-именем
+ * без бота у нас нет.
+ */
+const MINE = "oxar.flappy.mine";
+
+export type Mine = { handle: string; key: string; best: number };
+
+export function readMine(): Mine | null {
+  try {
+    const raw = window.localStorage.getItem(MINE);
+    return raw ? (JSON.parse(raw) as Mine) : null;
+  } catch {
+    // Приватный режим и запрет хранилища: играть можно, рекорд не запомнится
+    return null;
+  }
+}
+
+function remember(mine: Mine): void {
+  try {
+    window.localStorage.setItem(MINE, JSON.stringify(mine));
+  } catch {
+    // см. readMine
+  }
+}
+
+function freshKey(): string {
+  return crypto.randomUUID().replace(/-/g, "");
+}
+
+/**
+ * Отправить счёт. Возвращает лучший результат, который остался в таблице: если
+ * прошлая попытка была выше, останется она.
  */
 export async function postScore(
   handle: string,
   score: number,
-): Promise<{ ok: true } | { ok: false; reason: "taken" | "error" }> {
+): Promise<{ ok: true; kept: number } | { ok: false; reason: "taken" | "error" }> {
   if (!url || !anonKey) return { ok: false, reason: "error" };
+
+  const mine = readMine();
+  // Ключ от этого имени, если оно уже наше. Для нового имени - новый ключ.
+  const key =
+    mine && mine.handle.toLowerCase() === handle.toLowerCase() ? mine.key : freshKey();
 
   const response = await fetch(`${url}/rest/v1/rpc/submit_score`, {
     method: "POST",
     headers: headers(),
-    body: JSON.stringify({ handle, value: score }),
+    body: JSON.stringify({ handle, value: score, claim: key }),
   });
 
-  if (response.ok) return { ok: true };
+  if (!response.ok) {
+    const text = await response.text();
+    return { ok: false, reason: text.includes("name is taken") ? "taken" : "error" };
+  }
 
-  const text = await response.text();
-  return { ok: false, reason: text.includes("name is taken") ? "taken" : "error" };
+  const kept = (await response.json()) as number;
+  remember({ handle, key, best: kept });
+  return { ok: true, kept };
 }
