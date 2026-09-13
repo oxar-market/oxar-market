@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
-import { Anybody } from "next/font/google";
+import { Menbere } from "next/font/google";
 import "./globals.css";
 
-// Шрифт продукта. Вариативный, поэтому все веса берутся из одного файла, и
-// отдельные начертания подключать не нужно. Файл скачивается при сборке и
-// раздаётся с нашего домена: запроса к Google из браузера нет.
-const anybody = Anybody({
+// Шрифт продукта. Вариативный, веса от 100 до 700 берутся из одного файла.
+// Файл скачивается при сборке и раздаётся с нашего домена: запроса к Google из
+// браузера нет.
+//
+// Курсива у Menbere нет вовсе - только прямое начертание. Поэтому цитату
+// отличаем не наклоном, а рамкой и фоном: наклон браузер нарисовал бы сам,
+// сдвинув буквы, и выглядело бы это подделкой.
+const menbere = Menbere({
   subsets: ["latin"],
-  // Курсив подключён настоящим начертанием: без него браузер наклоняет прямое
-  // сам, и у шрифта с квадратными формами это видно сразу.
-  style: ["normal", "italic"],
   display: "swap",
-  variable: "--font-anybody",
+  variable: "--font-menbere",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={anybody.variable}>
+    <html lang="en" className={menbere.variable}>
       <body>{children}</body>
     </html>
   );
