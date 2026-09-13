@@ -28,14 +28,14 @@ export async function topScores(limit = 10): Promise<Score[]> {
 }
 
 /**
- * Отправить счёт. Возвращает результат, который остался в таблице: если прошлая
- * попытка была лучше, в списке останется она.
+ * Отправить счёт. Имя занимает тот, кто вписал его первым: занятое база не
+ * обновляет, потому что владение телеграм-именем мы проверить не можем.
  */
 export async function postScore(
   handle: string,
   score: number,
-): Promise<{ ok: true; kept: number } | { ok: false }> {
-  if (!url || !anonKey) return { ok: false };
+): Promise<{ ok: true } | { ok: false; reason: "taken" | "error" }> {
+  if (!url || !anonKey) return { ok: false, reason: "error" };
 
   const response = await fetch(`${url}/rest/v1/rpc/submit_score`, {
     method: "POST",
@@ -43,7 +43,8 @@ export async function postScore(
     body: JSON.stringify({ handle, value: score }),
   });
 
-  if (!response.ok) return { ok: false };
-  const kept = (await response.json()) as number;
-  return { ok: true, kept };
+  if (response.ok) return { ok: true };
+
+  const text = await response.text();
+  return { ok: false, reason: text.includes("name is taken") ? "taken" : "error" };
 }

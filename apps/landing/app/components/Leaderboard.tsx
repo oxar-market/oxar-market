@@ -8,8 +8,9 @@ import { Notice } from "./Notice";
 // Таблица и отправка счёта. Первые десять получают доступ раньше остальных,
 // поэтому счёт здесь - ещё и заявка: по телеграму мы и напишем победителю.
 //
-// Одно имя - одна строка, это держит база. Подтвердить, что имя принадлежит
-// тому, кто его вписал, без входа нельзя: доступ выдаём руками, там и видно.
+// Имя занимает тот, кто вписал его первым: занятое имя база не обновляет.
+// Иначе посторонний поднимал бы чужой счёт и вытеснял из топа честных игроков -
+// владение телеграм-именем нам подтвердить нечем.
 
 const TOP = 10;
 
@@ -27,7 +28,7 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
     load();
   }, [load]);
 
-  // Новая попытка - снова можно отправить: в списке остаётся лучшая.
+  // Новая попытка - снова показываем форму: отправить можно под другим именем.
   useEffect(() => {
     if (!played) setSent(null);
   }, [played]);
@@ -44,10 +45,14 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
 
     const result = await postScore(clean, score);
     if (!result.ok) {
-      setError("Could not save that score. Try again.");
+      setError(
+        result.reason === "taken"
+          ? "That name is already on the board. Pick another one."
+          : "Could not save that score. Try again.",
+      );
       return;
     }
-    setSent(result.kept);
+    setSent(score);
     load();
   }
 
@@ -85,9 +90,8 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
       {error && <Notice tone="error">{error}</Notice>}
       {sent !== null && (
         <Notice tone="success" title={`${sent} boards on the board`}>
-          {sent > score
-            ? "Your earlier run was better, so that one stays."
-            : "Beat it and post again - only your best counts."}
+          A name holds one score. Fly again under a new name if you want another
+          shot.
         </Notice>
       )}
 
