@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "OXAR - rent out your profile as ad space",
+  title: "OXAR - if people look at it, it's ad space",
   description:
-    "Sell a specific spot on your X profile - avatar, banner, bio link, pinned post - for a specific number of days. Paid in USDC on Solana.",
+    "OXAR is a marketplace for ad space on anything people look at. List a surface you control with a price and a date range, and buyers book it in USDC escrow that pays out only for the time it is actually up.",
 };
 
 export default function RootLayout({

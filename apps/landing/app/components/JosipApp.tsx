@@ -43,9 +43,9 @@ export function JosipApp() {
 
       <p className="muted small">
         He wrote that before we started building. His argument was that the
-        behaviour already exists - Solana sold ad space on its own logo for flood
-        relief, creators sell their banners, people sell their foreheads - and
-        that crypto is what makes the payouts global and cheap.
+        behaviour already exists - Solana auctioned zones on its own logo for
+        Nepal flood relief, creators sell their banners, people sell their
+        foreheads - and that crypto is what makes the payouts global and cheap.
       </p>
 
       <a className="josip-link" href={POST_URL} target="_blank" rel="noreferrer">
