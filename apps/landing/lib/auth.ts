@@ -13,13 +13,23 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const auth = url && anonKey ? createClient(url, anonKey) : null;
 
-export async function sendLink(email: string): Promise<"sent" | "error"> {
+/**
+ * Ссылка на вход. Новых пользователей не создаём: иначе любой адрес, введённый
+ * в форму, заводил аккаунт и получал письмо от нас - то есть форма работала бы
+ * рассылкой по чужим адресам. Продавца заводим руками, и с этого момента ссылка
+ * ему приходит.
+ */
+export async function sendLink(email: string): Promise<"sent" | "unknown" | "error"> {
   if (!auth) return "error";
   const { error } = await auth.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.origin },
+    options: { emailRedirectTo: window.location.origin, shouldCreateUser: false },
   });
-  return error ? "error" : "sent";
+
+  if (!error) return "sent";
+  // Адреса нет среди заведённых. Supabase отвечает на это отдельным кодом, и
+  // человеку надо сказать не «ошибка», а что делать дальше.
+  return error.code === "otp_disabled" || error.status === 422 ? "unknown" : "error";
 }
 
 export async function currentSession(): Promise<Session | null> {

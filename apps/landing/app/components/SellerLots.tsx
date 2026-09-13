@@ -10,7 +10,7 @@ import {
   type MyListing,
   type MyLot,
 } from "@/lib/seller";
-import { Ban } from "./icons";
+import { Ban, Gavel } from "./icons";
 import { Notice } from "./Notice";
 
 // Торги по одному месту. Раньше это был отдельный список внизу кабинета, и
@@ -78,7 +78,8 @@ export function SpotAuctions({
         />
       ) : (
         <button type="button" className="desk-more" onClick={() => setOpening(true)}>
-          Put dates up for bidding
+          <Gavel />
+          Start an auction on these dates
         </button>
       )}
     </div>
@@ -278,7 +279,7 @@ function OpenLot({
           Open the lot
         </button>
         <button type="button" className="desk-no" onClick={onCancel}>
-          Never mind
+          Cancel
         </button>
       </div>
 

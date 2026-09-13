@@ -2177,23 +2177,33 @@ a.primary {
   gap: 12px;
 }
 
-/* Раскрыть форму: выглядит как действие, а не как заголовок раздела. */
+/* Раскрыть форму: выглядит как действие, а не как заголовок раздела. Пунктир
+   был слишком тихим - «Start an auction» не находили глазами. */
 .desk-more {
   align-self: flex-start;
-  border: 1px dashed var(--line);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
   border-radius: 9px;
-  background: transparent;
-  padding: 7px 12px;
+  background: var(--card);
+  padding: 8px 12px;
   font: inherit;
   font-size: 14px;
-  color: var(--muted);
+  color: var(--fg);
   cursor: pointer;
-  transition: color 0.14s, border-color 0.14s;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.desk-more svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
 }
 
 .desk-more:hover {
-  color: var(--fg);
   border-color: #c8c8c2;
+  background: #f7f7f5;
 }
 
 .desk-spot {

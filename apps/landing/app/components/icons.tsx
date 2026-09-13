@@ -145,23 +145,36 @@ export function Cross(props: Props) {
   );
 }
 
-/** Снять с продажи: место остаётся, но его не видно в витрине. */
-export function EyeOff(props: Props) {
+/**
+ * Снять с продажи - пауза, а не зачёркнутый глаз: глаз читается как «скрыть от
+ * меня» или «посмотреть», а место здесь именно приостанавливают.
+ */
+export function Pause(props: Props) {
   return (
     <Svg {...props}>
-      <path d="M4 4l16 16" />
-      <path d="M9.7 5.4A8.6 8.6 0 0112 5.2c5 0 8 4.1 8 6.8a9 9 0 01-1.9 3.2" />
-      <path d="M6.4 7.3A11 11 0 004 12c0 2.7 3 6.8 8 6.8a8.4 8.4 0 003.6-.8" />
-      <path d="M10 10a2.8 2.8 0 004 4" />
+      <path d="M9.5 5.5v13" />
+      <path d="M14.5 5.5v13" />
     </Svg>
   );
 }
 
-export function Eye(props: Props) {
+export function Play(props: Props) {
   return (
     <Svg {...props}>
-      <path d="M4 12c0-2.7 3-6.8 8-6.8s8 4.1 8 6.8c0 2.7-3 6.8-8 6.8S4 14.7 4 12z" />
-      <circle cx="12" cy="12" r="2.8" />
+      <path d="M8 5.5l10 6.5-10 6.5z" />
+    </Svg>
+  );
+}
+
+/** Торг: молоток аукциониста. */
+export function Gavel(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M4.5 19.5h9" />
+      <path d="M7 14.5l6-6" />
+      <path d="M11.5 4.5l6 6" />
+      <path d="M14.5 3.5l4 4" />
+      <path d="M10.5 7.5l4 4" />
     </Svg>
   );
 }
