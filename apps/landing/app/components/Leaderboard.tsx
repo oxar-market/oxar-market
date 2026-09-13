@@ -2,15 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { contactKind, isValidContact, normalizeContact } from "@oxar/core";
-import { postScore, topScores, type Score } from "@/lib/game";
+import { postScore, readMine, topScores, type Mine, type Score } from "@/lib/game";
 import { Notice } from "./Notice";
 
 // Таблица и отправка счёта. Первые десять получают доступ раньше остальных,
 // поэтому счёт здесь - ещё и заявка: по телеграму мы и напишем победителю.
 //
-// Имя занимает тот, кто вписал его первым: занятое имя база не обновляет.
-// Иначе посторонний поднимал бы чужой счёт и вытеснял из топа честных игроков -
-// владение телеграм-именем нам подтвердить нечем.
+// Своё имя можно улучшать, чужое - нет: имя держит ключ, который придумал этот
+// браузер, а в базе лежит только его хэш. Результат ниже своего рекорда мы даже
+// не предлагаем отправить - в таблице он ничего не изменит.
 
 const TOP = 10;
 
@@ -18,6 +18,7 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
   const [rows, setRows] = useState<Score[] | null>(null);
   const [handle, setHandle] = useState("");
   const [sent, setSent] = useState<number | null>(null);
+  const [mine, setMine] = useState<Mine | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -26,12 +27,16 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
 
   useEffect(() => {
     load();
+    setMine(readMine());
   }, [load]);
 
   // Новая попытка - снова показываем форму: отправить можно под другим именем.
   useEffect(() => {
     if (!played) setSent(null);
   }, [played]);
+
+  // null - своего рекорда мы не знаем, значит форму показываем.
+  const beaten = mine ? score > mine.best : null;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -52,7 +57,8 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
       );
       return;
     }
-    setSent(score);
+    setSent(result.kept);
+    setMine(readMine());
     load();
   }
 
@@ -66,14 +72,23 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
         </span>
       </div>
 
-      {played && sent === null && (
+      {/* Свой рекорд уже в таблице, и эта попытка его не побила: отправлять
+          нечего, и кнопка тут была бы обманом. */}
+      {played && sent === null && beaten === false && mine && (
+        <Notice tone="success" title={`Your best is ${mine.best}`}>
+          {mine.handle} holds it. Beat {mine.best} and the board updates by
+          itself.
+        </Notice>
+      )}
+
+      {played && sent === null && beaten !== false && (
         <form className="board-form" onSubmit={submit} noValidate>
           <span className="prefixed">
             <span className="prefix" aria-hidden>
               @
             </span>
             <input
-              value={handle}
+              value={handle || (mine ? mine.handle.replace(/^@/, "") : "")}
               onChange={(event) => setHandle(event.target.value.replace(/^@/, ""))}
               placeholder="yourname"
               autoComplete="off"
@@ -90,8 +105,9 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
       {error && <Notice tone="error">{error}</Notice>}
       {sent !== null && (
         <Notice tone="success" title={`${sent} boards on the board`}>
-          A name holds one score. Fly again under a new name if you want another
-          shot.
+          {sent > score
+            ? "Your earlier run was better, so that one stays."
+            : "Beat it and it updates by itself - from this browser."}
         </Notice>
       )}
 
