@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { APPS, FILES, type DesktopFile } from "@/lib/desktop";
 import { useIconLayout, type Layout } from "@/lib/use-icon-layout";
 import { useSellerAccount } from "@/lib/use-seller-account";
@@ -84,6 +84,16 @@ export function Desktop() {
 
   const { positions, surface, onPointerDown, onPointerMove, onPointerUp } =
     useIconLayout(DEFAULT_POSITIONS, MOBILE_POSITIONS);
+
+  // Вход живёт по адресу, а не в интерфейсе: oxar.app/?signin. Ссылку мы
+  // отправляем сами тем, кого одобрили, - до открытия платформы остальным не
+  // нужно даже знать, что вход существует. Кнопка в доке или в окне это
+  // обещание, которое мы пока не готовы исполнить.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("signin")) {
+      setOpen({ kind: "desk" });
+    }
+  }, []);
 
   // Кабинет и звонок - две стороны одной дороги. Есть свои места - значит
   // разговор уже был, и предлагать его снова незачем. Мест нет - значит
@@ -223,10 +233,6 @@ export function Desktop() {
       {open?.kind === "waitlist" && (
         <Window title="waitlist" onClose={() => setOpen(null)}>
           <Waitlist />
-          {/* Для того, кого уже одобрили: он пришёл не записываться, а войти. */}
-          <button className="quiet" onClick={() => setOpen({ kind: "desk" })}>
-            Already approved? Sign in
-          </button>
         </Window>
       )}
 

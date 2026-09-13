@@ -559,27 +559,6 @@ input:focus {
   cursor: default;
 }
 
-/* Второе действие в окне: нужно немногим, поэтому выглядит как ссылка, а не как
-   кнопка рядом с основной. */
-.quiet {
-  align-self: flex-start;
-  border: none;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  font-size: 13.5px;
-  color: var(--muted);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--line);
-}
-
-.quiet:hover {
-  color: var(--fg);
-  text-decoration-color: currentColor;
-}
-
 .estimate {
   font-size: 14.5px;
   color: var(--muted);
