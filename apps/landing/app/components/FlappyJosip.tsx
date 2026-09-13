@@ -256,15 +256,19 @@ export function FlappyJosip({
           безопасную зону экрана и не прячутся под островом. */}
       <span className="flap-score">{score}</span>
 
-      <button
-        type="button"
-        className="flap-close"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={onExit}
-        aria-label="Close the game"
-      >
-        ✕
-      </button>
+      {/* Выход показывается до и после попытки, но не в полёте: там каждый тап
+          - это взмах, и кнопка у края экрана ловит промахи вместо игры. */}
+      {phase !== "playing" && (
+        <button
+          type="button"
+          className="flap-close"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={onExit}
+          aria-label="Close the game"
+        >
+          ✕
+        </button>
+      )}
 
       {phase === "ready" && (
         <div className="flap-over">
