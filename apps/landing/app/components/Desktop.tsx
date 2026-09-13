@@ -251,7 +251,7 @@ export function Desktop() {
             access={
               account.status === "loading"
                 ? "loading"
-                : account.status === "seller"
+                : account.access
                   ? "open"
                   : "locked"
             }
