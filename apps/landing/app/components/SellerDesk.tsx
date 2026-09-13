@@ -16,6 +16,7 @@ import {
   type MyListing,
   type MySeller,
 } from "@/lib/seller";
+import { SignOut } from "./icons";
 import { Notice } from "./Notice";
 import { usePriceFields } from "./PriceFields";
 import { SellerLots } from "./SellerLots";
@@ -183,12 +184,29 @@ function Desk({ seller }: { seller: MySeller }) {
 
   return (
     <div className="card">
-      <header className="req-head">
-        <h2>@{seller.x_handle}</h2>
-        <p className="req-sub">
-          {seller.follower_count.toLocaleString("en-US")} followers
-          {seller.verified ? " · verified" : " · not verified yet"}
-        </p>
+      <header className="req-head desk-head">
+        <div>
+          <h2>@{seller.x_handle}</h2>
+          <p className="req-sub">
+            {seller.follower_count.toLocaleString("en-US")} followers
+            {seller.verified ? " · verified" : " · not verified yet"}
+          </p>
+        </div>
+
+        {/* Выход стоит у имени: он про этот аккаунт, а не про места в списке
+            ниже, где он и висел. Иконка без подписи - действие редкое, а место
+            в потоке кабинета занимало строку. */}
+        <button
+          type="button"
+          className="desk-out"
+          onClick={async () => {
+            await signOut();
+          }}
+          aria-label="Sign out"
+          title="Sign out"
+        >
+          <SignOut />
+        </button>
       </header>
 
       {error && <Notice tone="error">{error}</Notice>}
@@ -286,16 +304,6 @@ function Desk({ seller }: { seller: MySeller }) {
       />
 
       <SellerLots listings={listings ?? []} />
-
-      <button
-        type="button"
-        className="link-back"
-        onClick={async () => {
-          await signOut();
-        }}
-      >
-        Sign out
-      </button>
     </div>
   );
 }

@@ -1450,6 +1450,43 @@ a.primary {
   letter-spacing: 0;
 }
 
+/* Шапка кабинета: имя слева, выход справа. Общий .req-head не трогаем - на
+   экране заявки заголовок и подпись стоят в столбик. */
+.desk-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Выход: иконка у имени. Подпись ему не нужна, а строкой в конце кабинета он
+   стоял дальше всего от того, к чему относится. */
+.desk-out {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.desk-out svg {
+  width: 16px;
+  height: 16px;
+}
+
+.desk-out:hover {
+  color: var(--fg);
+  border-color: #c8c8c2;
+  background: #f7f7f5;
+}
+
 .req-sub {
   margin-top: 3px;
   font-size: 14px;
