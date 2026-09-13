@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FlappyJosip } from "./FlappyJosip";
+import { Leaderboard } from "./Leaderboard";
 
 // Пасхалка. Йосип Воларевич описал этот маркетплейс публично ещё до того, как мы
 // начали его строить. Здесь короткая выдержка и ссылка на его пост: перепечатка
@@ -12,6 +13,8 @@ const PROFILE_URL = "https://x.com/JosipVolarevic2";
 
 export function JosipApp() {
   const [playing, setPlaying] = useState(false);
+  // Последний доигранный счёт: его и предлагаем отправить в таблицу.
+  const [lastScore, setLastScore] = useState<number | null>(null);
 
   if (playing) {
     return (
@@ -19,10 +22,11 @@ export function JosipApp() {
         <button type="button" className="link-back" onClick={() => setPlaying(false)}>
           Back
         </button>
-        <FlappyJosip />
+        <FlappyJosip onScore={setLastScore} />
         <p className="muted small">
           Every board in the way is ad space nobody bought yet.
         </p>
+        <Leaderboard score={lastScore ?? 0} played={lastScore !== null} />
       </div>
     );
   }

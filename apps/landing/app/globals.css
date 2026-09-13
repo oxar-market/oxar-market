@@ -1733,6 +1733,85 @@ a.primary {
   letter-spacing: -0.015em;
 }
 
+/* Таблица игроков */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.board-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.board-head strong {
+  font-size: 15px;
+}
+
+.board-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.board-form .prefixed {
+  flex: 1;
+}
+
+.board-form .primary {
+  flex: none;
+  white-space: nowrap;
+}
+
+.board-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.board-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f0f0ec;
+  font-size: 14px;
+}
+
+.board-list li:last-child {
+  border-bottom: none;
+}
+
+.board-rank {
+  width: 20px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-handle {
+  flex: 1;
+  color: var(--fg);
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-handle:hover {
+  text-decoration: underline;
+}
+
+.board-score {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Кабинет продавца */
 
 .desk-item {
