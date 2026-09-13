@@ -30,9 +30,9 @@ body {
      набор рядом - на случай, если шрифт ещё не загрузился. */
   font-family: var(--font-anybody), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", sans-serif;
-  /* Шрифт вариативный, поэтому базовый вес выбирается свободно. Обычные 400 у
-     Anybody выглядят тоньше системного набора, и текст читался бледно. */
-  font-weight: 500;
+  /* Полужирный интерфейс у Anybody читался тяжело в мелком тексте: у шрифта
+     узкие просветы, и на 13-15px буквы слипаются. Поэтому обычный вес. */
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -214,7 +214,7 @@ body {
 }
 
 .icon-name {
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.3;
   text-align: center;
   letter-spacing: 0.01em;
@@ -434,7 +434,7 @@ body {
 
 .window-body p {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.5;
   color: #2c2c33;
 }
@@ -459,7 +459,7 @@ body {
 
 .page p {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.5;
   color: #2c2c33;
 }
@@ -474,8 +474,10 @@ body {
   color: var(--muted);
 }
 
+/* Крупнее обычного мелкого текста: у Anybody различия между буквами уходят
+   раньше, чем у нейтрального шрифта. */
 .small {
-  font-size: 13.5px;
+  font-size: 14px;
 }
 
 /* Форма waitlist */
@@ -616,7 +618,7 @@ input:focus {
   }
 
   .icon-name {
-    font-size: 11px;
+    font-size: 11.5px;
   }
 
   /* Док остаётся поверх открытого листа: Home должен нажиматься всегда, как на
@@ -2014,7 +2016,7 @@ a.primary {
 }
 
 .desk-lines strong {
-  font-size: 14.5px;
+  font-size: 15px;
 }
 
 /* Превью креатива в заявке: продавцу надо увидеть, что встанет на его профиль */
@@ -2064,7 +2066,7 @@ a.primary {
   padding: 8px 12px;
   background: var(--card);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 14px;
   cursor: pointer;
   transition: border-color 0.14s, background 0.14s;
 }
@@ -2105,7 +2107,7 @@ a.primary {
 }
 
 .desk-saved {
-  font-size: 12.5px;
+  font-size: 13px;
   color: #2f7d55;
 }
 
