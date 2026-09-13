@@ -176,6 +176,22 @@ body {
   display: block;
 }
 
+/* Иконка-фотография: без внутренних полей, как аватарка приложения */
+.icon-art.photo {
+  background: var(--card);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  padding: 0;
+}
+
+.icon-art.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .icon-art.app {
   background: #0f1419;
   color: #fff;
@@ -1611,6 +1627,65 @@ a.primary {
   gap: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+/* Пасхалка про Йосипа */
+
+.josip {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.josip-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.josip-head strong {
+  display: block;
+  font-size: 16px;
+}
+
+.josip-face {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+
+.josip-handle {
+  font-size: 13.5px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.josip-handle:hover {
+  text-decoration: underline;
+}
+
+/* Его слова - отдельным блоком, чтобы не путались с нашими */
+.josip-quote {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 2px solid #6b46e5;
+  background: #f7f6fd;
+  border-radius: 0 11px 11px 0;
+  font-size: 15.5px;
+  line-height: 1.5;
+}
+
+.josip-link {
+  font-size: 14px;
+  color: var(--accent);
+  text-decoration: none;
+  width: fit-content;
+}
+
+.josip-link:hover {
+  text-decoration: underline;
 }
 
 /* Кабинет продавца */

@@ -77,6 +77,8 @@ export const FILES: DesktopFile[] = [
 export type DesktopApp = {
   slug: string;
   name: string;
+  /** Картинка иконки. Без неё рисуется чёрный значок X. */
+  icon?: string;
   x: number;
   y: number;
 };
@@ -86,6 +88,15 @@ export const APPS: DesktopApp[] = [
     slug: "x",
     name: "X placements",
     x: 16,
+    y: 70,
+  },
+  // Йосип предложил этот маркетплейс публично ещё до того, как мы его начали.
+  // Иконка с его лицом - отсылка для тех, кто это помнит.
+  {
+    slug: "josip",
+    name: "Josip called it",
+    icon: "/icons/josip.png",
+    x: 44,
     y: 70,
   },
 ];
