@@ -19,7 +19,7 @@ import {
   type MyLot,
   type MySeller,
 } from "@/lib/seller";
-import { Cross, Eye, EyeOff, Pencil, SignOut } from "./icons";
+import { Cross, Pause, Pencil, Play, SignOut } from "./icons";
 import { Notice } from "./Notice";
 import { usePriceFields } from "./PriceFields";
 import { SpotAuctions } from "./SellerLots";
@@ -91,7 +91,11 @@ function SignIn({ onSent }: { onSent: (email: string) => void }) {
       onSent(address);
       return;
     }
-    setError("Could not send the link. Try again in a minute.");
+    setError(
+      result === "unknown"
+        ? "No seller on that address yet. Onboarding is by hand - book a call and we will add you."
+        : "Could not send the link. Try again in a minute.",
+    );
   }
 
   return (
@@ -413,10 +417,10 @@ function Spot({
               await setActive(listing.id, !listing.active);
               onChanged();
             }}
-            aria-label={listing.active ? "Take off sale" : "Put back on sale"}
-            title={listing.active ? "Take off sale" : "Put back on sale"}
+            aria-label={listing.active ? "Pause the sale" : "Put back on sale"}
+            title={listing.active ? "Pause the sale" : "Put back on sale"}
           >
-            {listing.active ? <EyeOff /> : <Eye />}
+            {listing.active ? <Pause /> : <Play />}
           </button>
         </div>
       </div>
@@ -530,7 +534,7 @@ function AddSpot({
           List the spot
         </button>
         <button type="button" className="desk-no" onClick={onCancel}>
-          Never mind
+          Cancel
         </button>
       </div>
     </form>
