@@ -17,34 +17,27 @@ import { Lock } from "./icons";
 
 export function LockedOffers({ onWaitlist }: { onWaitlist: () => void }) {
   return (
-    <>
-      <div className="locked">
-        <div className="locked-rows" aria-hidden>
-          {[74, 52, 88].map((width) => (
-            <span className="locked-row" key={width}>
-              <span className="locked-side">
-                @<span className="locked-bar" style={{ width }} />
-              </span>
-              <span className="locked-side">
-                $<span className="locked-bar locked-price" />
-              </span>
+    <div className="locked">
+      <div className="locked-rows" aria-hidden>
+        {[74, 52, 88].map((width) => (
+          <span className="locked-row" key={width}>
+            <span className="locked-side">
+              @<span className="locked-bar" style={{ width }} />
             </span>
-          ))}
-        </div>
-
-        <div className="locked-over">
-          <Lock className="locked-lock" />
-          <strong>Prices open with the waitlist</strong>
-          <button type="button" className="primary" onClick={onWaitlist}>
-            Join the waitlist
-          </button>
-        </div>
+            <span className="locked-side">
+              $<span className="locked-bar locked-price" />
+            </span>
+          </span>
+        ))}
       </div>
 
-      <p className="muted small">
-        Sellers are verified by hand, a few accounts at a time. You get this spot the
-        day it opens.
-      </p>
-    </>
+      <div className="locked-over">
+        <Lock className="locked-lock" />
+        <strong>Prices open with the waitlist</strong>
+        <button type="button" className="primary" onClick={onWaitlist}>
+          Join the waitlist
+        </button>
+      </div>
+    </div>
   );
 }
