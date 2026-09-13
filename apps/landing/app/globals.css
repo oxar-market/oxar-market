@@ -2123,6 +2123,79 @@ a.primary {
   background: #f7f7f5;
 }
 
+/* Кнопка-иконка в строке места: два постоянных действия помещаются в край
+   строки, а подписи занимали половину её ширины на телефоне. */
+.desk-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.desk-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.desk-icon:hover {
+  color: var(--fg);
+  border-color: #c8c8c2;
+  background: #f7f7f5;
+}
+
+/* Открытая правка: кнопка держит нажатое состояние, иначе непонятно, чем
+   закрыть раскрытую форму. */
+.desk-icon.on {
+  color: var(--fg);
+  background: #f0f0ec;
+  border-color: #c8c8c2;
+}
+
+/* Торги места: вложенный блок со своей левой линией - видно, что это про место
+   выше, а не следующий пункт списка. */
+.desk-auction {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 0 12px;
+  padding-left: 12px;
+  border-left: 2px solid #eceae4;
+}
+
+.desk-lot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Раскрыть форму: выглядит как действие, а не как заголовок раздела. */
+.desk-more {
+  align-self: flex-start;
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+  background: transparent;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.14s, border-color 0.14s;
+}
+
+.desk-more:hover {
+  color: var(--fg);
+  border-color: #c8c8c2;
+}
+
 .desk-spot {
   border-bottom: 1px solid #f0f0ec;
 }

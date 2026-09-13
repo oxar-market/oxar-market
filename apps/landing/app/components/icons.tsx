@@ -128,6 +128,54 @@ export function Share(props: Props) {
   );
 }
 
+export function Pencil(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M4.5 19.5l4-1 10-10a2.1 2.1 0 00-3-3l-10 10-1 4z" />
+    </Svg>
+  );
+}
+
+export function Cross(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M6.5 6.5l11 11" />
+      <path d="M17.5 6.5l-11 11" />
+    </Svg>
+  );
+}
+
+/** Снять с продажи: место остаётся, но его не видно в витрине. */
+export function EyeOff(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M4 4l16 16" />
+      <path d="M9.7 5.4A8.6 8.6 0 0112 5.2c5 0 8 4.1 8 6.8a9 9 0 01-1.9 3.2" />
+      <path d="M6.4 7.3A11 11 0 004 12c0 2.7 3 6.8 8 6.8a8.4 8.4 0 003.6-.8" />
+      <path d="M10 10a2.8 2.8 0 004 4" />
+    </Svg>
+  );
+}
+
+export function Eye(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M4 12c0-2.7 3-6.8 8-6.8s8 4.1 8 6.8c0 2.7-3 6.8-8 6.8S4 14.7 4 12z" />
+      <circle cx="12" cy="12" r="2.8" />
+    </Svg>
+  );
+}
+
+/** Остановить торг: круг с чертой, а не крестик - крестик читается как «закрыть». */
+export function Ban(props: Props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="7.5" />
+      <path d="M7 17L17 7" />
+    </Svg>
+  );
+}
+
 export function SignOut(props: Props) {
   return (
     <Svg {...props}>

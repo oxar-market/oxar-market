@@ -3,23 +3,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatUsd, PLACEMENTS, placementSpec, type PlacementKind } from "@oxar/core";
 import { sendLink, signOut } from "@/lib/auth";
+import { closeDueLots } from "@/lib/auctions";
 import type { SellerAccount } from "@/lib/use-seller-account";
 import {
   addListing,
   decide,
   myBookings,
   myListings,
+  myLots,
   mySeller,
   setActive,
   updateListing,
   type MyBooking,
   type MyListing,
+  type MyLot,
   type MySeller,
 } from "@/lib/seller";
-import { SignOut } from "./icons";
+import { Cross, Eye, EyeOff, Pencil, SignOut } from "./icons";
 import { Notice } from "./Notice";
 import { usePriceFields } from "./PriceFields";
-import { SellerLots } from "./SellerLots";
+import { SpotAuctions } from "./SellerLots";
 
 // Кабинет продавца. Вход по ссылке на почту, дальше свои места и заявки на них.
 // Онбординг ручной: войти может любой, но местами владеет только тот, чей адрес
@@ -168,12 +171,23 @@ function LinkSent({ email, onAgain }: { email: string; onAgain: () => void }) {
 function Desk({ seller }: { seller: MySeller }) {
   const [listings, setListings] = useState<MyListing[] | null>(null);
   const [bookings, setBookings] = useState<MyBooking[] | null>(null);
+  const [lots, setLots] = useState<MyLot[] | null>(null);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
 
   const reload = useCallback(async () => {
-    const [spots, requests] = await Promise.all([myListings(seller.id), myBookings()]);
+    // Лоты грузим здесь, а не внутри каждого места: один запрос на кабинет
+    // вместо запроса на карточку. Сначала закрываем то, у чего вышел срок -
+    // продавец должен видеть исход, а не висящий торг.
+    await closeDueLots();
+    const [spots, requests, auctions] = await Promise.all([
+      myListings(seller.id),
+      myBookings(),
+      myLots(),
+    ]);
     setListings(spots);
     setBookings(requests);
+    setLots(auctions);
   }, [seller.id]);
 
   useEffect(() => {
@@ -289,31 +303,52 @@ function Desk({ seller }: { seller: MySeller }) {
         <span className="field-label">Your spots</span>
         {listings === null && <p className="muted small">Loading…</p>}
         {listings?.map((listing) => (
-          <Spot key={listing.id} listing={listing} onChanged={reload} />
+          <Spot
+            key={listing.id}
+            listing={listing}
+            lots={(lots ?? []).filter((lot) => lot.listing_id === listing.id)}
+            onChanged={reload}
+          />
         ))}
 
         {listings?.length === 0 && (
-          <p className="muted small">Nothing listed yet. Add your first spot below.</p>
+          <p className="muted small">Nothing listed yet. Add your first spot.</p>
+        )}
+
+        {/* Форма стоит за кнопкой: место добавляют один раз, а поля висели
+            всегда и удлиняли кабинет на целый экран. */}
+        {adding ? (
+          <AddSpot
+            sellerId={seller.id}
+            taken={(listings ?? []).map((listing) => listing.kind)}
+            onAdded={() => {
+              setAdding(false);
+              reload();
+            }}
+            onCancel={() => setAdding(false)}
+          />
+        ) : (
+          <button type="button" className="desk-more" onClick={() => setAdding(true)}>
+            Add a spot
+          </button>
         )}
       </section>
-
-      <AddSpot
-        sellerId={seller.id}
-        taken={(listings ?? []).map((listing) => listing.kind)}
-        onAdded={reload}
-      />
-
-      <SellerLots listings={listings ?? []} />
     </div>
   );
 }
 
-/** Место продавца: цену можно поправить здесь же, не пересоздавая место. */
+/**
+ * Место продавца. Здесь всё, что к нему относится: цена, продажа и торги -
+ * раньше торги лежали отдельным списком в конце кабинета, и связь с местом
+ * приходилось держать в голове.
+ */
 function Spot({
   listing,
+  lots,
   onChanged,
 }: {
   listing: MyListing;
+  lots: MyLot[];
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -358,23 +393,30 @@ function Spot({
           </span>
           {saved && <span className="desk-saved">Price updated</span>}
         </div>
+        {/* Иконки вместо подписей: у места два постоянных действия, и надписи
+            на них занимали половину строки на телефоне. Что делает каждая,
+            говорят aria-label и подсказка при наведении. */}
         <div className="desk-acts">
           <button
             type="button"
-            className="desk-no"
+            className={editing ? "desk-icon on" : "desk-icon"}
             onClick={() => setEditing(!editing)}
+            aria-label={editing ? "Close the price editor" : "Edit the price"}
+            title={editing ? "Close the price editor" : "Edit the price"}
           >
-            {editing ? "Cancel" : "Edit price"}
+            {editing ? <Cross /> : <Pencil />}
           </button>
           <button
             type="button"
-            className="desk-no"
+            className="desk-icon"
             onClick={async () => {
               await setActive(listing.id, !listing.active);
               onChanged();
             }}
+            aria-label={listing.active ? "Take off sale" : "Put back on sale"}
+            title={listing.active ? "Take off sale" : "Put back on sale"}
           >
-            {listing.active ? "Take off sale" : "Put back"}
+            {listing.active ? <EyeOff /> : <Eye />}
           </button>
         </div>
       </div>
@@ -388,6 +430,8 @@ function Spot({
           </button>
         </form>
       )}
+
+      <SpotAuctions listing={listing} lots={lots} onChanged={onChanged} />
     </div>
   );
 }
@@ -401,10 +445,12 @@ function AddSpot({
   sellerId,
   taken,
   onAdded,
+  onCancel,
 }: {
   sellerId: string;
   taken: PlacementKind[];
   onAdded: () => void;
+  onCancel: () => void;
 }) {
   const free = PLACEMENTS.filter((spec) => !taken.includes(spec.kind));
   const [kind, setKind] = useState<PlacementKind | "">("");
@@ -416,10 +462,7 @@ function AddSpot({
 
   if (free.length === 0) {
     return (
-      <section className="req-row">
-        <span className="field-label">Add a spot</span>
-        <p className="muted small">Every spot on your profile is listed already.</p>
-      </section>
+      <p className="muted small">Every spot on your profile is listed already.</p>
     );
   }
 
@@ -451,14 +494,12 @@ function AddSpot({
   }
 
   return (
-    <form className="req-row desk-add" onSubmit={submit} noValidate>
-      <span className="field-label">Add a spot</span>
-
+    <form className="desk-edit" onSubmit={submit} noValidate>
       {/* Молча созданное место читается как сбой: человек не понимает, сделалось
           ли что-нибудь вообще. */}
       {listed && (
         <Notice tone="success" title={`${listed} is listed`}>
-          It shows up in Your spots above, and buyers see it in the marketplace.
+          It shows up in the list above, and buyers see it in the marketplace.
         </Notice>
       )}
 
@@ -484,9 +525,14 @@ function AddSpot({
 
       {error && <Notice tone="error">{error}</Notice>}
 
-      <button type="submit" className="primary">
-        List the spot
-      </button>
+      <div className="desk-acts">
+        <button type="submit" className="primary">
+          List the spot
+        </button>
+        <button type="button" className="desk-no" onClick={onCancel}>
+          Never mind
+        </button>
+      </div>
     </form>
   );
 }
