@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
+import { Anybody } from "next/font/google";
 import "./globals.css";
+
+// Шрифт продукта. Вариативный, поэтому все веса берутся из одного файла, и
+// отдельные начертания подключать не нужно. Файл скачивается при сборке и
+// раздаётся с нашего домена: запроса к Google из браузера нет.
+const anybody = Anybody({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-anybody",
+});
 
 export const metadata: Metadata = {
   title: "OXAR - if people look at it, it's ad space",
@@ -13,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={anybody.variable}>
       <body>{children}</body>
     </html>
   );
