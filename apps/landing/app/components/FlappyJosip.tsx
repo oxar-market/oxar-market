@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   BIRD_R,
-  BIRD_X,
+  birdX,
   BOARD_W,
   fresh,
   GAP,
@@ -175,7 +175,13 @@ export function FlappyJosip({
       // только обрезал уши и подбородок.
       if (face.current) {
         const size = BIRD_R * 2.4;
-        ctx.drawImage(face.current, BIRD_X - size / 2, w.y - size / 2, size, size);
+        ctx.drawImage(
+          face.current,
+          birdX(logicalW) - size / 2,
+          w.y - size / 2,
+          size,
+          size,
+        );
       }
     };
 
