@@ -194,13 +194,10 @@ export function Desktop() {
           </a>
         </DockSlot>
 
-        {/* Одобренный продавец с другого телефона выглядит как гость, и без
-            этой кнопки войти ему было бы нечем. */}
-        <DockSlot show={role === "creator" && account.status === "guest"}>
-          <button className="dock-quiet" onClick={() => setOpen({ kind: "desk" })}>
-            Sign in
-          </button>
-        </DockSlot>
+        {/* Вход стоял здесь третьей кнопкой и ломал правило дока: две кнопки,
+            одна из которых зависит от состояния. Он переехал в окно вейтлиста -
+            одобренному продавцу на новом устройстве нужен редко, а место в доке
+            занимал всегда. */}
 
         <DockSlot show={role === "advertiser"}>
           <button className="dock-item" onClick={() => setOpen({ kind: "x" })}>
@@ -226,6 +223,10 @@ export function Desktop() {
       {open?.kind === "waitlist" && (
         <Window title="waitlist" onClose={() => setOpen(null)}>
           <Waitlist />
+          {/* Для того, кого уже одобрили: он пришёл не записываться, а войти. */}
+          <button className="quiet" onClick={() => setOpen({ kind: "desk" })}>
+            Already approved? Sign in
+          </button>
         </Window>
       )}
 

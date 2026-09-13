@@ -331,28 +331,6 @@ body {
   background: rgba(0, 0, 0, 0.06);
 }
 
-/* Вход в доке нужен редко - только одобренному продавцу на новом устройстве,
-   поэтому он тише соседей и не тянет на себя внимание. */
-.dock-quiet {
-  display: inline-flex;
-  align-items: center;
-  height: 40px;
-  border: none;
-  background: transparent;
-  border-radius: 9px;
-  padding: 0 12px;
-  font: inherit;
-  font-size: 13px;
-  white-space: nowrap;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.dock-quiet:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--fg);
-}
-
 /* Окна */
 
 .window-layer {
@@ -581,6 +559,27 @@ input:focus {
   cursor: default;
 }
 
+/* Второе действие в окне: нужно немногим, поэтому выглядит как ссылка, а не как
+   кнопка рядом с основной. */
+.quiet {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line);
+}
+
+.quiet:hover {
+  color: var(--fg);
+  text-decoration-color: currentColor;
+}
+
 .estimate {
   font-size: 14.5px;
   color: var(--muted);
@@ -654,10 +653,8 @@ input:focus {
     height: 40px;
   }
 
-  /* Теснее, чем на десктопе: у продавца в доке три кнопки, и на узком экране
-     последняя уезжала за край. */
-  .dock-item,
-  .dock-quiet {
+  /* Теснее, чем на десктопе: на узком экране кнопки иначе подпирают края. */
+  .dock-item {
     height: 40px;
     padding: 0 9px;
     font-size: 13px;
