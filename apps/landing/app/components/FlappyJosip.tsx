@@ -44,6 +44,14 @@ export function FlappyJosip({
   const [phase, setPhase] = useState<"ready" | "playing" | "dead">("ready");
   const [score, setScore] = useState(0);
 
+  // Цикл создаётся один раз и читает фазу отсюда. Если он зависит от состояния,
+  // то пересоздаётся на каждом очке - и вместе с ним заново создаётся мир:
+  // игра сама начиналась с начала после первых же щитов.
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  const report = useRef(onScore);
+  report.current = onScore;
+
   const flap = useCallback(() => {
     if (phase === "dead") return;
     if (phase === "ready") setPhase("playing");
@@ -54,8 +62,8 @@ export function FlappyJosip({
     world.current = fresh(width.current);
     setScore(0);
     setPhase("ready");
-    onScore?.(null);
-  }, [onScore]);
+    report.current?.(null);
+  }, []);
 
   useEffect(() => {
     const image = new Image();
@@ -90,6 +98,8 @@ export function FlappyJosip({
     resize();
     world.current = fresh(width.current);
     window.addEventListener("resize", resize);
+    // Мир создаётся здесь один раз: пересоздание на каждый resize стирало бы
+    // текущую попытку при повороте телефона.
 
     const draw = () => {
       const w = world.current;
@@ -169,7 +179,7 @@ export function FlappyJosip({
       const dt = Math.min((now - last) / 1000, 1 / 30);
       last = now;
 
-      if (phase === "playing") {
+      if (phaseRef.current === "playing") {
         world.current = step(
           world.current,
           dt,
@@ -177,10 +187,10 @@ export function FlappyJosip({
           width.current,
         );
 
-        if (world.current.score !== score) setScore(world.current.score);
+        setScore(world.current.score);
         if (world.current.dead) {
           setPhase("dead");
-          onScore?.(world.current.score);
+          report.current?.(world.current.score);
         }
       }
 
@@ -194,7 +204,9 @@ export function FlappyJosip({
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [phase, score, onScore]);
+    // Пустые зависимости намеренно: цикл живёт всё время, пока открыта игра.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

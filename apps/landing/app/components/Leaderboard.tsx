@@ -1,19 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { isValidHandle, normalizeHandle } from "@oxar/core";
+import { contactKind, isValidContact, normalizeContact } from "@oxar/core";
 import { postScore, topScores, type Score } from "@/lib/game";
 import { Notice } from "./Notice";
 
 // Таблица и отправка счёта. Первые десять получают доступ раньше остальных,
-// поэтому счёт здесь - ещё и заявка: без хэндла непонятно, кому его открывать.
+// поэтому счёт здесь - ещё и заявка: по телеграму мы и напишем победителю.
+//
+// Одно имя - одна строка, это держит база. Подтвердить, что имя принадлежит
+// тому, кто его вписал, без входа нельзя: доступ выдаём руками, там и видно.
 
 const TOP = 10;
 
 export function Leaderboard({ score, played }: { score: number; played: boolean }) {
   const [rows, setRows] = useState<Score[] | null>(null);
   const [handle, setHandle] = useState("");
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -26,25 +29,25 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
 
   // Новая попытка - снова можно отправить: в списке остаётся лучшая.
   useEffect(() => {
-    if (!played) setSent(false);
+    if (!played) setSent(null);
   }, [played]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
 
-    const clean = normalizeHandle(handle);
-    if (!isValidHandle(clean)) {
-      setError("Your X handle, letters and numbers, no @.");
+    const clean = normalizeContact(handle.startsWith("@") ? handle : `@${handle}`);
+    if (!isValidContact(clean) || contactKind(clean) !== "telegram") {
+      setError("Telegram name, like @yourname - at least five characters.");
       return;
     }
 
     const result = await postScore(clean, score);
-    if (result === "error") {
+    if (!result.ok) {
       setError("Could not save that score. Try again.");
       return;
     }
-    setSent(true);
+    setSent(result.kept);
     load();
   }
 
@@ -53,11 +56,12 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
       <div className="board-head">
         <strong>Top {TOP} get in first</strong>
         <span className="muted small">
-          The ten highest scores get access before the waitlist.
+          The ten highest scores get access before the waitlist. Leave a Telegram
+          so we can reach you.
         </span>
       </div>
 
-      {played && !sent && (
+      {played && sent === null && (
         <form className="board-form" onSubmit={submit} noValidate>
           <span className="prefixed">
             <span className="prefix" aria-hidden>
@@ -65,10 +69,11 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
             </span>
             <input
               value={handle}
-              onChange={(event) => setHandle(event.target.value)}
-              placeholder="yourhandle"
+              onChange={(event) => setHandle(event.target.value.replace(/^@/, ""))}
+              placeholder="yourname"
               autoComplete="off"
               spellCheck={false}
+              aria-label="Your Telegram name"
             />
           </span>
           <button type="submit" className="primary">
@@ -78,9 +83,11 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
       )}
 
       {error && <Notice tone="error">{error}</Notice>}
-      {sent && (
-        <Notice tone="success" title="Score posted">
-          Beat it again and post the better one - only your best counts.
+      {sent !== null && (
+        <Notice tone="success" title={`${sent} boards on the board`}>
+          {sent > score
+            ? "Your earlier run was better, so that one stays."
+            : "Beat it and post again - only your best counts."}
         </Notice>
       )}
 
@@ -92,15 +99,15 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
       {rows && rows.length > 0 && (
         <ol className="board-list">
           {rows.map((row, index) => (
-            <li key={row.x_handle}>
+            <li key={row.telegram}>
               <span className="board-rank">{index + 1}</span>
               <a
                 className="board-handle"
-                href={`https://x.com/${row.x_handle}`}
+                href={`https://t.me/${row.telegram.replace(/^@/, "")}`}
                 target="_blank"
                 rel="noreferrer"
               >
-                @{row.x_handle}
+                {row.telegram}
               </a>
               <span className="board-score">{row.score}</span>
             </li>
