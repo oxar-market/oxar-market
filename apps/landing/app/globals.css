@@ -439,17 +439,20 @@ body {
   gap: 14px;
 }
 
-/* Заголовки идут на ступень выше базового веса: иначе при тексте в 500 они
-   перестают читаться как заголовки. */
+/* Заголовки набраны так же, как шрифт показан в макете: Bold, трекинг ноль,
+   интерлиньяж 1.2. Отрицательный трекинг слепляет квадратные буквы Anybody, а
+   вес 800 у него уже начинает заплывать. */
 .window-body h1 {
   font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
 }
 
 .window-body p {
   font-size: 15px;
-  line-height: 1.6;
+  font-weight: 600;
+  line-height: 1.5;
   color: #2c2c33;
 }
 
@@ -466,13 +469,15 @@ body {
 
 .page h1 {
   font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
 }
 
 .page p {
   font-size: 16px;
-  line-height: 1.65;
+  font-weight: 600;
+  line-height: 1.5;
   color: #2c2c33;
 }
 
@@ -500,7 +505,7 @@ body {
 
 .card h2 {
   font-size: 19px;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
 }
 
 .sides {
@@ -1459,7 +1464,7 @@ a.primary {
 
 .req-head h2 {
   font-size: 22px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .req-sub {
@@ -1487,7 +1492,7 @@ a.primary {
 
 .req-total strong {
   font-size: 19px;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
 }
 
 .req-days {
@@ -1514,7 +1519,7 @@ a.primary {
 .cal-month {
   font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .cal-legend {
@@ -1691,7 +1696,7 @@ a.primary {
 
 .lot-price strong {
   font-size: 17px;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
 }
 
 .lot-bid {
@@ -1912,7 +1917,7 @@ a.primary {
 
 .flap-over strong {
   font-size: 26px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 /* .primary прижата влево по умолчанию - в игре она по центру, как и всё */
