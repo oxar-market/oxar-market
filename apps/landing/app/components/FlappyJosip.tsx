@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Cross } from "./icons";
 import {
   BIRD_R,
   birdX,
@@ -266,7 +267,7 @@ export function FlappyJosip({
           onClick={onExit}
           aria-label="Close the game"
         >
-          ✕
+          <Cross />
         </button>
       )}
 
