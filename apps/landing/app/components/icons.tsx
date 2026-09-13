@@ -127,3 +127,12 @@ export function Share(props: Props) {
     </Svg>
   );
 }
+
+export function Lock(props: Props) {
+  return (
+    <Svg {...props}>
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2.6" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5" />
+    </Svg>
+  );
+}
