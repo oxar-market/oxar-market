@@ -178,7 +178,7 @@ export function Desktop() {
             перекрывает док, там закрывает он. */}
         <button className="dock-home" onClick={() => setOpen(null)} aria-label="Home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/mark-home.webp" alt="" draggable={false} />
+          <img src="/icons/mark-home.png" alt="" draggable={false} />
         </button>
         <span className="dock-line" aria-hidden />
 
