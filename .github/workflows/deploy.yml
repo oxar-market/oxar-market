@@ -66,12 +66,13 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      # Вызываем wrangler напрямую, без чужого action: тот ставит его через
-      # pnpm add в корень монорепо, а pnpm такое без флага не разрешает и падает.
+      # Wrangler стоит в зависимостях с точной версией, а не тянется из сети на
+      # каждый деплой: в этом шаге есть токен Cloudflare, и подменённый пакет
+      # исполнился бы с ним. Хэш пакета проверяется по lockfile.
       - name: Deploy to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: >-
-          pnpm dlx wrangler@4 pages deploy apps/landing/out
+          pnpm exec wrangler pages deploy apps/landing/out
           --project-name=oxar-landing --branch=main --commit-dirty=true
