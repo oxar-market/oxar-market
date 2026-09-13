@@ -7,6 +7,9 @@ import "./globals.css";
 // раздаётся с нашего домена: запроса к Google из браузера нет.
 const anybody = Anybody({
   subsets: ["latin"],
+  // Курсив подключён настоящим начертанием: без него браузер наклоняет прямое
+  // сам, и у шрифта с квадратными формами это видно сразу.
+  style: ["normal", "italic"],
   display: "swap",
   variable: "--font-anybody",
 });
