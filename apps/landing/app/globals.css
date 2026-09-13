@@ -1688,6 +1688,51 @@ a.primary {
   text-decoration: underline;
 }
 
+/* Игра */
+
+.flap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flap-field {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  /* Палец по полю не должен скроллить страницу - это управление, а не прокрутка */
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.flap-canvas {
+  display: block;
+  width: 100%;
+}
+
+.flap-over {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(2px);
+  text-align: center;
+}
+
+.flap-over strong {
+  font-size: 20px;
+  letter-spacing: -0.015em;
+}
+
 /* Кабинет продавца */
 
 .desk-item {
