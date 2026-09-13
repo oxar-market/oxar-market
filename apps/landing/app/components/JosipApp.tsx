@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { FlappyJosip } from "./FlappyJosip";
+
 // Пасхалка. Йосип Воларевич описал этот маркетплейс публично ещё до того, как мы
 // начали его строить. Здесь короткая выдержка и ссылка на его пост: перепечатка
 // чужого текста целиком выглядела бы слабее отсылки, да и трафик должен идти ему.
@@ -7,7 +10,23 @@
 const POST_URL = "https://x.com/JosipVolarevic2/status/2096935262743900240";
 const PROFILE_URL = "https://x.com/JosipVolarevic2";
 
-export function JosipApp({ onPlay }: { onPlay?: () => void }) {
+export function JosipApp() {
+  const [playing, setPlaying] = useState(false);
+
+  if (playing) {
+    return (
+      <div className="josip">
+        <button type="button" className="link-back" onClick={() => setPlaying(false)}>
+          Back
+        </button>
+        <FlappyJosip />
+        <p className="muted small">
+          Every board in the way is ad space nobody bought yet.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="josip">
       <header className="josip-head">
@@ -37,11 +56,9 @@ export function JosipApp({ onPlay }: { onPlay?: () => void }) {
         Read the original post
       </a>
 
-      {onPlay && (
-        <button type="button" className="primary" onClick={onPlay}>
-          Play Flappy Josip
-        </button>
-      )}
+      <button type="button" className="primary" onClick={() => setPlaying(true)}>
+        Play Flappy Josip
+      </button>
     </div>
   );
 }
