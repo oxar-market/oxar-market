@@ -63,7 +63,7 @@ export function JosipApp() {
         <img src="/icons/josip.png" alt="" className="play-face" />
         <span className="play-text">
           <strong>{lastScore === null ? "Play Flappy Josip" : "Play again"}</strong>
-          <span>Fly him between the empty ad boards</span>
+          <span>Grab the coins between the empty ad boards</span>
         </span>
         <span className="play-go" aria-hidden>
           ▶

@@ -32,7 +32,15 @@ export function priceFor(height: number): number {
   return 100;
 }
 
-export type Board = { x: number; gapY: number; passed: boolean };
+/** Радиус монеты. Она заметно меньше проёма: пролететь мимо - обычное дело. */
+export const COIN_R = 9;
+
+export type Board = { x: number; gapY: number; taken: boolean };
+
+/** Монета висит ровно в середине проёма. */
+export function coinAt(board: Board): { x: number; y: number } {
+  return { x: board.x + BOARD_W / 2, y: board.gapY };
+}
 
 export type World = {
   y: number;
@@ -47,8 +55,8 @@ export function fresh(width = W): World {
     y: H / 2,
     vy: 0,
     boards: [
-      { x: width + 40, gapY: H / 2, passed: false },
-      { x: width + 40 + SPACING, gapY: H / 2 - 60, passed: false },
+      { x: width + 40, gapY: H / 2, taken: false },
+      { x: width + 40 + SPACING, gapY: H / 2 - 60, taken: false },
     ],
     score: 0,
     dead: false,
@@ -68,13 +76,20 @@ export function step(
   const y = world.y + vy * dt;
 
   let score = world.score;
+  // Очко даёт монета, а не пролёт: пройти проём мимо монеты можно, только
+  // это ничего не стоит. Место само по себе не приносит денег, платит тот,
+  // кто его занял.
   const boards = world.boards.map((board) => {
-    const x = board.x - SPEED * dt;
-    // Очко засчитываем, когда щит остался позади: так счёт не растёт, пока
-    // игрок ещё в зазоре.
-    const passed = board.passed || x + BOARD_W < BIRD_X - BIRD_R;
-    if (passed && !board.passed) score += 1;
-    return { ...board, x, passed };
+    const moved = { ...board, x: board.x - SPEED * dt };
+    if (moved.taken) return moved;
+
+    const coin = coinAt(moved);
+    const dx = coin.x - BIRD_X;
+    const dy = coin.y - y;
+    if (dx * dx + dy * dy > (BIRD_R + COIN_R) * (BIRD_R + COIN_R)) return moved;
+
+    score += 1;
+    return { ...moved, taken: true };
   });
 
   while (boards.length && boards[0]!.x + BOARD_W < -20) boards.shift();
@@ -82,9 +97,9 @@ export function step(
   // экране поле по игровым единицам уже, чем интервал, и щиты выходили рвано.
   const last = boards[boards.length - 1];
   if (!last) {
-    boards.push({ x: width + 40, gapY: pick(), passed: false });
+    boards.push({ x: width + 40, gapY: pick(), taken: false });
   } else if (last.x <= width + 40 - SPACING) {
-    boards.push({ x: last.x + SPACING, gapY: pick(), passed: false });
+    boards.push({ x: last.x + SPACING, gapY: pick(), taken: false });
   }
 
   // Пол и потолок - тоже столкновение: иначе можно улететь наверх и ждать.

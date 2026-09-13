@@ -6,6 +6,8 @@ import {
   BIRD_R,
   BIRD_X,
   BOARD_W,
+  COIN_R,
+  coinAt,
   fresh,
   GAP,
   H,
@@ -164,6 +166,37 @@ export function FlappyJosip({
         }
       }
 
+      // Монеты рисуем после щитов: та, что ещё не собрана, висит в проёме и
+      // должна лежать поверх пунктира.
+      for (const board of w.boards) {
+        if (board.taken) continue;
+        const coin = coinAt(board);
+
+        const shine = ctx.createLinearGradient(
+          coin.x - COIN_R,
+          coin.y - COIN_R,
+          coin.x + COIN_R,
+          coin.y + COIN_R,
+        );
+        shine.addColorStop(0, "#9945ff");
+        shine.addColorStop(1, "#14f195");
+        ctx.fillStyle = shine;
+        ctx.beginPath();
+        ctx.arc(coin.x, coin.y, COIN_R, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Три косые полосы вместо картинки с логотипом: знак узнаётся, а в
+        // бандл не едет чужой бренд.
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.92)";
+        ctx.lineWidth = 1.5;
+        for (const offset of [-3.4, 0, 3.4]) {
+          ctx.beginPath();
+          ctx.moveTo(coin.x - 4.2, coin.y + offset + 1.1);
+          ctx.lineTo(coin.x + 4.2, coin.y + offset - 1.1);
+          ctx.stroke();
+        }
+      }
+
       ctx.fillStyle = "#e7e7e2";
       ctx.fillRect(0, H - 6, logicalW, 6);
 
@@ -259,13 +292,17 @@ export function FlappyJosip({
       {phase === "ready" && (
         <div className="flap-over">
           <strong>Tap to fly</strong>
-          <span className="muted small">Space works too</span>
+          <span className="muted small">
+            Coins are the points. Space works too.
+          </span>
         </div>
       )}
 
       {phase === "dead" && (
         <div className="flap-over">
-          <strong>{score} boards</strong>
+          <strong>
+            {score} {score === 1 ? "coin" : "coins"}
+          </strong>
           <span className="muted small">Tap anywhere to try again</span>
           <button
             type="button"

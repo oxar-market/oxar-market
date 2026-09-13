@@ -84,7 +84,7 @@ export function Leaderboard({ score, played }: { score: number; played: boolean 
 
       {error && <Notice tone="error">{error}</Notice>}
       {sent !== null && (
-        <Notice tone="success" title={`${sent} boards on the board`}>
+        <Notice tone="success" title={`${sent} coins on the board`}>
           {sent > score
             ? "Your earlier run was better, so that one stays."
             : "Beat it and post again - only your best counts."}
