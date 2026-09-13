@@ -51,6 +51,9 @@ export function FlappyJosip({
   phaseRef.current = phase;
   const report = useRef(onScore);
   report.current = onScore;
+  // Последний показанный счёт. Без него setScore звался бы каждый кадр, и React
+  // перерисовывал бы разметку шестьдесят раз в секунду - отсюда подтормаживание.
+  const shown = useRef(0);
 
   const flap = useCallback(() => {
     if (phase === "dead") return;
@@ -60,6 +63,7 @@ export function FlappyJosip({
 
   const restart = useCallback(() => {
     world.current = fresh(width.current);
+    shown.current = 0;
     setScore(0);
     setPhase("ready");
     report.current?.(null);
@@ -84,6 +88,7 @@ export function FlappyJosip({
     let last = performance.now();
     let running = true;
     let scale = 1;
+    let sky: CanvasGradient | null = null;
 
     const resize = () => {
       const box = node.getBoundingClientRect();
@@ -93,6 +98,12 @@ export function FlappyJosip({
       scale = node.height / H;
       // Логическая ширина - сколько игровых единиц влезает при этом масштабе
       width.current = node.width / scale;
+
+      // Градиент зависит только от высоты поля, поэтому строится при смене
+      // размера, а не в каждом кадре.
+      sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, "#dde6fa");
+      sky.addColorStop(1, "#f0f2f7");
     };
 
     resize();
@@ -108,10 +119,7 @@ export function FlappyJosip({
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.clearRect(0, 0, logicalW, H);
 
-      const sky = ctx.createLinearGradient(0, 0, 0, H);
-      sky.addColorStop(0, "#dde6fa");
-      sky.addColorStop(1, "#f0f2f7");
-      ctx.fillStyle = sky;
+      ctx.fillStyle = sky ?? "#eef1f7";
       ctx.fillRect(0, 0, logicalW, H);
 
       for (const board of w.boards) {
@@ -159,17 +167,12 @@ export function FlappyJosip({
       ctx.fillStyle = "#e7e7e2";
       ctx.fillRect(0, H - 6, logicalW, 6);
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(BIRD_X, w.y, BIRD_R, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.fillStyle = "#6b46e5";
-      ctx.fill();
-      ctx.clip();
+      // Само лицо, без подложки: фон у картинки прозрачный, и круг под ней
+      // только обрезал уши и подбородок.
       if (face.current) {
-        ctx.drawImage(face.current, BIRD_X - BIRD_R, w.y - BIRD_R, BIRD_R * 2, BIRD_R * 2);
+        const size = BIRD_R * 2.4;
+        ctx.drawImage(face.current, BIRD_X - size / 2, w.y - size / 2, size, size);
       }
-      ctx.restore();
     };
 
     const frame = (now: number) => {
@@ -187,7 +190,10 @@ export function FlappyJosip({
           width.current,
         );
 
-        setScore(world.current.score);
+        if (world.current.score !== shown.current) {
+          shown.current = world.current.score;
+          setScore(world.current.score);
+        }
         if (world.current.dead) {
           setPhase("dead");
           report.current?.(world.current.score);
