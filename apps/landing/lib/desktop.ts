@@ -19,11 +19,10 @@ export const FILES: DesktopFile[] = [
     slug: "who-we-are",
     name: "What OXAR is",
     icon: "/icons/blue.svg",
-    title: "You already own a billboard. You're just not charging rent.",
+    title: "If people look at it, it's ad space.",
     x: 5,
     y: 8,
     body: [
-      "If people look at it, it's ad space.",
       "OXAR is a marketplace for ad space on anything people look at. List a surface you control with a price and a date range, and buyers book it in USDC escrow that pays out only for the time it is actually up.",
       // Узкий старт назван выбором, а не потолком: иначе категория читается как
       // «сервис для твиттера», и всё, что мы будем делать дальше, выглядит
