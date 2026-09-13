@@ -16,9 +16,17 @@ const SPACING = 235;
 export const BIRD_R = 17;
 export const BIRD_X = 92;
 
-export const PRICES = [100, 200, 300, 150, 250, 500];
+/**
+ * Цена щита зависит от его размера, как и в жизни: маленькая площадь стоит
+ * дешевле большой. Границы в долях поля, чтобы не зависеть от его высоты.
+ */
+export function priceFor(height: number): number {
+  if (height < H * 0.22) return 25;
+  if (height < H * 0.42) return 50;
+  return 100;
+}
 
-export type Board = { x: number; gapY: number; price: number; passed: boolean };
+export type Board = { x: number; gapY: number; passed: boolean };
 
 export type World = {
   y: number;
@@ -33,8 +41,8 @@ export function fresh(): World {
     y: H / 2,
     vy: 0,
     boards: [
-      { x: W + 40, gapY: H / 2, price: PRICES[0]!, passed: false },
-      { x: W + 40 + SPACING, gapY: H / 2 - 60, price: PRICES[1]!, passed: false },
+      { x: W + 40, gapY: H / 2, passed: false },
+      { x: W + 40 + SPACING, gapY: H / 2 - 60, passed: false },
     ],
     score: 0,
     dead: false,
@@ -42,7 +50,7 @@ export function fresh(): World {
 }
 
 /** Шаг мира. Чистый, поэтому его поведение видно без канваса. */
-export function step(world: World, dt: number, pick: () => { gapY: number; price: number }): World {
+export function step(world: World, dt: number, pick: () => number): World {
   if (world.dead) return world;
 
   const vy = world.vy + GRAVITY * dt;
@@ -61,8 +69,7 @@ export function step(world: World, dt: number, pick: () => { gapY: number; price
   while (boards.length && boards[0]!.x + BOARD_W < -20) boards.shift();
   const last = boards[boards.length - 1];
   if (!last || last.x < W - SPACING) {
-    const next = pick();
-    boards.push({ x: W + 40, gapY: next.gapY, price: next.price, passed: false });
+    boards.push({ x: W + 40, gapY: pick(), passed: false });
   }
 
   // Пол и потолок - тоже столкновение: иначе можно улететь наверх и ждать.
