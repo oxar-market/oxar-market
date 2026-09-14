@@ -6,7 +6,7 @@ import { submitWaitlist } from "@/lib/waitlist";
 import { Notice } from "./Notice";
 
 type Side = "seller" | "buyer";
-type Status = "idle" | "sending" | "done" | "already" | "error";
+type Status = "idle" | "sending" | "done" | "error";
 
 export function Waitlist() {
   const [pitch, setPitch] = useState("");
@@ -56,25 +56,24 @@ export function Waitlist() {
     if (result === "created") {
       setStatus("done");
     } else if (result === "duplicate") {
-      setStatus("already");
+      // Заявку не создали, поэтому и экрана «готово» быть не должно: зелёная
+      // галочка на отказе читается как ещё одна успешная запись, и человек
+      // жмёт кнопку снова.
+      setStatus("idle");
+      setError(
+        "That email or Telegram is already on the list. One contact, one spot in the queue - on either side.",
+      );
     } else {
       setStatus("error");
       setError("Could not save that. Try again in a minute.");
     }
   }
 
-  if (status === "done" || status === "already") {
+  if (status === "done") {
     return (
       <div className="card" id="waitlist">
-        <Notice
-          tone="success"
-          title={status === "done" ? "You're on the list" : "You're already on the list"}
-        >
-          {status === "done"
-            ? `We'll reach out on ${normalizeContact(contact)} before launch.`
-            : // Один контакт - одно место в очереди, и сторона тут ни при чём:
-              // выбирают, с какой стороны пришли, а не занимают оба места.
-              "That email or Telegram is in the queue already, on one side or the other."}
+        <Notice tone="success" title="You're on the list">
+          We&apos;ll reach out on {normalizeContact(contact)} before launch.
         </Notice>
       </div>
     );
