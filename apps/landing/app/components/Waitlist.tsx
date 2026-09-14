@@ -8,8 +8,9 @@ import { Notice } from "./Notice";
 type Side = "seller" | "buyer";
 type Status = "idle" | "sending" | "done" | "error";
 
-export function Waitlist() {
-  const [pitch, setPitch] = useState("");
+/** Текст в первом поле можно подставить: калькулятор уже знает, что человек продаёт. */
+export function Waitlist({ initialPitch = "" }: { initialPitch?: string }) {
+  const [pitch, setPitch] = useState(initialPitch);
   const [side, setSide] = useState<Side>("seller");
   const [contact, setContact] = useState("");
   const [status, setStatus] = useState<Status>("idle");
