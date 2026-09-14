@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import {
-  estimate,
   isValidContact,
   isValidHandle,
   normalizeContact,
   normalizeHandle,
-  parseFollowers,
 } from "@oxar/core";
 import { submitWaitlist } from "@/lib/waitlist";
 import { Notice } from "./Notice";
@@ -18,17 +16,11 @@ type Status = "idle" | "sending" | "done" | "already" | "error";
 export function Waitlist() {
   const [handle, setHandle] = useState("");
   const [side, setSide] = useState<Side>("seller");
-  const [followers, setFollowers] = useState("");
   const [contact, setContact] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
 
   const cleanHandle = normalizeHandle(handle);
-  const followerCount = parseFollowers(followers);
-  const preview =
-    side === "seller" && followerCount !== null && followerCount >= 100
-      ? estimate(followerCount)
-      : null;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -40,14 +32,6 @@ export function Waitlist() {
     }
     if (!isValidHandle(cleanHandle)) {
       setError("A handle is letters, numbers or underscores, up to 15 of them.");
-      return;
-    }
-    if (!followers.trim()) {
-      setError("How many followers does the account have?");
-      return;
-    }
-    if (followers.trim() && followerCount === null) {
-      setError("Followers should be a number, like 12400 or 12.4k.");
       return;
     }
     // Связаться с человеком нам нечем, если он не оставил ни почты, ни
@@ -68,7 +52,9 @@ export function Waitlist() {
     const result = await submitWaitlist({
       x_handle: cleanHandle,
       side,
-      follower_count: followerCount,
+      // Размер аудитории в форме больше не спрашиваем: он нужен в разговоре, а
+      // здесь был третьим полем между человеком и кнопкой.
+      follower_count: null,
       contact: normalizeContact(contact),
     });
 
@@ -91,13 +77,6 @@ export function Waitlist() {
         >
           We&apos;ll reach out on X to @{cleanHandle} before launch.
         </Notice>
-        {preview && (
-          <p className="estimate">
-            Based on {(followerCount ?? 0).toLocaleString("en-US")} followers, your profile
-            could bring <strong>${preview.monthlyLow}-${preview.monthlyHigh}</strong>{" "}
-            a month. Estimate, not a promise.
-          </p>
-        )}
       </div>
     );
   }
@@ -142,16 +121,6 @@ export function Waitlist() {
       </label>
 
       <label>
-        Followers <span className="need">required</span>
-        <input
-          value={followers}
-          onChange={(e) => setFollowers(e.target.value.replace(/[^\d.,\skmKM]/g, ""))}
-          placeholder="12400"
-          inputMode="numeric"
-        />
-      </label>
-
-      <label>
         Email or Telegram <span className="need">either one</span>
         <input
           value={contact}
@@ -160,17 +129,6 @@ export function Waitlist() {
           autoComplete="off"
         />
       </label>
-
-      {preview && (
-        <p className="estimate">
-          At {(followerCount ?? 0).toLocaleString("en-US")} followers, renting out your
-          avatar, banner and bio link could bring{" "}
-          <strong>
-            ${preview.monthlyLow}-${preview.monthlyHigh}
-          </strong>{" "}
-          a month. Estimate, not a promise.
-        </p>
-      )}
 
       {error && <Notice tone="error">{error}</Notice>}
 
