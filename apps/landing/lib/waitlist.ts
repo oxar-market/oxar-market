@@ -8,10 +8,10 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export type WaitlistEntry = {
-  x_handle: string;
+  /** Что и на какой площадке человек продаёт или ищет, своими словами. */
+  pitch: string;
   side: "seller" | "buyer";
-  follower_count: number | null;
-  contact: string | null;
+  contact: string;
 };
 
 export type SubmitResult = "created" | "duplicate" | "error";
@@ -31,7 +31,6 @@ export async function submitWaitlist(entry: WaitlistEntry): Promise<SubmitResult
   });
 
   if (response.ok) return "created";
-  // Уникальный индекс по lower(x_handle): этот аккаунт уже в списке.
   if (response.status === 409) return "duplicate";
   return "error";
 }
