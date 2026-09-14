@@ -1,6 +1,12 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { FEE_RATE, formatUsd, settle, splitPayout } from "./money.ts";
+import {
+  FEE_RATE,
+  formatUsd,
+  parseBudgetCents,
+  settle,
+  splitPayout,
+} from "./money.ts";
 
 test("комиссия 10% с продавца, покупатель платит ровно цену", () => {
   const split = splitPayout(10_000);
@@ -56,4 +62,26 @@ test("формат денег без лишних нулей", () => {
   assert.equal(formatUsd(10_000), "$100");
   assert.equal(formatUsd(10_050), "$100.50");
   assert.equal(formatUsd(0), "$0");
+});
+
+test("бюджет из того, что набрали руками", () => {
+  assert.equal(parseBudgetCents("2000"), 200_000);
+  assert.equal(parseBudgetCents("$2,000"), 200_000);
+  assert.equal(parseBudgetCents(" 2k "), 200_000);
+  assert.equal(parseBudgetCents("2.5k"), 250_000);
+  assert.equal(parseBudgetCents("1500.50"), 150_050);
+});
+
+test("центы получаются целыми даже из дробных долларов", () => {
+  // 0.1 + 0.2 в долларах даёт 0.30000000000000004, в центах - ровно 30.
+  assert.equal(parseBudgetCents("0.105"), 11);
+  assert.equal(Number.isInteger(parseBudgetCents("19.99")), true);
+});
+
+test("бюджет, которого не может быть, не принимаем", () => {
+  assert.equal(parseBudgetCents(""), null);
+  assert.equal(parseBudgetCents("free"), null);
+  assert.equal(parseBudgetCents("-100"), null);
+  assert.equal(parseBudgetCents("0"), null);
+  assert.equal(parseBudgetCents("999999999"), null);
 });
