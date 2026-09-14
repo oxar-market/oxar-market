@@ -123,8 +123,10 @@ export function Waitlist() {
         </button>
       </div>
 
+      {/* Все три поля обязательны, и это видно до нажатия кнопки: раньше
+          обязательность жила только в сообщении об ошибке. */}
       <label>
-        Your X handle
+        Your X handle <span className="need">required</span>
         <span className="prefixed">
           <span className="prefix" aria-hidden>
             @
@@ -140,7 +142,7 @@ export function Waitlist() {
       </label>
 
       <label>
-        Followers
+        Followers <span className="need">required</span>
         <input
           value={followers}
           onChange={(e) => setFollowers(e.target.value.replace(/[^\d.,\skmKM]/g, ""))}
@@ -150,7 +152,7 @@ export function Waitlist() {
       </label>
 
       <label>
-        Email or Telegram
+        Email or Telegram <span className="need">either one</span>
         <input
           value={contact}
           onChange={(e) => setContact(e.target.value)}

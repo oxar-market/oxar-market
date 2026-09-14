@@ -530,6 +530,13 @@ label {
 }
 
 
+/* Пометка у подписи поля: тише самой подписи, но читается до того, как человек
+   нажмёт кнопку и получит ошибку. */
+.need {
+  font-size: 12px;
+  color: #a8a8a2;
+}
+
 input {
   background: #fbfbf9;
   border: 1px solid var(--line);
