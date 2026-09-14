@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  isValidContact,
-  isValidHandle,
-  normalizeContact,
-  normalizeHandle,
-} from "@oxar/core";
+import { isValidContact, normalizeContact } from "@oxar/core";
 import { submitWaitlist } from "@/lib/waitlist";
 import { Notice } from "./Notice";
 
@@ -14,24 +9,27 @@ type Side = "seller" | "buyer";
 type Status = "idle" | "sending" | "done" | "already" | "error";
 
 export function Waitlist() {
-  const [handle, setHandle] = useState("");
+  const [pitch, setPitch] = useState("");
   const [side, setSide] = useState<Side>("seller");
   const [contact, setContact] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
 
-  const cleanHandle = normalizeHandle(handle);
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
 
-    if (!cleanHandle) {
-      setError("Your X handle goes here, without the @.");
+    const said = pitch.trim();
+    if (said.length < 3) {
+      setError(
+        side === "seller"
+          ? "Tell us what you would sell and where."
+          : "Tell us what you are looking for and where.",
+      );
       return;
     }
-    if (!isValidHandle(cleanHandle)) {
-      setError("A handle is letters, numbers or underscores, up to 15 of them.");
+    if (said.length > 500) {
+      setError("Keep it under 500 characters.");
       return;
     }
     // Связаться с человеком нам нечем, если он не оставил ни почты, ни
@@ -50,11 +48,8 @@ export function Waitlist() {
 
     setStatus("sending");
     const result = await submitWaitlist({
-      x_handle: cleanHandle,
+      pitch: said,
       side,
-      // Размер аудитории в форме больше не спрашиваем: он нужен в разговоре, а
-      // здесь был третьим полем между человеком и кнопкой.
-      follower_count: null,
       contact: normalizeContact(contact),
     });
 
@@ -75,7 +70,7 @@ export function Waitlist() {
           tone="success"
           title={status === "done" ? "You're on the list" : "You're already on the list"}
         >
-          We&apos;ll reach out on X to @{cleanHandle} before launch.
+          We&apos;ll reach out on {normalizeContact(contact)} before launch.
         </Notice>
       </div>
     );
@@ -102,22 +97,22 @@ export function Waitlist() {
         </button>
       </div>
 
-      {/* Все три поля обязательны, и это видно до нажатия кнопки: раньше
-          обязательность жила только в сообщении об ошибке. */}
+      {/* Своими словами, а не хэндлом: площадка может быть любой - профиль в X,
+          канал, подкаст, витрина в кофейне. Разбираем мы это руками, поэтому
+          свободный текст честнее списка из трёх вариантов. */}
       <label>
-        Your X handle <span className="need">required</span>
-        <span className="prefixed">
-          <span className="prefix" aria-hidden>
-            @
-          </span>
-          <input
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
-            placeholder="yourhandle"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </span>
+        {side === "seller" ? "What would you sell, and where?" : "What are you looking for, and where?"}{" "}
+        <span className="need">required</span>
+        <textarea
+          value={pitch}
+          onChange={(event) => setPitch(event.target.value)}
+          placeholder={
+            side === "seller"
+              ? "Avatar and bio link on my X profile, 12k followers"
+              : "Avatars for a week, crypto accounts with 10k+ followers"
+          }
+          rows={3}
+        />
       </label>
 
       <label>

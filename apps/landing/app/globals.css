@@ -537,7 +537,8 @@ label {
   color: #a8a8a2;
 }
 
-input {
+input,
+textarea {
   background: #fbfbf9;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -547,7 +548,15 @@ input {
   font-family: inherit;
 }
 
-input:focus {
+/* Рассказ о своём месте: несколько строк, тянуть за угол незачем - высота
+   задана, а длинный текст прокручивается внутри. */
+textarea {
+  resize: none;
+  line-height: 1.45;
+}
+
+input:focus,
+textarea:focus {
   outline: none;
   border-color: var(--accent);
 }
