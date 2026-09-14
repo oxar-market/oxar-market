@@ -70,7 +70,11 @@ export function Waitlist() {
           tone="success"
           title={status === "done" ? "You're on the list" : "You're already on the list"}
         >
-          We&apos;ll reach out on {normalizeContact(contact)} before launch.
+          {status === "done"
+            ? `We'll reach out on ${normalizeContact(contact)} before launch.`
+            : // Один контакт - одно место в очереди, и сторона тут ни при чём:
+              // выбирают, с какой стороны пришли, а не занимают оба места.
+              "That email or Telegram is in the queue already, on one side or the other."}
         </Notice>
       </div>
     );
