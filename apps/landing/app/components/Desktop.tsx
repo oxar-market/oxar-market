@@ -5,7 +5,6 @@ import { APPS, FILES, type DesktopFile } from "@/lib/desktop";
 import { useIconLayout, type Layout } from "@/lib/use-icon-layout";
 import { useSellerAccount } from "@/lib/use-seller-account";
 import { JosipApp } from "./JosipApp";
-import { Rate } from "./Rate";
 import { SellerDesk } from "./SellerDesk";
 import { Waitlist } from "./Waitlist";
 import { Window } from "./Window";
@@ -18,7 +17,6 @@ type Open =
   | { kind: "x" }
   | { kind: "desk" }
   | { kind: "josip" }
-  | { kind: "rate" }
   | null;
 
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
@@ -60,7 +58,6 @@ const MOBILE_POSITIONS: Layout = {
   "why-us": { x: 14, y: 20 },
   x: { x: 64, y: 20 },
   josip: { x: 14, y: 38 },
-  rate: { x: 64, y: 38 },
 };
 
 /** Слот кнопки в доке: скрытый схлопывается по ширине, а не исчезает рывком. */
@@ -109,15 +106,7 @@ export function Desktop() {
       setOpen({ kind: "file", file: item.file });
       return;
     }
-    if (item.slug === "josip") {
-      setOpen({ kind: "josip" });
-      return;
-    }
-    if (item.slug === "rate") {
-      setOpen({ kind: "rate" });
-      return;
-    }
-    setOpen({ kind: "x" });
+    setOpen(item.slug === "josip" ? { kind: "josip" } : { kind: "x" });
   }
 
   return (
@@ -257,12 +246,6 @@ export function Desktop() {
       {open?.kind === "desk" && (
         <Window title="My spots" onClose={() => setOpen(null)}>
           <SellerDesk account={account} />
-        </Window>
-      )}
-
-      {open?.kind === "rate" && (
-        <Window title="What can you charge" onClose={() => setOpen(null)}>
-          <Rate />
         </Window>
       )}
 
