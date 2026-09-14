@@ -2386,24 +2386,3 @@ select:focus {
 .attached-remove:hover {
   background: rgba(0, 0, 0, 0.09);
 }
-
-/* Заявка на кампанию: отделена от списка мест линией, иначе читается их
-   продолжением. */
-.brief {
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
-
-/* Числа кампании идут парами: на широком экране два поля в строку, на узком
-   в столбец, как и всё остальное. */
-.brief-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-@media (max-width: 520px) {
-  .brief-pair {
-    grid-template-columns: 1fr;
-  }
-}
