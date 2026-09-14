@@ -5,6 +5,7 @@ import { formatUsd, placementSpec, type PlacementKind } from "@oxar/core";
 import { offersFor, type Offer } from "@/lib/listings";
 import { closeDueLots, openLots, type Lot } from "@/lib/auctions";
 import { AuctionLot } from "./AuctionLot";
+import { CampaignBrief } from "./CampaignBrief";
 import { LockedOffers } from "./LockedOffers";
 import { RequestPlacement } from "./RequestPlacement";
 import {
@@ -127,12 +128,8 @@ export function XProfile({
           <>
             {offers === null && <p className="muted small">Loading…</p>}
 
-            {offers?.length === 0 && lots?.length === 0 && (
-              <p className="muted small">
-                Nobody is selling this spot yet. Join the waitlist and you get it
-                first.
-              </p>
-            )}
+            {/* Пустую полку словами больше не объясняем: заявка на кампанию
+                ниже говорит то же самое и даёт что делать дальше. */}
 
             {/* Торг идёт первым: у него есть срок, а цены на полке никуда не
                 денутся. */}
@@ -164,6 +161,14 @@ export function XProfile({
               </button>
             ))}
           </>
+        )}
+
+        {/* Единица товара - кампания, а не одиночный слот, и покупателю это
+            надо предлагать там, где он уже выбрал место. Работает и на пустой
+            витрине, и на полной: в первом случае это единственный путь, во
+            втором - способ взять пятьдесят аккаунтов, а не один. */}
+        {role === "advertiser" && access !== "loading" && (
+          <CampaignBrief kind={picked} />
         )}
       </div>
     );

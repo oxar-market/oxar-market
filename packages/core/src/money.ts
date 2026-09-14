@@ -60,6 +60,30 @@ function assertWholeNonNegative(value: number, name: string): void {
   }
 }
 
+/** Выше этого - не бюджет кампании, а опечатка. */
+export const MAX_BUDGET_CENTS = 100_000_000;
+
+/**
+ * Бюджет из того, что человек набрал руками: "2000", "$2,000", "2k", "2.5k".
+ * Сразу в центах, чтобы доллары с дробью нигде дальше не всплыли.
+ */
+export function parseBudgetCents(input: string): number | null {
+  const value = input.trim().toLowerCase().replace(/[\s,$]/g, "");
+  if (!value) return null;
+
+  const match = /^(\d+(?:\.\d+)?)([km])?$/.exec(value);
+  if (!match) return null;
+
+  const amount = Number.parseFloat(match[1]!);
+  if (!Number.isFinite(amount)) return null;
+
+  const scale = match[2] === "k" ? 1_000 : match[2] === "m" ? 1_000_000 : 1;
+  const cents = Math.round(amount * scale * 100);
+
+  if (cents <= 0 || cents > MAX_BUDGET_CENTS) return null;
+  return cents;
+}
+
 export function formatUsd(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
