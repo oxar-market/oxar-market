@@ -575,16 +575,6 @@ input:focus {
   cursor: default;
 }
 
-.estimate {
-  font-size: 14.5px;
-  color: var(--muted);
-  border-left: 2px solid var(--accent);
-  padding-left: 12px;
-}
-
-.estimate strong {
-  color: var(--fg);
-}
 
 .error {
   font-size: 13.5px;
