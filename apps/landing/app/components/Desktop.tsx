@@ -5,6 +5,7 @@ import { APPS, FILES, type DesktopFile } from "@/lib/desktop";
 import { useIconLayout, type Layout } from "@/lib/use-icon-layout";
 import { useSellerAccount } from "@/lib/use-seller-account";
 import { JosipApp } from "./JosipApp";
+import { Proof } from "./Proof";
 import { SellerDesk } from "./SellerDesk";
 import { Waitlist } from "./Waitlist";
 import { Window } from "./Window";
@@ -226,6 +227,9 @@ export function Desktop() {
       {open?.kind === "file" && (
         <Window title={open.file.name} onClose={() => setOpen(null)}>
           <h1>{open.file.title}</h1>
+          {/* Доказательство идёт сразу за заголовком и раньше объяснения: до
+              кнопки должно быть на что смотреть, а не пять абзацев подряд. */}
+          {open.file.slug === "who-we-are" && <Proof />}
           {open.file.body.map((paragraph) => (
             <p key={paragraph.slice(0, 24)}>{paragraph}</p>
           ))}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { FILES } from "@/lib/desktop";
+import { Proof } from "../../components/Proof";
 
 // Те же файлы, что лежат на рабочем столе, но обычными страницами: для поиска,
 // для превью ссылок и для тех, кому прислали прямой адрес.
@@ -39,6 +40,7 @@ export default async function FilePage({
         Back to the desktop
       </Link>
       <h1>{file.title}</h1>
+      {slug === "who-we-are" && <Proof />}
       {file.body.map((paragraph) => (
         <p key={paragraph.slice(0, 24)}>{paragraph}</p>
       ))}
