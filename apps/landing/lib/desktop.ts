@@ -25,11 +25,12 @@ export const FILES: DesktopFile[] = [
     title: "If people look at it, it's ad space.",
     x: 5,
     y: 8,
+    // Три абзаца, а не пять: над ними теперь стоят сделки, и до кнопки человеку
+    // надо доскроллить. Что escrow возвращает неотстоявшее, сказано внутри
+    // второго абзаца, а не отдельной строкой - факт остался, стена ушла.
     body: [
       "A marketplace for ad space on anything people look at.",
-      "You own a surface. You name a price and the dates it is free.",
-      "A buyer books those dates and pays into escrow, in USDC on Solana.",
-      "Escrow pays out for the time the placement was up. Taken down early, the unused days go back to the buyer.",
+      "You name a price and the dates your surface is free. A buyer books those dates and pays into escrow, in USDC on Solana, and the money is released only for the time the placement was actually up.",
       "Profiles first, because a profile can be checked automatically. Then every other digital surface, then the physical world.",
     ],
   },
