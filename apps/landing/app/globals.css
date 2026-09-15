@@ -2415,7 +2415,8 @@ select:focus {
   border-top: 1px solid var(--line);
 }
 
-.proof-row:hover {
+/* Гаснет только то, что действительно кликается. */
+a.proof-row:hover {
   opacity: 0.62;
 }
 
