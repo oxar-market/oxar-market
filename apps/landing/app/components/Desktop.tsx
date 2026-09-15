@@ -78,9 +78,10 @@ function DockSlot({ show, children }: { show: boolean; children: React.ReactNode
 
 export function Desktop() {
   const [role, setRole] = useState<Role>("creator");
-  // При первом заходе одно окно уже открыто: рабочий стол без подсказки
-  // заставляет человека догадываться, а оффер должен читаться сразу.
-  const [open, setOpen] = useState<Open>({ kind: "file", file: FILES[0]! });
+  // Ничего не открыто: первым человек видит сам стол. Раньше поверх сразу
+  // лежал первый файл, и на телефоне он занимал весь экран - иконки, макет
+  // профиля и игра не показывались вовсе, а вместо них встречала стена текста.
+  const [open, setOpen] = useState<Open>(null);
 
   const { positions, surface, onPointerDown, onPointerMove, onPointerUp } =
     useIconLayout(DEFAULT_POSITIONS, MOBILE_POSITIONS);
