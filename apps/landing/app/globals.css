@@ -241,17 +241,14 @@ body {
   filter: drop-shadow(0 3px 9px rgba(29, 78, 216, 0.35));
 }
 
-/* Содержимое открытой папки: та же сетка иконок, что на столе, только в потоке.
-   Иконка внутри позиционируется статикой - на столе ей задают проценты. */
+/* Содержимое открытой папки: те же иконки, что на столе, только в потоке.
+   Ни рамки, ни подписи вокруг - папка должна выглядеть как кусок стола, а не
+   как список файлов. Иконка внутри позиционируется статикой. */
 .folder-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  min-height: 108px;
-  margin-bottom: 14px;
-  padding: 8px;
-  border: 1px dashed var(--line);
-  border-radius: 12px;
+  gap: 6px;
+  min-height: 104px;
 }
 
 .folder-grid .icon {
@@ -2530,40 +2527,98 @@ a.proof-row:hover {
   height: auto;
 }
 
+/* Нанесение на ткани. Толщина обводки не масштабируется вместе с футболкой,
+   иначе на повороте рамка расплывалась бы в кляксу. */
 .ts-spot {
   cursor: pointer;
-}
-
-.ts-spot rect {
   fill: #f3f9fe;
   stroke: #cfe4f5;
   stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
   transition: fill 0.14s, stroke 0.14s;
 }
 
-.ts-spot text {
-  font-size: 11px;
-  fill: #4a7fa5;
-  pointer-events: none;
-}
-
-.ts-spot.on rect {
+.ts-spot:hover,
+.ts-spot.on {
   fill: #d8ebfb;
   stroke: #1d9bf0;
-}
-
-.ts-spot.on text {
-  fill: #0f1419;
 }
 
 .ts-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 10px 0 14px;
+  gap: 14px;
+  margin: 18px 0 4px;
 }
 
+.ts-side {
+  font-size: 12px;
+  color: var(--muted);
+  /* Ширина под самое длинное слово: без неё дорожка дёргалась бы при смене
+     подписи с Front на Back. */
+  width: 38px;
+  flex: none;
+}
+
+/* Свой ползунок: системный выглядел как регулятор громкости посреди макета. */
 .ts-controls input {
   flex: 1;
-  accent-color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
+  height: 18px;
+  background: transparent;
+  cursor: ew-resize;
+}
+
+.ts-controls input::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.ts-controls input::-moz-range-track {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.ts-controls input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--fg);
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.14s var(--spring);
+}
+
+.ts-controls input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--fg);
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.ts-controls input:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* Строка под футболкой: имя места при наведении, подсказка в остальное время */
+.ts-hint {
+  min-height: 20px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--fg);
+}
+
+.ts .muted.small + .muted.small {
+  margin-top: 8px;
+}
+
+.ts-cta {
+  margin-top: 18px;
 }

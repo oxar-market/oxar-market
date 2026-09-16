@@ -344,15 +344,6 @@ export function Desktop() {
               renderIcon(item),
             )}
           </div>
-          {ITEMS.every((item) => parents[item.slug] !== open.slug) && (
-            <p className="muted small">
-              Empty. Drag anything from the desktop onto the folder to put it here.
-            </p>
-          )}
-          <p className="muted small">
-            Surfaces that cannot be checked automatically yet. Profiles first, then
-            these.
-          </p>
         </Window>
       )}
 
