@@ -36,29 +36,60 @@ type Spot = {
 // горизонтально с этой высоты под этим углом, и куда он попадёт, понятно
 // заранее. Подбирать координаты на глаз для чужой модели - гиблое дело.
 //
-// Размечена вся вещь, а не несколько пятен: грудь, живот и подол спереди, бока,
-// рукава, спина, поясница и загривок. Так читается главное - продаётся не
-// футболка, а тринадцать отдельных мест на ней, как девять зон на аватарке
-// Solana. Высоты подобраны так, чтобы соседние пятна почти смыкались: между
-// ними остаётся полоса ткани, иначе декали налезают друг на друга и мерцают.
+// Размечена вся вещь: три панели спереди, три сзади, загривок, оба бока и оба
+// рукава. Одиннадцать отдельных мест, а не одно большое пятно - продаётся
+// каждое по отдельности, как девять зон на аватарке Solana.
+//
+// Ловушка, на которой развалилась прошлая раскладка: `height` - это доля от
+// высоты вещи, от 0 до 1, а `size` - единицы модели. Шкалы разные. Вещь
+// ростом SHIRT_SPAN единиц, поэтому панель высотой 0.14 единиц занимает
+// 0.14 / 0.62 = 23% роста, и «зазор» в 0.07 доли, то есть 0.043 единицы,
+// съедается ею целиком. Соседи налезали друг на друга.
+//
+// Поэтому вертикаль здесь посчитана, а не подобрана на глаз: перёд и спина
+// делятся на три панели по PANEL_TALL единиц с зазором PANEL_GAP между ними.
+//
+// Второе правило: азимуты соседей расходятся на 90 градусов, а не на 20.
+// Смещение по горизонтали равно радиусу торса на синус угла, и на ±20 оно
+// меньше половины ширины грудной панели - метка на груди оказывается внутри
+// неё. Отдельных грудных меток поэтому нет: на этом масштабе они занимали три
+// процента вещи и лезли под воротник.
+
+/** Во столько единиц модели вписана вещь: см. scale ниже по файлу. */
+const SHIRT_SPAN = 0.62;
+/** Высота одной панели и просвет между соседями, в единицах модели. */
+const PANEL_TALL = 0.1;
+const PANEL_GAP = 0.036;
+
+/** Доля роста для центра панели номер index, считая снизу. */
+function panelHeight(index: number): number {
+  const bottom = 0.18 * SHIRT_SPAN;
+  return (bottom + PANEL_TALL / 2 + index * (PANEL_TALL + PANEL_GAP)) / SHIRT_SPAN;
+}
+
 const SPOTS: Spot[] = [
-  // Перёд
-  { id: "chest", label: "Chest", height: 0.62, azimuth: 0, size: [0.2, 0.18] },
-  { id: "left-chest", label: "Left chest", height: 0.76, azimuth: -20, size: [0.07, 0.055] },
-  { id: "right-chest", label: "Right chest", height: 0.76, azimuth: 20, size: [0.07, 0.055] },
-  { id: "stomach", label: "Stomach", height: 0.4, azimuth: 0, size: [0.2, 0.18] },
-  { id: "hem-front", label: "Front hem", height: 0.16, azimuth: 0, size: [0.2, 0.09] },
-  // Бока и рукава
-  { id: "side-left", label: "Left side", height: 0.45, azimuth: -90, size: [0.09, 0.22] },
-  { id: "side-right", label: "Right side", height: 0.45, azimuth: 90, size: [0.09, 0.22] },
-  { id: "sleeve-left", label: "Left sleeve", height: 0.76, azimuth: -78, size: [0.075, 0.06] },
-  { id: "sleeve-right", label: "Right sleeve", height: 0.76, azimuth: 78, size: [0.075, 0.06] },
-  // Спина
-  { id: "nape", label: "Nape", height: 0.86, azimuth: 180, size: [0.1, 0.045] },
-  { id: "back", label: "Back", height: 0.62, azimuth: 180, size: [0.22, 0.2] },
-  { id: "lower-back", label: "Lower back", height: 0.4, azimuth: 180, size: [0.22, 0.18] },
-  { id: "hem-back", label: "Back hem", height: 0.16, azimuth: 180, size: [0.2, 0.09] },
+  // Перёд: подол, живот, грудь - три панели одной высоты с равным просветом
+  { id: "hem-front", label: "Front hem", height: panelHeight(0), azimuth: 0, size: [0.18, PANEL_TALL] },
+  { id: "stomach", label: "Stomach", height: panelHeight(1), azimuth: 0, size: [0.18, PANEL_TALL] },
+  { id: "chest", label: "Chest", height: panelHeight(2), azimuth: 0, size: [0.18, PANEL_TALL] },
+  // Бока: узкие полосы между панелями и рукавами
+  { id: "side-left", label: "Left side", height: 0.45, azimuth: -90, size: [0.06, 0.16] },
+  { id: "side-right", label: "Right side", height: 0.45, azimuth: 90, size: [0.06, 0.16] },
+  // Рукава ниже плечевого шва, иначе пятно заезжает на плечо
+  { id: "sleeve-left", label: "Left sleeve", height: 0.7, azimuth: -78, size: [0.07, 0.05] },
+  { id: "sleeve-right", label: "Right sleeve", height: 0.7, azimuth: 78, size: [0.07, 0.05] },
+  // Спина, зеркально переду, плюс загривок над верхней панелью
+  { id: "hem-back", label: "Back hem", height: panelHeight(0), azimuth: 180, size: [0.2, PANEL_TALL] },
+  { id: "lower-back", label: "Lower back", height: panelHeight(1), azimuth: 180, size: [0.2, PANEL_TALL] },
+  { id: "back", label: "Back", height: panelHeight(2), azimuth: 180, size: [0.2, PANEL_TALL] },
+  { id: "nape", label: "Nape", height: 0.87, azimuth: 180, size: [0.1, 0.04] },
 ];
+
+// Глубина коробки, которой декаль вырезается из ткани. Было 0.12, и на этом
+// боковые пятна заворачивались на перёд: коробка на боку захватывала и
+// переднюю поверхность тоже, потому что там ткань круто уходит за угол.
+// Ткань тонкая, ей хватает малого.
+const DECAL_DEPTH = 0.07;
 
 export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => void }) {
   const mount = useRef<HTMLDivElement>(null);
@@ -197,7 +228,7 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
             cloth,
             hit.point,
             anchor.rotation,
-            new THREE.Vector3(spot.size[0], spot.size[1], 0.12),
+            new THREE.Vector3(spot.size[0], spot.size[1], DECAL_DEPTH),
           );
           const material = new THREE.MeshStandardMaterial({
             color: 0x4aa8ec,
