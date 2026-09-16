@@ -20,8 +20,11 @@ export const metadata: Metadata = {
   // адресу, а относительный путь в теге они не разворачивают.
   metadataBase: new URL("https://oxar.app"),
   title: "OXAR - if people look at it, it's ad space",
+  // Коротко намеренно: в карточке ссылки видно около ста двадцати знаков, а
+  // главное здесь - последняя фраза про оплату за отстоявшее время. В прежнем
+  // описании она обрезалась.
   description:
-    "OXAR is a marketplace for ad space on anything people look at. List a surface you control with a price and a date range, and buyers book it in USDC escrow that pays out only for the time it is actually up.",
+    "Rent ad space on anything people look at - a profile, a banner, a wall. Book the dates, pay into escrow, pay only for the time it was up.",
   // Карточка, которой ссылка разворачивается в X, Telegram, Discord, Slack. Это
   // один стандард на всех - Open Graph; заголовок и описание Next подставляет
   // сюда сам из полей выше, поэтому тут только то, чего в них нет.
