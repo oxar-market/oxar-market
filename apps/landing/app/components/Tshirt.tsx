@@ -35,15 +35,29 @@ type Spot = {
 // Место задано высотой и углом, а не точкой в пространстве: луч летит
 // горизонтально с этой высоты под этим углом, и куда он попадёт, понятно
 // заранее. Подбирать координаты на глаз для чужой модели - гиблое дело.
+//
+// Размечена вся вещь, а не несколько пятен: грудь, живот и подол спереди, бока,
+// рукава, спина, поясница и загривок. Так читается главное - продаётся не
+// футболка, а тринадцать отдельных мест на ней, как девять зон на аватарке
+// Solana. Высоты подобраны так, чтобы соседние пятна почти смыкались: между
+// ними остаётся полоса ткани, иначе декали налезают друг на друга и мерцают.
 const SPOTS: Spot[] = [
-  { id: "chest", label: "Chest", height: 0.56, azimuth: 0, size: [0.14, 0.12] },
-  { id: "left-chest", label: "Left chest", height: 0.72, azimuth: -22, size: [0.05, 0.045] },
-  { id: "right-chest", label: "Right chest", height: 0.72, azimuth: 22, size: [0.05, 0.045] },
-  { id: "hem-front", label: "Front hem", height: 0.14, azimuth: 0, size: [0.11, 0.04] },
-  { id: "back", label: "Back", height: 0.56, azimuth: 180, size: [0.15, 0.14] },
-  { id: "nape", label: "Nape", height: 0.86, azimuth: 180, size: [0.08, 0.03] },
-  { id: "sleeve-left", label: "Left sleeve", height: 0.74, azimuth: -78, size: [0.055, 0.045] },
-  { id: "sleeve-right", label: "Right sleeve", height: 0.74, azimuth: 78, size: [0.055, 0.045] },
+  // Перёд
+  { id: "chest", label: "Chest", height: 0.62, azimuth: 0, size: [0.2, 0.18] },
+  { id: "left-chest", label: "Left chest", height: 0.76, azimuth: -20, size: [0.07, 0.055] },
+  { id: "right-chest", label: "Right chest", height: 0.76, azimuth: 20, size: [0.07, 0.055] },
+  { id: "stomach", label: "Stomach", height: 0.4, azimuth: 0, size: [0.2, 0.18] },
+  { id: "hem-front", label: "Front hem", height: 0.16, azimuth: 0, size: [0.2, 0.09] },
+  // Бока и рукава
+  { id: "side-left", label: "Left side", height: 0.45, azimuth: -90, size: [0.09, 0.22] },
+  { id: "side-right", label: "Right side", height: 0.45, azimuth: 90, size: [0.09, 0.22] },
+  { id: "sleeve-left", label: "Left sleeve", height: 0.76, azimuth: -78, size: [0.075, 0.06] },
+  { id: "sleeve-right", label: "Right sleeve", height: 0.76, azimuth: 78, size: [0.075, 0.06] },
+  // Спина
+  { id: "nape", label: "Nape", height: 0.86, azimuth: 180, size: [0.1, 0.045] },
+  { id: "back", label: "Back", height: 0.62, azimuth: 180, size: [0.22, 0.2] },
+  { id: "lower-back", label: "Lower back", height: 0.4, azimuth: 180, size: [0.22, 0.18] },
+  { id: "hem-back", label: "Back hem", height: 0.16, azimuth: 180, size: [0.2, 0.09] },
 ];
 
 export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => void }) {
@@ -131,8 +145,10 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
 
         // Модель приходит с запечённой текстурой чужого демо. Нам нужна чистая
         // вещь: на ней читаются наши места, а не чужой принт.
+        // Светлее прежнего, но не белая: на чистом белом под этой выдержкой
+        // пропадают складки, а вместе с ними и ощущение вещи.
         cloth.material = new THREE.MeshStandardMaterial({
-          color: 0xdcdfe4,
+          color: 0xedeff3,
           roughness: 0.92,
           metalness: 0,
         });
@@ -184,13 +200,14 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
             new THREE.Vector3(spot.size[0], spot.size[1], 0.12),
           );
           const material = new THREE.MeshStandardMaterial({
-            color: 0x9fcdf0,
+            color: 0x4aa8ec,
             roughness: 0.95,
             metalness: 0,
             transparent: true,
-            // Полупрозрачно: сквозь пятно должна читаться ткань, иначе это уже
-            // не размеченное место, а закрашенный кусок вещи.
-            opacity: 0.6,
+            // Сквозь пятно по-прежнему читается ткань со складками, но само
+            // пятно видно с первого взгляда: на посветлевшей ткани прежний
+            // бледно-голубой при 0.6 почти сливался с фоном.
+            opacity: 0.74,
             // Декаль лежит ровно на ткани, поэтому её надо чуть приподнять -
             // иначе поверхности спорят и пятно мерцает полосами.
             polygonOffset: true,
@@ -229,8 +246,8 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
             const material = decal.mesh.material as InstanceType<
               typeof THREE.MeshStandardMaterial
             >;
-            material.color.set(decal.id === id ? 0x1d9bf0 : 0x9fcdf0);
-            material.opacity = decal.id === id ? 0.8 : 0.6;
+            material.color.set(decal.id === id ? 0x0a7fd4 : 0x4aa8ec);
+            material.opacity = decal.id === id ? 0.92 : 0.74;
           }
         };
         // Клик считаем только если мышь не уехала: иначе поворот модели
