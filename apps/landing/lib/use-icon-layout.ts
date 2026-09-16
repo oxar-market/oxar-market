@@ -23,8 +23,10 @@ const TOUCH_SLOP = 10;
 
 export type Point = { x: number; y: number };
 export type Layout = Record<string, Point>;
+/** Где лежит иконка: имя папки или null, если прямо на столе. */
+export type Parents = Record<string, string | null>;
 
-type Stored = { positions: Layout };
+type Stored = { positions: Layout; parents?: Parents };
 
 type DragState = {
   slug: string;
@@ -35,8 +37,13 @@ type DragState = {
   moved: boolean;
 };
 
-export function useIconLayout(defaults: Layout, mobileDefaults: Layout) {
+export function useIconLayout(
+  defaults: Layout,
+  mobileDefaults: Layout,
+  defaultParents: Parents = {},
+) {
   const [positions, setPositions] = useState<Layout>(defaults);
+  const [parents, setParents] = useState<Parents>(defaultParents);
   const surface = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
 
@@ -49,6 +56,9 @@ export function useIconLayout(defaults: Layout, mobileDefaults: Layout) {
         const saved = JSON.parse(raw) as Stored;
         if (saved.positions) {
           setPositions({ ...defaults, ...saved.positions });
+          // У раскладок, сохранённых до появления папок, поля parents нет -
+          // тогда берём то, что положено по умолчанию.
+          setParents({ ...defaultParents, ...(saved.parents ?? {}) });
           return;
         }
       }
@@ -135,6 +145,36 @@ export function useIconLayout(defaults: Layout, mobileDefaults: Layout) {
         return;
       }
 
+      // Куда отпустили, решает то, что лежит под курсором, а не расчёт
+      // расстояний до папок: под пальцем может оказаться окно, и тогда иконка
+      // не должна улетать на стол сквозь него.
+      const under = document.elementsFromPoint(event.clientX, event.clientY);
+      const folder = under
+        .find(
+          (node) =>
+            node instanceof HTMLElement &&
+            node.dataset.folder &&
+            node.dataset.folder !== state.slug,
+        )
+        ?.getAttribute("data-folder");
+
+      if (folder) {
+        reset();
+        const nextParents = { ...parents, [state.slug]: folder };
+        setParents(nextParents);
+        persist({ positions, parents: nextParents });
+        return;
+      }
+
+      // Отпустили внутри открытой папки - иконка просто остаётся в ней.
+      const insideFolderWindow = under.some(
+        (node) => node instanceof HTMLElement && node.dataset.folderWindow !== undefined,
+      );
+      if (insideFolderWindow) {
+        reset();
+        return;
+      }
+
       const box = surface.current?.getBoundingClientRect();
       if (!box) {
         reset();
@@ -146,28 +186,41 @@ export function useIconLayout(defaults: Layout, mobileDefaults: Layout) {
       const x = clamp(((rect.left - box.left) / box.width) * 100, 0, maxX);
       const y = clamp(((rect.top - box.top) / box.height) * 100, 0, 88);
 
-      // Новые координаты пишем в DOM в том же кадре, в котором убираем
-      // transform. Если сначала стереть transform и ждать ре-рендер React,
-      // иконка на один кадр прыгает на старое место и это видно как рывок.
-      state.element.style.left = `${x}%`;
-      state.element.style.top = `${y}%`;
-      state.element.style.transform = "";
-      state.element.style.zIndex = "";
-
+      const cameFromFolder = Boolean(parents[state.slug]);
       const next = { ...positions, [state.slug]: { x, y } };
-      setPositions(next);
-      persist({ positions: next });
+      const nextParents = cameFromFolder
+        ? { ...parents, [state.slug]: null }
+        : parents;
 
-      // Переход возвращаем только со следующего кадра, иначе он подхватит
-      // сброс transform и анимирует его.
-      requestAnimationFrame(() => {
-        state.element.style.transition = "";
-      });
+      if (cameFromFolder) {
+        // Иконка лежала внутри окна папки, в обычном потоке. Писать ей left и
+        // top бессмысленно: React сейчас перенесёт её на стол, и позицию она
+        // возьмёт из состояния.
+        reset();
+        setParents(nextParents);
+      } else {
+        // Новые координаты пишем в DOM в том же кадре, в котором убираем
+        // transform. Если сначала стереть transform и ждать ре-рендер React,
+        // иконка на один кадр прыгает на старое место и это видно как рывок.
+        state.element.style.left = `${x}%`;
+        state.element.style.top = `${y}%`;
+        state.element.style.transform = "";
+        state.element.style.zIndex = "";
+
+        // Переход возвращаем только со следующего кадра, иначе он подхватит
+        // сброс transform и анимирует его.
+        requestAnimationFrame(() => {
+          state.element.style.transition = "";
+        });
+      }
+
+      setPositions(next);
+      persist({ positions: next, parents: nextParents });
     },
-    [positions, persist],
+    [positions, parents, persist],
   );
 
-  return { positions, surface, onPointerDown, onPointerMove, onPointerUp };
+  return { positions, parents, surface, onPointerDown, onPointerMove, onPointerUp };
 }
 
 function clamp(value: number, min: number, max: number): number {

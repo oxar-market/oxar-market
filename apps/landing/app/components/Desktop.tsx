@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { APPS, FILES, type DesktopFile } from "@/lib/desktop";
-import { useIconLayout, type Layout } from "@/lib/use-icon-layout";
+import { APPS, FILES, FOLDERS, type DesktopFile } from "@/lib/desktop";
+import { useIconLayout, type Layout, type Parents } from "@/lib/use-icon-layout";
 import { useSellerAccount } from "@/lib/use-seller-account";
 import { JosipApp } from "./JosipApp";
 import { Proof } from "./Proof";
 import { SellerDesk } from "./SellerDesk";
+import { Tshirt } from "./Tshirt";
 import { Waitlist } from "./Waitlist";
 import { Window } from "./Window";
 import { XProfile } from "./XProfile";
@@ -18,13 +19,16 @@ type Open =
   | { kind: "x" }
   | { kind: "desk" }
   | { kind: "josip" }
+  | { kind: "tshirt" }
+  | { kind: "folder"; slug: string; name: string }
   | null;
 
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
 type Item =
   | { slug: string; kind: "file"; name: string; icon: string; file: DesktopFile }
-  | { slug: string; kind: "app"; name: string; icon?: string };
+  | { slug: string; kind: "app"; name: string; icon?: string }
+  | { slug: string; kind: "folder"; name: string };
 
 const ITEMS: Item[] = [
   ...FILES.map<Item>((file) => ({
@@ -40,12 +44,22 @@ const ITEMS: Item[] = [
     name: app.name,
     icon: app.icon,
   })),
+  ...FOLDERS.map<Item>((folder) => ({
+    slug: folder.slug,
+    kind: "folder",
+    name: folder.name,
+  })),
 ];
 
 const DEFAULT_POSITIONS: Layout = Object.fromEntries([
   ...FILES.map((file) => [file.slug, { x: file.x, y: file.y }]),
   ...APPS.map((app) => [app.slug, { x: app.x, y: app.y }]),
+  ...FOLDERS.map((folder) => [folder.slug, { x: folder.x, y: folder.y }]),
 ]);
+
+const DEFAULT_PARENTS: Parents = Object.fromEntries(
+  APPS.map((app) => [app.slug, app.parent ?? null]),
+);
 
 /**
  * Стартовая раскладка для узкого экрана: два столбца, тот же свободный стол.
@@ -59,7 +73,41 @@ const MOBILE_POSITIONS: Layout = {
   "why-us": { x: 14, y: 20 },
   x: { x: 64, y: 20 },
   josip: { x: 14, y: 38 },
+  "physical-world": { x: 64, y: 38 },
 };
+
+/** Папка системного вида: задняя стенка с язычком и передняя створка. */
+function FolderArt() {
+  return (
+    <svg viewBox="0 0 64 52" className="folder-art">
+      <path
+        d="M2 10a6 6 0 0 1 6-6h16l6 7h26a6 6 0 0 1 6 6v29a6 6 0 0 1-6 6H8a6 6 0 0 1-6-6z"
+        fill="#9dc4ea"
+      />
+      <path
+        d="M2 20a6 6 0 0 1 6-6h48a6 6 0 0 1 6 6v26a6 6 0 0 1-6 6H8a6 6 0 0 1-6-6z"
+        fill="#c3ddf6"
+      />
+    </svg>
+  );
+}
+
+/** Иконка футболки: своего файла у неё нет, и заводить его ради одного значка
+    незачем - тот же силуэт, что в макете. */
+function TshirtArt() {
+  return (
+    <svg viewBox="0 0 64 64" className="tshirt-art">
+      <path
+        d="M22 12 L28 9 Q32 14 36 9 L42 12 L54 24 L47 31 L42 26 L42 55 Q32 58 22 55
+           L22 26 L17 31 L10 24 Z"
+        fill="#f4f5f7"
+        stroke="#c9ced6"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 /** Слот кнопки в доке: скрытый схлопывается по ширине, а не исчезает рывком. */
 function DockSlot({ show, children }: { show: boolean; children: React.ReactNode }) {
@@ -83,8 +131,8 @@ export function Desktop() {
   // профиля и игра не показывались вовсе, а вместо них встречала стена текста.
   const [open, setOpen] = useState<Open>(null);
 
-  const { positions, surface, onPointerDown, onPointerMove, onPointerUp } =
-    useIconLayout(DEFAULT_POSITIONS, MOBILE_POSITIONS);
+  const { positions, parents, surface, onPointerDown, onPointerMove, onPointerUp } =
+    useIconLayout(DEFAULT_POSITIONS, MOBILE_POSITIONS, DEFAULT_PARENTS);
 
   // Вход живёт по адресу, а не в интерфейсе: oxar.app/?signin. Ссылку мы
   // отправляем сами тем, кого одобрили, - до открытия платформы остальным не
@@ -108,7 +156,65 @@ export function Desktop() {
       setOpen({ kind: "file", file: item.file });
       return;
     }
+    if (item.kind === "folder") {
+      setOpen({ kind: "folder", slug: item.slug, name: item.name });
+      return;
+    }
+    if (item.slug === "tshirt") {
+      setOpen({ kind: "tshirt" });
+      return;
+    }
     setOpen(item.slug === "josip" ? { kind: "josip" } : { kind: "x" });
+  }
+
+  /**
+   * Одна и та же иконка стоит и на столе, и внутри папки. На столе ей задают
+   * координаты, в папке она идёт обычным потоком - в остальном это один
+   * элемент с одними обработчиками, поэтому перетаскивать её можно откуда
+   * угодно куда угодно.
+   */
+  function renderIcon(item: Item, style?: React.CSSProperties) {
+    const art =
+      item.kind === "folder"
+        ? "icon-art folder"
+        : item.slug === "tshirt"
+          ? "icon-art drawn"
+          : item.kind === "file"
+            ? "icon-art file"
+            : item.icon
+              ? "icon-art photo"
+              : "icon-art app";
+
+    return (
+      <button
+        key={item.slug}
+        className="icon"
+        style={style}
+        // Папка сама себе цель: по этому атрибуту перетаскивание понимает, что
+        // иконку отпустили над ней.
+        data-folder={item.kind === "folder" ? item.slug : undefined}
+        onPointerDown={(event) => onPointerDown(item.slug, event)}
+        onPointerMove={onPointerMove}
+        onPointerUp={(event) => onPointerUp(event, activate)}
+        onPointerCancel={(event) => onPointerUp(event, () => {})}
+      >
+        <span className={art} aria-hidden>
+          {item.kind === "folder" ? (
+            <FolderArt />
+          ) : item.slug === "tshirt" ? (
+            <TshirtArt />
+          ) : item.icon ? (
+            // Логотипы лежат в public и не меняются, оптимизатор картинок
+            // тут только добавил бы работы.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.icon} alt="" draggable={false} />
+          ) : (
+            "𝕏"
+          )}
+        </span>
+        <span className="icon-name">{item.name}</span>
+      </button>
+    );
   }
 
   return (
@@ -137,40 +243,9 @@ export function Desktop() {
       </header>
 
       <div className="icons" ref={surface}>
-        {ITEMS.map((item) => {
+        {ITEMS.filter((item) => !parents[item.slug]).map((item) => {
           const at = positions[item.slug] ?? { x: 5, y: 8 };
-          return (
-            <button
-              key={item.slug}
-              className="icon"
-              style={{ left: `${at.x}%`, top: `${at.y}%` }}
-              onPointerDown={(event) => onPointerDown(item.slug, event)}
-              onPointerMove={onPointerMove}
-              onPointerUp={(event) => onPointerUp(event, activate)}
-              onPointerCancel={(event) => onPointerUp(event, () => {})}
-            >
-              <span
-                className={
-                  item.kind === "file"
-                    ? "icon-art file"
-                    : item.icon
-                      ? "icon-art photo"
-                      : "icon-art app"
-                }
-                aria-hidden
-              >
-                {item.icon ? (
-                  // Логотипы лежат в public и не меняются, оптимизатор картинок
-                  // тут только добавил бы работы.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.icon} alt="" draggable={false} />
-                ) : (
-                  "𝕏"
-                )}
-              </span>
-              <span className="icon-name">{item.name}</span>
-            </button>
-          );
+          return renderIcon(item, { left: `${at.x}%`, top: `${at.y}%` });
         })}
       </div>
 
@@ -257,6 +332,33 @@ export function Desktop() {
       {open?.kind === "josip" && (
         <Window title="Josip called it" onClose={() => setOpen(null)}>
           <JosipApp />
+        </Window>
+      )}
+
+      {open?.kind === "folder" && (
+        <Window title={open.name} onClose={() => setOpen(null)}>
+          {/* По этому атрибуту перетаскивание понимает, что иконку отпустили
+              внутри папки, а не вынесли на стол сквозь окно. */}
+          <div className="folder-grid" data-folder-window>
+            {ITEMS.filter((item) => parents[item.slug] === open.slug).map((item) =>
+              renderIcon(item),
+            )}
+          </div>
+          {ITEMS.every((item) => parents[item.slug] !== open.slug) && (
+            <p className="muted small">
+              Empty. Drag anything from the desktop onto the folder to put it here.
+            </p>
+          )}
+          <p className="muted small">
+            Surfaces that cannot be checked automatically yet. Profiles first, then
+            these.
+          </p>
+        </Window>
+      )}
+
+      {open?.kind === "tshirt" && (
+        <Window title="T-shirt" onClose={() => setOpen(null)} wide>
+          <Tshirt role={role} onWaitlist={() => setOpen({ kind: "waitlist" })} />
         </Window>
       )}
 
