@@ -1,18 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
- * Макет футболки с местами под нанесение - тот же приём, что и макет профиля X:
- * человек видит вещь и сразу понимает, что именно продаётся.
+ * Трёхмерный макет футболки. Вещь крутится мышью и пальцем, как в любом
+ * конструкторе мерча, а места под нанесение висят на самой ткани: их позиции
+ * пересчитываются из точек на модели в экранные координаты на каждом кадре,
+ * и место гаснет, когда уезжает на другую сторону.
  *
- * Футболка вертится вокруг своей оси. Это не две картинки «перёд и спина»:
- * каждое место лежит на цилиндре под своим углом, и при повороте уезжает за
- * корпус и появляется с другой стороны само.
- *
- * Места лежат внутри той же группы, что и силуэт, и обрезаны по нему маской.
- * Поэтому они ведут себя как нанесённые на ткань: сужаются вместе с корпусом и
- * уходят под край, а не плавают поверх картинки.
+ * three.js и сама модель грузятся динамически, только когда окно открыли: это
+ * около мегабайта, и тянуть его в основной бандл ради одной иконки на столе
+ * нельзя.
  *
  * Цен здесь нет намеренно. Ни одна футболка ещё не продана, проверять
  * размещение на ткани мы пока не умеем, и ставить цифру было бы обещанием,
@@ -24,179 +22,219 @@ type Role = "creator" | "advertiser";
 type Spot = {
   id: string;
   label: string;
-  /** Угол на цилиндре: 0 - грудь, 180 - спина, ±90 - бока. */
-  angle: number;
-  /** Насколько место далеко от оси. Рукава дальше корпуса. */
-  radius: number;
-  y: number;
-  w: number;
-  h: number;
+  /** Точка на поверхности модели, в её собственных координатах. */
+  at: [number, number, number];
+  /** Куда смотрит ткань в этой точке: по ней считаем, видно место или нет. */
+  face: [number, number, number];
 };
 
-/**
- * Силуэт: плечи, короткий рукав, чуть приталенный бок, ровный низ. Пропорции
- * взяты у настоящей футболки - ширина примерно две трети длины. Более узкая и
- * длинная выглядела как платье.
- */
-const SHIRT =
-  "M104 122 L138 110 Q160 146 182 110 L216 122 L276 184 L238 212 L228 196 " +
-  "L228 310 Q160 322 92 310 L92 196 L82 212 L44 184 Z";
-
 const SPOTS: Spot[] = [
-  { id: "chest", label: "Chest", angle: 0, radius: 44, y: 250, w: 76, h: 58 },
-  { id: "left-chest", label: "Left chest", angle: -42, radius: 44, y: 204, w: 30, h: 24 },
-  { id: "right-chest", label: "Right chest", angle: 42, radius: 44, y: 204, w: 30, h: 24 },
-  { id: "collar-front", label: "Under the collar", angle: 0, radius: 44, y: 172, w: 36, h: 12 },
-  { id: "hem-front", label: "Front hem", angle: 0, radius: 44, y: 294, w: 54, h: 18 },
-  // Рукава сидят ближе к фронту, чем настоящие ±90: ровно сбоку место
-  // схлопывается в линию и с фронта его не было бы видно вовсе.
-  { id: "sleeve-left", label: "Left sleeve", angle: -58, radius: 96, y: 186, w: 28, h: 22 },
-  { id: "sleeve-right", label: "Right sleeve", angle: 58, radius: 96, y: 186, w: 28, h: 22 },
-  { id: "back", label: "Back", angle: 180, radius: 44, y: 246, w: 84, h: 68 },
-  { id: "nape", label: "Nape", angle: 180, radius: 44, y: 170, w: 48, h: 14 },
-  { id: "back-hem", label: "Back hem", angle: 180, radius: 44, y: 294, w: 54, h: 18 },
+  { id: "chest", label: "Chest", at: [0, 0.02, 0.14], face: [0, 0, 1] },
+  { id: "left-chest", label: "Left chest", at: [-0.09, 0.1, 0.115], face: [-0.3, 0, 1] },
+  { id: "right-chest", label: "Right chest", at: [0.09, 0.1, 0.115], face: [0.3, 0, 1] },
+  { id: "hem-front", label: "Front hem", at: [0, -0.26, 0.1], face: [0, 0, 1] },
+  { id: "back", label: "Back", at: [0, 0.02, -0.12], face: [0, 0, -1] },
+  { id: "nape", label: "Nape", at: [0, 0.19, -0.08], face: [0, 0.3, -1] },
+  { id: "sleeve-left", label: "Left sleeve", at: [-0.23, 0.12, 0.02], face: [-1, 0.2, 0] },
+  { id: "sleeve-right", label: "Right sleeve", at: [0.23, 0.12, 0.02], face: [1, 0.2, 0] },
 ];
 
-const CX = 160;
-const RAD = Math.PI / 180;
-
-/** Куда уехало место и видно ли его вообще при текущем повороте. */
-function project(spotAngle: number, turn: number) {
-  const rel = ((spotAngle - turn + 540) % 360) - 180;
-  const depth = Math.cos(rel * RAD);
-  return {
-    shift: Math.sin(rel * RAD),
-    depth,
-    // У самого края место сжато в линию и читать его нельзя - там оно гаснет.
-    opacity: depth <= 0.12 ? 0 : Math.min(1, (depth - 0.12) / 0.2),
-  };
-}
+type Marker = { id: string; label: string; x: number; y: number; on: boolean };
 
 export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => void }) {
-  const [turn, setTurn] = useState(0);
-  const [hovered, setHovered] = useState<Spot | null>(null);
-  const drag = useRef<{ id: number; x: number; from: number } | null>(null);
+  const mount = useRef<HTMLDivElement>(null);
+  const [markers, setMarkers] = useState<Marker[]>([]);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
 
-  // Силуэт при повороте сужается: футболка сбоку уже, чем анфас. Ткань не
-  // исчезает совсем, поэтому нижняя граница не ноль.
-  const squeeze = 0.34 + 0.66 * Math.abs(Math.cos(turn * RAD));
-  // Нормализуем в -180..180 и считаем спиной всё, что дальше четверти оборота.
-  const back = Math.abs(((turn + 180) % 360) - 180) > 90;
+  useEffect(() => {
+    const host = mount.current;
+    if (!host) return;
 
-  function onPointerDown(event: React.PointerEvent) {
-    try {
-      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    } catch {
-      // Захват указателя не обязателен: без него поворот просто прервётся,
-      // если курсор уйдёт со сцены. А исключение отсюда убило бы поворот
-      // вовсе - обработчик дальше не дошёл бы до запоминания начальной точки.
-    }
-    drag.current = { id: event.pointerId, x: event.clientX, from: turn };
-  }
+    let stop = false;
+    let cleanup = () => {};
 
-  function onPointerMove(event: React.PointerEvent) {
-    const state = drag.current;
-    if (!state || state.id !== event.pointerId) return;
-    // Пол-экрана пальца - полный оборот.
-    const width = (event.currentTarget as HTMLElement).clientWidth || 320;
-    const next = state.from + ((event.clientX - state.x) / width) * 360;
-    setTurn(((next % 360) + 360) % 360);
-  }
+    (async () => {
+      try {
+        const THREE = await import("three");
+        const { GLTFLoader } = await import(
+          "three/examples/jsm/loaders/GLTFLoader.js"
+        );
+        const { OrbitControls } = await import(
+          "three/examples/jsm/controls/OrbitControls.js"
+        );
+        const { RoomEnvironment } = await import(
+          "three/examples/jsm/environments/RoomEnvironment.js"
+        );
+        if (stop) return;
 
-  function onPointerUp(event: React.PointerEvent) {
-    if (drag.current?.id === event.pointerId) drag.current = null;
-  }
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(host.clientWidth, host.clientHeight);
+        host.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        // Комната вместо файла с картой окружения: ткань без отражений выглядит
+        // как бумажная выкройка, а лишний ассет тянуть не хочется.
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+        // Свет сверху-сбоку поверх мягкой заливки: без него белая ткань на
+        // светлом фоне теряет объём и читается плоским пятном.
+        const key = new THREE.DirectionalLight(0xffffff, 1.6);
+        key.position.set(1.2, 1.6, 1.4);
+        scene.add(key);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+        fill.position.set(-1.4, 0.4, -1);
+        scene.add(fill);
+
+        const camera = new THREE.PerspectiveCamera(
+          32,
+          host.clientWidth / host.clientHeight,
+          0.1,
+          100,
+        );
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        controls.enableZoom = false;
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.rotateSpeed = 0.9;
+        // Вертикаль ограничена: снизу и сверху модель выглядит как мешок.
+        controls.minPolarAngle = Math.PI * 0.28;
+        controls.maxPolarAngle = Math.PI * 0.72;
+
+        const gltf = await new GLTFLoader().loadAsync("/models/shirt.glb");
+        if (stop) {
+          renderer.dispose();
+          return;
+        }
+
+        const shirt = gltf.scene;
+        shirt.traverse((node) => {
+          const mesh = node as { isMesh?: boolean; material?: unknown };
+          if (!mesh.isMesh) return;
+          // Модель приходит с запечённой текстурой чужого демо. Нам нужна
+          // чистая белая вещь: на ней читаются наши места, а не чужой принт.
+          mesh.material = new THREE.MeshStandardMaterial({
+            color: 0xe9ebef,
+            roughness: 0.85,
+            metalness: 0,
+          });
+        });
+
+        // Модель кладём в центр вида и отводим камеру ровно настолько, чтобы
+        // вещь влезала целиком: единицы у чужой модели могут быть любыми, а
+        // подобранное на глаз расстояние срезало плечи.
+        const box = new THREE.Box3().setFromObject(shirt);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const scale = 0.62 / Math.max(size.x, size.y);
+        shirt.scale.setScalar(scale);
+        shirt.position.sub(center.multiplyScalar(scale));
+        scene.add(shirt);
+
+        const reach = 0.62 * 0.5;
+        const fov = (camera.fov * Math.PI) / 180;
+        camera.position.set(0, 0, (reach / Math.tan(fov / 2)) * 1.35);
+        camera.updateProjectionMatrix();
+        controls.update();
+
+        const points = SPOTS.map((spot) => ({
+          spot,
+          at: new THREE.Vector3(...spot.at),
+          face: new THREE.Vector3(...spot.face).normalize(),
+        }));
+
+        const world = new THREE.Vector3();
+        const normal = new THREE.Vector3();
+        const toCamera = new THREE.Vector3();
+
+        const resize = () => {
+          if (!host.clientWidth || !host.clientHeight) return;
+          camera.aspect = host.clientWidth / host.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(host.clientWidth, host.clientHeight);
+        };
+        const observer = new ResizeObserver(resize);
+        observer.observe(host);
+
+        let frame = 0;
+        const tick = () => {
+          frame = requestAnimationFrame(tick);
+          controls.update();
+          renderer.render(scene, camera);
+
+          const next: Marker[] = [];
+          for (const point of points) {
+            world.copy(point.at).applyMatrix4(shirt.matrixWorld);
+            normal.copy(point.face).transformDirection(shirt.matrixWorld);
+            toCamera.copy(camera.position).sub(world).normalize();
+            // Ткань отвернулась от зрителя - место сейчас с той стороны.
+            if (normal.dot(toCamera) < 0.15) continue;
+
+            const projected = world.clone().project(camera);
+            next.push({
+              id: point.spot.id,
+              label: point.spot.label,
+              x: (projected.x * 0.5 + 0.5) * 100,
+              y: (-projected.y * 0.5 + 0.5) * 100,
+              on: true,
+            });
+          }
+          setMarkers(next);
+        };
+        tick();
+        setState("ready");
+
+        cleanup = () => {
+          cancelAnimationFrame(frame);
+          observer.disconnect();
+          controls.dispose();
+          renderer.dispose();
+          pmrem.dispose();
+          renderer.domElement.remove();
+        };
+      } catch {
+        // Без WebGL или при сбое загрузки модели окно должно остаться
+        // работающим: текст и кнопка в вейтлист важнее картинки.
+        if (!stop) setState("failed");
+      }
+    })();
+
+    return () => {
+      stop = true;
+      cleanup();
+    };
+  }, []);
 
   return (
     <div className="ts">
-      <div
-        className="ts-stage"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        {/* Поле зрения обрезано по самой вещи: при полном холсте футболка тонула
-            в пустоте и выглядела мелкой. */}
-        <svg viewBox="30 98 260 232" className="ts-svg" role="img" aria-label="T-shirt">
-          <defs>
-            {/* Ткань обрезает нанесение: место, уехавшее за бок, скрывается под
-                краем, а не висит рядом с футболкой. */}
-            <clipPath id="ts-fabric">
-              <path d={SHIRT} />
-            </clipPath>
-          </defs>
+      <div className="ts-stage" ref={mount}>
+        {state === "loading" && <span className="ts-status">Loading the shirt…</span>}
+        {state === "failed" && (
+          <span className="ts-status">This view needs WebGL, which is off here.</span>
+        )}
 
-          <g style={{ transform: `scaleX(${squeeze})`, transformOrigin: "160px 210px" }}>
-            <path
-              d={SHIRT}
-              fill="#f4f5f7"
-              stroke="#d8dbe0"
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
-            {/* Горловина: спереди вырез, сзади шов по спинке. */}
-            {back ? (
-              <path
-                d="M138 110 Q160 124 182 110"
-                fill="none"
-                stroke="#d8dbe0"
-                strokeWidth="3"
-              />
-            ) : (
-              <path
-                d="M138 110 Q160 146 182 110"
-                fill="#eceef1"
-                stroke="#d8dbe0"
-                strokeWidth="2"
-              />
-            )}
-
-            <g clipPath="url(#ts-fabric)">
-              {SPOTS.map((spot) => {
-                const at = project(spot.angle, turn);
-                if (at.opacity === 0) return null;
-                const x = CX + at.shift * spot.radius;
-                return (
-                  <rect
-                    key={spot.id}
-                    className={hovered?.id === spot.id ? "ts-spot on" : "ts-spot"}
-                    x={-spot.w / 2}
-                    y={-spot.h / 2}
-                    width={spot.w}
-                    height={spot.h}
-                    rx="4"
-                    style={{ opacity: at.opacity }}
-                    transform={`translate(${x} ${spot.y}) scale(${at.depth} 1)`}
-                    onClick={onWaitlist}
-                    onPointerEnter={() => setHovered(spot)}
-                    onPointerLeave={() => setHovered(null)}
-                  />
-                );
-              })}
-            </g>
-          </g>
-        </svg>
+        {markers.map((marker) => (
+          <button
+            key={marker.id}
+            type="button"
+            className={hovered === marker.id ? "ts-spot on" : "ts-spot"}
+            style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
+            onClick={onWaitlist}
+            onPointerEnter={() => setHovered(marker.id)}
+            onPointerLeave={() => setHovered(null)}
+            aria-label={marker.label}
+          />
+        ))}
       </div>
 
-      {/* Своя дорожка вместо системного ползунка: тот выглядел как настройка
-          громкости посреди макета. */}
-      <div className="ts-controls">
-        <input
-          type="range"
-          min={0}
-          max={359}
-          value={Math.round(turn)}
-          onChange={(event) => setTurn(Number(event.target.value))}
-          aria-label="Turn the shirt"
-        />
-        <span className="ts-side">{back ? "Back" : "Front"}</span>
-      </div>
-
-      {/* Подпись держит высоту всегда: иначе текст под футболкой прыгал бы на
-          каждое наведение. */}
       <p className="ts-hint">
-        {hovered ? hovered.label : "Drag the shirt to turn it. Tap a spot to sign up."}
+        {hovered
+          ? SPOTS.find((spot) => spot.id === hovered)?.label
+          : "Drag to turn the shirt. Tap a spot to sign up."}
       </p>
 
       <p className="muted small">
