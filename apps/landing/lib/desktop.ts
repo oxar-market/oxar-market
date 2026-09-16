@@ -78,6 +78,8 @@ export type DesktopApp = {
   icon?: string;
   x: number;
   y: number;
+  /** Папка, в которой иконка лежит изначально. Пусто - значит на столе. */
+  parent?: string;
 };
 
 export const APPS: DesktopApp[] = [
@@ -94,6 +96,32 @@ export const APPS: DesktopApp[] = [
     name: "Josip called it",
     icon: "/icons/josip.png",
     x: 44,
+    y: 70,
+  },
+  // Первая поверхность из физического мира. Лежит в папке, а не на столе:
+  // очередь важна сама по себе - профили проверяются автоматически, футболка
+  // нет, и мы не делаем вид, что это одно и то же.
+  {
+    slug: "tshirt",
+    name: "T-shirt",
+    parent: "physical-world",
+    x: 12,
+    y: 10,
+  },
+];
+
+export type DesktopFolder = {
+  slug: string;
+  name: string;
+  x: number;
+  y: number;
+};
+
+export const FOLDERS: DesktopFolder[] = [
+  {
+    slug: "physical-world",
+    name: "Physical World",
+    x: 72,
     y: 70,
   },
 ];
