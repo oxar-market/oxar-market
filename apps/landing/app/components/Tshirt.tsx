@@ -69,7 +69,13 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
   const back = Math.abs(((turn + 180) % 360) - 180) > 90;
 
   function onPointerDown(event: React.PointerEvent) {
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    try {
+      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    } catch {
+      // Захват указателя не обязателен: без него поворот просто прервётся,
+      // если курсор уйдёт со сцены. А исключение отсюда убило бы поворот
+      // вовсе - обработчик дальше не дошёл бы до запоминания начальной точки.
+    }
     drag.current = { id: event.pointerId, x: event.clientX, from: turn };
   }
 
