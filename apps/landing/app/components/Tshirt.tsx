@@ -8,8 +8,11 @@ import { useRef, useState } from "react";
  *
  * Футболка вертится вокруг своей оси. Это не две картинки «перёд и спина»:
  * каждое место лежит на цилиндре под своим углом, и при повороте уезжает за
- * корпус и появляется с другой стороны само. Поэтому спина не нарисована
- * отдельно - она получается из того же силуэта.
+ * корпус и появляется с другой стороны само.
+ *
+ * Места лежат внутри той же группы, что и силуэт, и обрезаны по нему маской.
+ * Поэтому они ведут себя как нанесённые на ткань: сужаются вместе с корпусом и
+ * уходят под край, а не плавают поверх картинки.
  *
  * Цен здесь нет намеренно. Ни одна футболка ещё не продана, проверять
  * размещение на ткани мы пока не умеем, и ставить цифру было бы обещанием,
@@ -30,15 +33,28 @@ type Spot = {
   h: number;
 };
 
+/**
+ * Силуэт: плечи, короткий рукав, чуть приталенный бок, ровный низ. Пропорции
+ * взяты у настоящей футболки - ширина примерно две трети длины. Более узкая и
+ * длинная выглядела как платье.
+ */
+const SHIRT =
+  "M104 122 L138 110 Q160 146 182 110 L216 122 L276 184 L238 212 L228 196 " +
+  "L228 310 Q160 322 92 310 L92 196 L82 212 L44 184 Z";
+
 const SPOTS: Spot[] = [
-  { id: "chest", label: "Chest", angle: 0, radius: 52, y: 240, w: 92, h: 70 },
-  { id: "pocket", label: "Left chest", angle: -40, radius: 52, y: 180, w: 44, h: 30 },
-  { id: "back", label: "Back", angle: 180, radius: 52, y: 240, w: 100, h: 86 },
-  { id: "nape", label: "Nape", angle: 180, radius: 52, y: 180, w: 62, h: 18 },
+  { id: "chest", label: "Chest", angle: 0, radius: 44, y: 250, w: 76, h: 58 },
+  { id: "left-chest", label: "Left chest", angle: -42, radius: 44, y: 204, w: 30, h: 24 },
+  { id: "right-chest", label: "Right chest", angle: 42, radius: 44, y: 204, w: 30, h: 24 },
+  { id: "collar-front", label: "Under the collar", angle: 0, radius: 44, y: 172, w: 36, h: 12 },
+  { id: "hem-front", label: "Front hem", angle: 0, radius: 44, y: 294, w: 54, h: 18 },
   // Рукава сидят ближе к фронту, чем настоящие ±90: ровно сбоку место
-  // схлопывается в линию, и при взгляде анфас его не было бы видно вовсе.
-  { id: "sleeve-right", label: "Sleeve", angle: 62, radius: 76, y: 150, w: 42, h: 30 },
-  { id: "sleeve-left", label: "Sleeve", angle: -62, radius: 76, y: 150, w: 42, h: 30 },
+  // схлопывается в линию и с фронта его не было бы видно вовсе.
+  { id: "sleeve-left", label: "Left sleeve", angle: -58, radius: 96, y: 186, w: 28, h: 22 },
+  { id: "sleeve-right", label: "Right sleeve", angle: 58, radius: 96, y: 186, w: 28, h: 22 },
+  { id: "back", label: "Back", angle: 180, radius: 44, y: 246, w: 84, h: 68 },
+  { id: "nape", label: "Nape", angle: 180, radius: 44, y: 170, w: 48, h: 14 },
+  { id: "back-hem", label: "Back hem", angle: 180, radius: 44, y: 294, w: 54, h: 18 },
 ];
 
 const CX = 160;
@@ -49,17 +65,16 @@ function project(spotAngle: number, turn: number) {
   const rel = ((spotAngle - turn + 540) % 360) - 180;
   const depth = Math.cos(rel * RAD);
   return {
-    x: CX + Math.sin(rel * RAD),
     shift: Math.sin(rel * RAD),
     depth,
     // У самого края место сжато в линию и читать его нельзя - там оно гаснет.
-    opacity: depth <= 0.14 ? 0 : Math.min(1, (depth - 0.14) / 0.22),
+    opacity: depth <= 0.12 ? 0 : Math.min(1, (depth - 0.12) / 0.2),
   };
 }
 
 export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => void }) {
   const [turn, setTurn] = useState(0);
-  const [hovered, setHovered] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<Spot | null>(null);
   const drag = useRef<{ id: number; x: number; from: number } | null>(null);
 
   // Силуэт при повороте сужается: футболка сбоку уже, чем анфас. Ткань не
@@ -101,15 +116,20 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <svg viewBox="0 0 320 380" className="ts-svg" role="img" aria-label="T-shirt">
-          <g
-            style={{ transform: `scaleX(${squeeze})`, transformOrigin: "160px 200px" }}
-          >
-            {/* Корпус и рукава одной фигурой: плечи, короткий рукав, бок с
-                небольшим приталиванием, ровный низ. */}
+        {/* Поле зрения обрезано по самой вещи: при полном холсте футболка тонула
+            в пустоте и выглядела мелкой. */}
+        <svg viewBox="30 98 260 232" className="ts-svg" role="img" aria-label="T-shirt">
+          <defs>
+            {/* Ткань обрезает нанесение: место, уехавшее за бок, скрывается под
+                краем, а не висит рядом с футболкой. */}
+            <clipPath id="ts-fabric">
+              <path d={SHIRT} />
+            </clipPath>
+          </defs>
+
+          <g style={{ transform: `scaleX(${squeeze})`, transformOrigin: "160px 210px" }}>
             <path
-              d="M104 108 L134 94 Q160 110 186 94 L216 108 L258 152 L228 186 L212 168
-                 L212 320 Q160 332 108 320 L108 168 L92 186 L62 152 Z"
+              d={SHIRT}
               fill="#f4f5f7"
               stroke="#d8dbe0"
               strokeWidth="2"
@@ -118,54 +138,49 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
             {/* Горловина: спереди вырез, сзади шов по спинке. */}
             {back ? (
               <path
-                d="M134 94 Q160 106 186 94"
+                d="M138 110 Q160 124 182 110"
                 fill="none"
                 stroke="#d8dbe0"
                 strokeWidth="3"
               />
             ) : (
               <path
-                d="M134 94 Q160 126 186 94"
+                d="M138 110 Q160 146 182 110"
                 fill="#eceef1"
                 stroke="#d8dbe0"
                 strokeWidth="2"
               />
             )}
-          </g>
 
-          {SPOTS.map((spot) => {
-            const at = project(spot.angle, turn);
-            if (at.opacity === 0) return null;
-            const x = CX + at.shift * spot.radius * squeeze;
-            const on = hovered === spot.id;
-            return (
-              <g
-                key={spot.id}
-                className={on ? "ts-spot on" : "ts-spot"}
-                style={{ opacity: at.opacity }}
-                transform={`translate(${x} ${spot.y}) scale(${at.depth} 1)`}
-                onClick={onWaitlist}
-                onPointerEnter={() => setHovered(spot.id)}
-                onPointerLeave={() => setHovered(null)}
-              >
-                <rect
-                  x={-spot.w / 2}
-                  y={-spot.h / 2}
-                  width={spot.w}
-                  height={spot.h}
-                  rx="6"
-                />
-                {/* Подпись держим прямой: вместе с местом она сжималась бы в
-                    нечитаемую полосу. */}
-                <text textAnchor="middle" dy="4" transform={`scale(${1 / at.depth} 1)`}>
-                  {spot.label}
-                </text>
-              </g>
-            );
-          })}
+            <g clipPath="url(#ts-fabric)">
+              {SPOTS.map((spot) => {
+                const at = project(spot.angle, turn);
+                if (at.opacity === 0) return null;
+                const x = CX + at.shift * spot.radius;
+                return (
+                  <rect
+                    key={spot.id}
+                    className={hovered?.id === spot.id ? "ts-spot on" : "ts-spot"}
+                    x={-spot.w / 2}
+                    y={-spot.h / 2}
+                    width={spot.w}
+                    height={spot.h}
+                    rx="4"
+                    style={{ opacity: at.opacity }}
+                    transform={`translate(${x} ${spot.y}) scale(${at.depth} 1)`}
+                    onClick={onWaitlist}
+                    onPointerEnter={() => setHovered(spot)}
+                    onPointerLeave={() => setHovered(null)}
+                  />
+                );
+              })}
+            </g>
+          </g>
         </svg>
       </div>
 
+      {/* Своя дорожка вместо системного ползунка: тот выглядел как настройка
+          громкости посреди макета. */}
       <div className="ts-controls">
         <input
           type="range"
@@ -175,20 +190,25 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
           onChange={(event) => setTurn(Number(event.target.value))}
           aria-label="Turn the shirt"
         />
-        <span className="muted small">{back ? "Back" : "Front"}</span>
+        <span className="ts-side">{back ? "Back" : "Front"}</span>
       </div>
+
+      {/* Подпись держит высоту всегда: иначе текст под футболкой прыгал бы на
+          каждое наведение. */}
+      <p className="ts-hint">
+        {hovered ? hovered.label : "Drag the shirt to turn it. Tap a spot to sign up."}
+      </p>
 
       <p className="muted small">
         {role === "advertiser"
-          ? "Every highlighted area is a surface you could rent. Drag the shirt to turn it."
-          : "Every highlighted area is something a club or a team could rent out. Drag the shirt to turn it."}
+          ? "Every marked area is a surface you could rent - on a team shirt, a merch drop, a conference tee."
+          : "Every marked area is something a club or a team could rent out."}
       </p>
       <p className="muted small">
         Nobody is selling shirts yet. A profile can be checked automatically, a shirt
-        needs a photo and a place - that part is next. Join the waitlist and you get it
-        first.
+        needs a photo and a place - that part is next.
       </p>
-      <button className="primary" onClick={onWaitlist}>
+      <button className="primary ts-cta" onClick={onWaitlist}>
         Join the waitlist
       </button>
     </div>
