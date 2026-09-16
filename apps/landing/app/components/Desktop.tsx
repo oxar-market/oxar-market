@@ -93,16 +93,16 @@ function FolderArt() {
 }
 
 /** Иконка футболки: своего файла у неё нет, и заводить его ради одного значка
-    незачем - тот же силуэт, что в макете. */
+    незачем. Силуэт тот же, что был в макете, - вещь узнаётся с первого взгляда. */
 function TshirtArt() {
   return (
-    <svg viewBox="0 0 64 64" className="tshirt-art">
+    <svg viewBox="36 94 248 244" className="tshirt-art">
       <path
-        d="M22 12 L28 9 Q32 14 36 9 L42 12 L54 24 L47 31 L42 26 L42 55 Q32 58 22 55
-           L22 26 L17 31 L10 24 Z"
-        fill="#f4f5f7"
-        stroke="#c9ced6"
-        strokeWidth="2"
+        d="M104 122 L138 110 Q160 146 182 110 L216 122 L276 184 L238 212 L228 196
+           L228 310 Q160 322 92 310 L92 196 L82 212 L44 184 Z"
+        fill="#dfe3e9"
+        stroke="#b9c1cc"
+        strokeWidth="6"
         strokeLinejoin="round"
       />
     </svg>
@@ -178,7 +178,7 @@ export function Desktop() {
       item.kind === "folder"
         ? "icon-art folder"
         : item.slug === "tshirt"
-          ? "icon-art drawn"
+          ? "icon-art file drawn"
           : item.kind === "file"
             ? "icon-art file"
             : item.icon
