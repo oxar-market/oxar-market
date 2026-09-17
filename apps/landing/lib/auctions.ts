@@ -16,6 +16,8 @@ export type Lot = {
   status: string;
   listing: {
     kind: PlacementKind;
+    /** Чем доказывается размещение: от этого зависит, что просить у ставящего. */
+    catalog: { proof: string } | null;
     seller: { x_handle: string; follower_count: number; is_org: boolean };
   };
 };
@@ -43,7 +45,7 @@ export async function openLots(kind: PlacementKind): Promise<Lot[]> {
     .from("auctions")
     .select(
       "id,start_date,end_date,reserve_cents,closes_at,status," +
-        "listing:listings!inner(kind,seller:sellers!inner(x_handle,follower_count,is_org))",
+        "listing:listings!inner(kind,catalog:placement_catalog(proof),seller:sellers!inner(x_handle,follower_count,is_org))",
     )
     .eq("status", "open")
     .eq("listing.kind", kind)
@@ -70,7 +72,6 @@ export async function lotBids(lotId: string): Promise<PublicBid[]> {
 export type NewBid = {
   auction_id: string;
   bidder_handle: string;
-  bidder_contact: string | null;
   amount_cents: number;
   creative_url: string | null;
   creative_text: string | null;
@@ -108,7 +109,7 @@ export async function lotsOnSurface(surface: string): Promise<Lot[]> {
     .from("auctions")
     .select(
       "id,start_date,end_date,reserve_cents,closes_at,status," +
-        "listing:listings!inner(kind,catalog:placement_catalog!inner(surface)," +
+        "listing:listings!inner(kind,catalog:placement_catalog!inner(surface,proof)," +
         "seller:sellers!inner(x_handle,follower_count,is_org))",
     )
     .eq("status", "open")
@@ -116,4 +117,20 @@ export async function lotsOnSurface(surface: string): Promise<Lot[]> {
     .order("closes_at");
 
   return (data ?? []) as unknown as Lot[];
+}
+
+
+/**
+ * Чем этот человек ставил в прошлый раз.
+ *
+ * Хэндл и логотип у одного участника торгов не меняются от зоны к зоне, а
+ * вводить их заново на каждую из одиннадцати - причина не ставить вовсе.
+ * Ищем по адресу входа: его проставляет база триггером, подделать нельзя.
+ */
+export async function lastBidOf(): Promise<
+  { bidder_handle: string; creative_url: string | null } | null
+> {
+  if (!auth) return null;
+  const { data } = await auth.rpc("my_last_bid");
+  return (data as { bidder_handle: string; creative_url: string | null }[])?.[0] ?? null;
 }

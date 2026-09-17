@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatUsd, isValidHandle, minBidCents, normalizeHandle } from "@oxar/core";
-import { lotBids, placeBid, type Lot, type PublicBid } from "@/lib/auctions";
+import { lastBidOf, lotBids, placeBid, type Lot, type PublicBid } from "@/lib/auctions";
 import { CreativeDrop } from "./CreativeDrop";
 import { Notice } from "./Notice";
 import { MAX_BYTES, uploadCreative } from "@/lib/upload";
@@ -143,12 +143,29 @@ function BidForm({
 }) {
   const [amount, setAmount] = useState((need / 100).toString());
   const [handle, setHandle] = useState("");
-  const [contact, setContact] = useState("");
   const [creative, setCreative] = useState("");
   const [file, setFile] = useState<{ name: string; url: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+
+  // Один участник торгов ставит на несколько зон подряд, и хэндл с логотипом у
+  // него те же. Заполняем их из прошлой ставки: вводить заново одиннадцать раз
+  // - причина не ставить вовсе. Поле остаётся обычным, поверх подставленного
+  // можно написать своё.
+  useEffect(() => {
+    let live = true;
+    lastBidOf().then((last) => {
+      if (!live || !last) return;
+      setHandle((now) => now || `@${last.bidder_handle}`);
+      setFile((now) =>
+        now ?? (last.creative_url ? { name: "last upload", url: last.creative_url } : null),
+      );
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   async function upload(picked: File) {
     setError("");
@@ -192,7 +209,6 @@ function BidForm({
     const result = await placeBid({
       auction_id: lot.id,
       bidder_handle: bidder,
-      bidder_contact: contact.trim() || null,
       amount_cents: cents,
       creative_url: file?.url ?? null,
       creative_text: creative.trim() || null,
@@ -211,6 +227,11 @@ function BidForm({
           : "Could not place the bid. Try again in a minute.",
     );
   }
+
+  // Что доказывает размещение, то и просим. У ткани это фотография, у строки
+  // в профиле - текст. Спрашивать и то и другое значит спрашивать лишнее.
+  const wantsFile = lot.listing.catalog?.proof !== "text";
+  const wantsText = lot.listing.catalog?.proof !== "photo";
 
   return (
     <form className="lot-form" onSubmit={submit} noValidate>
@@ -233,29 +254,23 @@ function BidForm({
         />
       </label>
 
-      <label>
-        Email or Telegram <span className="optional">optional</span>
-        <input
-          value={contact}
-          onChange={(event) => setContact(event.target.value)}
-          placeholder="you@mail.com"
-          autoComplete="off"
-        />
-      </label>
-
       <div className="field">
         <span className="field-label">What goes up if you win</span>
-        <input
-          value={creative}
-          onChange={(event) => setCreative(event.target.value)}
-          placeholder="https://… or the exact text"
-        />
-        <CreativeDrop
-          file={file}
-          uploading={uploading}
-          onPick={upload}
-          onClear={() => setFile(null)}
-        />
+        {wantsText && (
+          <input
+            value={creative}
+            onChange={(event) => setCreative(event.target.value)}
+            placeholder={wantsFile ? "https://… or the exact text" : "The exact text"}
+          />
+        )}
+        {wantsFile && (
+          <CreativeDrop
+            file={file}
+            uploading={uploading}
+            onPick={upload}
+            onClear={() => setFile(null)}
+          />
+        )}
       </div>
 
       {error && <Notice tone="error">{error}</Notice>}
