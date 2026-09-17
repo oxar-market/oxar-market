@@ -2627,3 +2627,9 @@ a.proof-row:hover {
   align-items: flex-end;
   gap: 2px;
 }
+
+/* Заголовок выбранной зоны футболки: та же роль, что у шапки места в витрине. */
+.ts-offers-head {
+  padding-top: 4px;
+  font-size: 15px;
+}

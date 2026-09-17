@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { formatUsd } from "@oxar/core";
+import { lotsOnSurface, type Lot } from "@/lib/auctions";
+import { AuctionLot } from "./AuctionLot";
 
 /**
  * Трёхмерный макет футболки. Вещь крутится мышью и пальцем, как в любом
@@ -14,9 +17,14 @@ import { useEffect, useRef, useState } from "react";
  * около мегабайта, и тянуть его в основной бандл ради одной иконки на столе
  * нельзя.
  *
- * Цен здесь нет намеренно. Ни одна футболка ещё не продана, проверять
- * размещение на ткани мы пока не умеем, и ставить цифру было бы обещанием,
- * которого мы не выполним. Место ведёт в вейтлист.
+ * Зоны названы так же, как места в каталоге: по этому имени вид находит свой
+ * лот. Зона, выставленная на торги, ведёт в форму ставки; остальные - в
+ * вейтлист, потому что обещать цену на непроданном месте нечем.
+ *
+ * Эскроу тут нет намеренно, и это не упущение. Он отдаёт деньги за время,
+ * которое размещение простояло, а простой ткани проверить нечем: ни строки, ни
+ * картинки профиля, ни id поста. Плюс печать - невозвратная трата продавца до
+ * начала. Разобрано в docs/plan-payments.md.
  */
 
 type Role = "creator" | "advertiser";
@@ -69,20 +77,20 @@ function panelHeight(index: number): number {
 
 const SPOTS: Spot[] = [
   // Перёд: подол, живот, грудь - три панели одной высоты с равным просветом
-  { id: "hem-front", label: "Front hem", height: panelHeight(0), azimuth: 0, size: [0.18, PANEL_TALL] },
-  { id: "stomach", label: "Stomach", height: panelHeight(1), azimuth: 0, size: [0.18, PANEL_TALL] },
-  { id: "chest", label: "Chest", height: panelHeight(2), azimuth: 0, size: [0.18, PANEL_TALL] },
+  { id: "tshirt_hem_front", label: "Front hem", height: panelHeight(0), azimuth: 0, size: [0.18, PANEL_TALL] },
+  { id: "tshirt_stomach", label: "Stomach", height: panelHeight(1), azimuth: 0, size: [0.18, PANEL_TALL] },
+  { id: "tshirt_chest", label: "Chest", height: panelHeight(2), azimuth: 0, size: [0.18, PANEL_TALL] },
   // Бока: узкие полосы между панелями и рукавами
-  { id: "side-left", label: "Left side", height: 0.45, azimuth: -90, size: [0.06, 0.16] },
-  { id: "side-right", label: "Right side", height: 0.45, azimuth: 90, size: [0.06, 0.16] },
+  { id: "tshirt_side_left", label: "Left side", height: 0.45, azimuth: -90, size: [0.06, 0.16] },
+  { id: "tshirt_side_right", label: "Right side", height: 0.45, azimuth: 90, size: [0.06, 0.16] },
   // Рукава ниже плечевого шва, иначе пятно заезжает на плечо
-  { id: "sleeve-left", label: "Left sleeve", height: 0.7, azimuth: -78, size: [0.07, 0.05] },
-  { id: "sleeve-right", label: "Right sleeve", height: 0.7, azimuth: 78, size: [0.07, 0.05] },
+  { id: "tshirt_sleeve_left", label: "Left sleeve", height: 0.7, azimuth: -78, size: [0.07, 0.05] },
+  { id: "tshirt_sleeve_right", label: "Right sleeve", height: 0.7, azimuth: 78, size: [0.07, 0.05] },
   // Спина, зеркально переду, плюс загривок над верхней панелью
-  { id: "hem-back", label: "Back hem", height: panelHeight(0), azimuth: 180, size: [0.2, PANEL_TALL] },
-  { id: "lower-back", label: "Lower back", height: panelHeight(1), azimuth: 180, size: [0.2, PANEL_TALL] },
-  { id: "back", label: "Back", height: panelHeight(2), azimuth: 180, size: [0.2, PANEL_TALL] },
-  { id: "nape", label: "Nape", height: 0.87, azimuth: 180, size: [0.1, 0.04] },
+  { id: "tshirt_hem_back", label: "Back hem", height: panelHeight(0), azimuth: 180, size: [0.2, PANEL_TALL] },
+  { id: "tshirt_lower_back", label: "Lower back", height: panelHeight(1), azimuth: 180, size: [0.2, PANEL_TALL] },
+  { id: "tshirt_back", label: "Back", height: panelHeight(2), azimuth: 180, size: [0.2, PANEL_TALL] },
+  { id: "tshirt_nape", label: "Nape", height: 0.87, azimuth: 180, size: [0.1, 0.04] },
 ];
 
 // Глубина коробки, которой декаль вырезается из ткани. Было 0.12, и на этом
@@ -91,14 +99,33 @@ const SPOTS: Spot[] = [
 // Ткань тонкая, ей хватает малого.
 const DECAL_DEPTH = 0.07;
 
+/** Подпись под моделью: что за зона и в каких она торгах. */
+function hint(hovered: string | null, lot: Lot | null): string {
+  if (!hovered) return "Drag to turn the shirt. Tap a spot.";
+  const label = SPOTS.find((spot) => spot.id === hovered)?.label ?? "Spot";
+  if (!lot) return `${label} - not for sale yet`;
+  return `${label} - bidding from ${formatUsd(lot.reserve_cents)}`;
+}
+
 export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => void }) {
   const mount = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
   // Клик по месту приходит из сцены, а обработчик живёт в React. Через ref -
   // чтобы сцену не пересобирать на каждый ре-рендер.
-  const waitlist = useRef(onWaitlist);
-  waitlist.current = onWaitlist;
+  const [lots, setLots] = useState<Lot[]>([]);
+  const [picked, setPicked] = useState<string | null>(null);
+  // Клик по месту приходит из сцены, а обработчик живёт в React. Через ref -
+  // чтобы сцену не пересобирать на каждый ре-рендер.
+  const onPick = useRef<(id: string) => void>(() => {});
+  onPick.current = (id) => setPicked(id);
+
+  useEffect(() => {
+    lotsOnSurface("tshirt").then(setLots);
+  }, []);
+
+  const lotFor = (id: string | null) =>
+    lots.find((lot) => lot.listing.kind === id) ?? null;
 
   useEffect(() => {
     const host = mount.current;
@@ -293,7 +320,8 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
           if (!start) return;
           if (Math.abs(event.clientX - start.x) > 5) return;
           if (Math.abs(event.clientY - start.y) > 5) return;
-          if (pick(event)) waitlist.current();
+          const found = pick(event);
+          if (found) onPick.current(found.id);
         };
 
         renderer.domElement.addEventListener("pointermove", onMove);
@@ -352,23 +380,38 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
       </div>
 
       <p className="ts-hint">
-        {hovered
-          ? SPOTS.find((spot) => spot.id === hovered)?.label
-          : "Drag to turn the shirt. Tap a spot to sign up."}
+        {hint(hovered, lotFor(hovered))}
       </p>
 
-      <p className="muted small">
-        {role === "advertiser"
-          ? "Every marked area is a surface you could rent - on a team shirt, a merch drop, a conference tee."
-          : "Every marked area is something a club or a team could rent out."}
-      </p>
-      <p className="muted small">
-        Nobody is selling shirts yet. A profile can be checked automatically, a shirt
-        needs a photo and a place - that part is next.
-      </p>
-      <button className="primary ts-cta" onClick={onWaitlist}>
-        Join the waitlist
-      </button>
+      {picked && lotFor(picked) ? (
+        <>
+          <button type="button" className="link-back" onClick={() => setPicked(null)}>
+            Back to the shirt
+          </button>
+          <div className="ts-offers-head">
+            <strong>{SPOTS.find((spot) => spot.id === picked)?.label}</strong>
+          </div>
+          <AuctionLot lot={lotFor(picked)!} />
+        </>
+      ) : (
+        <>
+          <p className="muted small">
+            {role === "advertiser"
+              ? "Every marked area is a surface you could rent - on a team shirt, a merch drop, a conference tee."
+              : "Every marked area is something a club or a team could rent out."}
+          </p>
+          {lots.length === 0 && (
+            <p className="muted small">
+              Nothing is up for auction on a shirt right now. A profile can be checked
+              automatically, a shirt needs a photo and a place - that part is done by
+              hand.
+            </p>
+          )}
+          <button className="primary ts-cta" onClick={onWaitlist}>
+            Join the waitlist
+          </button>
+        </>
+      )}
     </div>
   );
 }
