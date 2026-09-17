@@ -2926,21 +2926,12 @@ a.proof-row:hover {
   transition: border-color 0.14s, background 0.14s, transform 0.1s ease-out;
 }
 
-/* Знак кошелька в его фирменном цвете: по цвету его находят быстрее, чем по
-   названию. Рисуем сами - чужие логотипы файлами это и вес, и права на них. */
-.wallet-app-mark {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
+/* Настоящий значок кошелька: у всех трёх он и есть скруглённый квадрат со
+   своим фоном, поэтому подложка ему не нужна. */
+.wallet-app img {
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--brand) 18%, transparent);
-  color: var(--brand);
-}
-
-.wallet-app-mark svg {
-  width: 1.25rem;
-  height: 1.25rem;
 }
 
 .wallet-app:hover {
