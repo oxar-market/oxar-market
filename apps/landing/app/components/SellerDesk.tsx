@@ -169,15 +169,13 @@ function LinkSent({ email, onAgain }: { email: string; onAgain: () => void }) {
             onChange={(event) => setCode(event.target.value)}
             inputMode="numeric"
             autoComplete="one-time-code"
-            placeholder="123456"
+            placeholder="Code from the email"
           />
         </label>
         {codeError && <Notice tone="error">{codeError}</Notice>}
-        <button
-          type="submit"
-          className="primary"
-          disabled={checking || code.trim().length < 6}
-        >
+        {/* Длину кода не проверяем: она настраивается в Supabase и у нас уже
+            не та, что по умолчанию. Неверный код отбракует сервер. */}
+        <button type="submit" className="primary" disabled={checking || !code.trim()}>
           {checking ? "Checking…" : "Sign in with the code"}
         </button>
       </form>
