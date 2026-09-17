@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { takeOpenPoint } from "@/lib/open-from";
+import { spring } from "@/lib/spring";
 
 /**
  * Окно рабочего стола.
@@ -28,9 +29,15 @@ export function Window({
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const offset = useRef({ x: 0, y: 0 });
-  const drag = useRef<{ pointerId: number; startX: number; startY: number } | null>(
-    null,
-  );
+  const drag = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    /** Последняя точка со временем: по ней считается скорость на отпускании. */
+    lastY: number;
+    lastAt: number;
+    speed: number;
+  } | null>(null);
 
   // Точка отсчёта масштабирования - иконка, по которой нажали. Считается после
   // вёрстки, а не до: до неё у окна нет ни размеров, ни места на экране.
@@ -88,6 +95,9 @@ export function Window({
       pointerId: event.pointerId,
       startX: event.clientX - offset.current.x,
       startY: event.clientY - offset.current.y,
+      lastY: event.clientY,
+      lastAt: event.timeStamp,
+      speed: 0,
     };
     (event.target as Element).setPointerCapture(event.pointerId);
   }
@@ -98,6 +108,11 @@ export function Window({
 
     // На телефоне это не окно, а лист: он ходит только вниз и только чтобы
     // закрыться. Вверх не тянем, иначе контент уедет под статусбар.
+    const seconds = (event.timeStamp - state.lastAt) / 1000;
+    if (seconds > 0) state.speed = (event.clientY - state.lastY) / seconds;
+    state.lastY = event.clientY;
+    state.lastAt = event.timeStamp;
+
     const sheet = isSheet();
     offset.current = {
       x: sheet ? 0 : event.clientX - state.startX,
@@ -109,23 +124,47 @@ export function Window({
   }
 
   function endDrag(event: React.PointerEvent) {
-    if (drag.current?.pointerId !== event.pointerId) return;
+    const state = drag.current;
+    if (state?.pointerId !== event.pointerId) return;
     drag.current = null;
 
     if (!isSheet() || !frame.current) return;
 
-    // Утянул лист вниз больше чем на 110 пикселей - закрываем, как в
-    // мобильных системах. Иначе возвращаем на место.
-    if (offset.current.y > 110) {
-      onClose();
+    const box = frame.current;
+    const from = offset.current.y;
+
+    // Закрывать или вернуть, решает намерение, а не расстояние. Короткий
+    // быстрый флик вниз - это «закрой», даже если лист проехал сантиметр;
+    // медленное протягивание на полэкрана с остановкой - это «передумал».
+    const flung = state.speed > 500;
+    if (flung || from > 110) {
+      offset.current = { x: 0, y: 0 };
+      spring({
+        from,
+        to: window.innerHeight,
+        velocity: state.speed,
+        response: 0.3,
+        onFrame: (value) => {
+          box.style.transform = `translate3d(0, ${value}px, 0)`;
+        },
+        onDone: onClose,
+      });
       return;
     }
-    frame.current.style.transition = "transform 0.18s var(--spring)";
-    frame.current.style.transform = "translate3d(0, 0, 0)";
+
+    // Возврат - тоже пружина с той же скоростью: у перехода на CSS начальная
+    // скорость всегда ноль, и на отпускании видно, как движение спотыкается.
     offset.current = { x: 0, y: 0 };
-    window.setTimeout(() => {
-      if (frame.current) frame.current.style.transition = "";
-    }, 200);
+    spring({
+      from,
+      to: 0,
+      damping: 0.8,
+      response: 0.3,
+      velocity: state.speed,
+      onFrame: (value) => {
+        box.style.transform = `translate3d(0, ${value}px, 0)`;
+      },
+    });
   }
 
   return (

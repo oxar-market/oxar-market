@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { tapped } from "./haptics";
+import { spring } from "./spring";
 
 /**
  * Перетаскивание иконок по рабочему столу.
@@ -58,6 +59,60 @@ export type Parents = Record<string, string | null>;
 
 type Stored = { positions: Layout; parents?: Parents };
 
+/** Летящая иконка: чем её остановить и где она сейчас относительно места. */
+type Flight = { stop: () => void; at: Point };
+
+/**
+ * Иконка долетает до места сама, начиная с той скорости, с какой её отпустили.
+ *
+ * Раньше она вставала туда мгновенно: точку приземления считали с учётом
+ * броска, а прыжок в неё был в один кадр - иконка пропадала из-под пальца и
+ * появлялась вдали. Это хуже, чем если бы броска не было вовсе.
+ *
+ * По оси на пружину, а не одна на расстояние: при разной скорости по X и Y
+ * общая пружина рассинхронизирует движение и оно идёт по дуге, которой человек
+ * не задавал.
+ */
+function fly(
+  element: HTMLElement,
+  from: Point,
+  velocity: Point,
+  flight: Flight,
+  onEnd: () => void,
+): () => void {
+  let left = 2;
+  const done = () => {
+    if (--left === 0) onEnd();
+  };
+  const write = () => {
+    element.style.transform = `translate3d(${flight.at.x}px, ${flight.at.y}px, 0)`;
+  };
+  const stopX = spring({
+    from: from.x,
+    to: 0,
+    velocity: velocity.x,
+    onFrame: (value) => {
+      flight.at.x = value;
+      write();
+    },
+    onDone: done,
+  });
+  const stopY = spring({
+    from: from.y,
+    to: 0,
+    velocity: velocity.y,
+    onFrame: (value) => {
+      flight.at.y = value;
+      write();
+    },
+    onDone: done,
+  });
+  return () => {
+    stopX();
+    stopY();
+  };
+}
+
 type DragState = {
   slug: string;
   pointerId: number;
@@ -65,6 +120,12 @@ type DragState = {
   startY: number;
   element: HTMLElement;
   moved: boolean;
+  /**
+   * Смещение, которое было на иконке в момент захвата. Не ноль только когда
+   * иконку поймали в полёте: тогда она стоит на своих left/top плюс остаток
+   * пружины, и палец обязан продолжить движение отсюда, а не с прыжка.
+   */
+  origin: Point;
   /** Где иконка лежала до перетаскивания: от неё считается выход за край. */
   startRect: DOMRect;
   box: DOMRect | null;
@@ -83,6 +144,7 @@ export function useIconLayout(
   const [parents, setParents] = useState<Parents>(defaultParents);
   const surface = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
+  const flights = useRef(new Map<string, Flight>());
 
   // Читаем сохранённую раскладку после гидратации: на сервере localStorage нет,
   // а несовпадение разметки дало бы ошибку гидратации.
@@ -134,6 +196,13 @@ export function useIconLayout(
     // туда, куда её отпустили.
     element.style.transition = "none";
 
+    // Летящую иконку можно поймать. Пружину останавливаем, а её остаток берём
+    // за начало нового движения: иначе иконка прыгнет на конечную точку - ровно
+    // тот рывок, ради которого полёт и заводили.
+    const flight = flights.current.get(slug);
+    if (flight) flights.current.delete(slug);
+    flight?.stop();
+
     drag.current = {
       slug,
       pointerId: event.pointerId,
@@ -141,6 +210,7 @@ export function useIconLayout(
       startY: event.clientY,
       element,
       moved: false,
+      origin: flight ? { ...flight.at } : { x: 0, y: 0 },
       // Снимаем до первого transform: потом эта рамка уже поехала бы вместе с
       // иконкой, и выход за край считался бы от неверного места.
       startRect: element.getBoundingClientRect(),
@@ -170,7 +240,9 @@ export function useIconLayout(
 
     const moved = resist(state, dx, dy);
     state.shown = moved;
-    state.element.style.transform = `translate3d(${moved.x}px, ${moved.y}px, 0)`;
+    state.element.style.transform = `translate3d(${state.origin.x + moved.x}px, ${
+      state.origin.y + moved.y
+    }px, 0)`;
     state.element.style.zIndex = "4";
   }, []);
 
@@ -257,17 +329,31 @@ export function useIconLayout(
         reset();
         setParents(nextParents);
       } else {
-        // Новые координаты пишем в DOM в том же кадре, в котором убираем
+        // Новые координаты пишем в DOM в том же кадре, в котором меняем
         // transform. Если сначала стереть transform и ждать ре-рендер React,
         // иконка на один кадр прыгает на старое место и это видно как рывок.
         state.element.style.left = `${x}%`;
         state.element.style.top = `${y}%`;
-        state.element.style.transform = "";
-        state.element.style.zIndex = "";
 
-        // Переход возвращаем только со следующего кадра, иначе он подхватит
-        // сброс transform и анимирует его.
-        requestAnimationFrame(() => {
+        // Место у иконки уже новое, но видно её пока на старом: transform
+        // держит разницу, и пружина сводит эту разницу к нулю, начиная с той
+        // скорости, с какой палец её отпустил. Так между рукой и полётом нет
+        // шва - движение не прерывается ни на кадр.
+        const rest = {
+          x: state.startRect.left + state.shown.x - (box.left + (x / 100) * box.width),
+          y: state.startRect.top + state.shown.y - (box.top + (y / 100) * box.height),
+        };
+        state.element.style.transform = `translate3d(${rest.x}px, ${rest.y}px, 0)`;
+
+        const flight: Flight = { stop: () => {}, at: { ...rest } };
+        flights.current.set(state.slug, flight);
+        flight.stop = fly(state.element, rest, speed, flight, () => {
+          // Полёт мог быть прерван новым захватом - тогда убирать за собой
+          // нельзя, иконка уже в чужих руках.
+          if (flights.current.get(state.slug) !== flight) return;
+          flights.current.delete(state.slug);
+          state.element.style.transform = "";
+          state.element.style.zIndex = "";
           state.element.style.transition = "";
         });
       }

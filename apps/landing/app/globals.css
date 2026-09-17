@@ -303,7 +303,6 @@ body {
   background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -501,7 +500,7 @@ body {
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
 }
 
 .window-body p {
@@ -533,7 +532,7 @@ body {
   font-size: 1.875rem;
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: 0;
+  letter-spacing: -0.015em;
 }
 
 .page p {
@@ -882,6 +881,13 @@ textarea:focus-visible {
     animation-name: fade-in !important;
   }
 
+  /* Уход - тоже проявление, только обратное. Без этой строки правило выше
+     ловило и закрытие, окно проигрывало появление на месте и пропадало
+     рывком в конце. */
+  .window.leaving {
+    animation-name: fade-out !important;
+  }
+
   .icon:hover,
   .primary:active,
   .dock-home:active,
@@ -896,6 +902,12 @@ textarea:focus-visible {
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
   }
 }
 
@@ -2080,6 +2092,7 @@ a.primary {
   text-align: center;
   font-size: 2.125rem;
   font-weight: 700;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: #16161a;
   pointer-events: none;
@@ -2135,7 +2148,7 @@ a.primary {
 
 .flap-over strong {
   font-size: 1.625rem;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
 }
 
 /* .primary прижата влево по умолчанию - в игре она по центру, как и всё */
@@ -2985,7 +2998,8 @@ a.proof-row:hover {
 .role:active,
 .dock-item:active,
 .desk-edit:active,
-.desk-more:active {
+.desk-more:active,
+.icon:active {
   transform: scale(0.97);
 }
 
