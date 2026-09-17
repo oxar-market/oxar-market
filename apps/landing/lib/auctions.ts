@@ -93,3 +93,27 @@ export async function placeBid(
   if (text.includes("bid must be at least")) return "low";
   return "error";
 }
+
+/**
+ * Все открытые лоты на одной поверхности - например, все зоны футболки сразу.
+ *
+ * Отдельно от `openLots`, который берёт по одному типу места: 3D-вид должен
+ * покрасить одиннадцать зон за один запрос, а не за одиннадцать. Отбор идёт по
+ * каталогу, поэтому новая поверхность не требует правок здесь.
+ */
+export async function lotsOnSurface(surface: string): Promise<Lot[]> {
+  if (!auth) return [];
+
+  const { data } = await auth
+    .from("auctions")
+    .select(
+      "id,start_date,end_date,reserve_cents,closes_at,status," +
+        "listing:listings!inner(kind,catalog:placement_catalog!inner(surface)," +
+        "seller:sellers!inner(x_handle,follower_count,is_org))",
+    )
+    .eq("status", "open")
+    .eq("listing.catalog.surface", surface)
+    .order("closes_at");
+
+  return (data ?? []) as unknown as Lot[];
+}
