@@ -2822,6 +2822,9 @@ a.proof-row:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Запасной выход для телефона встаёт своей строкой под подписью, а не рядом
+     с ней: рядом он сжимался до двух слов в строку. */
+  flex-wrap: wrap;
   gap: 0.75rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--line);
@@ -2888,22 +2891,99 @@ a.proof-row:hover {
   }
 }
 
-/* Запасной выход в мобильном браузере: строка объяснения и ряд ссылок на
-   встроенные браузеры кошельков. */
+/* Запасной выход в мобильном браузере: объяснение и плитки кошельков.
+
+   Занимает всю ширину строки, в которую вставлен: рядом со своей подписью он
+   сжимался в колонку из двух слов, и ряд кнопок ломался посреди названия. */
 .wallet-mobile {
+  flex: 1 1 100%;
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Три в ряд на любой ширине: названия короткие, а равные доли читаются как
+   выбор из трёх, а не как список со случайными переносами. */
+.wallet-apps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.5rem;
 }
 
-.wallet-apps {
+.wallet-app {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
   gap: 0.375rem;
+  padding: 0.75rem 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  font-size: 0.8125rem;
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color 0.14s, background 0.14s, transform 0.1s ease-out;
 }
 
-.wallet-apps a {
-  text-decoration: none;
+/* Знак кошелька в его фирменном цвете: по цвету его находят быстрее, чем по
+   названию. Рисуем сами - чужие логотипы файлами это и вес, и права на них. */
+.wallet-app-mark {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 18%, transparent);
+  color: var(--brand);
+}
+
+.wallet-app-mark svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.wallet-app:hover {
+  border-color: #c8c8c2;
+  background: #f7f7f5;
+}
+
+.wallet-app:active {
+  transform: scale(0.97);
+}
+
+/* Запасной выход из запасного выхода: он не должен спорить с плитками. */
+.wallet-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  padding: 0.375rem 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.wallet-copy svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.wallet-copy:active {
+  transform: scale(0.97);
+}
+
+/* Код из письма стоит отдельным блоком, а не в общей колонке карточки: это
+   второй путь ко входу, а не продолжение первого. */
+.code-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
 }
 
 

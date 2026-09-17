@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatUsd, PLACEMENTS, placementSpec, type PlacementKind } from "@oxar/core";
-import { sendLink, signOut } from "@/lib/auth";
+import { sendLink, signInWithCode, signOut } from "@/lib/auth";
 import { closeDueLots } from "@/lib/auctions";
 import type { SellerAccount } from "@/lib/use-seller-account";
 import {
@@ -126,10 +126,17 @@ function SignIn({ onSent }: { onSent: (email: string) => void }) {
 /**
  * Письмо ушло. Повторить можно, но не сразу: у встроенной почты Supabase есть
  * свой предел, и второе письмо в ту же секунду просто не уйдёт.
+ *
+ * Рядом со ссылкой - поле для кода из того же письма. Оно нужно там, где
+ * ссылка бесполезна: во встроенном браузере кошелька почта откроет её в
+ * системном браузере, сессия окажется в нём, а человек останется в кошельке.
  */
 function LinkSent({ email, onAgain }: { email: string; onAgain: () => void }) {
   const [wait, setWait] = useState(60);
   const [again, setAgain] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [code, setCode] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [codeError, setCodeError] = useState("");
 
   useEffect(() => {
     if (wait === 0) return;
@@ -137,11 +144,43 @@ function LinkSent({ email, onAgain }: { email: string; onAgain: () => void }) {
     return () => window.clearTimeout(timer);
   }, [wait]);
 
+  async function enter(event: React.FormEvent) {
+    event.preventDefault();
+    setCodeError("");
+    setChecking(true);
+    const result = await signInWithCode(email, code.trim());
+    setChecking(false);
+    // На успехе делать нечего: сессия сменилась, и кабинет перерисует себя сам.
+    if (result === "bad") setCodeError("That code does not match. Check the email again.");
+    else if (result === "error") setCodeError("Could not check the code. Try again in a minute.");
+  }
+
   return (
     <div className="card">
       <Notice tone="success" title="Check your inbox">
         A sign-in link is on its way to {email}. Open it on this device.
       </Notice>
+
+      <form className="code-form" onSubmit={enter}>
+        <label>
+          Or type the code from the same email
+          <input
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="123456"
+          />
+        </label>
+        {codeError && <Notice tone="error">{codeError}</Notice>}
+        <button
+          type="submit"
+          className="primary"
+          disabled={checking || code.trim().length < 6}
+        >
+          {checking ? "Checking…" : "Sign in with the code"}
+        </button>
+      </form>
 
       {again === "error" && (
         <Notice tone="error">Could not send it again. Try in a minute.</Notice>
