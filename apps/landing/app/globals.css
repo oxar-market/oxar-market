@@ -2435,13 +2435,77 @@ a.primary {
   border-bottom: none;
 }
 
-/* Кнопки по центру строки, а не по её верху. Кнопка высотой 34px, прижатая
-   верхом к верху текста, вставала на девять пикселей ниже середины названия -
-   отсюда и ощущение, что иконки не на одном уровне с текстом. Заявкам это не
-   годится: там в строке бывает картинка креатива, и центрировать нечего. */
+/* Строка места - сетка из четырёх колонок. Ширины заданы числами, а не `auto`:
+   каждая строка это своя сетка, и на `auto` колонки подгонялись бы под своё
+   содержимое, а строки снова разъехались бы. Название забирает остаток.
+
+   Кнопки встают по центру строки. Раньше кнопка высотой 34px прижималась верхом
+   к верху текста и оказывалась на девять пикселей ниже середины названия - это и
+   читалось как «иконки не на одном уровне». Заявкам сетка не годится: там в
+   строке бывает картинка креатива, и колонок у неё нет. */
 .desk-spot .desk-item {
   border-bottom: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 176px 92px 220px;
   align-items: center;
+  column-gap: 12px;
+}
+
+/* Кнопки места делят свою колонку поровну. По содержимому «Close» уже, чем
+   «Edit price», и вторая кнопка от строки к строке уезжала. */
+.desk-spot .desk-acts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.desk-spot .desk-act {
+  justify-content: center;
+}
+
+.desk-name {
+  font-size: 15px;
+  min-width: 0;
+}
+
+.desk-price {
+  font-size: 14px;
+  color: var(--muted);
+  /* Цифры одной ширины: иначе суммы в столбце не сходятся по разрядам. */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Состояние: слово, а не хвост к цене. Ширины хватает самому длинному из трёх
+   («Price updated»), поэтому перенос строки не меняет высоту. */
+.desk-state {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.desk-state.off {
+  color: #9a6b2f;
+}
+
+.desk-state.fresh {
+  color: #2f7d55;
+}
+
+/* На узком экране колонки не помещаются: строка складывается в две - сверху
+   название с ценой, снизу состояние и кнопки. */
+@media (max-width: 760px) {
+  .desk-spot .desk-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 6px;
+  }
+
+  .desk-price {
+    white-space: normal;
+  }
+
+  .desk-state {
+    grid-column: 1;
+  }
 }
 
 /* Правка цены раскрывается под самим местом, а не уводит на другой экран */
@@ -2450,11 +2514,6 @@ a.primary {
   flex-direction: column;
   gap: 12px;
   padding: 4px 0 16px;
-}
-
-.desk-saved {
-  font-size: 13px;
-  color: #2f7d55;
 }
 
 .desk-add {
