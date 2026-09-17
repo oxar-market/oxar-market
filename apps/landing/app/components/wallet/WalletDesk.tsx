@@ -4,6 +4,12 @@ import { useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import {
+  createDefaultAuthorizationCache,
+  createDefaultChainSelector,
+  createDefaultWalletNotFoundHandler,
+  registerMwa,
+} from "@solana-mobile/wallet-standard-mobile";
 import { CLUSTER_URL } from "@/lib/stream.ts";
 import { OrdersPanel } from "./OrdersPanel";
 import { PayoutPanel } from "./PayoutPanel";
@@ -23,6 +29,27 @@ import { PayoutPanel } from "./PayoutPanel";
  * autoConnect включён: разрешение уже дали, спрашивать на каждой перезагрузке
  * незачем.
  */
+
+/**
+ * Android: кошельки не инжектятся в мобильный браузер, но принимают интент.
+ * MWA объявляет себя по тому же Wallet Standard, поэтому в массив `wallets`
+ * его добавлять не надо - адаптер подхватит сам. Регистрация на уровне модуля,
+ * а файл грузится только в браузере, так что до SSR это не доедет.
+ *
+ * На iOS MWA не работает и не заработает: он держит сокет в фоне, чего iOS не
+ * позволяет. Там запасной выход - ConnectWallet.
+ */
+registerMwa({
+  appIdentity: {
+    name: "OXAR",
+    uri: "https://oxar.app",
+    icon: "icons/mark-home.png",
+  },
+  authorizationCache: createDefaultAuthorizationCache(),
+  chains: ["solana:devnet", "solana:mainnet"],
+  chainSelector: createDefaultChainSelector(),
+  onWalletNotFound: createDefaultWalletNotFoundHandler(),
+});
 
 export type DeskProps =
   | { kind: "orders"; onWaitlist: () => void }
