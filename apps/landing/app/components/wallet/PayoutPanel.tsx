@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { setPayoutWallet } from "@/lib/payments.ts";
 import { Notice } from "../Notice";
+import { ConnectWallet } from "./ConnectWallet";
 
 /**
  * Куда продавцу приходят деньги.
@@ -53,7 +53,7 @@ export function PayoutPanel({
 
       {/* Кнопка адаптера: она же открывает список кошельков, найденных на
           устройстве, и она же показывает подключённый. */}
-      <WalletMultiButton />
+      <ConnectWallet />
 
       {error && <Notice tone="error">{error}</Notice>}
     </div>

@@ -6,8 +6,8 @@ import { myOrders, attachPayment, type MyOrder } from "@/lib/payments.ts";
 import { cancelStream, openStream } from "@/lib/stream.ts";
 import { payOnce } from "@/lib/transfer.ts";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { Notice } from "../Notice";
+import { ConnectWallet } from "./ConnectWallet";
 
 /**
  * Кабинет покупателя: свои брони и деньги по ним.
@@ -130,7 +130,7 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
             ? `Paying from ${short(adapter.publicKey.toBase58())}`
             : "No wallet connected"}
         </span>
-        <WalletMultiButton />
+        <ConnectWallet />
       </div>
 
       <p className="small muted">
