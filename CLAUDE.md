@@ -77,6 +77,18 @@ supabase/        миграции схемы
 живёт внутри лендинга, на рабочем столе. Мобильное приложение планируется на Expo
 (веб плюс Android и iOS одним кодом), под Solana появится `packages/chain`.
 
+## Скилл `solana-dev`
+
+В репозитории лежит скилл Solana Foundation (`.agents/skills/solana-dev`, поставлен
+через `npx skills add solana-foundation/solana-dev-skill`, версия закреплена в
+`skills-lock.json`). Полезен по программам, ошибкам RPC, тестированию и безопасности.
+
+**Где он расходится с нами.** Его глава про фронтенд требует `@solana/kit` и прямо
+запрещает `@solana/wallet-adapter-*`. Мы на wallet-adapter и web3.js v1 сознательно:
+Streamflow SDK 13 работает с `Connection` и `Transaction` из v1, и переход на Kit
+сломал бы эскроу. Совет «мигрируйте на Kit» принимать не надо, пока Streamflow не
+переедет сам. Про Mobile Wallet Adapter в скилле нет ничего.
+
 ## Команды
 
 ```bash
