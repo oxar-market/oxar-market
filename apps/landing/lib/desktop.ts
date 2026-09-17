@@ -108,6 +108,15 @@ export const APPS: DesktopApp[] = [
     x: 12,
     y: 10,
   },
+  // Вторая вещь в той же папке. Чемодан едет по аэропорту несколько часов
+  // подряд мимо людей, которым нечем себя занять, - это и есть его аргумент.
+  {
+    slug: "suitcase",
+    name: "Suitcase",
+    parent: "physical-world",
+    x: 52,
+    y: 10,
+  },
 ];
 
 export type DesktopFolder = {

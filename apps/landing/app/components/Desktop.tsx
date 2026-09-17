@@ -9,6 +9,7 @@ import { JosipApp } from "./JosipApp";
 import { MyOrders } from "./MyOrders";
 import { Proof } from "./Proof";
 import { SellerDesk } from "./SellerDesk";
+import { Suitcase } from "./Suitcase";
 import { Tshirt } from "./Tshirt";
 import { Waitlist } from "./Waitlist";
 import { Window } from "./Window";
@@ -23,6 +24,7 @@ type Open =
   | { kind: "josip" }
   | { kind: "orders" }
   | { kind: "tshirt" }
+  | { kind: "suitcase" }
   | { kind: "folder"; slug: string; name: string }
   | null;
 
@@ -112,6 +114,44 @@ function TshirtArt() {
   );
 }
 
+/** Иконка чемодана: корпус с рёбрами, поднятая ручка и колёса - по этим трём
+    признакам вещь читается даже в размер иконки на столе. */
+function SuitcaseArt() {
+  return (
+    <svg viewBox="0 0 160 200" className="tshirt-art">
+      <path
+        d="M70 18h20v26H70z M62 10h36v10H62z"
+        fill="none"
+        stroke="#7c8695"
+        strokeWidth="7"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="22"
+        y="44"
+        width="116"
+        height="132"
+        rx="18"
+        fill="#dfe3e9"
+        stroke="#b9c1cc"
+        strokeWidth="6"
+      />
+      <path
+        d="M52 44v132 M108 44v132"
+        stroke="#b9c1cc"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M44 176v10 M116 176v10"
+        stroke="#7c8695"
+        strokeWidth="8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /** Слот кнопки в доке: скрытый схлопывается по ширине, а не исчезает рывком. */
 function DockSlot({ show, children }: { show: boolean; children: React.ReactNode }) {
   return (
@@ -163,8 +203,8 @@ export function Desktop() {
       setOpen({ kind: "folder", slug: item.slug, name: item.name });
       return;
     }
-    if (item.slug === "tshirt") {
-      setOpen({ kind: "tshirt" });
+    if (item.slug === "tshirt" || item.slug === "suitcase") {
+      setOpen({ kind: item.slug });
       return;
     }
     setOpen(item.slug === "josip" ? { kind: "josip" } : { kind: "x" });
@@ -180,7 +220,7 @@ export function Desktop() {
     const art =
       item.kind === "folder"
         ? "icon-art folder"
-        : item.slug === "tshirt"
+        : item.slug === "tshirt" || item.slug === "suitcase"
           ? "icon-art file drawn"
           : item.kind === "file"
             ? "icon-art file"
@@ -210,6 +250,8 @@ export function Desktop() {
             <FolderArt />
           ) : item.slug === "tshirt" ? (
             <TshirtArt />
+          ) : item.slug === "suitcase" ? (
+            <SuitcaseArt />
           ) : item.icon ? (
             // Логотипы лежат в public и не меняются, оптимизатор картинок
             // тут только добавил бы работы.
@@ -367,6 +409,12 @@ export function Desktop() {
               renderIcon(item),
             )}
           </div>
+        </Window>
+      )}
+
+      {open?.kind === "suitcase" && (
+        <Window title="Suitcase" onClose={() => setOpen(null)} wide>
+          <Suitcase role={role} onWaitlist={() => setOpen({ kind: "waitlist" })} />
         </Window>
       )}
 
