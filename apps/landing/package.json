@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "devnet-check": "node --experimental-strip-types scripts/devnet-check.mjs"
   },
   "dependencies": {
     "@oxar/core": "workspace:*",
