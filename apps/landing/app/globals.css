@@ -16,8 +16,14 @@
   padding: 0;
 }
 
+/* Точка отсчёта - системный размер шрифта, а не наши шестнадцать пикселей.
+   Всё остальное здесь измерено в rem от него, поэтому увеличенный шрифт в
+   настройках увеличивает и буквы, и воздух вокруг них, а вёрстка не
+   расползается. Волосяные линии, тени и размеры иконок остались в пикселях:
+   они не про текст. */
 html,
 body {
+  font-size: 100%;
   height: 100%;
   /* Страницу не тянет в сторону: рабочий стол занимает ровно экран, а
      горизонтальная пружина на телефоне выглядит как сломанная вёрстка. */
@@ -89,13 +95,13 @@ body {
   align-items: center;
   justify-content: center;
   height: 58px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .roles {
   display: flex;
-  gap: 2px;
-  padding: 3px;
+  gap: 0.125rem;
+  padding: 0.1875rem;
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -108,7 +114,7 @@ body {
   border: none;
   background: transparent;
   border-radius: 999px;
-  padding: 6px 15px;
+  padding: 0.375rem 0.9375rem;
   font: inherit;
   color: var(--muted);
   cursor: pointer;
@@ -135,14 +141,14 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 0.4375rem;
   border: none;
   background: transparent;
   font: inherit;
   color: var(--fg);
   text-decoration: none;
   cursor: pointer;
-  padding: 6px;
+  padding: 0.375rem;
   border-radius: 10px;
   transition: transform 0.14s var(--spring), background 0.14s;
 }
@@ -177,7 +183,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
@@ -215,7 +221,7 @@ body {
 .icon-art.app {
   background: #0f1419;
   color: #fff;
-  font-size: 24px;
+  font-size: 1.5rem;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
@@ -239,7 +245,7 @@ body {
   width: 100%;
   height: 100%;
   display: block;
-  padding: 9px;
+  padding: 0.5625rem;
 }
 
 /* Папка, над которой держат иконку, подсвечивается - иначе непонятно, попадёт
@@ -254,7 +260,7 @@ body {
 .folder-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 0.375rem;
   min-height: 104px;
 }
 
@@ -263,7 +269,7 @@ body {
 }
 
 .icon-name {
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.3;
   text-align: center;
   letter-spacing: 0.01em;
@@ -290,7 +296,7 @@ body {
   height: 56px;
   /* Зазор задают сами слоты: у дока он добавлялся бы и вокруг схлопнутых. */
   gap: 0;
-  padding: 0 8px;
+  padding: 0 0.5rem;
   /* Плотная заливка была нужна, пока лист заходил под док и сквозь него
      читался текст. Теперь лист кончается выше, под доком только обои - хватает
      лёгкой подложки с размытием. */
@@ -308,7 +314,7 @@ body {
 .dock-home {
   width: 40px;
   height: 40px;
-  padding: 2px;
+  padding: 0.125rem;
   border: none;
   background: transparent;
   border-radius: 11px;
@@ -335,14 +341,14 @@ body {
 .dock-line {
   width: 1px;
   height: 22px;
-  margin: 0 3px;
+  margin: 0 0.1875rem;
   background: var(--line);
 }
 
 .dock-slot {
   display: flex;
   flex: none;
-  padding: 0 2px;
+  padding: 0 0.125rem;
   /* Предел близок к ширине самой широкой кнопки: будь он вдвое больше, первая
      половина хода уходила бы в пустоту и раскрытие читалось бы рывком. */
   max-width: 172px;
@@ -373,9 +379,9 @@ body {
   border: none;
   background: transparent;
   border-radius: 9px;
-  padding: 0 14px;
+  padding: 0 0.875rem;
   font: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   white-space: nowrap;
   color: var(--fg);
   text-decoration: none;
@@ -395,7 +401,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 1rem;
   pointer-events: none;
 }
 
@@ -444,8 +450,8 @@ body {
 .window-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
   border-bottom: 1px solid var(--line);
   cursor: grab;
   touch-action: none;
@@ -471,7 +477,7 @@ body {
 }
 
 .window-title {
-  font-size: 12.5px;
+  font-size: 0.7812rem;
   color: var(--muted);
 }
 
@@ -481,25 +487,25 @@ body {
 }
 
 .window-body {
-  padding: 22px;
+  padding: 1.375rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0.875rem;
 }
 
 /* Заголовки набраны так же, как шрифт показан в макете: Bold, трекинг ноль,
    интерлиньяж 1.2. Отрицательный трекинг в этом шрифте слепляет буквы, а выше
    700 у него просто нет начертаний. */
 .window-body h1 {
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0;
 }
 
 .window-body p {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 400;
   line-height: 1.6;
   color: #2c2c33;
@@ -517,21 +523,21 @@ body {
 .page {
   max-width: 620px;
   margin: 0 auto;
-  padding: 64px 24px;
+  padding: 4rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .page h1 {
-  font-size: 30px;
+  font-size: 1.875rem;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0;
 }
 
 .page p {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 400;
   line-height: 1.6;
   color: #2c2c33;
@@ -543,7 +549,7 @@ body {
 }
 
 .back {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--muted);
   text-decoration: none;
 }
@@ -555,7 +561,7 @@ body {
 /* Крупнее обычного мелкого текста: у дисплейного шрифта различия между буквами
    уходят раньше, чем у нейтрального. */
 .small {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 /* Форма waitlist */
@@ -563,27 +569,27 @@ body {
 .card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0.875rem;
 }
 
 .card h2 {
-  font-size: 19px;
+  font-size: 1.1875rem;
   letter-spacing: 0;
 }
 
 .sides {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .side {
   background: transparent;
   border: 1px solid var(--line);
   border-radius: 9px;
-  padding: 10px 12px;
+  padding: 0.625rem 0.75rem;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-family: inherit;
   cursor: pointer;
   transition: border-color 0.14s, color 0.14s;
@@ -597,8 +603,8 @@ body {
 label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 13.5px;
+  gap: 0.375rem;
+  font-size: 0.8438rem;
   color: var(--muted);
 }
 
@@ -606,7 +612,7 @@ label {
 /* Пометка у подписи поля: тише самой подписи, но читается до того, как человек
    нажмёт кнопку и получит ошибку. */
 .need {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #a8a8a2;
 }
 
@@ -615,9 +621,9 @@ textarea {
   background: #fbfbf9;
   border: 1px solid var(--line);
   border-radius: 9px;
-  padding: 11px 13px;
+  padding: 0.6875rem 0.8125rem;
   color: var(--fg);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-family: inherit;
 }
 
@@ -657,8 +663,8 @@ textarea:focus-visible {
   color: #fff;
   border: none;
   border-radius: 9px;
-  padding: 12px 16px;
-  font-size: 14.5px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9062rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
@@ -677,7 +683,7 @@ textarea:focus-visible {
 
 
 .error {
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   color: #c0392b;
 }
 
@@ -704,7 +710,7 @@ textarea:focus-visible {
 
   .icon {
     width: 84px;
-    gap: 8px;
+    gap: 0.5rem;
   }
 
   .icon-art {
@@ -714,7 +720,7 @@ textarea:focus-visible {
   }
 
   .icon-name {
-    font-size: 11.5px;
+    font-size: 0.7188rem;
   }
 
   /* Док остаётся поверх открытого листа: Home должен нажиматься всегда, как на
@@ -725,7 +731,7 @@ textarea:focus-visible {
     max-width: calc(100% - 16px);
     height: 54px;
     border-radius: 18px;
-    padding: 0 6px;
+    padding: 0 0.375rem;
   }
 
   /* Док по содержимому, как на десктопе. Растянутый во всю ширину делил остаток
@@ -738,16 +744,16 @@ textarea:focus-visible {
   /* Теснее, чем на десктопе: на узком экране кнопки иначе подпирают края. */
   .dock-item {
     height: 40px;
-    padding: 0 9px;
-    font-size: 13px;
+    padding: 0 0.5625rem;
+    font-size: 0.8125rem;
   }
 
   .dock-slot {
-    padding: 0 1px;
+    padding: 0 0.0625rem;
   }
 
   .dock-line {
-    margin: 0 2px;
+    margin: 0 0.125rem;
   }
 
   /* Лист поверх всего, включая верхнюю панель: иначе её кнопки перекрывают
@@ -787,7 +793,7 @@ textarea:focus-visible {
     cursor: default;
     /* Заголовку листа нужен воздух: прижатый к статусбару, он читается как
        часть системной панели, а не как шапка окна. */
-    padding: calc(24px + env(safe-area-inset-top)) 14px 18px;
+    padding: calc(1.5rem + env(safe-area-inset-top)) 0.875rem 1.125rem;
     justify-content: center;
   }
 
@@ -808,7 +814,7 @@ textarea:focus-visible {
   }
 
   .window-title {
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--fg);
     font-weight: 500;
   }
@@ -846,11 +852,11 @@ textarea:focus-visible {
      пропадала бы последняя кнопка формы. */
   .window-body {
     /* Запаса под док здесь больше нет: лист и так кончается над ним. */
-    padding: 22px 16px 24px;
+    padding: 1.375rem 1rem 1.5rem;
   }
 
   .window-title {
-    font-size: 15px;
+    font-size: 0.9375rem;
   }
 }
 
@@ -945,18 +951,18 @@ textarea:focus-visible {
   overflow: hidden;
   background: #fff;
   color: #0f1419;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .xp-topline {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 18px;
+  gap: 0.875rem;
+  padding: 0.625rem 1.125rem;
 }
 
 .xp-arrow {
-  font-size: 17px;
+  font-size: 1.0625rem;
   color: #536471;
 }
 
@@ -969,14 +975,14 @@ textarea:focus-visible {
 .xp-topname {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .xp-posts {
   color: #8b98a5;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .xp-badge {
@@ -996,11 +1002,11 @@ textarea:focus-visible {
   background: #f3f9fe;
   border-radius: 8px;
   font: inherit;
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1;
   color: #4a7fa5;
   cursor: pointer;
-  padding: 6px 9px;
+  padding: 0.375rem 0.5625rem;
   /* Только цвет и рамка: размеры не трогаем, чтобы наведение не
      пересчитывало лэйаут. */
   transition: background 0.14s, border-color 0.14s, color 0.14s;
@@ -1031,8 +1037,8 @@ textarea:focus-visible {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 0 18px;
+  gap: 1rem;
+  padding: 0 1.125rem;
   /* Ровно столько, сколько занимает нижняя половина аватарки */
   height: 46px;
 }
@@ -1053,8 +1059,8 @@ textarea:focus-visible {
 .xp-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-top: 10px;
+  gap: 0.5rem;
+  padding-top: 0.625rem;
 }
 
 .xp-round {
@@ -1065,7 +1071,7 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #536471;
 }
 
@@ -1073,59 +1079,59 @@ textarea:focus-visible {
   border-radius: 999px;
   background: #0f1419;
   color: #fff;
-  padding: 7px 17px;
-  font-size: 12.5px;
+  padding: 0.4375rem 1.0625rem;
+  font-size: 0.7812rem;
   font-weight: 700;
 }
 
 .xp-lines {
-  padding: 6px 18px 14px;
+  padding: 0.375rem 1.125rem 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .xp-nameline {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .xp-name {
   font-weight: 800;
-  font-size: 17px;
+  font-size: 1.0625rem;
   letter-spacing: -0.01em;
 }
 
 .xp-handle {
   color: #8b98a5;
-  margin-top: -8px;
-  font-size: 14px;
+  margin-top: -0.5rem;
+  font-size: 0.875rem;
 }
 
 .xp-wide {
   text-align: left;
-  padding: 10px;
+  padding: 0.625rem;
 }
 
 .xp-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
   flex-wrap: wrap;
   color: #8b98a5;
 }
 
 .xp-joined {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .xp-counts {
   display: flex;
-  gap: 20px;
+  gap: 1.25rem;
   color: #8b98a5;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .xp-counts strong {
@@ -1138,7 +1144,7 @@ textarea:focus-visible {
   border-top: 1px solid #f1f4f6;
   border-bottom: 1px solid #f1f4f6;
   color: #8b98a5;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
   height: 46px;
 }
@@ -1159,8 +1165,8 @@ textarea:focus-visible {
 
 .xp-post {
   display: flex;
-  gap: 12px;
-  padding: 14px 18px 16px;
+  gap: 0.75rem;
+  padding: 0.875rem 1.125rem 1rem;
 }
 
 .xp-post-avatar {
@@ -1174,13 +1180,13 @@ textarea:focus-visible {
 .xp-post-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
   flex: 1;
   min-width: 0;
 }
 
 .xp-post-head {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #8b98a5;
 }
 
@@ -1193,27 +1199,27 @@ textarea:focus-visible {
   width: 100%;
   height: 92px;
   text-align: left;
-  padding: 10px 12px;
+  padding: 0.625rem 0.75rem;
 }
 
 .xp-post-actions {
   display: flex;
-  gap: 42px;
+  gap: 2.625rem;
   color: #8b98a5;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .xp {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 1.125rem;
 }
 
 .xp-offers {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 16px;
+  gap: 0.625rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--line);
 }
 
@@ -1221,18 +1227,18 @@ textarea:focus-visible {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .xp-offers-head strong {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .xp-clear {
   border: none;
   background: transparent;
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   cursor: pointer;
 }
@@ -1241,13 +1247,13 @@ textarea:focus-visible {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 13px 14px;
+  gap: 0.75rem;
+  padding: 0.8125rem 0.875rem;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: var(--card);
   font: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   text-align: left;
   cursor: pointer;
   transition: border-color 0.14s, background 0.14s;
@@ -1277,7 +1283,7 @@ textarea:focus-visible {
 .locked-rows {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
   filter: blur(3.5px);
   opacity: 0.75;
   user-select: none;
@@ -1287,19 +1293,19 @@ textarea:focus-visible {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 13px 14px;
+  gap: 0.75rem;
+  padding: 0.8125rem 0.875rem;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: var(--card);
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--muted);
 }
 
 .locked-side {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.3125rem;
 }
 
 .locked-bar {
@@ -1320,8 +1326,8 @@ textarea:focus-visible {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  padding: 0 16px;
+  gap: 0.5625rem;
+  padding: 0 1rem;
   text-align: center;
   border-radius: 12px;
   background: radial-gradient(
@@ -1338,14 +1344,14 @@ textarea:focus-visible {
 }
 
 .locked-over strong {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 /* Кнопка в остальных местах прижата к левому краю - здесь она в центре. */
 .locked-over .primary {
   align-self: center;
-  padding: 9px 16px;
-  font-size: 13px;
+  padding: 0.5625rem 1rem;
+  font-size: 0.8125rem;
 }
 
 a.primary {
@@ -1360,11 +1366,11 @@ a.primary {
 
   .xp-topline {
     height: 46px;
-    padding: 0 14px;
+    padding: 0 0.875rem;
   }
 
   .xp-avatar-row {
-    padding: 0 14px;
+    padding: 0 0.875rem;
     height: 36px;
   }
 
@@ -1375,19 +1381,19 @@ a.primary {
   }
 
   .xp-post {
-    padding: 12px 14px 14px;
+    padding: 0.75rem 0.875rem 0.875rem;
   }
 
   .xp-post-actions {
-    gap: 28px;
+    gap: 1.75rem;
   }
 
   .xp-lines {
-    padding: 12px 14px 14px;
+    padding: 0.75rem 0.875rem 0.875rem;
   }
 
   .xp-tabs {
-    font-size: 12px;
+    font-size: 0.75rem;
     height: 44px;
   }
 
@@ -1424,13 +1430,13 @@ a.primary {
 .xp-meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.3125rem;
 }
 
 .xp-post-actions span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 /* Поле с постоянным префиксом: хэндл вводится без @ */
@@ -1441,7 +1447,7 @@ a.primary {
   background: #fbfbf9;
   border: 1px solid var(--line);
   border-radius: 9px;
-  padding-left: 11px;
+  padding-left: 0.6875rem;
 }
 
 .prefixed:focus-within {
@@ -1450,13 +1456,13 @@ a.primary {
 
 .prefix {
   color: #9a9a94;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .prefixed input {
   border: none;
   background: transparent;
-  padding-left: 2px;
+  padding-left: 0.125rem;
 }
 
 .prefixed input:focus {
@@ -1468,10 +1474,10 @@ a.primary {
 .notice {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
   border-radius: 13px;
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   line-height: 1.5;
   animation: notice-in 0.2s var(--spring);
 }
@@ -1490,7 +1496,7 @@ a.primary {
 .notice-ico {
   flex: none;
   display: flex;
-  margin-top: 1px;
+  margin-top: 0.0625rem;
 }
 
 .notice-ico svg {
@@ -1501,7 +1507,7 @@ a.primary {
 .notice-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.125rem;
   min-width: 0;
 }
 
@@ -1542,7 +1548,7 @@ a.primary {
   background: transparent;
   padding: 0;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   color: var(--muted);
   cursor: pointer;
 }
@@ -1554,14 +1560,14 @@ a.primary {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 0.5625rem;
 }
 
 .field-label {
   display: block;
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   color: var(--muted);
-  margin-bottom: 9px;
+  margin-bottom: 0.5625rem;
 }
 
 /* Поля тянутся на всю ширину и вне label: там их растягивал флекс-контейнер. */
@@ -1573,9 +1579,9 @@ a.primary {
 .stepper {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.25rem;
   width: fit-content;
-  padding: 4px;
+  padding: 0.25rem;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: var(--card);
@@ -1588,7 +1594,7 @@ a.primary {
   background: rgba(0, 0, 0, 0.04);
   border-radius: 8px;
   font: inherit;
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1;
   color: var(--fg);
   cursor: pointer;
@@ -1607,14 +1613,14 @@ a.primary {
 .stepper-value {
   min-width: 46px;
   text-align: center;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
 }
 
 /* Экран заявки */
 
 .req-head h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
   letter-spacing: 0;
 }
 
@@ -1624,7 +1630,7 @@ a.primary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 /* Выход: иконка у имени. Подпись ему не нужна, а строкой в конце кабинета он
@@ -1656,15 +1662,15 @@ a.primary {
 }
 
 .req-sub {
-  margin-top: 3px;
-  font-size: 14px;
+  margin-top: 0.1875rem;
+  font-size: 0.875rem;
   color: var(--muted);
 }
 
 /* Секции разделены тонкой линией, а не воздухом: без неё поля, календарь и
    сумма читаются одним сплошным списком. */
 .req-row {
-  padding-top: 16px;
+  padding-top: 1rem;
   border-top: 1px solid var(--line);
 }
 
@@ -1672,14 +1678,14 @@ a.primary {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 16px;
+  gap: 0.75rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--line);
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .req-total strong {
-  font-size: 19px;
+  font-size: 1.1875rem;
   letter-spacing: 0;
 }
 
@@ -1688,8 +1694,8 @@ a.primary {
 }
 
 .req-fine {
-  margin-top: -6px;
-  font-size: 12.5px;
+  margin-top: -0.375rem;
+  font-size: 0.7812rem;
   line-height: 1.5;
   color: #9a9a95;
 }
@@ -1701,11 +1707,11 @@ a.primary {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 0.5rem;
 }
 
 .cal-month {
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 600;
   letter-spacing: 0;
 }
@@ -1713,8 +1719,8 @@ a.primary {
 .cal-legend {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 0.375rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
@@ -1730,12 +1736,12 @@ a.primary {
   grid-template-columns: repeat(7, 1fr);
   /* По горизонтали зазора нет: выбранный отрезок должен идти одной полосой,
      а не рассыпаться на кружки. */
-  row-gap: 2px;
+  row-gap: 0.125rem;
 }
 
 .cal-weekday {
-  padding-bottom: 6px;
-  font-size: 11px;
+  padding-bottom: 0.375rem;
+  font-size: 0.6875rem;
   text-align: center;
   color: #a5a5a0;
 }
@@ -1746,7 +1752,7 @@ a.primary {
   border: none;
   background: transparent;
   font: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
   color: var(--fg);
   cursor: pointer;
@@ -1812,7 +1818,7 @@ a.primary {
   bottom: 4px;
   width: 5px;
   height: 5px;
-  margin-left: -2.5px;
+  margin-left: -0.1562rem;
   border-radius: 50%;
   background: #c08a98;
 }
@@ -1845,8 +1851,8 @@ a.primary {
 .lot {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 13px 14px;
+  gap: 0.5rem;
+  padding: 0.8125rem 0.875rem;
   border: 1px solid var(--line);
   border-radius: 13px;
   background: var(--card);
@@ -1856,16 +1862,16 @@ a.primary {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .lot-head strong {
-  font-size: 14.5px;
+  font-size: 0.9062rem;
 }
 
 /* Часы - единственное красное на экране: это то, что кончается */
 .lot-clock {
-  font-size: 12.5px;
+  font-size: 0.7812rem;
   font-variant-numeric: tabular-nums;
   color: #b4442f;
   white-space: nowrap;
@@ -1879,11 +1885,11 @@ a.primary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .lot-price strong {
-  font-size: 17px;
+  font-size: 1.0625rem;
   letter-spacing: 0;
 }
 
@@ -1892,9 +1898,9 @@ a.primary {
   background: #0071e3;
   color: #fff;
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 0.5rem 0.875rem;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.14s;
@@ -1908,16 +1914,16 @@ a.primary {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 12.5px;
+  gap: 0.125rem;
+  font-size: 0.7812rem;
   color: var(--muted);
 }
 
 .lot-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 12px;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--line);
 }
 
@@ -1926,18 +1932,18 @@ a.primary {
 .josip {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0.875rem;
 }
 
 .josip-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .josip-head strong {
   display: block;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .josip-face {
@@ -1949,7 +1955,7 @@ a.primary {
 }
 
 .josip-handle {
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   color: var(--muted);
   text-decoration: none;
 }
@@ -1964,18 +1970,18 @@ a.primary {
    этого шрифта он держится лучше, чем на шрифте с засечками. */
 .josip-quote {
   margin: 0;
-  padding: 12px 14px;
+  padding: 0.75rem 0.875rem;
   border-left: 2px solid #6b46e5;
   background: #f7f6fd;
   border-radius: 0 11px 11px 0;
-  font-size: 15.5px;
+  font-size: 0.9688rem;
   font-style: italic;
   font-weight: 500;
   line-height: 1.5;
 }
 
 .josip-link {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--accent);
   text-decoration: none;
   width: fit-content;
@@ -1990,9 +1996,9 @@ a.primary {
 .play {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
   width: 100%;
-  padding: 11px 14px;
+  padding: 0.6875rem 0.875rem;
   border: none;
   border-radius: 14px;
   /* Фиолетовый Superteam: по нему эту отсылку и узнают */
@@ -2026,23 +2032,23 @@ a.primary {
 .play-text {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0.0625rem;
   flex: 1;
   min-width: 0;
 }
 
 .play-text strong {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .play-text span {
-  font-size: 12.5px;
+  font-size: 0.7812rem;
   color: rgba(255, 255, 255, 0.82);
 }
 
 .play-go {
   flex: none;
-  font-size: 12px;
+  font-size: 0.75rem;
   opacity: 0.9;
 }
 
@@ -2072,7 +2078,7 @@ a.primary {
   left: 0;
   right: 0;
   text-align: center;
-  font-size: 34px;
+  font-size: 2.125rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #16161a;
@@ -2119,23 +2125,23 @@ a.primary {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0.5rem;
   background: rgba(247, 247, 245, 0.78);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   text-align: center;
-  padding: 0 24px;
+  padding: 0 1.5rem;
 }
 
 .flap-over strong {
-  font-size: 26px;
+  font-size: 1.625rem;
   letter-spacing: 0;
 }
 
 /* .primary прижата влево по умолчанию - в игре она по центру, как и всё */
 .flap-over .primary {
   align-self: center;
-  margin-top: 8px;
+  margin-top: 0.5rem;
 }
 
 /* Таблица игроков */
@@ -2143,24 +2149,24 @@ a.primary {
 .board {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 14px;
+  gap: 0.625rem;
+  padding-top: 0.875rem;
   border-top: 1px solid var(--line);
 }
 
 .board-head {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.125rem;
 }
 
 .board-head strong {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .board-form {
   display: flex;
-  gap: 8px;
+  gap: 0.5rem;
   align-items: center;
 }
 
@@ -2182,10 +2188,10 @@ a.primary {
 .board-list li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 0;
+  gap: 0.625rem;
+  padding: 0.4375rem 0;
   border-bottom: 1px solid #f0f0ec;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .board-list li:last-child {
@@ -2223,8 +2229,8 @@ a.primary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 0;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
   border-bottom: 1px solid #f0f0ec;
 }
 
@@ -2235,12 +2241,12 @@ a.primary {
 .desk-lines {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0.1875rem;
   min-width: 0;
 }
 
 .desk-lines strong {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 /* Превью креатива в заявке: продавцу надо увидеть, что встанет на его профиль */
@@ -2249,7 +2255,7 @@ a.primary {
   display: block;
   width: 180px;
   max-width: 100%;
-  margin-top: 4px;
+  margin-top: 0.25rem;
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow: hidden;
@@ -2262,11 +2268,11 @@ a.primary {
   position: absolute;
   left: 8px;
   bottom: 8px;
-  padding: 3px 8px;
+  padding: 0.1875rem 0.5rem;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: 11.5px;
+  font-size: 0.7188rem;
 }
 
 .desk-media img,
@@ -2279,7 +2285,7 @@ a.primary {
 
 .desk-acts {
   display: flex;
-  gap: 6px;
+  gap: 0.375rem;
   flex: none;
 }
 
@@ -2287,10 +2293,10 @@ a.primary {
 .desk-no {
   border: 1px solid var(--line);
   border-radius: 9px;
-  padding: 8px 12px;
+  padding: 0.5rem 0.75rem;
   background: var(--card);
   font: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: border-color 0.14s, background 0.14s;
 }
@@ -2351,9 +2357,9 @@ a.primary {
 .desk-auction {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 2px 0 12px;
-  padding-left: 12px;
+  gap: 0.5rem;
+  margin: 0.125rem 0 0.75rem;
+  padding-left: 0.75rem;
   border-left: 2px solid #eceae4;
 }
 
@@ -2361,7 +2367,7 @@ a.primary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 /* Раскрыть форму: выглядит как действие, а не как заголовок раздела. Пунктир
@@ -2370,13 +2376,13 @@ a.primary {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 0.4375rem;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--card);
-  padding: 8px 12px;
+  padding: 0.5rem 0.75rem;
   font: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--fg);
   cursor: pointer;
   transition: border-color 0.14s, background 0.14s;
@@ -2398,14 +2404,14 @@ a.primary {
 .desk-act {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 0.4375rem;
   flex: none;
   border: 1px solid var(--line);
   border-radius: 9px;
-  padding: 7px 11px;
+  padding: 0.4375rem 0.6875rem;
   background: var(--card);
   font: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--fg);
   cursor: pointer;
   transition: border-color 0.14s, background 0.14s;
@@ -2448,7 +2454,7 @@ a.primary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 176px 92px 220px;
   align-items: center;
-  column-gap: 12px;
+  column-gap: 0.75rem;
 }
 
 /* Кнопки места делят свою колонку поровну. По содержимому «Close» уже, чем
@@ -2463,12 +2469,12 @@ a.primary {
 }
 
 .desk-name {
-  font-size: 15px;
+  font-size: 0.9375rem;
   min-width: 0;
 }
 
 .desk-price {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--muted);
   /* Цифры одной ширины: иначе суммы в столбце не сходятся по разрядам. */
   font-variant-numeric: tabular-nums;
@@ -2478,7 +2484,7 @@ a.primary {
 /* Состояние: слово, а не хвост к цене. Ширины хватает самому длинному из трёх
    («Price updated»), поэтому перенос строки не меняет высоту. */
 .desk-state {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -2496,7 +2502,7 @@ a.primary {
 @media (max-width: 760px) {
   .desk-spot .desk-item {
     grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 6px;
+    row-gap: 0.375rem;
   }
 
   .desk-price {
@@ -2512,23 +2518,23 @@ a.primary {
 .desk-edit {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 4px 0 16px;
+  gap: 0.75rem;
+  padding: 0.25rem 0 1rem;
 }
 
 .desk-add {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 select {
   background: #fbfbf9;
   border: 1px solid var(--line);
   border-radius: 9px;
-  padding: 11px 13px;
+  padding: 0.6875rem 0.8125rem;
   color: var(--fg);
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-family: inherit;
 }
 
@@ -2543,9 +2549,9 @@ select:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 0.4375rem;
   width: 100%;
-  padding: 22px 16px;
+  padding: 1.375rem 1rem;
   border: 1px solid var(--line);
   border-radius: 13px;
   background: #fbfbfa;
@@ -2587,19 +2593,19 @@ select:focus {
 }
 
 .drop-text {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .drop-hint {
-  font-size: 12.5px;
+  font-size: 0.7812rem;
   color: #a5a5a0;
 }
 
 .attached {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 9px 11px;
+  gap: 0.6875rem;
+  padding: 0.5625rem 0.6875rem;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: var(--card);
@@ -2619,7 +2625,7 @@ select:focus {
 }
 
 .attached-name {
-  font-size: 13.5px;
+  font-size: 0.8438rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2633,7 +2639,7 @@ select:focus {
   border-radius: 50%;
   width: 24px;
   height: 24px;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1;
   color: #56565e;
   cursor: pointer;
@@ -2649,8 +2655,8 @@ select:focus {
 .proof {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin: 4px 0 8px;
+  gap: 0.125rem;
+  margin: 0.25rem 0 0.5rem;
 }
 
 /* Колонка суммы задана числом, а не `auto`. Каждая строка - отдельная сетка, и
@@ -2664,8 +2670,8 @@ select:focus {
     "amount what"
     "amount who";
   align-items: baseline;
-  column-gap: 16px;
-  padding: 14px 0;
+  column-gap: 1rem;
+  padding: 0.875rem 0;
   border-bottom: 1px solid var(--line);
   text-decoration: none;
   color: inherit;
@@ -2688,7 +2694,7 @@ a.proof-row:hover {
      вставала по середине своих двух строк, а в строке без второй подписи - по
      середине одной, и от строки к строке уезжала. */
   align-self: baseline;
-  font-size: 27px;
+  font-size: 1.6875rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   /* Цифры одной ширины: иначе разряды в столбце не сходятся. */
@@ -2698,22 +2704,22 @@ a.proof-row:hover {
 
 .proof-what {
   grid-area: what;
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.35;
 }
 
 .proof-who {
   grid-area: who;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.35;
   color: var(--muted);
 }
 
 .proof-note {
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.5;
   color: var(--muted);
-  padding-top: 12px;
+  padding-top: 0.75rem;
 }
 
 /* На телефоне сумма встаёт над подписью: в две колонки строка ломается
@@ -2725,12 +2731,12 @@ a.proof-row:hover {
       "amount"
       "what"
       "who";
-    row-gap: 3px;
+    row-gap: 0.1875rem;
   }
 
   .proof-amount {
     align-self: start;
-    font-size: 25px;
+    font-size: 1.5625rem;
   }
 }
 
@@ -2769,7 +2775,7 @@ a.proof-row:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--muted);
 }
 
@@ -2779,7 +2785,7 @@ a.proof-row:hover {
   position: absolute;
   width: 26px;
   height: 26px;
-  margin: -13px 0 0 -13px;
+  margin: -0.8125rem 0 0 -0.8125rem;
   padding: 0;
   border: 1.5px solid #8ec6ee;
   border-radius: 7px;
@@ -2798,17 +2804,17 @@ a.proof-row:hover {
 /* Строка под футболкой: имя места при наведении, подсказка в остальное время */
 .ts-hint {
   min-height: 20px;
-  margin-bottom: 16px;
-  font-size: 13px;
+  margin-bottom: 1rem;
+  font-size: 0.8125rem;
   color: var(--fg);
 }
 
 .ts .muted.small + .muted.small {
-  margin-top: 8px;
+  margin-top: 0.5rem;
 }
 
 .ts-cta {
-  margin-top: 18px;
+  margin-top: 1.125rem;
 }
 
 /* Кабинет покупателя: строка брони и деньги по ней. */
@@ -2816,8 +2822,8 @@ a.proof-row:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 12px;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--line);
 }
 
@@ -2825,10 +2831,10 @@ a.proof-row:hover {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 8px 12px;
-  padding: 13px 0;
+  gap: 0.5rem 0.75rem;
+  padding: 0.8125rem 0;
   border-bottom: 1px solid var(--line);
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 /* Кнопка встаёт во всю ширину под строкой: рядом с ценой она поджимала текст
@@ -2841,20 +2847,20 @@ a.proof-row:hover {
 .pay-what {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.125rem;
 }
 
 .pay-right {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: 0.125rem;
 }
 
 /* Заголовок выбранной зоны футболки: та же роль, что у шапки места в витрине. */
 .ts-offers-head {
-  padding-top: 4px;
-  font-size: 15px;
+  padding-top: 0.25rem;
+  font-size: 0.9375rem;
 }
 
 /* Кошелёк выплат: одна кнопка, как во всех приложениях с кошельком. Поля для
@@ -2864,13 +2870,13 @@ a.proof-row:hover {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .wallet-known {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0.0625rem;
 }
 
 /* На узком экране подпись и кнопка встают в столбец, иначе кнопку сжимает до
