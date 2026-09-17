@@ -5,6 +5,7 @@ import { APPS, FILES, FOLDERS, type DesktopFile } from "@/lib/desktop";
 import { useIconLayout, type Layout, type Parents } from "@/lib/use-icon-layout";
 import { useSellerAccount } from "@/lib/use-seller-account";
 import { JosipApp } from "./JosipApp";
+import { MyOrders } from "./MyOrders";
 import { Proof } from "./Proof";
 import { SellerDesk } from "./SellerDesk";
 import { Tshirt } from "./Tshirt";
@@ -19,6 +20,7 @@ type Open =
   | { kind: "x" }
   | { kind: "desk" }
   | { kind: "josip" }
+  | { kind: "orders" }
   | { kind: "tshirt" }
   | { kind: "folder"; slug: string; name: string }
   | null;
@@ -298,6 +300,14 @@ export function Desktop() {
             Browse placements
           </button>
         </DockSlot>
+
+        {/* Свои покупки и деньги по ним. Только для тех, кого пустили: анониму
+            RLS всё равно не отдаст ни строки, и обещать ему кабинет незачем. */}
+        <DockSlot show={role === "advertiser" && account.access}>
+          <button className="dock-item" onClick={() => setOpen({ kind: "orders" })}>
+            My orders
+          </button>
+        </DockSlot>
       </nav>
 
       {open?.kind === "file" && (
@@ -326,6 +336,12 @@ export function Desktop() {
       {open?.kind === "desk" && (
         <Window title="My spots" onClose={() => setOpen(null)}>
           <SellerDesk account={account} />
+        </Window>
+      )}
+
+      {open?.kind === "orders" && (
+        <Window title="My orders" onClose={() => setOpen(null)}>
+          <MyOrders onWaitlist={() => setOpen({ kind: "waitlist" })} />
         </Window>
       )}
 

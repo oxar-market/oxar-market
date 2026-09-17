@@ -13,6 +13,8 @@ export type MySeller = {
   follower_count: number;
   /** Онбординг ручной: пока мы не проверили аккаунт, места в витрину не идут. */
   verified: boolean;
+  /** Куда течёт стрим. Без него покупатель не может открыть оплату. */
+  payout_wallet: string | null;
 };
 
 export type MyListing = {
