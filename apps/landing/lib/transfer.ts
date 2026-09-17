@@ -1,8 +1,8 @@
 "use client";
 
 import { toUsdcBaseUnits } from "@oxar/core";
-import { CLUSTER_URL, USDC_DEVNET_MINT } from "./stream";
-import type { Wallet } from "./wallet";
+import { CLUSTER_URL, USDC_DEVNET_MINT } from "./stream.ts";
+import type { Wallet } from "./wallet.ts";
 
 /**
  * Разовый перевод USDC: покупатель платит продавцу и всё.

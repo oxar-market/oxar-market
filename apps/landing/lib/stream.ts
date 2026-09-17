@@ -1,7 +1,7 @@
 "use client";
 
 import { streamPlan, type StreamPlan } from "@oxar/core";
-import type { Wallet } from "./wallet";
+import type { Wallet } from "./wallet.ts";
 
 /**
  * Стрим в Streamflow - это и есть наш эскроу.
@@ -14,10 +14,24 @@ import type { Wallet } from "./wallet";
  * создать mainnet-строку из браузера.
  */
 
-export const CLUSTER_URL = "https://api.devnet.solana.com";
+/**
+ * Куда ходим за цепочкой. Через переменную, чтобы прогон
+ * scripts/devnet-check.mjs мог направить тот же код на локальный валидатор:
+ * кран публичного девнета исчерпывается, а проверка не должна от него
+ * зависеть. Умолчание - девнет, мейннета в коде нет вовсе.
+ */
+export const CLUSTER_URL =
+  process.env.NEXT_PUBLIC_SOLANA_RPC ?? "https://api.devnet.solana.com";
 
-/** Тестовый USDC на девнете от Circle. В мейннете адрес другой. */
-export const USDC_DEVNET_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
+/**
+ * Тестовый USDC на девнете от Circle. В мейннете адрес другой.
+ *
+ * Через переменную, чтобы прогон scripts/devnet-check.mjs мог подставить свою
+ * монету: девнетовый USDC выдаётся через кран с капчей, а проверять механику
+ * перевода и стрима это не мешает - важны шесть знаков после точки.
+ */
+export const USDC_DEVNET_MINT =
+  process.env.NEXT_PUBLIC_USDC_MINT ?? "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
 /**
  * SDK и web3.js весят больше мегабайта и нужны только на экране оплаты,
