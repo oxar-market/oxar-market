@@ -21,6 +21,7 @@ import {
 } from "@/lib/seller";
 import { Cross, Pause, Pencil, Play, SignOut } from "./icons";
 import { Notice } from "./Notice";
+import { PayoutWallet } from "./PayoutWallet";
 import { usePriceFields } from "./PriceFields";
 import { SpotAuctions } from "./SellerLots";
 
@@ -226,6 +227,8 @@ function Desk({ seller }: { seller: MySeller }) {
           <SignOut />
         </button>
       </header>
+
+      <PayoutWallet sellerId={seller.id} saved={seller.payout_wallet} />
 
       {error && <Notice tone="error">{error}</Notice>}
 

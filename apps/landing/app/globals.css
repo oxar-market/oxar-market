@@ -2587,3 +2587,43 @@ a.proof-row:hover {
 .ts-cta {
   margin-top: 18px;
 }
+
+/* Кабинет покупателя: строка брони и деньги по ней. */
+.pay-wallet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.pay-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+/* Кнопка встаёт во всю ширину под строкой: рядом с ценой она поджимала текст
+   на телефоне до двух символов в строку. */
+.pay-row > button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.pay-what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pay-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
