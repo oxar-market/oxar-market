@@ -2381,6 +2381,40 @@ a.primary {
   background: #f7f7f5;
 }
 
+/* Действие места: иконка со словом. Отдельно от .desk-icon, который остался
+   голым там, где действий много и подписи не умещаются. */
+.desk-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 7px 11px;
+  background: var(--card);
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.desk-act svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.desk-act:hover {
+  border-color: #c8c8c2;
+  background: #f7f7f5;
+}
+
+.desk-act.on {
+  background: #f0f0ec;
+  border-color: #c8c8c2;
+}
+
 .desk-spot {
   border-bottom: 1px solid #f0f0ec;
 }
@@ -2389,8 +2423,13 @@ a.primary {
   border-bottom: none;
 }
 
+/* Кнопки по центру строки, а не по её верху. Кнопка высотой 34px, прижатая
+   верхом к верху текста, вставала на девять пикселей ниже середины названия -
+   отсюда и ощущение, что иконки не на одном уровне с текстом. Заявкам это не
+   годится: там в строке бывает картинка креатива, и центрировать нечего. */
 .desk-spot .desk-item {
   border-bottom: none;
+  align-items: center;
 }
 
 /* Правка цены раскрывается под самим местом, а не уводит на другой экран */

@@ -338,8 +338,10 @@ export function Desktop() {
         </Window>
       )}
 
+      {/* Кабинет широкий: это таблица, а не текст. В строке имя, цена,
+          состояние и два действия, и на узком окне они разъезжались. */}
       {open?.kind === "desk" && (
-        <Window title="My spots" onClose={() => setOpen(null)}>
+        <Window title="My spots" onClose={() => setOpen(null)} wide>
           <SellerDesk account={account} />
         </Window>
       )}
