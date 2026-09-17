@@ -390,17 +390,30 @@ function Spot({
 
   return (
     <div className="desk-spot">
+      {/* Строка места - четыре колонки одной ширины во всех строках: название,
+          цена, состояние, действия. Раньше это был текстовый столбик и кнопки
+          справа, и от строки к строке всё начиналось в разных местах. */}
       <div className="desk-item">
-        <div className="desk-lines">
-          <strong>{placementSpec(listing.kind).label}</strong>
-          <span className="muted small">
-            {listing.pricing === "daily"
-              ? `${formatUsd(listing.price_cents)} a day · from ${listing.term_days} days`
-              : `${formatUsd(listing.price_cents)} for ${listing.term_days} days`}
-            {listing.active ? "" : " · off sale"}
-          </span>
-          {saved && <span className="desk-saved">Price updated</span>}
-        </div>
+        <strong className="desk-name">{placementSpec(listing.kind).label}</strong>
+        <span className="desk-price">
+          {listing.pricing === "daily"
+            ? `${formatUsd(listing.price_cents)} a day · from ${listing.term_days} days`
+            : `${formatUsd(listing.price_cents)} for ${listing.term_days} days`}
+        </span>
+        {/* Состояние стоит своей колонкой, а не хвостом к цене: снятое с
+            продажи место ничем не отличалось от активного, кроме серых слов
+            «· off sale» в самом незаметном месте строки.
+
+            Сюда же на несколько секунд встаёт «Price updated». Раньше это была
+            отдельная строчка внутри блока: она раздвигала строку, а потом
+            схлопывала обратно. В своей колонке она ничего не двигает. */}
+        <span
+          className={
+            saved ? "desk-state fresh" : listing.active ? "desk-state" : "desk-state off"
+          }
+        >
+          {saved ? "Price updated" : listing.active ? "On sale" : "Paused"}
+        </span>
         {/* Иконки подписаны словом. Без подписи это два одинаковых серых
             квадрата, и какой из них правит цену, а какой снимает с продажи,
             видно только по наведению - а крестик у открытого редактора читался
