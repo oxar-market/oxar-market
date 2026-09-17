@@ -42,7 +42,7 @@ export function MyOrders({ onWaitlist }: { onWaitlist: () => void }) {
   async function connect() {
     setError("");
     if (!walletInstalled()) {
-      setError("Phantom is not installed in this browser.");
+      setError("No wallet found in this browser.");
       return;
     }
     const address = await connectWallet();
@@ -139,8 +139,8 @@ export function MyOrders({ onWaitlist }: { onWaitlist: () => void }) {
           {wallet ? `Wallet ${short(wallet)}` : "No wallet connected"}
         </span>
         {!wallet && (
-          <button type="button" className="dock-item" onClick={connect}>
-            Connect Phantom
+          <button type="button" className="primary" onClick={connect}>
+            Connect wallet
           </button>
         )}
       </div>
