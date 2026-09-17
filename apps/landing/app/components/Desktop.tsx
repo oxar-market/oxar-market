@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { APPS, FILES, FOLDERS, type DesktopFile } from "@/lib/desktop";
+import { rememberOpenPoint } from "@/lib/open-from";
 import { useIconLayout, type Layout, type Parents } from "@/lib/use-icon-layout";
 import { useSellerAccount } from "@/lib/use-seller-account";
 import { JosipApp } from "./JosipApp";
@@ -197,7 +198,11 @@ export function Desktop() {
         data-folder={item.kind === "folder" ? item.slug : undefined}
         onPointerDown={(event) => onPointerDown(item.slug, event)}
         onPointerMove={onPointerMove}
-        onPointerUp={(event) => onPointerUp(event, activate)}
+        onPointerUp={(event) => {
+          // Запоминаем до открытия: окно прочитает точку при появлении.
+          rememberOpenPoint(event);
+          onPointerUp(event, activate);
+        }}
         onPointerCancel={(event) => onPointerUp(event, () => {})}
       >
         <span className={art} aria-hidden>
