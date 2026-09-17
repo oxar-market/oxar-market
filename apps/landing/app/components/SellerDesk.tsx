@@ -365,6 +365,7 @@ function Spot({
     pricing: listing.pricing,
     price_cents: listing.price_cents,
     term_days: listing.term_days,
+    payment: listing.payment,
   });
 
   async function save(event: React.FormEvent) {

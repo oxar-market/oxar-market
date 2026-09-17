@@ -13,6 +13,8 @@ export type Wallet = {
   publicKey: { toBase58(): string } | null;
   signTransaction: (tx: unknown) => Promise<unknown>;
   signAllTransactions: (txs: unknown[]) => Promise<unknown[]>;
+  /** Phantom подписывает и отправляет сам: так надёжнее сырых байтов. */
+  signAndSendTransaction?: (tx: unknown) => Promise<{ signature: string }>;
 };
 
 type Phantom = Wallet & {

@@ -39,8 +39,26 @@ export const PLACEMENTS: readonly PlacementSpec[] = [
   { kind: "avatar", label: "Avatar", proof: "image", defaultDays: 7, friction: 5 },
 ];
 
-export function placementSpec(kind: PlacementKind): PlacementSpec {
+/**
+ * Описание места. Здесь лежат только семь поверхностей профиля X: полный
+ * каталог товаров переехал в базу, потому что перечень того, что продаётся, -
+ * это данные, а не правило.
+ *
+ * Поэтому на незнакомом имени функция больше не падает. Зона футболки -
+ * законное место, просто его описание живёт не тут, и подпись выводится из
+ * самого имени: `tshirt_lower_back` читается как «Lower back».
+ */
+export function placementSpec(kind: string): PlacementSpec {
   const spec = PLACEMENTS.find((p) => p.kind === kind);
-  if (!spec) throw new Error(`Unknown placement kind: ${kind}`);
-  return spec;
+  if (spec) return spec;
+
+  const words = kind.split("_").slice(1).join(" ") || kind;
+  return {
+    kind: kind as PlacementKind,
+    label: words.charAt(0).toUpperCase() + words.slice(1),
+    // Физическую поверхность скриптом не проверить: остаётся фотография.
+    proof: "image",
+    defaultDays: 7,
+    friction: 3,
+  };
 }
