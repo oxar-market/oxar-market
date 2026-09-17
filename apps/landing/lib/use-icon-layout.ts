@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { tapped } from "./haptics";
 
 /**
  * Перетаскивание иконок по рабочему столу.
@@ -21,6 +22,35 @@ const CLICK_SLOP = 6;
 /** Иконка на телефоне шире по площади, поэтому промах пальцем больше. */
 const TOUCH_SLOP = 10;
 
+/**
+ * Насколько иконка сопротивляется, когда её тянут за край стола.
+ *
+ * До этого она уходила за границу один к одному, а на отпускании её обрезало и
+ * телепортировало обратно. Жёсткий упор читается как «зависло», растущее
+ * сопротивление - как «дальше ничего нет». Формула из сэмплов Apple.
+ */
+const RUBBER = 0.55;
+
+function rubberband(overshoot: number, dimension: number): number {
+  return (overshoot * dimension * RUBBER) / (dimension + RUBBER * overshoot);
+}
+
+/**
+ * Куда иконка доехала бы сама, если её бросить.
+ *
+ * Экспоненциальное затухание, как у прокрутки, а не школьная формула через
+ * ускорение: именно это даёт ощущение броска, когда маленькое движение пальца
+ * отправляет иконку далеко.
+ */
+const DECELERATION = 0.998;
+
+function project(velocity: number): number {
+  return ((velocity / 1000) * DECELERATION) / (1 - DECELERATION);
+}
+
+/** Сколько последних точек храним, чтобы посчитать скорость на отпускании. */
+const TRAIL = 5;
+
 export type Point = { x: number; y: number };
 export type Layout = Record<string, Point>;
 /** Где лежит иконка: имя папки или null, если прямо на столе. */
@@ -35,6 +65,13 @@ type DragState = {
   startY: number;
   element: HTMLElement;
   moved: boolean;
+  /** Где иконка лежала до перетаскивания: от неё считается выход за край. */
+  startRect: DOMRect;
+  box: DOMRect | null;
+  /** Последние точки с временем: по ним считается скорость броска. */
+  trail: { x: number; y: number; at: number }[];
+  /** Смещение с учётом резинки - его же отдаём как точку отпускания. */
+  shown: { x: number; y: number };
 };
 
 export function useIconLayout(
@@ -104,6 +141,12 @@ export function useIconLayout(
       startY: event.clientY,
       element,
       moved: false,
+      // Снимаем до первого transform: потом эта рамка уже поехала бы вместе с
+      // иконкой, и выход за край считался бы от неверного места.
+      startRect: element.getBoundingClientRect(),
+      box: surface.current?.getBoundingClientRect() ?? null,
+      trail: [{ x: event.clientX, y: event.clientY, at: event.timeStamp }],
+      shown: { x: 0, y: 0 },
     };
   }, []);
 
@@ -120,7 +163,14 @@ export function useIconLayout(
     }
     if (!state.moved) return;
 
-    state.element.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+    // Хвост из последних точек: одной разницы мало, по ней скорость дёргается
+    // от кадра к кадру.
+    state.trail.push({ x: event.clientX, y: event.clientY, at: event.timeStamp });
+    if (state.trail.length > TRAIL) state.trail.shift();
+
+    const moved = resist(state, dx, dy);
+    state.shown = moved;
+    state.element.style.transform = `translate3d(${moved.x}px, ${moved.y}px, 0)`;
     state.element.style.zIndex = "4";
   }, []);
 
@@ -160,6 +210,7 @@ export function useIconLayout(
 
       if (folder) {
         reset();
+        tapped();
         const nextParents = { ...parents, [state.slug]: folder };
         setParents(nextParents);
         persist({ positions, parents: nextParents });
@@ -181,10 +232,17 @@ export function useIconLayout(
         return;
       }
 
-      const rect = state.element.getBoundingClientRect();
+      // Бросок: иконка летит туда, куда доехала бы сама, а не встаёт там, где
+      // разжали палец. Маленькое движение - большой результат.
+      const speed = velocityOf(state);
+      const thrown = {
+        x: state.startRect.left + state.shown.x + project(speed.x),
+        y: state.startRect.top + state.shown.y + project(speed.y),
+      };
+
       const maxX = isMobile() ? 74 : 92;
-      const x = clamp(((rect.left - box.left) / box.width) * 100, 0, maxX);
-      const y = clamp(((rect.top - box.top) / box.height) * 100, 0, 88);
+      const x = clamp(((thrown.x - box.left) / box.width) * 100, 0, maxX);
+      const y = clamp(((thrown.y - box.top) / box.height) * 100, 0, 88);
 
       const cameFromFolder = Boolean(parents[state.slug]);
       const next = { ...positions, [state.slug]: { x, y } };
@@ -225,4 +283,48 @@ export function useIconLayout(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * Смещение с сопротивлением у края: внутри стола палец и иконка идут один к
+ * одному, за краем иконка отстаёт всё сильнее.
+ */
+function resist(state: DragState, dx: number, dy: number): Point {
+  const box = state.box;
+  if (!box) return { x: dx, y: dy };
+
+  const soften = (
+    delta: number,
+    edge: number,
+    size: number,
+    low: number,
+    high: number,
+    span: number,
+  ) => {
+    const want = edge + delta;
+    const held = clamp(want, low, high - size);
+    const over = want - held;
+    if (over === 0) return delta;
+    return delta - over + Math.sign(over) * rubberband(Math.abs(over), span);
+  };
+
+  return {
+    x: soften(dx, state.startRect.left, state.startRect.width, box.left, box.right, box.width),
+    y: soften(dy, state.startRect.top, state.startRect.height, box.top, box.bottom, box.height),
+  };
+}
+
+/**
+ * Скорость в пикселях за секунду по хвосту точек. Берём от самой старой к
+ * самой новой: так один дрогнувший кадр не решает исход броска.
+ */
+function velocityOf(state: DragState): Point {
+  const trail = state.trail;
+  if (trail.length < 2) return { x: 0, y: 0 };
+  const first = trail[0]!;
+  const last = trail[trail.length - 1]!;
+  const seconds = (last.at - first.at) / 1000;
+  // Палец замер перед отпусканием - значит броска не было.
+  if (seconds <= 0 || seconds > 0.2) return { x: 0, y: 0 };
+  return { x: (last.x - first.x) / seconds, y: (last.y - first.y) / seconds };
 }

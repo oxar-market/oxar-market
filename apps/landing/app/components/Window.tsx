@@ -49,11 +49,33 @@ export function Window({
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") leave();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // leave стабилен: он не зависит от состояния.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onClose]);
+
+  /**
+   * Закрытие тем же путём, каким открывались. Размонтируем после анимации, а не
+   * до: React иначе убирает узел сразу, и уход не виден.
+   *
+   * Если анимаций в системе просят меньше, длительность там короткая, и это
+   * тот же самый путь - ждать нечего.
+   */
+  function leave() {
+    const box = frame.current;
+    if (!box) {
+      onClose();
+      return;
+    }
+    box.classList.add("leaving");
+    const done = () => onClose();
+    box.addEventListener("animationend", done, { once: true });
+    // Страховка: если анимация не запустилась вовсе, окно всё равно закроется.
+    window.setTimeout(done, 400);
+  }
 
   function isSheet() {
     return window.matchMedia("(max-width: 760px)").matches;
@@ -120,7 +142,7 @@ export function Window({
           <button
             type="button"
             className="window-close"
-            onClick={onClose}
+            onClick={leave}
             aria-label="Close"
           />
           <span className="window-title">{title}</span>
@@ -129,7 +151,7 @@ export function Window({
           <button
             type="button"
             className="sheet-done"
-            onClick={onClose}
+            onClick={leave}
             aria-label="Close"
           >
             <svg viewBox="0 0 24 24" aria-hidden>

@@ -5,6 +5,7 @@ import { formatUsd, isValidHandle, minBidCents, normalizeHandle } from "@oxar/co
 import { lastBidOf, lotBids, placeBid, type Lot, type PublicBid } from "@/lib/auctions";
 import { CreativeDrop } from "./CreativeDrop";
 import { Notice } from "./Notice";
+import { committed } from "@/lib/haptics";
 import { MAX_BYTES, uploadCreative } from "@/lib/upload";
 
 // Лот: срок размещения, текущая ставка и сколько осталось торговаться.
@@ -216,6 +217,7 @@ function BidForm({
     setSending(false);
 
     if (result === "placed") {
+      committed();
       onPlaced();
       return;
     }

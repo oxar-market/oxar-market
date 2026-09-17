@@ -98,6 +98,7 @@ body {
   padding: 3px;
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--line);
   border-radius: 999px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
@@ -296,6 +297,7 @@ body {
   background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -410,6 +412,22 @@ body {
   overflow: hidden;
   will-change: transform;
   animation: window-in 0.2s var(--spring);
+}
+
+/* Уход тем же путём, что и приход. До этого окно просто исчезало: появление
+   было анимировано, закрытие - нет, и связь между значком и окном рвалась в
+   одну сторону. Кривая обратная входу, поэтому путь читается как один и тот
+   же, пройденный назад. */
+.window.leaving {
+  animation: window-out 0.16s cubic-bezier(0.8, 0, 0.9, 0.1) forwards;
+  pointer-events: none;
+}
+
+@keyframes window-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
 }
 
 @keyframes window-in {
@@ -2092,6 +2110,7 @@ a.primary {
   gap: 8px;
   background: rgba(247, 247, 245, 0.78);
   backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   text-align: center;
   padding: 0 24px;
 }
@@ -2760,4 +2779,32 @@ a.proof-row:hover {
 .role,
 .dock-item {
   transition: background 0.15s, color 0.15s, transform 0.1s ease-out;
+}
+
+
+/* Площадь нажатия не меньше 44px, но без раздувания самой кнопки: крестик
+   окна, выход из кабинета и чипы нарисованы мелкими намеренно, а попадать по
+   ним пальцем надо было прицельно. Невидимая область растёт вокруг. */
+.window-close,
+.desk-out,
+.attached-remove,
+.desk-edit,
+.desk-more,
+.dock-home {
+  position: relative;
+}
+
+.window-close::after,
+.desk-out::after,
+.attached-remove::after,
+.desk-edit::after,
+.desk-more::after,
+.dock-home::after {
+  content: "";
+  position: absolute;
+  /* Ровно столько, чтобы дотянуть до 44px от текущего размера. */
+  inset: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
