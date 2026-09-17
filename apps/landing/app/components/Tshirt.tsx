@@ -44,53 +44,45 @@ type Spot = {
 // горизонтально с этой высоты под этим углом, и куда он попадёт, понятно
 // заранее. Подбирать координаты на глаз для чужой модели - гиблое дело.
 //
-// Размечена вся вещь: три панели спереди, три сзади, загривок, оба бока и оба
-// рукава. Одиннадцать отдельных мест, а не одно большое пятно - продаётся
-// каждое по отдельности, как девять зон на аватарке Solana.
+// Размечена вся вещь: одиннадцать отдельных мест, а не одно большое пятно -
+// продаётся каждое по отдельности, как девять зон на аватарке Solana.
 //
-// Ловушка, на которой развалилась прошлая раскладка: `height` - это доля от
-// высоты вещи, от 0 до 1, а `size` - единицы модели. Шкалы разные. Вещь
-// ростом SHIRT_SPAN единиц, поэтому панель высотой 0.14 единиц занимает
-// 0.14 / 0.62 = 23% роста, и «зазор» в 0.07 доли, то есть 0.043 единицы,
-// съедается ею целиком. Соседи налезали друг на друга.
+// Числа ниже сняты с самой модели лучами, а не подобраны на глаз, и держатся на
+// трёх правилах.
 //
-// Поэтому вертикаль здесь посчитана, а не подобрана на глаз: перёд и спина
-// делятся на три панели по PANEL_TALL единиц с зазором PANEL_GAP между ними.
+// Первое: рукав начинается выше 0.55 роста. Горизонтальный луч на 90 градусах
+// попадает в торс, пока высота ниже, и в рукав, когда выше - на 0.6 точка
+// касания скачет с x=0.14 на x=0.27. Прежние рукава стояли на 78 градусах, где
+// луч идёт по касательной к подмышке (совпадение нормали и луча 0.28 против
+// 0.97 на 98 градусах) - оттуда и бралась косая метка под мышкой. Поэтому
+// рукава здесь на 98, а бока опущены под 0.5.
 //
-// Второе правило: азимуты соседей расходятся на 90 градусов, а не на 20.
-// Смещение по горизонтали равно радиусу торса на синус угла, и на ±20 оно
-// меньше половины ширины грудной панели - метка на груди оказывается внутри
-// неё. Отдельных грудных меток поэтому нет: на этом масштабе они занимали три
-// процента вещи и лезли под воротник.
-
-/** Во столько единиц модели вписана вещь: см. scale ниже по файлу. */
-const SHIRT_SPAN = 0.62;
-/** Высота одной панели и просвет между соседями, в единицах модели. */
-const PANEL_TALL = 0.1;
-const PANEL_GAP = 0.036;
-
-/** Доля роста для центра панели номер index, считая снизу. */
-function panelHeight(index: number): number {
-  const bottom = 0.18 * SHIRT_SPAN;
-  return (bottom + PANEL_TALL / 2 + index * (PANEL_TALL + PANEL_GAP)) / SHIRT_SPAN;
-}
+// Второе: у подола ткань уходит раструбом, и нормаль заваливается вниз - на
+// высотах 0.24-0.30 она даёт до -0.5 по вертикали, и рамка вставала косо.
+// Полосы у подола стоят на 0.34-0.35, где поверхность снова ровная.
+//
+// Третье: раскладка намеренно не симметрична. Крупная печать на груди и на
+// спине, метка поменьше со смещением в одну сторону, у подола - маленькая со
+// смещением в другую, рукава разного размера. Одинаковые панели в столбик
+// читались как тестовая таблица, а не как места под нанесение.
 
 const SPOTS: Spot[] = [
-  // Перёд: подол, живот, грудь - три панели одной высоты с равным просветом
-  { id: "tshirt_hem_front", label: "Front hem", height: panelHeight(0), azimuth: 0, size: [0.18, PANEL_TALL] },
-  { id: "tshirt_stomach", label: "Stomach", height: panelHeight(1), azimuth: 0, size: [0.18, PANEL_TALL] },
-  { id: "tshirt_chest", label: "Chest", height: panelHeight(2), azimuth: 0, size: [0.18, PANEL_TALL] },
-  // Бока: узкие полосы между панелями и рукавами
-  { id: "tshirt_side_left", label: "Left side", height: 0.45, azimuth: -90, size: [0.06, 0.16] },
-  { id: "tshirt_side_right", label: "Right side", height: 0.45, azimuth: 90, size: [0.06, 0.16] },
-  // Рукава ниже плечевого шва, иначе пятно заезжает на плечо
-  { id: "tshirt_sleeve_left", label: "Left sleeve", height: 0.7, azimuth: -78, size: [0.07, 0.05] },
-  { id: "tshirt_sleeve_right", label: "Right sleeve", height: 0.7, azimuth: 78, size: [0.07, 0.05] },
-  // Спина, зеркально переду, плюс загривок над верхней панелью
-  { id: "tshirt_hem_back", label: "Back hem", height: panelHeight(0), azimuth: 180, size: [0.2, PANEL_TALL] },
-  { id: "tshirt_lower_back", label: "Lower back", height: panelHeight(1), azimuth: 180, size: [0.2, PANEL_TALL] },
-  { id: "tshirt_back", label: "Back", height: panelHeight(2), azimuth: 180, size: [0.2, PANEL_TALL] },
-  { id: "tshirt_nape", label: "Nape", height: 0.87, azimuth: 180, size: [0.1, 0.04] },
+  // Перёд: большая печать по центру, ниже метка со смещением вправо, у подола
+  // маленькая влево.
+  { id: "tshirt_chest", label: "Chest", height: 0.645, azimuth: 0, size: [0.17, 0.11] },
+  { id: "tshirt_stomach", label: "Stomach", height: 0.45, azimuth: -30, size: [0.105, 0.08] },
+  { id: "tshirt_hem_front", label: "Front hem", height: 0.34, azimuth: 24, size: [0.088, 0.038] },
+  // Бока: узкие полосы по рёбрам, ниже начала рукава
+  { id: "tshirt_side_left", label: "Left side", height: 0.42, azimuth: -90, size: [0.045, 0.1] },
+  { id: "tshirt_side_right", label: "Right side", height: 0.38, azimuth: 90, size: [0.04, 0.075] },
+  // Рукава: на внешней стороне, правый заметно меньше левого
+  { id: "tshirt_sleeve_left", label: "Left sleeve", height: 0.72, azimuth: -98, size: [0.075, 0.055] },
+  { id: "tshirt_sleeve_right", label: "Right sleeve", height: 0.7, azimuth: 98, size: [0.055, 0.042] },
+  // Спина: та же логика, но печать крупнее - её видно дальше всего
+  { id: "tshirt_back", label: "Back", height: 0.645, azimuth: 180, size: [0.2, 0.14] },
+  { id: "tshirt_lower_back", label: "Lower back", height: 0.46, azimuth: 163, size: [0.095, 0.07] },
+  { id: "tshirt_hem_back", label: "Back hem", height: 0.35, azimuth: 193, size: [0.125, 0.036] },
+  { id: "tshirt_nape", label: "Nape", height: 0.82, azimuth: 180, size: [0.08, 0.03] },
 ];
 
 // Глубина коробки, которой декаль вырезается из ткани. Было 0.12, и на этом
@@ -98,6 +90,100 @@ const SPOTS: Spot[] = [
 // переднюю поверхность тоже, потому что там ткань круто уходит за угол.
 // Ткань тонкая, ей хватает малого.
 const DECAL_DEPTH = 0.07;
+
+/**
+ * Свободное место рисуется рамкой, как пустующий щит: пунктир по контуру, чуть
+ * заметная заливка, подпись внутри. Сплошная заливка читалась как брак печати,
+ * а не как место, которое можно занять.
+ *
+ * Рисунок белый, а цвет задаёт материал: тогда наведение по-прежнему меняет
+ * один color, а не пересобирает текстуру.
+ */
+const sheets = new Map<string, InstanceType<typeof import("three").CanvasTexture>>();
+
+function placeholder(THREE: typeof import("three"), spot: Spot) {
+  const [wide, tall] = spot.size;
+  const key = `${wide}x${tall}`;
+  const known = sheets.get(key);
+  if (known) return known;
+
+  // Холст повторяет пропорции места: иначе рамка и буквы растянутся вместе с
+  // декалью.
+  const span = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = wide >= tall ? span : Math.round((span * wide) / tall);
+  canvas.height = wide >= tall ? Math.round((span * tall) / wide) : span;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("нет 2d-контекста");
+
+  const short = Math.min(canvas.width, canvas.height);
+  const pad = short * 0.06;
+  const line = Math.max(2, short * 0.035);
+  const frame = () =>
+    roundRect(ctx, pad, pad, canvas.width - pad * 2, canvas.height - pad * 2, short * 0.12);
+
+  ctx.fillStyle = "rgba(255,255,255,0.16)";
+  frame();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.lineWidth = line;
+  ctx.lineCap = "round";
+  ctx.setLineDash([short * 0.14, short * 0.09]);
+  frame();
+  ctx.stroke();
+
+  // Подпись только там, где её прочитают, и мера тут - размер места на вещи, а
+  // не размер холста. На полосе у подола или на рукаве буквы превратились бы в
+  // грязь, и рамка справляется одна.
+  if (Math.min(wide, tall) >= 0.1) {
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Кегль подбирается под ширину рамки, а не берётся долей от холста: на
+    // широком месте надпись вылезала за пунктир.
+    const room = canvas.width - (pad + line) * 2 - short * 0.14;
+    const font = (size: number) => `600 ${size}px ui-sans-serif, system-ui, sans-serif`;
+    let size = short * 0.17;
+    ctx.letterSpacing = `${size * 0.08}px`;
+    ctx.font = font(size);
+    const width = ctx.measureText(PLACEHOLDER).width;
+    if (width > room) {
+      size *= room / width;
+      ctx.letterSpacing = `${size * 0.08}px`;
+      ctx.font = font(size);
+    }
+    ctx.fillText(PLACEHOLDER, canvas.width / 2, canvas.height / 2);
+  }
+
+  const made = new THREE.CanvasTexture(canvas);
+  made.colorSpace = THREE.SRGBColorSpace;
+  made.anisotropy = 8;
+  sheets.set(key, made);
+  return made;
+}
+
+const PLACEHOLDER = "YOUR AD HERE";
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  wide: number,
+  tall: number,
+  radius: number,
+) {
+  const r = Math.min(radius, wide / 2, tall / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + wide, y, x + wide, y + tall, r);
+  ctx.arcTo(x + wide, y + tall, x, y + tall, r);
+  ctx.arcTo(x, y + tall, x, y, r);
+  ctx.arcTo(x, y, x + wide, y, r);
+  ctx.closePath();
+}
 
 /** Подпись под моделью: что за зона и в каких она торгах. */
 function hint(hovered: string | null, lot: Lot | null): string {
@@ -258,14 +344,14 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
             new THREE.Vector3(spot.size[0], spot.size[1], DECAL_DEPTH),
           );
           const material = new THREE.MeshStandardMaterial({
-            color: 0x4aa8ec,
+            map: placeholder(THREE, spot),
+            color: 0x2f9fe0,
             roughness: 0.95,
             metalness: 0,
             transparent: true,
-            // Сквозь пятно по-прежнему читается ткань со складками, но само
-            // пятно видно с первого взгляда: на посветлевшей ткани прежний
-            // бледно-голубой при 0.6 почти сливался с фоном.
-            opacity: 0.74,
+            // Сквозь место по-прежнему читается ткань со складками: заливка под
+            // рамкой почти прозрачная, и держит внимание сам контур.
+            opacity: 0.88,
             // Декаль лежит ровно на ткани, поэтому её надо чуть приподнять -
             // иначе поверхности спорят и пятно мерцает полосами.
             polygonOffset: true,
@@ -304,8 +390,8 @@ export function Tshirt({ role, onWaitlist }: { role: Role; onWaitlist: () => voi
             const material = decal.mesh.material as InstanceType<
               typeof THREE.MeshStandardMaterial
             >;
-            material.color.set(decal.id === id ? 0x0a7fd4 : 0x4aa8ec);
-            material.opacity = decal.id === id ? 0.92 : 0.74;
+            material.color.set(decal.id === id ? 0x0a7fd4 : 0x2f9fe0);
+            material.opacity = decal.id === id ? 1 : 0.88;
           }
         };
         // Клик считаем только если мышь не уехала: иначе поворот модели
