@@ -32,6 +32,27 @@ export async function sendLink(email: string): Promise<"sent" | "unknown" | "err
   return error.code === "otp_disabled" || error.status === 422 ? "unknown" : "error";
 }
 
+/**
+ * Вход по коду из письма.
+ *
+ * Ссылка работает не везде. Во встроенном браузере кошелька почта открывает
+ * ссылку в системном браузере - сессия оказывается в Safari, а человек остался
+ * в Phantom, и войти туда, где лежит кошелёк, нельзя вообще никак. Код таким
+ * свойством не обладает: его переносят руками.
+ *
+ * Письмо то же самое, это один и тот же одноразовый пароль - у Supabase ссылка
+ * и код это две формы одного токена.
+ */
+export async function signInWithCode(
+  email: string,
+  code: string,
+): Promise<"ok" | "bad" | "error"> {
+  if (!auth) return "error";
+  const { error } = await auth.auth.verifyOtp({ email, token: code, type: "email" });
+  if (!error) return "ok";
+  return error.status === 403 || error.status === 401 ? "bad" : "error";
+}
+
 export async function currentSession(): Promise<Session | null> {
   if (!auth) return null;
   const { data } = await auth.auth.getSession();
