@@ -57,31 +57,37 @@ type Spot = {
 // 0.97 на 98 градусах) - оттуда и бралась косая метка под мышкой. Поэтому
 // рукава здесь на 98, а бока опущены под 0.5.
 //
-// Второе: у подола ткань уходит раструбом, и нормаль заваливается вниз - на
-// высотах 0.24-0.30 она даёт до -0.5 по вертикали, и рамка вставала косо.
-// Полосы у подола стоят на 0.34-0.35, где поверхность снова ровная.
+// Второе: ниже 0.34 роста ткань уходит раструбом, и нормаль заваливается вниз -
+// на высотах 0.24-0.30 она даёт до -0.5 по вертикали, и рамка вставала косо.
+// Поэтому у подола зон нет вовсе, нижние стоят на 0.42-0.47.
 //
-// Третье: раскладка намеренно не симметрична. Крупная печать на груди и на
-// спине, метка поменьше со смещением в одну сторону, у подола - маленькая со
-// смещением в другую, рукава разного размера. Одинаковые панели в столбик
-// читались как тестовая таблица, а не как места под нанесение.
+// Третье: размеров всего три. Крупная печать, квадрат под логотип и полоска на
+// загривке. Перёд и спина устроены одинаково - печать, под ней пара квадратов,
+// ниже ничего. Разнобой размеров, который был тут до этого, читался как случайно
+// разбросанные пятна, а одинаковый квадрат - как место под логотип.
+
+/** Место под логотип: один размер на все мелкие зоны, в единицах модели. */
+const BADGE: [number, number] = [0.06, 0.06];
+/** Рукав чуть шире квадрата: там места по высоте меньше, чем по длине. */
+const SLEEVE: [number, number] = [0.075, 0.055];
+/** Разворот пары под большой печатью. На ±22 между квадратами остаётся просвет. */
+const PAIR = 22;
 
 const SPOTS: Spot[] = [
-  // Перёд: большая печать по центру, ниже метка со смещением вправо, у подола
-  // маленькая влево.
+  // Перёд: печать на груди, под ней пара квадратов
   { id: "tshirt_chest", label: "Chest", height: 0.645, azimuth: 0, size: [0.17, 0.11] },
-  { id: "tshirt_stomach", label: "Stomach", height: 0.45, azimuth: -30, size: [0.105, 0.08] },
-  { id: "tshirt_hem_front", label: "Front hem", height: 0.34, azimuth: 24, size: [0.088, 0.038] },
-  // Бока: узкие полосы по рёбрам, ниже начала рукава
-  { id: "tshirt_side_left", label: "Left side", height: 0.42, azimuth: -90, size: [0.045, 0.1] },
-  { id: "tshirt_side_right", label: "Right side", height: 0.38, azimuth: 90, size: [0.04, 0.075] },
-  // Рукава: на внешней стороне, правый заметно меньше левого
-  { id: "tshirt_sleeve_left", label: "Left sleeve", height: 0.72, azimuth: -98, size: [0.075, 0.055] },
-  { id: "tshirt_sleeve_right", label: "Right sleeve", height: 0.7, azimuth: 98, size: [0.055, 0.042] },
-  // Спина: та же логика, но печать крупнее - её видно дальше всего
+  { id: "tshirt_stomach", label: "Stomach", height: 0.47, azimuth: -PAIR, size: BADGE },
+  { id: "tshirt_hem_front", label: "Front hem", height: 0.47, azimuth: PAIR, size: BADGE },
+  // Бока: те же квадраты по рёбрам, ниже начала рукава
+  { id: "tshirt_side_left", label: "Left side", height: 0.42, azimuth: -90, size: BADGE },
+  { id: "tshirt_side_right", label: "Right side", height: 0.42, azimuth: 90, size: BADGE },
+  // Рукава: на внешней стороне, оба одинаковые
+  { id: "tshirt_sleeve_left", label: "Left sleeve", height: 0.72, azimuth: -98, size: SLEEVE },
+  { id: "tshirt_sleeve_right", label: "Right sleeve", height: 0.72, azimuth: 98, size: SLEEVE },
+  // Спина: то же самое, но печать крупнее - её видно дальше всего
   { id: "tshirt_back", label: "Back", height: 0.645, azimuth: 180, size: [0.2, 0.14] },
-  { id: "tshirt_lower_back", label: "Lower back", height: 0.46, azimuth: 163, size: [0.095, 0.07] },
-  { id: "tshirt_hem_back", label: "Back hem", height: 0.35, azimuth: 193, size: [0.125, 0.036] },
+  { id: "tshirt_lower_back", label: "Lower back", height: 0.45, azimuth: 180 - PAIR, size: BADGE },
+  { id: "tshirt_hem_back", label: "Back hem", height: 0.45, azimuth: 180 + PAIR, size: BADGE },
   { id: "tshirt_nape", label: "Nape", height: 0.82, azimuth: 180, size: [0.08, 0.03] },
 ];
 
