@@ -499,10 +499,17 @@ body {
 }
 
 .window-body p {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.6;
   color: #2c2c33;
+}
+
+/* Абзацы отбиваются друг от друга сильнее, чем на просвет самого окна: при
+   зазоре в 14px и строке в 25px промежуток был меньше строки, границы абзаца
+   глаз не видел, и текст читался сплошным полотном. */
+.window-body p + p {
+  margin-top: 6px;
 }
 
 /* Страницы файлов и общие элементы */
@@ -526,8 +533,13 @@ body {
 .page p {
   font-size: 16px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.6;
   color: #2c2c33;
+}
+
+/* Тот же ритм, что в окне: страницы файлов - это те же файлы. */
+.page p + p {
+  margin-top: 4px;
 }
 
 .back {
@@ -2582,9 +2594,13 @@ select:focus {
   margin: 4px 0 8px;
 }
 
+/* Колонка суммы задана числом, а не `auto`. Каждая строка - отдельная сетка, и
+   на `auto` колонка подгонялась под своё число: `$105,000` шире `$7,000`, и
+   подписи начинались в трёх разных местах, с разбросом в 34 пикселя. Ширины
+   хватает на самую длинную сумму, ниже 460px строка всё равно встаёт в колонку. */
 .proof-row {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 132px 1fr;
   grid-template-areas:
     "amount what"
     "amount who";
@@ -2609,10 +2625,15 @@ a.proof-row:hover {
 /* Цифра ведёт взгляд: она и есть аргумент, остальное - подпись к ней. */
 .proof-amount {
   grid-area: amount;
-  align-self: center;
+  /* Базовая линия суммы совпадает со строкой подписи. На `center` сумма
+     вставала по середине своих двух строк, а в строке без второй подписи - по
+     середине одной, и от строки к строке уезжала. */
+  align-self: baseline;
   font-size: 27px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  /* Цифры одной ширины: иначе разряды в столбце не сходятся. */
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
