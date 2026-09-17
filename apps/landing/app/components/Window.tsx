@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { takeOpenPoint } from "@/lib/open-from";
 
 /**
  * Окно рабочего стола.
@@ -30,6 +31,21 @@ export function Window({
   const drag = useRef<{ pointerId: number; startX: number; startY: number } | null>(
     null,
   );
+
+  // Точка отсчёта масштабирования - иконка, по которой нажали. Считается после
+  // вёрстки, а не до: до неё у окна нет ни размеров, ни места на экране.
+  // transform-origin принимает значения и за пределами блока, поэтому иконка,
+  // лежащая далеко от центра, работает как есть.
+  useLayoutEffect(() => {
+    const from = takeOpenPoint();
+    const box = frame.current;
+    if (!from || !box) return;
+    const rect = box.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    box.style.transformOrigin = `${((from.x - rect.left) / rect.width) * 100}% ${
+      ((from.y - rect.top) / rect.height) * 100
+    }%`;
+  }, []);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

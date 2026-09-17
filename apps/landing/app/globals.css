@@ -604,6 +604,24 @@ textarea:focus {
   border-color: var(--accent);
 }
 
+/* Обводка с клавиатуры, но не от мыши: focus-visible не срабатывает на клик,
+   поэтому кнопки не обрастают рамкой при обычном нажатии. До этого по столу
+   можно было идти табом вслепую - ничего не показывало, где ты. */
+:where(button, a, [role="tab"]):focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Поле внутри составного блока подсвечивает весь блок, а не себя: рамка внутри
+   рамки читается как ошибка вёрстки. */
+.prefixed:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .primary {
   background: var(--fg);
   color: #fff;
@@ -806,12 +824,79 @@ textarea:focus {
   }
 }
 
+/* Уменьшенное движение - это не «убрать отклик», а заменить его на мягкий.
+   Прежнее правило гасило все длительности до нуля вместе с подсветкой нажатия
+   и сменой цвета, и интерфейс становился мёртвым: ничего не подтверждало, что
+   кнопка сработала. Поэтому убираем только то, что двигает по экрану -
+   смещения, масштаб, пружины, - а прозрачность и цвет оставляем. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    animation-duration: 0.14s !important;
+    animation-timing-function: ease-out !important;
+    transition-property: opacity, background-color, border-color, color !important;
+    transition-duration: 0.14s !important;
+  }
+
+  /* Появление без наезда и без перелёта: только проявление. */
+  .window,
+  .notice,
+  .play {
+    animation-name: fade-in !important;
+  }
+
+  .icon:hover,
+  .primary:active,
+  .dock-home:active,
+  .play:active {
+    transform: none !important;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Кому мешает прозрачность - тому плотный фон вместо размытия. Размытых
+   поверхностей у нас четыре, и без этого правила текст на них читается хуже
+   всего именно у тех, кто об этом попросил. */
+@media (prefers-reduced-transparency: reduce) {
+  .dock,
+  .roles,
+  .window-layer,
+  .locked-over {
+    background: var(--card) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Повышенный контраст: границы вместо намёков на границы. */
+@media (prefers-contrast: more) {
+  :root {
+    --line: #8a8a8f;
+    --muted: #3c3c42;
+  }
+
+  .dock,
+  .roles,
+  .window {
+    background: var(--card);
+    backdrop-filter: none;
+  }
+
+  input,
+  textarea,
+  .primary,
+  .dock-item,
+  .side {
+    border: 1px solid var(--fg);
   }
 }
 
@@ -2657,4 +2742,22 @@ a.proof-row:hover {
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+
+/* Отклик на нажатие, а не на отпускание: подтверждение должно появляться в тот
+   момент, когда палец коснулся, иначе кнопка кажется неживой. Масштаб мелкий -
+   на кнопке в доке заметный сдвиг читался бы как промах. */
+.side:active,
+.role:active,
+.dock-item:active,
+.desk-edit:active,
+.desk-more:active {
+  transform: scale(0.97);
+}
+
+.side,
+.role,
+.dock-item {
+  transition: background 0.15s, color 0.15s, transform 0.1s ease-out;
 }
