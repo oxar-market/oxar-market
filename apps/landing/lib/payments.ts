@@ -18,6 +18,8 @@ export type MyOrder = {
   network: string;
   listing: {
     kind: string;
+    /** Поток по секундам или разовый перевод. Свойство места, не платформы. */
+    payment: "stream" | "transfer";
     seller: { x_handle: string; payout_wallet: string | null };
   } | null;
 };
@@ -33,7 +35,7 @@ export async function myOrders(): Promise<MyOrder[]> {
     .from("bookings")
     .select(
       "id,start_date,end_date,price_cents,status,pay_by,stream_id,buyer_wallet,network," +
-        "listing:listings(kind,seller:sellers(x_handle,payout_wallet))",
+        "listing:listings(kind,payment,seller:sellers(x_handle,payout_wallet))",
     )
     .order("start_date");
 

@@ -21,6 +21,8 @@ export type MyListing = {
   id: string;
   kind: PlacementKind;
   pricing: Pricing;
+  /** Как платят за это место: потоком или разом. */
+  payment: "stream" | "transfer";
   price_cents: number;
   term_days: number;
   active: boolean;
@@ -66,7 +68,7 @@ export async function myListings(sellerId: string): Promise<MyListing[]> {
   if (!auth) return [];
   const { data } = await auth
     .from("listings")
-    .select("id,kind,pricing,price_cents,term_days,active")
+    .select("id,kind,pricing,payment,price_cents,term_days,active")
     .eq("seller_id", sellerId)
     .order("kind");
   return (data ?? []) as MyListing[];

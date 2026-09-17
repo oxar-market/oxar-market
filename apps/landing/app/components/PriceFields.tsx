@@ -10,6 +10,8 @@ export type PriceValue = {
   pricing: Pricing;
   price_cents: number;
   term_days: number;
+  /** Поток по секундам или разовый перевод. */
+  payment: "stream" | "transfer";
 };
 
 export function usePriceFields(kind: PlacementKind, initial?: PriceValue) {
@@ -19,6 +21,11 @@ export function usePriceFields(kind: PlacementKind, initial?: PriceValue) {
     initial ? (initial.price_cents / 100).toString() : "",
   );
   const [days, setDays] = useState(initial ? String(initial.term_days) : "");
+  // Поток осмыслен там, где состояние места читается автоматически. У ткани
+  // такой проверки нет, поэтому у зон футболки умолчание другое.
+  const [transfer, setTransfer] = useState(
+    initial ? initial.payment === "transfer" : spec.proof === "image" && kind.includes("_"),
+  );
 
   /** Строка или готовые центы: цену считаем целыми центами, как везде. */
   function read(): { value: PriceValue } | { error: string } {
@@ -41,6 +48,7 @@ export function usePriceFields(kind: PlacementKind, initial?: PriceValue) {
         pricing: daily ? "daily" : "term",
         price_cents: Math.round(dollars * 100),
         term_days: term,
+        payment: transfer ? "transfer" : "stream",
       },
     };
   }
@@ -52,6 +60,26 @@ export function usePriceFields(kind: PlacementKind, initial?: PriceValue) {
 
   const fields = (
     <>
+      {/* Как платят за это место. Выбор продавца, а не свойство платформы:
+          поток защищает покупателя только там, где мы умеем проверить, стоит
+          ли размещение. */}
+      <div className="sides">
+        <button
+          type="button"
+          className={transfer ? "side" : "side active"}
+          onClick={() => setTransfer(false)}
+        >
+          Stream by the second
+        </button>
+        <button
+          type="button"
+          className={transfer ? "side active" : "side"}
+          onClick={() => setTransfer(true)}
+        >
+          Pay once
+        </button>
+      </div>
+
       <div className="sides">
         <button
           type="button"

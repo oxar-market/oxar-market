@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { myOrders, attachPayment, type MyOrder } from "@/lib/payments";
 import { cancelStream, openStream } from "@/lib/stream";
+import { payOnce } from "@/lib/transfer";
 import { connectWallet, currentWallet, walletInstalled } from "@/lib/wallet";
 import { Notice } from "./Notice";
 
@@ -21,6 +22,9 @@ import { Notice } from "./Notice";
  */
 
 type Busy = { id: string; what: "paying" | "stopping" } | null;
+
+/** Поток можно остановить, разовый перевод - нет: он уже ушёл. */
+const isStream = (order: MyOrder) => order.listing?.payment !== "transfer";
 
 export function MyOrders({ onWaitlist }: { onWaitlist: () => void }) {
   const [orders, setOrders] = useState<MyOrder[] | null>(null);
@@ -63,25 +67,39 @@ export function MyOrders({ onWaitlist }: { onWaitlist: () => void }) {
 
     setBusy({ id: order.id, what: "paying" });
     try {
-      const stream = await openStream({
-        wallet: signer,
-        recipient: seller.payout_wallet,
-        priceCents: order.price_cents,
-        startDate: order.start_date,
-        endDate: order.end_date,
-        name: `${order.listing?.kind ?? "spot"} @${seller.x_handle}`,
-      });
+      // Что именно происходит с деньгами, решает место, а не платформа: у
+      // профиля X есть автопроверка и поток осмыслен, у футболки проверять
+      // нечем и печать оплачена до начала.
+      const paid = isStream(order)
+        ? await openStream({
+            wallet: signer,
+            recipient: seller.payout_wallet,
+            priceCents: order.price_cents,
+            startDate: order.start_date,
+            endDate: order.end_date,
+            name: `${order.listing?.kind ?? "spot"} @${seller.x_handle}`,
+          }).then((stream) => stream.streamId)
+        : await payOnce({
+            wallet: signer,
+            recipient: seller.payout_wallet,
+            priceCents: order.price_cents,
+          });
+
       const saved = await attachPayment({
         bookingId: order.id,
         wallet: signer.publicKey!.toBase58(),
-        streamId: stream.streamId,
+        streamId: paid,
       });
       if (saved === "error") {
-        // Деньги уже в контракте, а запись не легла: молчать тут нельзя, иначе
+        // Деньги уже ушли, а запись не легла: молчать тут нельзя, иначе
         // человек решит, что платёж не прошёл, и заплатит второй раз.
-        setError(`Paid, but we could not record it. Send us this id: ${stream.streamId}`);
+        setError(`Paid, but we could not record it. Send us this id: ${paid}`);
       } else {
-        setDone("The stream is open. Money moves by the second once the dates start.");
+        setDone(
+          isStream(order)
+            ? "The stream is open. Money moves by the second once the dates start."
+            : "Paid. The seller has the money and your spot is booked.",
+        );
       }
       setOrders(await myOrders());
     } catch (cause) {
@@ -166,11 +184,17 @@ export function MyOrders({ onWaitlist }: { onWaitlist: () => void }) {
               disabled={busy?.id === order.id}
               onClick={() => pay(order)}
             >
-              {busy?.id === order.id ? "Opening…" : "Pay into the stream"}
+              {busy?.id === order.id
+                ? isStream(order)
+                  ? "Opening…"
+                  : "Paying…"
+                : isStream(order)
+                  ? "Pay into the stream"
+                  : "Pay now"}
             </button>
           )}
 
-          {order.stream_id && (
+          {order.stream_id && isStream(order) && (
             <button
               type="button"
               className="dock-item"
@@ -190,7 +214,9 @@ export function MyOrders({ onWaitlist }: { onWaitlist: () => void }) {
 }
 
 function label(order: MyOrder): string {
-  if (order.stream_id) return "paid, streaming";
+  if (order.stream_id) {
+    return order.listing?.payment === "transfer" ? "paid" : "paid, streaming";
+  }
   if (order.status === "requested") return "waiting for the seller";
   if (order.status === "approved") {
     return order.pay_by ? `approved, pay by ${order.pay_by.slice(0, 10)}` : "approved";
