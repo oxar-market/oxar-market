@@ -401,30 +401,31 @@ function Spot({
           </span>
           {saved && <span className="desk-saved">Price updated</span>}
         </div>
-        {/* Иконки вместо подписей: у места два постоянных действия, и надписи
-            на них занимали половину строки на телефоне. Что делает каждая,
-            говорят aria-label и подсказка при наведении. */}
+        {/* Иконки подписаны словом. Без подписи это два одинаковых серых
+            квадрата, и какой из них правит цену, а какой снимает с продажи,
+            видно только по наведению - а крестик у открытого редактора читался
+            как «удалить». */}
         <div className="desk-acts">
           <button
             type="button"
-            className={editing ? "desk-icon on" : "desk-icon"}
+            className={editing ? "desk-act on" : "desk-act"}
             onClick={() => setEditing(!editing)}
-            aria-label={editing ? "Close the price editor" : "Edit the price"}
             title={editing ? "Close the price editor" : "Edit the price"}
           >
             {editing ? <Cross /> : <Pencil />}
+            {editing ? "Close" : "Edit price"}
           </button>
           <button
             type="button"
-            className="desk-icon"
+            className="desk-act"
             onClick={async () => {
               await setActive(listing.id, !listing.active);
               onChanged();
             }}
-            aria-label={listing.active ? "Pause the sale" : "Put back on sale"}
             title={listing.active ? "Pause the sale" : "Put back on sale"}
           >
             {listing.active ? <Pause /> : <Play />}
+            {listing.active ? "Pause" : "Resume"}
           </button>
         </div>
       </div>
