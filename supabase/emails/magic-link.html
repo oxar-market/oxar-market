@@ -1,0 +1,107 @@
+<!--
+  Письмо со входом. Вставляется в Supabase: Authentication - Emails - Magic Link,
+  вкладка Source. Здесь лежит исходник, потому что в дашборде его негде хранить
+  и через полгода никто не вспомнит, что там стояло.
+
+  Две формы одного токена в одном письме, и это не дублирование:
+  {{ .ConfirmationURL }} работает в обычном браузере, {{ .Token }} - там, где
+  ссылка бесполезна. Во встроенном браузере кошелька почта открывает ссылку в
+  системном браузере, сессия оказывается в нём, а человек остался в кошельке.
+  Код переносится руками и потому работает везде.
+
+  Вёрстка таблицами и стили строкой - не архаизм, а требование почтовых
+  клиентов: Outlook рисует движком Word, флексбокса и внешних стилей там нет.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+  </head>
+  <body style="margin:0;padding:0;background:#f4f4f1;">
+    <!-- Видно в списке писем рядом с темой, до открытия. -->
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+      One link, one code. Either one signs you in.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f1;">
+      <tr>
+        <td align="center" style="padding:40px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                 style="max-width:440px;background:#ffffff;border:1px solid #dededa;border-radius:14px;">
+            <tr>
+              <td style="padding:32px 32px 0;">
+                <img src="https://oxar.app/icons/mark-home.png" width="28" height="40" alt="OXAR"
+                     style="display:block;border:0;" />
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:20px 32px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                <h1 style="margin:0;font-size:24px;line-height:1.2;letter-spacing:-0.01em;color:#16161a;font-weight:700;">
+                  Sign in to OXAR
+                </h1>
+                <p style="margin:12px 0 0;font-size:15px;line-height:1.6;color:#6e6e76;">
+                  This works once, and only for you. If you did not ask for it, nothing happens when you ignore it.
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:24px 32px 0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="background:#16161a;border-radius:10px;">
+                      <a href="{{ .ConfirmationURL }}"
+                         style="display:inline-block;padding:13px 26px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">
+                        Sign in
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Код. Нужен там, где ссылка уводит не в тот браузер. -->
+            <tr>
+              <td style="padding:28px 32px 0;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                       style="border-top:1px solid #dededa;">
+                  <tr>
+                    <td style="padding-top:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                      <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#6e6e76;">
+                        Opened this page inside a wallet app? The link above would send you to a different
+                        browser. Type this code on the sign-in screen instead:
+                      </p>
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td style="background:#f4f4f1;border:1px solid #dededa;border-radius:10px;padding:12px 20px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:24px;letter-spacing:0.18em;color:#16161a;font-weight:600;">
+                            {{ .Token }}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:28px 32px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                <p style="margin:0;font-size:12px;line-height:1.6;color:#6e6e76;">
+                  Sent to {{ .Email }} because someone asked to sign in to
+                  <a href="https://oxar.app" style="color:#6e6e76;">oxar.app</a>.
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <p style="max-width:440px;margin:16px auto 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#9a9aa2;text-align:center;">
+            OXAR. Ad space on things people already look at.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
