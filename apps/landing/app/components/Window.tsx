@@ -20,6 +20,7 @@ export function Window({
   onClose,
   wide = false,
   closer,
+  folder,
   children,
 }: {
   title: string;
@@ -35,6 +36,16 @@ export function Window({
    * же, откуда бы его ни попросили.
    */
   closer?: { current: (() => void) | null };
+  /**
+   * Имя папки, если окно её показывает.
+   *
+   * По этому атрибуту перетаскивание понимает, что иконку отпустили в папку.
+   * Раньше он висел на сетке иконок внутри, и бросок засчитывался только по
+   * ней: заголовок, поля и пустое место под иконками были мимо, хотя окно
+   * показывает ту же папку. Целится человек в окно, а не в невидимый
+   * прямоугольник внутри него.
+   */
+  folder?: string;
   children: React.ReactNode;
 }) {
   const frame = useRef<HTMLDivElement>(null);
@@ -189,7 +200,11 @@ export function Window({
 
   return (
     <div className="window-layer" role="dialog" aria-label={title}>
-      <div className={wide ? "window wide" : "window"} ref={frame}>
+      <div
+        className={wide ? "window wide" : "window"}
+        ref={frame}
+        data-folder-window={folder}
+      >
         <div
           className="window-bar"
           onPointerDown={startDrag}

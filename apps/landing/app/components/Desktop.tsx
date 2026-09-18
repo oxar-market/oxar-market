@@ -411,10 +411,13 @@ export function Desktop() {
       )}
 
       {open?.kind === "folder" && (
-        <Window title={open.name} onClose={() => setOpen(null)} closer={closer}>
-          {/* По этому атрибуту перетаскивание понимает, что иконку отпустили
-              внутри папки, а не вынесли на стол сквозь окно. */}
-          <div className="folder-grid" data-folder-window={open.slug}>
+        <Window
+          title={open.name}
+          onClose={() => setOpen(null)}
+          closer={closer}
+          folder={open.slug}
+        >
+          <div className="folder-grid">
             {ITEMS.filter((item) => parents[item.slug] === open.slug).map((item) =>
               renderIcon(item),
             )}
