@@ -992,8 +992,18 @@ textarea:focus-visible {
   }
 }
 
+/* Широкое окно заметно шире и дышит: в нём живут витрины - профиль X, вещи,
+   кабинет, - и в 680px они стояли впритык к собственным краям. */
 .window.wide {
-  width: min(680px, 100%);
+  width: min(880px, 100%);
+}
+
+/* Только на широком экране: на телефоне лист и так на весь экран, и лишние
+   поля съедали бы его ширину. */
+@media (min-width: 761px) {
+  .window.wide .window-body {
+    padding: 1.75rem 2rem 2rem;
+  }
 }
 
 /* Макет профиля X, собранный по настоящей странице.
@@ -2789,6 +2799,14 @@ a.proof-row:hover {
 
 /* Карточка вещи из физического мира */
 
+/* Свой ритм, крупнее общего: карточка товара, а не статья. Единый зазор
+   между блоками вместо точечных отступов - так ничего не слипается. */
+.ts {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
 /* Шапка: имя вещи крупно, переход к соседней - тихой ссылкой справа. */
 .ts-top {
   display: flex;
@@ -2822,7 +2840,9 @@ a.proof-row:hover {
   width: 100%;
   /* Высота задана соотношением, а не содержимым: канвас сам по себе её не
      держит, и до первого кадра блок схлопнулся бы в ноль. */
-  aspect-ratio: 4 / 3;
+  /* В широком окне сцена ниже и шире, чем 4:3: с дугами по бокам вещь стоит
+     по центру, и лишняя высота только отодвигала описание за край окна. */
+  aspect-ratio: 16 / 10;
   max-height: 60vh;
   border-radius: 14px;
   /* Подложка светло-серая: белая вещь на белом фоне теряет края. */
@@ -2871,10 +2891,13 @@ a.proof-row:hover {
   transform: scale(1.12);
 }
 
-/* Строка под футболкой: имя места при наведении, подсказка в остальное время */
-.ts-hint {
+/* Строка под футболкой: имя места при наведении, подсказка в остальное время.
+   Селектор с элементом, потому что `.window-body p` весит больше одиночного
+   класса и красил подсказку в полный кегль основного текста - от этого она
+   выглядела абзацем, прилипшим к табам. */
+p.ts-hint {
   min-height: 20px;
-  margin-bottom: 1rem;
+  margin-top: -0.375rem;
   font-size: 0.8125rem;
   color: var(--muted);
 }
@@ -2940,9 +2963,11 @@ a.proof-row:hover {
   align-items: flex-start;
 }
 
+/* Правая дуга - окно барабана: сама стоит на середине сцены, а столбец цветов
+   внутри подъезжает так, чтобы выбранный оказался ровно в этой точке. */
 .ts-arc.right {
-  right: 1rem;
-  align-items: flex-end;
+  right: 1.25rem;
+  transform: none;
 }
 
 .ts-arc.left > :nth-child(1),
@@ -2950,9 +2975,18 @@ a.proof-row:hover {
   transform: translateX(14px);
 }
 
-.ts-arc.right > :nth-child(1),
-.ts-arc.right > :nth-child(4) {
-  transform: translateX(-14px);
+.ts-reel {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.45s var(--spring);
+}
+
+/* Строка барабана одной высоты: сдвиг ленты считается умножением, и разный
+   размер выбранного свотча высоту строки не меняет. */
+.ts-reel .ts-swatch {
+  height: 72px;
+  justify-content: flex-end;
+  transition: transform 0.45s var(--spring), opacity 0.3s, color 0.14s;
 }
 
 /* Ставка на дуге: точка и подпись. Вся строка кликается и ведёт к торгу. */
@@ -3093,17 +3127,17 @@ a.proof-row:hover {
 /* Табы карточки: подчёркнута активная, как в любом магазине. */
 .ts-tabs {
   display: flex;
-  gap: 1.375rem;
+  gap: 2rem;
   border-bottom: 1px solid var(--line);
 }
 
 .ts-tab {
   border: none;
   background: transparent;
-  padding: 0.4375rem 0 0.5625rem;
+  padding: 0.5rem 0 0.75rem;
   margin-bottom: -1px;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.9062rem;
   color: var(--muted);
   cursor: pointer;
   border-bottom: 2px solid transparent;
@@ -3162,12 +3196,13 @@ button.ts-row .ts-row-price {
 }
 
 /* Пара кнопок карточки: контурная и залитая, обе пилюли - как в референсе
-   продуктовой страницы. */
+   продуктовой страницы. Отступ сверху добавляется к общему зазору карточки:
+   кнопки - конец истории, им положено стоять чуть отдельно. */
 .ts-ctas {
   display: flex;
   flex-wrap: wrap;
   gap: 0.625rem;
-  margin-top: 1.125rem;
+  margin-top: 0.375rem;
 }
 
 .ts-ghost {
@@ -3198,6 +3233,20 @@ button.ts-row .ts-row-price {
 
 .ts-buy {
   border-radius: 999px;
+}
+
+/* Атрибуция модели: обязательная по CC BY, но самая тихая строка карточки.
+   Селектор с элементом - иначе побеждает `.window-body p` и красит её в
+   полный кегль. */
+p.ts-credit {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: #b6b6b0;
+}
+
+p.ts-credit a {
+  color: inherit;
 }
 
 /* На широком экране цвета выбирают на правой дуге - плитки под сценой стали бы

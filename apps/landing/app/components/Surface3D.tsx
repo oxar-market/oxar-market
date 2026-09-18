@@ -618,6 +618,14 @@ export function Surface3D({
   const label = (id: string | null) =>
     spec.spots.find((spot) => spot.id === id)?.label ?? "Spot";
 
+  /** Выбрать цвет: из барабана, с плитки - путь один. */
+  const pickVariant = (index: number) => {
+    if (index < 0 || index >= spec.variants.length) return;
+    setVariant(index);
+    variantNow.current = index;
+    paint.current?.(spec.variants[index].color);
+  };
+
   const hint = () => {
     if (!hovered) return spec.words.idle;
     const lot = lotFor(hovered);
@@ -688,26 +696,46 @@ export function Surface3D({
               </div>
             )}
 
-            <div className="ts-arc right" role="group" aria-label="Colors">
-              {spec.variants.map((option, index) => (
-                <button
-                  key={option.label}
-                  type="button"
-                  className={index === variant ? "ts-swatch on" : "ts-swatch"}
-                  aria-pressed={index === variant}
-                  onClick={() => {
-                    setVariant(index);
-                    variantNow.current = index;
-                    paint.current?.(option.color);
-                  }}
-                >
-                  <span className="ts-swatch-text">{option.label}</span>
-                  <span className="ts-swatch-dot">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={option.thumb} alt="" draggable={false} />
-                  </span>
-                </button>
-              ))}
+            {/* Цвета - вертикальный барабан: выбранный всегда в центре сцены,
+                столбец подъезжает под него, как лента в слот-конфигураторе.
+                Листается кликом по соседнему цвету и колесом над дугой. */}
+            <div
+              className="ts-arc right"
+              role="group"
+              aria-label="Colors"
+              onWheel={(event) => {
+                pickVariant(variant + (event.deltaY > 0 ? 1 : -1));
+              }}
+            >
+              <div
+                className="ts-reel"
+                style={{ transform: `translateY(${-(variant * 72 + 36)}px)` }}
+              >
+                {spec.variants.map((option, index) => {
+                  const away = Math.abs(index - variant);
+                  return (
+                    <button
+                      key={option.label}
+                      type="button"
+                      className={index === variant ? "ts-swatch on" : "ts-swatch"}
+                      aria-pressed={index === variant}
+                      onClick={() => pickVariant(index)}
+                      style={{
+                        // Изгиб дуги: активный ближе всех к вещи, дальние
+                        // утоплены к краю и гаснут с расстоянием.
+                        transform: `translateX(${-Math.max(0, 18 - 7 * away)}px)`,
+                        opacity: Math.max(0.35, 1 - away * 0.28),
+                      }}
+                    >
+                      <span className="ts-swatch-text">{option.label}</span>
+                      <span className="ts-swatch-dot">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={option.thumb} alt="" draggable={false} />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </>
         )}
@@ -737,11 +765,7 @@ export function Surface3D({
                 className={index === variant ? "ts-thumb on" : "ts-thumb"}
                 title={option.label}
                 aria-pressed={index === variant}
-                onClick={() => {
-                  setVariant(index);
-                  variantNow.current = index;
-                  paint.current?.(option.color);
-                }}
+                onClick={() => pickVariant(index)}
               >
                 {/* Снимки статические и мелкие, оптимизатору тут нечего делать. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -768,20 +792,9 @@ export function Surface3D({
           </nav>
 
           {tab === "about" ? (
-            <>
-              <p className="muted small">
-                {role === "advertiser" ? spec.words.forBuyer : spec.words.forSeller}
-              </p>
-              {spec.credit && (
-                <p className="muted small">
-                  Model by{" "}
-                  <a href={spec.credit.url} target="_blank" rel="noreferrer">
-                    {spec.credit.who}
-                  </a>
-                  , {spec.credit.licence}.
-                </p>
-              )}
-            </>
+            <p className="muted small">
+              {role === "advertiser" ? spec.words.forBuyer : spec.words.forSeller}
+            </p>
           ) : (
             <div className="ts-rows">
               {spec.spots.map((spot) => {
@@ -819,6 +832,18 @@ export function Surface3D({
             </button>
           </div>
         </>
+      )}
+
+      {/* Атрибуция модели - самой тихой строкой внизу. Убрать её совсем нельзя:
+          CC BY обязывает называть автора рядом с самой вещью. */}
+      {spec.credit && (
+        <p className="ts-credit">
+          3D model{" "}
+          <a href={spec.credit.url} target="_blank" rel="noreferrer">
+            {spec.credit.who}
+          </a>{" "}
+          · {spec.credit.licence}
+        </p>
       )}
     </div>
   );
