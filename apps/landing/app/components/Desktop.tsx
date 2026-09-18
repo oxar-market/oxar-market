@@ -114,92 +114,18 @@ function FolderArt() {
   );
 }
 
-/** Иконка футболки: своего файла у неё нет, и заводить его ради одного значка
-    незачем. Силуэт тот же, что был в макете, - вещь узнаётся с первого взгляда.
-    Цвет - тёплый оранжевый нашего знака: серой вещь читалась как заглушка. */
-function TshirtArt() {
-  const gradient = useId();
-  return (
-    <svg viewBox="36 94 248 244" className="tshirt-art">
-      <defs>
-        <linearGradient
-          id={gradient}
-          x1="0"
-          y1="110"
-          x2="0"
-          y2="318"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0" stopColor="#ffb492" />
-          <stop offset="1" stopColor="#ef7f4f" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M104 122 L138 110 Q160 146 182 110 L216 122 L276 184 L238 212 L228 196
-           L228 310 Q160 322 92 310 L92 196 L82 212 L44 184 Z"
-        fill={`url(#${gradient})`}
-        stroke="#d9683a"
-        strokeWidth="6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Иконка чемодана: корпус с рёбрами, поднятая ручка и колёса - по этим трём
-    признакам вещь читается даже в размер иконки на столе. Корпус бирюзовый, а
-    ручка и колёса остались стальными: рядом с оранжевой футболкой вещи должны
-    различаться с одного взгляда, а не сливаться в две серые коробки. */
-function SuitcaseArt() {
-  const gradient = useId();
-  return (
-    <svg viewBox="0 0 160 200" className="tshirt-art">
-      <defs>
-        <linearGradient
-          id={gradient}
-          x1="0"
-          y1="44"
-          x2="0"
-          y2="176"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0" stopColor="#8ed6cb" />
-          <stop offset="1" stopColor="#4aada1" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M70 18h20v26H70z M62 10h36v10H62z"
-        fill="none"
-        stroke="#7c8695"
-        strokeWidth="7"
-        strokeLinejoin="round"
-      />
-      <rect
-        x="22"
-        y="44"
-        width="116"
-        height="132"
-        rx="18"
-        fill={`url(#${gradient})`}
-        stroke="#35897e"
-        strokeWidth="6"
-      />
-      <path
-        d="M52 44v132 M108 44v132"
-        stroke="#35897e"
-        strokeWidth="5"
-        strokeLinecap="round"
-        opacity="0.45"
-      />
-      <path
-        d="M44 176v10 M116 176v10"
-        stroke="#7c8695"
-        strokeWidth="8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+/**
+ * Вещи из физического мира показываем самой вещью, а не значком: это снимок
+ * той же модели, которую человек крутит, открыв окно. Рисованный силуэт рядом
+ * с настоящим рендером читался как заглушка на месте картинки.
+ *
+ * Файлы сняты с `public/models/*.glb` в three.js на прозрачном фоне - тем же
+ * освещением и той же цветопередачей, что в окне.
+ */
+const THINGS: Record<string, string> = {
+  tshirt: "/icons/tshirt.png",
+  suitcase: "/icons/suitcase.png",
+};
 
 /** Слот кнопки в доке: скрытый схлопывается по ширине, а не исчезает рывком. */
 function DockSlot({ show, children }: { show: boolean; children: React.ReactNode }) {
@@ -279,8 +205,8 @@ export function Desktop() {
     const art =
       item.kind === "folder"
         ? "icon-art folder"
-        : item.slug === "tshirt" || item.slug === "suitcase"
-          ? "icon-art file drawn"
+        : THINGS[item.slug]
+          ? "icon-art thing"
           : item.kind === "file"
             ? "icon-art file"
             : item.icon
@@ -307,10 +233,9 @@ export function Desktop() {
         <span className={art} aria-hidden>
           {item.kind === "folder" ? (
             <FolderArt />
-          ) : item.slug === "tshirt" ? (
-            <TshirtArt />
-          ) : item.slug === "suitcase" ? (
-            <SuitcaseArt />
+          ) : THINGS[item.slug] ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={THINGS[item.slug]} alt="" draggable={false} />
           ) : item.icon ? (
             // Логотипы лежат в public и не меняются, оптимизатор картинок
             // тут только добавил бы работы.

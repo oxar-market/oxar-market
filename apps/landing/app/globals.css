@@ -249,11 +249,22 @@ body {
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.14));
 }
 
-.icon-art.drawn .tshirt-art {
+/* Вещь лежит на столе сама по себе, без карточки под ней: это снимок предмета
+   на прозрачном фоне, и белая подложка вокруг белой футболки выглядела бы
+   рамкой вокруг пустоты. Тень своя, по контуру вещи. */
+.icon-art.thing {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  padding: 0;
+}
+
+.icon-art.thing img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
   display: block;
-  padding: 0.5625rem;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.16));
 }
 
 /* Папка, над которой держат иконку, подсвечивается - иначе непонятно, попадёт
