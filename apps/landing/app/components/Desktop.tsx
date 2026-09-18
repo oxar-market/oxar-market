@@ -278,6 +278,9 @@ export function Desktop() {
 
   return (
     <div className="desktop">
+      {/* Пелена, приглушающая обои. Стоит до иконок, чтобы они красились
+          поверх неё без z-index: см. комментарий у .desktop-veil. */}
+      <div className="desktop-veil" aria-hidden />
       <header className="topbar">
         {/* Переключатель подписан действием, а не ролью: «Creator» рядом с
             «Advertiser» ничего не объясняет, а «I'm selling» объясняет. */}
