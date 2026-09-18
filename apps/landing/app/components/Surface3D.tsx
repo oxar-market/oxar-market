@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatUsd } from "@oxar/core";
-import { lotsOnSurface, type Lot } from "@/lib/auctions";
+import { lotBids, lotsOnSurface, type Lot, type PublicBid } from "@/lib/auctions";
 import { AuctionLot } from "./AuctionLot";
 
 /**
@@ -243,6 +243,26 @@ export function Surface3D({
 
   const lotFor = (id: string | null) =>
     lots.find((lot) => lot.listing.kind === id) ?? null;
+
+  // Ставки для левой дуги на широком экране: смотрим на торг выбранного места,
+  // а пока ничего не выбрано - на первый идущий. Нет торгов - нет и дуги.
+  const [arcBids, setArcBids] = useState<PublicBid[]>([]);
+  const arcLot = lotFor(picked) ?? lots[0] ?? null;
+  const arcLotId = arcLot?.id ?? null;
+
+  useEffect(() => {
+    if (!arcLotId) {
+      setArcBids([]);
+      return;
+    }
+    let live = true;
+    lotBids(arcLotId).then((rows) => {
+      if (live) setArcBids(rows.slice(0, 4));
+    });
+    return () => {
+      live = false;
+    };
+  }, [arcLotId]);
 
   useEffect(() => {
     const host = mount.current;
@@ -644,6 +664,51 @@ export function Surface3D({
                 <path d="M9.5 5.5L16 12l-6.5 6.5" />
               </svg>
             </button>
+
+            {/* Широкий экран: по бокам от вещи две дуги, как на витрине
+                конфигуратора. Слева - живые ставки идущего торга, справа -
+                цвета. На телефоне дуг нет: там цвета остаются плитками. */}
+            {arcBids.length > 0 && arcLot && (
+              <div className="ts-arc left">
+                {arcBids.map((bid, index) => (
+                  <button
+                    key={bid.id}
+                    type="button"
+                    className="ts-bid"
+                    onClick={() => setPicked(arcLot.listing.kind)}
+                    title={`Open the ${label(arcLot.listing.kind)} auction`}
+                  >
+                    {/* Верхняя ставка - лидирующая, ей оранжевый нашего знака. */}
+                    <span className={index === 0 ? "ts-bid-dot lead" : "ts-bid-dot"} />
+                    <span className="ts-bid-text">
+                      @{bid.bidder_handle} · {formatUsd(bid.amount_cents)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="ts-arc right" role="group" aria-label="Colors">
+              {spec.variants.map((option, index) => (
+                <button
+                  key={option.label}
+                  type="button"
+                  className={index === variant ? "ts-swatch on" : "ts-swatch"}
+                  aria-pressed={index === variant}
+                  onClick={() => {
+                    setVariant(index);
+                    variantNow.current = index;
+                    paint.current?.(option.color);
+                  }}
+                >
+                  <span className="ts-swatch-text">{option.label}</span>
+                  <span className="ts-swatch-dot">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={option.thumb} alt="" draggable={false} />
+                  </span>
+                </button>
+              ))}
+            </div>
           </>
         )}
       </div>
