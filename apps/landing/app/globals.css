@@ -2923,6 +2923,133 @@ a.proof-row:hover {
   left: calc(50% + 8px);
 }
 
+/* Дуги по бокам сцены, как на витрине конфигуратора: слева ставки идущего
+   торга, справа цвета вещи. Изгиб задаёт сдвиг крайних элементов - средние
+   ближе к краю, концы утоплены к центру, и колонка читается дугой. */
+.ts-arc {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.ts-arc.left {
+  left: 1rem;
+  align-items: flex-start;
+}
+
+.ts-arc.right {
+  right: 1rem;
+  align-items: flex-end;
+}
+
+.ts-arc.left > :nth-child(1),
+.ts-arc.left > :nth-child(4) {
+  transform: translateX(14px);
+}
+
+.ts-arc.right > :nth-child(1),
+.ts-arc.right > :nth-child(4) {
+  transform: translateX(-14px);
+}
+
+/* Ставка на дуге: точка и подпись. Вся строка кликается и ведёт к торгу. */
+.ts-bid {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ts-bid:hover {
+  color: var(--fg);
+}
+
+.ts-bid-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #16182c;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+}
+
+/* Лидирующая ставка - оранжевым нашего знака: она и есть текущая цена. */
+.ts-bid-dot.lead {
+  background: #e5480f;
+}
+
+.ts-bid-text {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Цвет на дуге: круглый снимок вещи и подпись слева от него. */
+.ts-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ts-swatch:hover {
+  color: var(--fg);
+}
+
+.ts-swatch-dot {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #f6f7f8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: width 0.16s var(--spring), height 0.16s var(--spring),
+    border-color 0.14s;
+}
+
+/* Снимок вписан целиком, в кружке вещь мельчает - приближаем до заполнения. */
+.ts-swatch-dot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.45);
+  display: block;
+}
+
+/* Выбранный цвет крупнее и назван в полную силу, как в референсе витрины. */
+.ts-swatch.on {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.ts-swatch.on .ts-swatch-dot {
+  width: 54px;
+  height: 54px;
+  border-color: var(--fg);
+}
+
+/* Дуги живут только на широком экране: на телефоне цвета остаются плитками
+   под сценой, а ставки видны в самом торге. */
+@media (max-width: 760px) {
+  .ts-arc {
+    display: none;
+  }
+}
+
 /* Цвета вещи: снимки модели плитками, как варианты товара в магазине. */
 .ts-variants {
   display: flex;
@@ -3071,6 +3198,15 @@ button.ts-row .ts-row-price {
 
 .ts-buy {
   border-radius: 999px;
+}
+
+/* На широком экране цвета выбирают на правой дуге - плитки под сценой стали бы
+   вторым способом сказать то же самое. Правило стоит ниже самих плиток,
+   потому что при равной специфичности побеждает последнее. */
+@media (min-width: 761px) {
+  .ts-variants {
+    display: none;
+  }
 }
 
 /* Кабинет покупателя: строка брони и деньги по ней. */
