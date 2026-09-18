@@ -618,12 +618,44 @@ export function Surface3D({
   const label = (id: string | null) =>
     spec.spots.find((spot) => spot.id === id)?.label ?? "Spot";
 
-  /** Выбрать цвет: из барабана, с плитки - путь один. */
-  const pickVariant = (index: number) => {
-    if (index < 0 || index >= spec.variants.length) return;
+  /**
+   * Барабан цветов закольцован: лента - три копии списка подряд, и активный
+   * всегда в середине окна, с соседями сверху и снизу, как в референсе.
+   *
+   * slot - позиция на этой тройной ленте. Ехать можно к любому видимому
+   * элементу; когда пружина доехала, лента тихо перескакивает на эквивалент
+   * в средней копии - глазу перескок не виден, точка та же.
+   */
+  const count = spec.variants.length;
+  const [slot, setSlot] = useState(count);
+  const [gliding, setGliding] = useState(true);
+  const snapTimer = useRef(0);
+
+  const goTo = (target: number) => {
+    const index = ((target % count) + count) % count;
+    setGliding(true);
+    setSlot(target);
     setVariant(index);
     variantNow.current = index;
     paint.current?.(spec.variants[index].color);
+    window.clearTimeout(snapTimer.current);
+    snapTimer.current = window.setTimeout(() => {
+      if (target < count || target >= count * 2) {
+        setGliding(false);
+        setSlot(count + index);
+      }
+    }, 480);
+  };
+
+  /** Выбрать цвет с плитки: едем к ближайшему на ленте эквиваленту, чтобы
+      барабан крутился в короткую сторону, а не разматывался через весь круг. */
+  const pickVariant = (index: number) => {
+    if (index < 0 || index >= count) return;
+    let best = count + index;
+    for (const candidate of [index, count + index, count * 2 + index]) {
+      if (Math.abs(candidate - slot) < Math.abs(best - slot)) best = candidate;
+    }
+    goTo(best);
   };
 
   const hint = () => {
@@ -696,45 +728,52 @@ export function Surface3D({
               </div>
             )}
 
-            {/* Цвета - вертикальный барабан: выбранный всегда в центре сцены,
-                столбец подъезжает под него, как лента в слот-конфигураторе.
-                Листается кликом по соседнему цвету и колесом над дугой. */}
+            {/* Цвета - закольцованный барабан: выбранный всегда в середине,
+                соседи видны сверху и снизу, края тают в маске. Листается
+                кликом по любому видимому цвету и колесом над дугой. */}
             <div
               className="ts-arc right"
               role="group"
               aria-label="Colors"
               onWheel={(event) => {
-                pickVariant(variant + (event.deltaY > 0 ? 1 : -1));
+                goTo(slot + (event.deltaY > 0 ? 1 : -1));
               }}
             >
               <div
                 className="ts-reel"
-                style={{ transform: `translateY(${-(variant * 72 + 36)}px)` }}
+                style={{
+                  transform: `translateY(${180 - (slot * 72 + 36)}px)`,
+                  transition: gliding ? undefined : "none",
+                }}
               >
-                {spec.variants.map((option, index) => {
-                  const away = Math.abs(index - variant);
-                  return (
-                    <button
-                      key={option.label}
-                      type="button"
-                      className={index === variant ? "ts-swatch on" : "ts-swatch"}
-                      aria-pressed={index === variant}
-                      onClick={() => pickVariant(index)}
-                      style={{
-                        // Изгиб дуги: активный ближе всех к вещи, дальние
-                        // утоплены к краю и гаснут с расстоянием.
-                        transform: `translateX(${-Math.max(0, 18 - 7 * away)}px)`,
-                        opacity: Math.max(0.35, 1 - away * 0.28),
-                      }}
-                    >
-                      <span className="ts-swatch-text">{option.label}</span>
-                      <span className="ts-swatch-dot">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={option.thumb} alt="" draggable={false} />
-                      </span>
-                    </button>
-                  );
-                })}
+                {[0, 1, 2].flatMap((copy) =>
+                  spec.variants.map((option, index) => {
+                    const at = copy * count + index;
+                    const away = Math.abs(at - slot);
+                    return (
+                      <button
+                        key={`${copy}-${option.label}`}
+                        type="button"
+                        className={at === slot ? "ts-swatch on" : "ts-swatch"}
+                        aria-pressed={at === slot}
+                        tabIndex={copy === 1 ? 0 : -1}
+                        onClick={() => goTo(at)}
+                        style={{
+                          // Изгиб дуги: активный ближе всех к вещи, дальние
+                          // утоплены к краю и гаснут с расстоянием.
+                          transform: `translateX(${-Math.max(0, 18 - 7 * away)}px)`,
+                          opacity: Math.max(0.3, 1 - away * 0.26),
+                        }}
+                      >
+                        <span className="ts-swatch-text">{option.label}</span>
+                        <span className="ts-swatch-dot">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={option.thumb} alt="" draggable={false} />
+                        </span>
+                      </button>
+                    );
+                  }),
+                )}
               </div>
             </div>
           </>
