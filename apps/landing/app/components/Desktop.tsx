@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { APPS, FILES, FOLDERS, type DesktopFile } from "@/lib/desktop";
 import { rememberOpenPoint } from "@/lib/open-from";
 import { useIconLayout, type Layout, type Parents } from "@/lib/use-icon-layout";
@@ -81,32 +81,64 @@ const MOBILE_POSITIONS: Layout = {
   "physical-world": { x: 64, y: 38 },
 };
 
-/** Папка системного вида: задняя стенка с язычком и передняя створка. */
+/** Папка системного вида: задняя стенка с язычком и передняя створка. Створка
+    залита градиентом в цвет акцента - папка единственная цветная вещь на столе,
+    и бледной она терялась среди белых карточек. Идентификатор градиента свой у
+    каждой папки: одинаковые id в разных svg ссылались бы на один узел. */
 function FolderArt() {
+  const gradient = useId();
   return (
     <svg viewBox="0 0 64 52" className="folder-art">
+      <defs>
+        <linearGradient
+          id={gradient}
+          x1="0"
+          y1="14"
+          x2="0"
+          y2="52"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0" stopColor="#b5d7fb" />
+          <stop offset="1" stopColor="#6ba3e8" />
+        </linearGradient>
+      </defs>
       <path
         d="M2 10a6 6 0 0 1 6-6h16l6 7h26a6 6 0 0 1 6 6v29a6 6 0 0 1-6 6H8a6 6 0 0 1-6-6z"
-        fill="#9dc4ea"
+        fill="#5a90d2"
       />
       <path
         d="M2 20a6 6 0 0 1 6-6h48a6 6 0 0 1 6 6v26a6 6 0 0 1-6 6H8a6 6 0 0 1-6-6z"
-        fill="#c3ddf6"
+        fill={`url(#${gradient})`}
       />
     </svg>
   );
 }
 
 /** Иконка футболки: своего файла у неё нет, и заводить его ради одного значка
-    незачем. Силуэт тот же, что был в макете, - вещь узнаётся с первого взгляда. */
+    незачем. Силуэт тот же, что был в макете, - вещь узнаётся с первого взгляда.
+    Цвет - тёплый оранжевый нашего знака: серой вещь читалась как заглушка. */
 function TshirtArt() {
+  const gradient = useId();
   return (
     <svg viewBox="36 94 248 244" className="tshirt-art">
+      <defs>
+        <linearGradient
+          id={gradient}
+          x1="0"
+          y1="110"
+          x2="0"
+          y2="318"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0" stopColor="#ffb492" />
+          <stop offset="1" stopColor="#ef7f4f" />
+        </linearGradient>
+      </defs>
       <path
         d="M104 122 L138 110 Q160 146 182 110 L216 122 L276 184 L238 212 L228 196
            L228 310 Q160 322 92 310 L92 196 L82 212 L44 184 Z"
-        fill="#dfe3e9"
-        stroke="#b9c1cc"
+        fill={`url(#${gradient})`}
+        stroke="#d9683a"
         strokeWidth="6"
         strokeLinejoin="round"
       />
@@ -115,10 +147,26 @@ function TshirtArt() {
 }
 
 /** Иконка чемодана: корпус с рёбрами, поднятая ручка и колёса - по этим трём
-    признакам вещь читается даже в размер иконки на столе. */
+    признакам вещь читается даже в размер иконки на столе. Корпус бирюзовый, а
+    ручка и колёса остались стальными: рядом с оранжевой футболкой вещи должны
+    различаться с одного взгляда, а не сливаться в две серые коробки. */
 function SuitcaseArt() {
+  const gradient = useId();
   return (
     <svg viewBox="0 0 160 200" className="tshirt-art">
+      <defs>
+        <linearGradient
+          id={gradient}
+          x1="0"
+          y1="44"
+          x2="0"
+          y2="176"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0" stopColor="#8ed6cb" />
+          <stop offset="1" stopColor="#4aada1" />
+        </linearGradient>
+      </defs>
       <path
         d="M70 18h20v26H70z M62 10h36v10H62z"
         fill="none"
@@ -132,15 +180,16 @@ function SuitcaseArt() {
         width="116"
         height="132"
         rx="18"
-        fill="#dfe3e9"
-        stroke="#b9c1cc"
+        fill={`url(#${gradient})`}
+        stroke="#35897e"
         strokeWidth="6"
       />
       <path
         d="M52 44v132 M108 44v132"
-        stroke="#b9c1cc"
+        stroke="#35897e"
         strokeWidth="5"
         strokeLinecap="round"
+        opacity="0.45"
       />
       <path
         d="M44 176v10 M116 176v10"
