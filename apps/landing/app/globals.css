@@ -616,7 +616,7 @@ body {
 .side {
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 999px;
   padding: 0.625rem 0.75rem;
   color: var(--muted);
   font-size: 0.875rem;
@@ -692,8 +692,10 @@ textarea:focus-visible {
   background: var(--fg);
   color: #fff;
   border: none;
-  border-radius: 9px;
-  padding: 0.75rem 1rem;
+  /* Пилюля, как у всех остальных кнопок: прямоугольник со скруглением в девять
+     пикселей рядом с ними читался как поле ввода. */
+  border-radius: 999px;
+  padding: 0.75rem 1.25rem;
   font-size: 0.9062rem;
   font-weight: 600;
   font-family: inherit;
@@ -1674,43 +1676,6 @@ a.primary {
   letter-spacing: 0;
 }
 
-/* Шапка кабинета: имя слева, выход справа. Общий .req-head не трогаем - на
-   экране заявки заголовок и подпись стоят в столбик. */
-.desk-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-/* Выход: иконка у имени. Подпись ему не нужна, а строкой в конце кабинета он
-   стоял дальше всего от того, к чему относится. */
-.desk-out {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--card);
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.14s, border-color 0.14s, background 0.14s;
-}
-
-.desk-out svg {
-  width: 16px;
-  height: 16px;
-}
-
-.desk-out:hover {
-  color: var(--fg);
-  border-color: #c8c8c2;
-  background: #f7f7f5;
-}
-
 .req-sub {
   margin-top: 0.1875rem;
   font-size: 0.875rem;
@@ -2276,6 +2241,244 @@ a.primary {
 
 /* Кабинет продавца */
 
+/* Кабинет набран мельче остального окна. Это не статья, а панель управления:
+   здесь не читают текст, а находят строку и нажимают кнопку, и шестнадцатый
+   кегль раздувал список из четырёх мест на весь экран. */
+.desk {
+  font-size: 0.875rem;
+}
+
+.desk h2 {
+  font-size: 1rem;
+}
+
+/* Шапка кабинета: имя слева, выход справа. */
+.desk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* Шапка страницы внутри кабинета: стрелка обратно и заголовок рядом с ней.
+   Крестик окна закрывает весь кабинет, поэтому вернуться на шаг назад можно
+   только отсюда. */
+.desk-page-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+/* Наша кнопка: пилюля с тонкой рамкой. Одна форма на все действия кабинета -
+   до этого в одном окне стояли прямоугольники трёх разных скруглений. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4375rem;
+  align-self: flex-start;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  padding: 0.5rem 0.9375rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s, transform 0.1s ease-out;
+}
+
+.pill svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.pill:hover {
+  border-color: #c8c8c2;
+  background: #f7f7f5;
+}
+
+.pill:active {
+  transform: scale(0.97);
+}
+
+.pill:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Круглая кнопка-иконка: выход, назад, остановка торга. */
+.pill-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--muted);
+}
+
+.pill-icon:hover {
+  color: var(--fg);
+}
+
+/* Согласие на заявку - единственное действие в кабинете, которое что-то
+   отдаёт покупателю, поэтому оно залито. */
+.pill-yes {
+  background: #0071e3;
+  border-color: #0071e3;
+  color: #fff;
+}
+
+.pill-yes:hover {
+  background: #0063c6;
+  border-color: #0063c6;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Список мест: строка ведёт на страницу места. Раньше в строке жили цена,
+   состояние и три кнопки сразу, и четыре таких строки читались как пульт. */
+.spot-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.spot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 18px;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid #f0f0ec;
+  background: transparent;
+  padding: 0.75rem 0.25rem;
+  font: inherit;
+  text-align: left;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+
+.spot-row:last-child {
+  border-bottom: none;
+}
+
+.spot-row:hover {
+  background: #f7f7f5;
+}
+
+.spot-row-name {
+  font-weight: 600;
+  min-width: 0;
+}
+
+.spot-row-price {
+  color: var(--muted);
+  /* Цифры одной ширины: иначе суммы в столбце не сходятся по разрядам. */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.spot-row-go {
+  width: 18px;
+  height: 18px;
+  color: #b4b4ae;
+}
+
+/* Состояние места - метка, а не серое слово в конце строки. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.1875rem 0.5625rem;
+  background: #eef4ec;
+  color: #2f7d55;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.tag.off {
+  background: #f5efe4;
+  color: #9a6b2f;
+}
+
+/* Поля кабинета набраны мельче и стоят по двое в ряд: цена и срок - это два
+   числа, а не два абзаца, и каждое во всю ширину окна выглядело анкетой. */
+.desk input,
+.desk select {
+  font-size: 0.875rem;
+  padding: 0.5625rem 0.75rem;
+}
+
+.desk label {
+  font-size: 0.8125rem;
+}
+
+.desk .desk-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 0.875rem;
+  align-items: start;
+}
+
+/* Во всю ширину идёт то, что не пара к соседнему полю: переключатели, выбор
+   места, ошибки и кнопка. */
+.desk .desk-edit > .sides,
+.desk .desk-edit > .notice,
+.desk .desk-edit > .muted,
+.desk .desk-edit > button,
+.desk .desk-edit > label:has(select) {
+  grid-column: 1 / -1;
+}
+
+/* Кнопка идёт по своему содержимому: растянутая на обе колонки, она читалась
+   как полоса внизу формы. */
+.desk .desk-edit > button {
+  justify-self: start;
+}
+
+@media (max-width: 560px) {
+  .desk .desk-edit {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Сводка на странице места: цена и состояние до кнопок. */
+.spot-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.spot-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.spot-fact .field-label {
+  margin-bottom: 0;
+}
+
+/* На телефоне четыре колонки в строке места не помещаются: цена уходит под
+   название, метка и шеврон остаются справа. */
+@media (max-width: 560px) {
+  .spot-row {
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    row-gap: 0.25rem;
+  }
+
+  .spot-row-price {
+    grid-column: 1;
+    white-space: normal;
+  }
+}
+
 .desk-item {
   display: flex;
   align-items: flex-start;
@@ -2340,233 +2543,11 @@ a.primary {
   flex: none;
 }
 
-.desk-yes,
-.desk-no {
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 0.5rem 0.75rem;
-  background: var(--card);
-  font: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: border-color 0.14s, background 0.14s;
-}
-
-.desk-yes {
-  background: #0071e3;
-  border-color: #0071e3;
-  color: #fff;
-}
-
-.desk-yes:hover {
-  background: #0063c6;
-}
-
-.desk-no:hover {
-  border-color: #c8c8c2;
-  background: #f7f7f5;
-}
-
-/* Кнопка-иконка в строке места: два постоянных действия помещаются в край
-   строки, а подписи занимали половину её ширины на телефоне. */
-.desk-icon {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--card);
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.14s, border-color 0.14s, background 0.14s;
-}
-
-.desk-icon svg {
-  width: 17px;
-  height: 17px;
-}
-
-.desk-icon:hover {
-  color: var(--fg);
-  border-color: #c8c8c2;
-  background: #f7f7f5;
-}
-
-/* Открытая правка: кнопка держит нажатое состояние, иначе непонятно, чем
-   закрыть раскрытую форму. */
-.desk-icon.on {
-  color: var(--fg);
-  background: #f0f0ec;
-  border-color: #c8c8c2;
-}
-
-/* Торги места: вложенный блок со своей левой линией - видно, что это про место
-   выше, а не следующий пункт списка. */
-.desk-auction {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 0.125rem 0 0.75rem;
-  padding-left: 0.75rem;
-  border-left: 2px solid #eceae4;
-}
-
 .desk-lot {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-}
-
-/* Раскрыть форму: выглядит как действие, а не как заголовок раздела. Пунктир
-   был слишком тихим - «Start an auction» не находили глазами. */
-.desk-more {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4375rem;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--card);
-  padding: 0.5rem 0.75rem;
-  font: inherit;
-  font-size: 0.875rem;
-  color: var(--fg);
-  cursor: pointer;
-  transition: border-color 0.14s, background 0.14s;
-}
-
-.desk-more svg {
-  width: 16px;
-  height: 16px;
-  color: var(--muted);
-}
-
-.desk-more:hover {
-  border-color: #c8c8c2;
-  background: #f7f7f5;
-}
-
-/* Действие места: иконка со словом. Отдельно от .desk-icon, который остался
-   голым там, где действий много и подписи не умещаются. */
-.desk-act {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4375rem;
-  flex: none;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 0.4375rem 0.6875rem;
-  background: var(--card);
-  font: inherit;
-  font-size: 0.875rem;
-  color: var(--fg);
-  cursor: pointer;
-  transition: border-color 0.14s, background 0.14s;
-}
-
-.desk-act svg {
-  width: 16px;
-  height: 16px;
-  color: var(--muted);
-}
-
-.desk-act:hover {
-  border-color: #c8c8c2;
-  background: #f7f7f5;
-}
-
-.desk-act.on {
-  background: #f0f0ec;
-  border-color: #c8c8c2;
-}
-
-.desk-spot {
-  border-bottom: 1px solid #f0f0ec;
-}
-
-.desk-spot:last-of-type {
-  border-bottom: none;
-}
-
-/* Строка места - сетка из четырёх колонок. Ширины заданы числами, а не `auto`:
-   каждая строка это своя сетка, и на `auto` колонки подгонялись бы под своё
-   содержимое, а строки снова разъехались бы. Название забирает остаток.
-
-   Кнопки встают по центру строки. Раньше кнопка высотой 34px прижималась верхом
-   к верху текста и оказывалась на девять пикселей ниже середины названия - это и
-   читалось как «иконки не на одном уровне». Заявкам сетка не годится: там в
-   строке бывает картинка креатива, и колонок у неё нет. */
-.desk-spot .desk-item {
-  border-bottom: none;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 176px 92px 220px;
-  align-items: center;
-  column-gap: 0.75rem;
-}
-
-/* Кнопки места делят свою колонку поровну. По содержимому «Close» уже, чем
-   «Edit price», и вторая кнопка от строки к строке уезжала. */
-.desk-spot .desk-acts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-.desk-spot .desk-act {
-  justify-content: center;
-  /* Кнопка действия - подпись, а не текст: на четырнадцатом кегле «Edit price»
-     не влезало в свою половину колонки и ломалось на две строки. */
-  font-size: 0.8125rem;
-  white-space: nowrap;
-}
-
-.desk-name {
-  font-size: 0.9375rem;
-  min-width: 0;
-}
-
-.desk-price {
-  font-size: 0.875rem;
-  color: var(--muted);
-  /* Цифры одной ширины: иначе суммы в столбце не сходятся по разрядам. */
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* Состояние: слово, а не хвост к цене. Ширины хватает самому длинному из трёх
-   («Price updated»), поэтому перенос строки не меняет высоту. */
-.desk-state {
-  font-size: 0.8125rem;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.desk-state.off {
-  color: #9a6b2f;
-}
-
-.desk-state.fresh {
-  color: #2f7d55;
-}
-
-/* На узком экране колонки не помещаются: строка складывается в две - сверху
-   название с ценой, снизу состояние и кнопки. */
-@media (max-width: 760px) {
-  .desk-spot .desk-item {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 0.375rem;
-  }
-
-  .desk-price {
-    white-space: normal;
-  }
-
-  .desk-state {
-    grid-column: 1;
-  }
 }
 
 /* Правка цены раскрывается под самим местом, а не уводит на другой экран */
@@ -2921,6 +2902,32 @@ a.proof-row:hover {
   font-size: 0.9375rem;
 }
 
+/* Кнопка кошелька приходит из wallet-adapter со своим фиолетовым фоном и своим
+   шрифтом - в нашем окне она выглядела вставкой из чужого приложения. Форма и
+   цвет наши, поведение остаётся его. */
+button.wallet-adapter-button-trigger,
+button.wallet-adapter-button {
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  padding: 0.5rem 0.9375rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  /* У адаптера интерлиньяж задан в 48 пикселей - с ним пилюля выходила вдвое
+     выше наших кнопок. */
+  line-height: 1.4;
+  color: var(--fg);
+  transition: border-color 0.14s, background 0.14s;
+}
+
+button.wallet-adapter-button-trigger:not([disabled]):hover,
+button.wallet-adapter-button:not([disabled]):hover {
+  border-color: #c8c8c2;
+  background: #f7f7f5;
+}
+
 /* Кошелёк выплат: одна кнопка, как во всех приложениях с кошельком. Поля для
    адреса тут нет намеренно - base58 руками не набирают. */
 .wallet-row {
@@ -3040,7 +3047,6 @@ a.proof-row:hover {
 .role:active,
 .dock-item:active,
 .desk-edit:active,
-.desk-more:active,
 .icon:active {
   transform: scale(0.97);
 }
@@ -3056,19 +3062,17 @@ a.proof-row:hover {
    окна, выход из кабинета и чипы нарисованы мелкими намеренно, а попадать по
    ним пальцем надо было прицельно. Невидимая область растёт вокруг. */
 .window-close,
-.desk-out,
+.pill-icon,
 .attached-remove,
 .desk-edit,
-.desk-more,
 .dock-home {
   position: relative;
 }
 
 .window-close::after,
-.desk-out::after,
+.pill-icon::after,
 .attached-remove::after,
 .desk-edit::after,
-.desk-more::after,
 .dock-home::after {
   content: "";
   position: absolute;
