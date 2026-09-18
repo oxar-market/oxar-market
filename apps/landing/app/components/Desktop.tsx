@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { APPS, FILES, FOLDERS, type DesktopFile } from "@/lib/desktop";
 import { rememberOpenPoint } from "@/lib/open-from";
 import { useIconLayout, type Layout, type Parents } from "@/lib/use-icon-layout";
@@ -174,8 +174,17 @@ export function Desktop() {
   // профиля и игра не показывались вовсе, а вместо них встречала стена текста.
   const [open, setOpen] = useState<Open>(null);
 
+  // Окно кладёт сюда свою функцию ухода, пока оно открыто. Снаружи его
+  // закрывают двое - логотип в доке и вынос иконки из папки, - и оба должны
+  // уходить тем же путём, что и крестик, а не пропадать рывком.
+  const closer = useRef<(() => void) | null>(null);
+  const close = useCallback(() => {
+    if (closer.current) closer.current();
+    else setOpen(null);
+  }, []);
+
   const { positions, parents, surface, onPointerDown, onPointerMove, onPointerUp } =
-    useIconLayout(DEFAULT_POSITIONS, MOBILE_POSITIONS, DEFAULT_PARENTS);
+    useIconLayout(DEFAULT_POSITIONS, MOBILE_POSITIONS, DEFAULT_PARENTS, close);
 
   // Вход живёт по адресу, а не в интерфейсе: oxar.app/?signin. Ссылку мы
   // отправляем сами тем, кого одобрили, - до открытия платформы остальным не
@@ -191,6 +200,7 @@ export function Desktop() {
   // разговор уже был, и предлагать его снова незачем. Мест нет - значит
   // начинать надо с разговора, а не с пустого кабинета.
   const account = useSellerAccount();
+
 
   function activate(slug: string) {
     const item = ITEMS.find((candidate) => candidate.slug === slug);
@@ -302,7 +312,7 @@ export function Desktop() {
         {/* Логотип работает как Home: закрывает окно и возвращает на стол.
             Крестик в окне остался - на телефоне лист занимает весь экран и
             перекрывает док, там закрывает он. */}
-        <button className="dock-home" onClick={() => setOpen(null)} aria-label="Home">
+        <button className="dock-home" onClick={close} aria-label="Home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icons/mark-home.png" alt="" draggable={false} />
         </button>
@@ -358,7 +368,7 @@ export function Desktop() {
       </nav>
 
       {open?.kind === "file" && (
-        <Window title={open.file.name} onClose={() => setOpen(null)}>
+        <Window title={open.file.name} onClose={() => setOpen(null)} closer={closer}>
           <h1>{open.file.title}</h1>
           {/* Доказательство идёт сразу за заголовком и раньше объяснения: до
               кнопки должно быть на что смотреть, а не пять абзацев подряд. */}
@@ -375,7 +385,7 @@ export function Desktop() {
       )}
 
       {open?.kind === "waitlist" && (
-        <Window title="waitlist" onClose={() => setOpen(null)}>
+        <Window title="waitlist" onClose={() => setOpen(null)} closer={closer}>
           <Waitlist />
         </Window>
       )}
@@ -383,28 +393,28 @@ export function Desktop() {
       {/* Кабинет широкий: это таблица, а не текст. В строке имя, цена,
           состояние и два действия, и на узком окне они разъезжались. */}
       {open?.kind === "desk" && (
-        <Window title="My spots" onClose={() => setOpen(null)} wide>
+        <Window title="My spots" onClose={() => setOpen(null)} closer={closer} wide>
           <SellerDesk account={account} />
         </Window>
       )}
 
       {open?.kind === "orders" && (
-        <Window title="My orders" onClose={() => setOpen(null)}>
+        <Window title="My orders" onClose={() => setOpen(null)} closer={closer}>
           <MyOrders onWaitlist={() => setOpen({ kind: "waitlist" })} />
         </Window>
       )}
 
       {open?.kind === "josip" && (
-        <Window title="Josip called it" onClose={() => setOpen(null)}>
+        <Window title="Josip called it" onClose={() => setOpen(null)} closer={closer}>
           <JosipApp />
         </Window>
       )}
 
       {open?.kind === "folder" && (
-        <Window title={open.name} onClose={() => setOpen(null)}>
+        <Window title={open.name} onClose={() => setOpen(null)} closer={closer}>
           {/* По этому атрибуту перетаскивание понимает, что иконку отпустили
               внутри папки, а не вынесли на стол сквозь окно. */}
-          <div className="folder-grid" data-folder-window>
+          <div className="folder-grid" data-folder-window={open.slug}>
             {ITEMS.filter((item) => parents[item.slug] === open.slug).map((item) =>
               renderIcon(item),
             )}
@@ -413,19 +423,19 @@ export function Desktop() {
       )}
 
       {open?.kind === "suitcase" && (
-        <Window title="Suitcase" onClose={() => setOpen(null)} wide>
+        <Window title="Suitcase" onClose={() => setOpen(null)} closer={closer} wide>
           <Suitcase role={role} onWaitlist={() => setOpen({ kind: "waitlist" })} />
         </Window>
       )}
 
       {open?.kind === "tshirt" && (
-        <Window title="T-shirt" onClose={() => setOpen(null)} wide>
+        <Window title="T-shirt" onClose={() => setOpen(null)} closer={closer} wide>
           <Tshirt role={role} onWaitlist={() => setOpen({ kind: "waitlist" })} />
         </Window>
       )}
 
       {open?.kind === "x" && (
-        <Window title="X placements" onClose={() => setOpen(null)} wide>
+        <Window title="X placements" onClose={() => setOpen(null)} closer={closer} wide>
           {/* Смотреть витрину может кто угодно, а цены и торги - только
               одобренный аккаунт: заводим мы их руками, и до вейтлиста человек
               всё равно ничего не купит. */}

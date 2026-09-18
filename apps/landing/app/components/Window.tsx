@@ -19,12 +19,22 @@ export function Window({
   title,
   onClose,
   wide = false,
+  closer,
   children,
 }: {
   title: string;
   onClose: () => void;
   /** Окну с макетом профиля нужно больше места, чем текстовому файлу. */
   wide?: boolean;
+  /**
+   * Куда окно кладёт свою же функцию ухода.
+   *
+   * Закрыть окно можно и снаружи: логотипом в доке, выносом иконки из папки.
+   * Раньше эти пути звали onClose напрямую, и окно пропадало рывком, хотя по
+   * крестику оно уходило с анимацией. Ссылка на leave делает уход одним и тем
+   * же, откуда бы его ни попросили.
+   */
+  closer?: { current: (() => void) | null };
   children: React.ReactNode;
 }) {
   const frame = useRef<HTMLDivElement>(null);
@@ -53,6 +63,16 @@ export function Window({
       ((from.y - rect.top) / rect.height) * 100
     }%`;
   }, []);
+
+  // Без списка зависимостей намеренно: leave пересоздаётся на каждый рендер, и
+  // наружу должна смотреть свежая функция, а не та, что была при монтировании.
+  useEffect(() => {
+    if (!closer) return;
+    closer.current = leave;
+    return () => {
+      if (closer.current === leave) closer.current = null;
+    };
+  });
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

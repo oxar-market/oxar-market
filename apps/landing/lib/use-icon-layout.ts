@@ -139,6 +139,15 @@ export function useIconLayout(
   defaults: Layout,
   mobileDefaults: Layout,
   defaultParents: Parents = {},
+  /**
+   * Иконку вынесли из папки на стол.
+   *
+   * Окно папки стоит поверх стола и занимает его середину, поэтому иконка,
+   * положенная куда угодно под него, оказывается за окном - человек видит,
+   * что вещь исчезла. Папку после выноса закрывают, и место приземления видно
+   * сразу.
+   */
+  onOutOfFolder?: () => void,
 ) {
   const [positions, setPositions] = useState<Layout>(defaults);
   const [parents, setParents] = useState<Parents>(defaultParents);
@@ -289,12 +298,21 @@ export function useIconLayout(
         return;
       }
 
-      // Отпустили внутри открытой папки - иконка просто остаётся в ней.
-      const insideFolderWindow = under.some(
-        (node) => node instanceof HTMLElement && node.dataset.folderWindow !== undefined,
-      );
-      if (insideFolderWindow) {
+      // Отпустили в окне открытой папки. Раньше иконка просто оставалась там,
+      // где лежала, и для своей же папки это верно - а вот принесённая со
+      // стола так и оставалась на столе. Окно папки показывает ровно то же,
+      // что её иконка, значит и принимать должно так же.
+      const openFolder = under
+        .find((node) => node instanceof HTMLElement && node.dataset.folderWindow)
+        ?.getAttribute("data-folder-window");
+      if (openFolder) {
         reset();
+        if (parents[state.slug] !== openFolder) {
+          tapped();
+          const nextParents = { ...parents, [state.slug]: openFolder };
+          setParents(nextParents);
+          persist({ positions, parents: nextParents });
+        }
         return;
       }
 
@@ -328,6 +346,7 @@ export function useIconLayout(
         // возьмёт из состояния.
         reset();
         setParents(nextParents);
+        onOutOfFolder?.();
       } else {
         // Новые координаты пишем в DOM в том же кадре, в котором меняем
         // transform. Если сначала стереть transform и ждать ре-рендер React,
@@ -361,7 +380,7 @@ export function useIconLayout(
       setPositions(next);
       persist({ positions: next, parents: nextParents });
     },
-    [positions, parents, persist],
+    [positions, parents, persist, onOutOfFolder],
   );
 
   return { positions, parents, surface, onPointerDown, onPointerMove, onPointerUp };
