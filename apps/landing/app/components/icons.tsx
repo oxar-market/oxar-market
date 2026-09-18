@@ -199,6 +199,24 @@ export function SignOut(props: Props) {
   );
 }
 
+/** Строка ведёт дальше: шеврон в конце ряда, как в списках настроек. */
+export function Chevron(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M9.5 5.5l6.5 6.5-6.5 6.5" />
+    </Svg>
+  );
+}
+
+export function Plus(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 5.5v13" />
+      <path d="M5.5 12h13" />
+    </Svg>
+  );
+}
+
 export function Lock(props: Props) {
   return (
     <Svg {...props}>

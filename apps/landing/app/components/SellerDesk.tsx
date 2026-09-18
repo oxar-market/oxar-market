@@ -19,11 +19,11 @@ import {
   type MyLot,
   type MySeller,
 } from "@/lib/seller";
-import { Cross, Pause, Pencil, Play, SignOut } from "./icons";
+import { ArrowLeft, Chevron, Gavel, Pause, Pencil, Play, Plus, SignOut } from "./icons";
 import { Notice } from "./Notice";
 import { PayoutWallet } from "./PayoutWallet";
 import { usePriceFields } from "./PriceFields";
-import { SpotAuctions } from "./SellerLots";
+import { NewAuction, SpotAuctions } from "./SellerLots";
 
 // Кабинет продавца. Вход по ссылке на почту, дальше свои места и заявки на них.
 // Онбординг ручной: войти может любой, но местами владеет только тот, чей адрес
@@ -187,7 +187,7 @@ function LinkSent({ email, onAgain }: { email: string; onAgain: () => void }) {
       <div className="desk-acts">
         <button
           type="button"
-          className="desk-no"
+          className="pill"
           disabled={wait > 0 || again === "sending"}
           onClick={async () => {
             setAgain("sending");
@@ -202,10 +202,51 @@ function LinkSent({ email, onAgain }: { email: string; onAgain: () => void }) {
               ? `Send again in ${wait}s`
               : "Send again"}
         </button>
-        <button type="button" className="desk-no" onClick={onAgain}>
+        <button type="button" className="pill" onClick={onAgain}>
           Other email
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Где сейчас продавец. Раньше каждое действие раскрывало поля прямо в списке:
+ * кабинет удлинялся вдвое, а место, к которому относились поля, уезжало вверх.
+ * Теперь это страницы - на каждой одно дело и стрелка обратно.
+ */
+type View =
+  | { kind: "list" }
+  | { kind: "add" }
+  | { kind: "spot"; id: string }
+  | { kind: "price"; id: string }
+  | { kind: "auction"; id: string };
+
+function priceLine(listing: MyListing): string {
+  return listing.pricing === "daily"
+    ? `${formatUsd(listing.price_cents)} a day · from ${listing.term_days} days`
+    : `${formatUsd(listing.price_cents)} for ${listing.term_days} days`;
+}
+
+/** Страница кабинета: стрелка обратно, заголовок и само дело под ними. */
+function DeskPage({
+  title,
+  onBack,
+  children,
+}: {
+  title: string;
+  onBack: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="card desk">
+      <header className="desk-page-head">
+        <button type="button" className="pill pill-icon" onClick={onBack} aria-label="Back">
+          <ArrowLeft />
+        </button>
+        <h2>{title}</h2>
+      </header>
+      {children}
     </div>
   );
 }
@@ -214,7 +255,7 @@ function Desk({ seller }: { seller: MySeller }) {
   const [listings, setListings] = useState<MyListing[] | null>(null);
   const [bookings, setBookings] = useState<MyBooking[] | null>(null);
   const [lots, setLots] = useState<MyLot[] | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [view, setView] = useState<View>({ kind: "list" });
   const [error, setError] = useState("");
 
   const reload = useCallback(async () => {
@@ -237,24 +278,85 @@ function Desk({ seller }: { seller: MySeller }) {
   }, [reload]);
 
   const waiting = (bookings ?? []).filter((booking) => booking.status === "requested");
+  const spot =
+    view.kind === "list" || view.kind === "add"
+      ? null
+      : (listings ?? []).find((listing) => listing.id === view.id) ?? null;
+
+  if (view.kind === "add") {
+    return (
+      <DeskPage title="Add a spot" onBack={() => setView({ kind: "list" })}>
+        <AddSpot
+          sellerId={seller.id}
+          taken={(listings ?? []).map((listing) => listing.kind)}
+          onAdded={() => {
+            setView({ kind: "list" });
+            reload();
+          }}
+        />
+      </DeskPage>
+    );
+  }
+
+  // Место могло исчезнуть между переходом и обновлением списка - тогда показываем
+  // сам список, а не пустую страницу неизвестно чего.
+  if (spot) {
+    const label = placementSpec(spot.kind).label;
+
+    if (view.kind === "price") {
+      return (
+        <DeskPage title={`${label} price`} onBack={() => setView({ kind: "spot", id: spot.id })}>
+          <EditPrice
+            listing={spot}
+            onSaved={() => {
+              setView({ kind: "spot", id: spot.id });
+              reload();
+            }}
+          />
+        </DeskPage>
+      );
+    }
+
+    if (view.kind === "auction") {
+      return (
+        <DeskPage title={`Auction the ${label.toLowerCase()}`} onBack={() => setView({ kind: "spot", id: spot.id })}>
+          <NewAuction
+            listing={spot}
+            onOpened={() => {
+              setView({ kind: "spot", id: spot.id });
+              reload();
+            }}
+          />
+        </DeskPage>
+      );
+    }
+
+    return (
+      <DeskPage title={label} onBack={() => setView({ kind: "list" })}>
+        <SpotPage
+          listing={spot}
+          lots={(lots ?? []).filter((lot) => lot.listing_id === spot.id)}
+          onEditPrice={() => setView({ kind: "price", id: spot.id })}
+          onAuction={() => setView({ kind: "auction", id: spot.id })}
+          onChanged={reload}
+        />
+      </DeskPage>
+    );
+  }
 
   return (
-    <div className="card">
-      <header className="req-head desk-head">
-        <div>
-          <h2>@{seller.x_handle}</h2>
-          <p className="req-sub">
-            {seller.follower_count.toLocaleString("en-US")} followers
-            {seller.verified ? " · verified" : " · not verified yet"}
-          </p>
-        </div>
+    <div className="card desk">
+      <header className="desk-head">
+        {/* Число подписчиков отсюда убрано: продавец знает его и без нас, а
+            строка занимала самое заметное место в кабинете. */}
+        <h2>@{seller.x_handle}</h2>
 
         {/* Выход стоит у имени: он про этот аккаунт, а не про места в списке
             ниже, где он и висел. Иконка без подписи - действие редкое, а место
             в потоке кабинета занимало строку. */}
         <button
           type="button"
-          className="desk-out"
+          className="pill pill-icon"
           onClick={async () => {
             await signOut();
           }}
@@ -269,12 +371,11 @@ function Desk({ seller }: { seller: MySeller }) {
 
       {error && <Notice tone="error">{error}</Notice>}
 
+      {/* Пустая секция «Requests waiting» стояла всегда и занимала две строки
+          ради слова «nothing». Заявок нет - и говорить не о чем. */}
+      {waiting.length > 0 && (
       <section className="req-row">
         <span className="field-label">Requests waiting</span>
-        {bookings === null && <p className="muted small">Loading…</p>}
-        {bookings !== null && waiting.length === 0 && (
-          <p className="muted small">Nothing waiting for you right now.</p>
-        )}
         {waiting.map((booking) => (
           <div key={booking.id} className="desk-item">
             <div className="desk-lines">
@@ -313,7 +414,7 @@ function Desk({ seller }: { seller: MySeller }) {
             <div className="desk-acts">
               <button
                 type="button"
-                className="desk-yes"
+                className="pill pill-yes"
                 onClick={async () => {
                   setError("");
                   const result = await decide(booking.id, "approved");
@@ -329,7 +430,7 @@ function Desk({ seller }: { seller: MySeller }) {
               </button>
               <button
                 type="button"
-                className="desk-no"
+                className="pill"
                 onClick={async () => {
                   setError("");
                   await decide(booking.id, "rejected");
@@ -342,61 +443,117 @@ function Desk({ seller }: { seller: MySeller }) {
           </div>
         ))}
       </section>
+      )}
 
       <section className="req-row">
         <span className="field-label">Your spots</span>
         {listings === null && <p className="muted small">Loading…</p>}
-        {listings?.map((listing) => (
-          <Spot
-            key={listing.id}
-            listing={listing}
-            lots={(lots ?? []).filter((lot) => lot.listing_id === listing.id)}
-            onChanged={reload}
-          />
-        ))}
+
+        {/* Список мест - строки, ведущие внутрь. Раньше в каждой строке стояли
+            цена, состояние и две кнопки, а под ней ещё и третья: четыре ряда
+            таких строк читались как приборная панель, хотя это список из
+            четырёх пунктов. */}
+        {listings && listings.length > 0 && (
+          <div className="spot-list">
+            {listings.map((listing) => (
+              <button
+                key={listing.id}
+                type="button"
+                className="spot-row"
+                onClick={() => setView({ kind: "spot", id: listing.id })}
+              >
+                <span className="spot-row-name">{placementSpec(listing.kind).label}</span>
+                <span className="spot-row-price">{priceLine(listing)}</span>
+                <span className={listing.active ? "tag" : "tag off"}>
+                  {listing.active ? "On sale" : "Paused"}
+                </span>
+                <Chevron className="spot-row-go" />
+              </button>
+            ))}
+          </div>
+        )}
 
         {listings?.length === 0 && (
           <p className="muted small">Nothing listed yet. Add your first spot.</p>
         )}
 
-        {/* Форма стоит за кнопкой: место добавляют один раз, а поля висели
-            всегда и удлиняли кабинет на целый экран. */}
-        {adding ? (
-          <AddSpot
-            sellerId={seller.id}
-            taken={(listings ?? []).map((listing) => listing.kind)}
-            onAdded={() => {
-              setAdding(false);
-              reload();
-            }}
-            onCancel={() => setAdding(false)}
-          />
-        ) : (
-          <button type="button" className="desk-more" onClick={() => setAdding(true)}>
-            Add a spot
-          </button>
-        )}
+        <button type="button" className="pill" onClick={() => setView({ kind: "add" })}>
+          <Plus />
+          Add a spot
+        </button>
       </section>
     </div>
   );
 }
 
 /**
- * Место продавца. Здесь всё, что к нему относится: цена, продажа и торги -
+ * Страница места. Здесь всё, что к нему относится: цена, продажа и торги -
  * раньше торги лежали отдельным списком в конце кабинета, и связь с местом
  * приходилось держать в голове.
  */
-function Spot({
+function SpotPage({
   listing,
   lots,
+  onEditPrice,
+  onAuction,
   onChanged,
 }: {
   listing: MyListing;
   lots: MyLot[];
+  onEditPrice: () => void;
+  onAuction: () => void;
   onChanged: () => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [saved, setSaved] = useState(false);
+  return (
+    <>
+      <div className="spot-facts">
+        <span className="spot-fact">
+          <span className="field-label">Price</span>
+          <strong>{priceLine(listing)}</strong>
+        </span>
+        <span className="spot-fact">
+          <span className="field-label">State</span>
+          <span className={listing.active ? "tag" : "tag off"}>
+            {listing.active ? "On sale" : "Paused"}
+          </span>
+        </span>
+      </div>
+
+      <div className="pill-row">
+        <button type="button" className="pill" onClick={onEditPrice}>
+          <Pencil />
+          Edit price
+        </button>
+        <button
+          type="button"
+          className="pill"
+          onClick={async () => {
+            await setActive(listing.id, !listing.active);
+            onChanged();
+          }}
+        >
+          {listing.active ? <Pause /> : <Play />}
+          {listing.active ? "Pause" : "Resume"}
+        </button>
+        <button type="button" className="pill" onClick={onAuction}>
+          <Gavel />
+          Start an auction
+        </button>
+      </div>
+
+      <SpotAuctions lots={lots} onChanged={onChanged} />
+    </>
+  );
+}
+
+/** Цена места: те же поля, что при выставлении, только на своей странице. */
+function EditPrice({
+  listing,
+  onSaved,
+}: {
+  listing: MyListing;
+  onSaved: () => void;
+}) {
   const [error, setError] = useState("");
   const price = usePriceFields(listing.kind, {
     pricing: listing.pricing,
@@ -419,79 +576,17 @@ function Spot({
       setError("Could not save that. Try again.");
       return;
     }
-    setEditing(false);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 4000);
-    onChanged();
+    onSaved();
   }
 
   return (
-    <div className="desk-spot">
-      {/* Строка места - четыре колонки одной ширины во всех строках: название,
-          цена, состояние, действия. Раньше это был текстовый столбик и кнопки
-          справа, и от строки к строке всё начиналось в разных местах. */}
-      <div className="desk-item">
-        <strong className="desk-name">{placementSpec(listing.kind).label}</strong>
-        <span className="desk-price">
-          {listing.pricing === "daily"
-            ? `${formatUsd(listing.price_cents)} a day · from ${listing.term_days} days`
-            : `${formatUsd(listing.price_cents)} for ${listing.term_days} days`}
-        </span>
-        {/* Состояние стоит своей колонкой, а не хвостом к цене: снятое с
-            продажи место ничем не отличалось от активного, кроме серых слов
-            «· off sale» в самом незаметном месте строки.
-
-            Сюда же на несколько секунд встаёт «Price updated». Раньше это была
-            отдельная строчка внутри блока: она раздвигала строку, а потом
-            схлопывала обратно. В своей колонке она ничего не двигает. */}
-        <span
-          className={
-            saved ? "desk-state fresh" : listing.active ? "desk-state" : "desk-state off"
-          }
-        >
-          {saved ? "Price updated" : listing.active ? "On sale" : "Paused"}
-        </span>
-        {/* Иконки подписаны словом. Без подписи это два одинаковых серых
-            квадрата, и какой из них правит цену, а какой снимает с продажи,
-            видно только по наведению - а крестик у открытого редактора читался
-            как «удалить». */}
-        <div className="desk-acts">
-          <button
-            type="button"
-            className={editing ? "desk-act on" : "desk-act"}
-            onClick={() => setEditing(!editing)}
-            title={editing ? "Close the price editor" : "Edit the price"}
-          >
-            {editing ? <Cross /> : <Pencil />}
-            {editing ? "Close" : "Edit price"}
-          </button>
-          <button
-            type="button"
-            className="desk-act"
-            onClick={async () => {
-              await setActive(listing.id, !listing.active);
-              onChanged();
-            }}
-            title={listing.active ? "Pause the sale" : "Put back on sale"}
-          >
-            {listing.active ? <Pause /> : <Play />}
-            {listing.active ? "Pause" : "Resume"}
-          </button>
-        </div>
-      </div>
-
-      {editing && (
-        <form className="desk-edit" onSubmit={save}>
-          {price.fields}
-          {error && <Notice tone="error">{error}</Notice>}
-          <button type="submit" className="primary">
-            Save the price
-          </button>
-        </form>
-      )}
-
-      <SpotAuctions listing={listing} lots={lots} onChanged={onChanged} />
-    </div>
+    <form className="desk-edit" onSubmit={save}>
+      {price.fields}
+      {error && <Notice tone="error">{error}</Notice>}
+      <button type="submit" className="primary">
+        Save the price
+      </button>
+    </form>
   );
 }
 
@@ -504,17 +599,14 @@ function AddSpot({
   sellerId,
   taken,
   onAdded,
-  onCancel,
 }: {
   sellerId: string;
   taken: PlacementKind[];
   onAdded: () => void;
-  onCancel: () => void;
 }) {
   const free = PLACEMENTS.filter((spec) => !taken.includes(spec.kind));
   const [kind, setKind] = useState<PlacementKind | "">("");
   const [error, setError] = useState("");
-  const [listed, setListed] = useState("");
 
   const chosen = (kind || free[0]?.kind) as PlacementKind | undefined;
   const price = usePriceFields(chosen ?? "avatar");
@@ -528,7 +620,6 @@ function AddSpot({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
-    setListed("");
     if (!chosen) return;
 
     const read = price.read();
@@ -539,9 +630,8 @@ function AddSpot({
 
     const result = await addListing(sellerId, { kind: chosen, ...read.value });
     if (result === "done") {
-      price.reset();
-      setKind("");
-      setListed(placementSpec(chosen).label);
+      // Отдельная плашка «место выставлено» тут больше не нужна: страница
+      // закрывается, и место видно в списке, куда мы возвращаемся.
       onAdded();
       return;
     }
@@ -554,14 +644,6 @@ function AddSpot({
 
   return (
     <form className="desk-edit" onSubmit={submit} noValidate>
-      {/* Молча созданное место читается как сбой: человек не понимает, сделалось
-          ли что-нибудь вообще. */}
-      {listed && (
-        <Notice tone="success" title={`${listed} is listed`}>
-          It shows up in the list above, and buyers see it in the marketplace.
-        </Notice>
-      )}
-
       <label>
         Spot
         <select
@@ -584,14 +666,9 @@ function AddSpot({
 
       {error && <Notice tone="error">{error}</Notice>}
 
-      <div className="desk-acts">
-        <button type="submit" className="primary">
-          List the spot
-        </button>
-        <button type="button" className="desk-no" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
+      <button type="submit" className="primary">
+        List the spot
+      </button>
     </form>
   );
 }

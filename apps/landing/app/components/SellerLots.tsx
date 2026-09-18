@@ -10,7 +10,7 @@ import {
   type MyListing,
   type MyLot,
 } from "@/lib/seller";
-import { Ban, Gavel } from "./icons";
+import { Ban } from "./icons";
 import { Notice } from "./Notice";
 
 // Торги по одному месту. Раньше это был отдельный список внизу кабинета, и
@@ -39,24 +39,26 @@ function moment(iso: string): string {
   });
 }
 
-/** Торги этого места: что идёт сейчас, чем кончились прошлые, как открыть новый. */
+/** Торги этого места: что идёт сейчас и чем кончились прошлые. Открывают торг
+    со страницы места - формой, а не раскрытым блоком посреди списка. */
 export function SpotAuctions({
-  listing,
   lots,
   onChanged,
 }: {
-  listing: MyListing;
   lots: MyLot[];
   onChanged: () => void;
 }) {
-  const [opening, setOpening] = useState(false);
   const [error, setError] = useState("");
 
   const open = lots.filter((lot) => lot.status === "open");
   const past = lots.filter((lot) => lot.status !== "open");
 
+  if (open.length === 0 && past.length === 0) return null;
+
   return (
-    <div className="desk-auction">
+    <section className="req-row">
+      <span className="field-label">Auctions</span>
+
       {open.map((lot) => (
         <Running key={lot.id} lot={lot} onChanged={onChanged} onError={setError} />
       ))}
@@ -66,23 +68,7 @@ export function SpotAuctions({
       ))}
 
       {error && <Notice tone="error">{error}</Notice>}
-
-      {opening ? (
-        <OpenLot
-          listing={listing}
-          onOpened={() => {
-            setOpening(false);
-            onChanged();
-          }}
-          onCancel={() => setOpening(false)}
-        />
-      ) : (
-        <button type="button" className="desk-more" onClick={() => setOpening(true)}>
-          <Gavel />
-          Start an auction on these dates
-        </button>
-      )}
-    </div>
+    </section>
   );
 }
 
@@ -137,14 +123,14 @@ function Running({
       </div>
 
       <div className="desk-acts">
-        <button type="button" className="desk-no" onClick={show}>
+        <button type="button" className="pill" onClick={show}>
           {shown ? "Hide bids" : "Bids"}
         </button>
         {/* «Cancel» здесь ничего не говорило: отменяется не правка, а сам торг,
             и ставки при этом пропадают. Поэтому подпись прямая. */}
         <button
           type="button"
-          className="desk-icon"
+          className="pill pill-icon"
           aria-label="Stop the bidding"
           title="Stop the bidding - bids are dropped"
           onClick={async () => {
@@ -175,17 +161,15 @@ function Finished({ lot }: { lot: MyLot }) {
 }
 
 /**
- * Открыть торг на это место. Выбора места здесь нет: форма раскрывается внутри
- * него, и селект был бы вторым способом сказать то же самое.
+ * Открыть торг на это место. Выбора места здесь нет: на эту страницу приходят
+ * со страницы места, и селект был бы вторым способом сказать то же самое.
  */
-function OpenLot({
+export function NewAuction({
   listing,
   onOpened,
-  onCancel,
 }: {
   listing: MyListing;
   onOpened: () => void;
-  onCancel: () => void;
 }) {
   const [start, setStart] = useState("");
   const [days, setDays] = useState(String(DEFAULT_TERM_DAYS));
@@ -274,14 +258,9 @@ function OpenLot({
 
       {error && <Notice tone="error">{error}</Notice>}
 
-      <div className="desk-acts">
-        <button type="submit" className="primary">
-          Open the lot
-        </button>
-        <button type="button" className="desk-no" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
+      <button type="submit" className="primary">
+        Open the lot
+      </button>
 
       <p className="muted small">
         The winner gets the spot for these dates. You agreed to sell by opening
