@@ -43,11 +43,24 @@ const SPOTS: Spot[] = [
 
 const SUITCASE: SurfaceSpec = {
   surface: "suitcase",
+  name: "Suitcase",
   model: "/models/suitcase.glb",
   spots: SPOTS,
   // Корпус жёсткий и толстый, но грани сходятся под прямым углом: глубокая
   // коробка захватила бы соседнюю грань и пятно завернулось бы за угол.
   depth: 0.05,
+  // Красится только корпус: в модели он отдельный материал по имени Material,
+  // а колёса, ручка и ремень - фурнитура, у неё цвет свой.
+  paintMaterial: "Material",
+  // Первый цвет - родной цвет модели. Миниатюры в public/icons/variants сняты
+  // с этой же модели: three.js, RoomEnvironment, ACES - как в сцене. Меняются
+  // цвета - миниатюры надо переснять.
+  variants: [
+    { label: "Sky", color: 0x79b5ca, thumb: "/icons/variants/suitcase-sky.png" },
+    { label: "Graphite", color: 0x45484e, thumb: "/icons/variants/suitcase-graphite.png" },
+    { label: "Sand", color: 0xcfc0a8, thumb: "/icons/variants/suitcase-sand.png" },
+    { label: "Coral", color: 0xde8a63, thumb: "/icons/variants/suitcase-coral.png" },
+  ],
   // Белая рамка, а не синяя: корпус сам цветной, и синий контур на нём
   // растворялся. У футболки ткань светлая и серая, там читается синий.
   tint: { idle: 0xeef4ff, hot: 0xffffff },
@@ -74,9 +87,13 @@ const SUITCASE: SurfaceSpec = {
 export function Suitcase({
   role,
   onWaitlist,
+  onSwap,
 }: {
   role: "creator" | "advertiser";
   onWaitlist: () => void;
+  onSwap: () => void;
 }) {
-  return <Surface3D spec={SUITCASE} role={role} onWaitlist={onWaitlist} />;
+  return (
+    <Surface3D spec={SUITCASE} role={role} onWaitlist={onWaitlist} onSwap={onSwap} />
+  );
 }

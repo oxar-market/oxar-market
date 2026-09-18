@@ -57,6 +57,7 @@ const SPOTS: Spot[] = [
 
 const SHIRT: SurfaceSpec = {
   surface: "tshirt",
+  name: "T-shirt",
   model: "/models/shirt.glb",
   spots: SPOTS,
   // Было 0.12, и на этом боковые пятна заворачивались на перёд: коробка на боку
@@ -64,10 +65,19 @@ const SHIRT: SurfaceSpec = {
   // за угол. Ткань тонкая, ей хватает малого.
   depth: 0.07,
   // Модель приходит с запечённой текстурой чужого демо. Нам нужна чистая вещь:
-  // на ней читаются наши места, а не чужой принт. Светлее прежнего, но не белая:
-  // на чистом белом под этой выдержкой пропадают складки, а вместе с ними и
-  // ощущение вещи.
-  repaint: { color: 0xedeff3, roughness: 0.92 },
+  // на ней читаются наши места, а не чужой принт. Белый не чистый, а с каплей
+  // серого: на чистом белом под этой выдержкой пропадают складки, а вместе с
+  // ними и ощущение вещи.
+  repaint: { color: 0xf1f2f5, roughness: 0.92 },
+  // Ходовые цвета мерча. Миниатюры в public/icons/variants сняты с этой же
+  // модели в этих же цветах: three.js, RoomEnvironment, ACES - как в сцене.
+  // Меняются цвета - миниатюры надо переснять.
+  variants: [
+    { label: "White", color: 0xf1f2f5, thumb: "/icons/variants/tshirt-white.png" },
+    { label: "Grey", color: 0xc4c8cf, thumb: "/icons/variants/tshirt-grey.png" },
+    { label: "Navy", color: 0x303c56, thumb: "/icons/variants/tshirt-navy.png" },
+    { label: "Black", color: 0x23252a, thumb: "/icons/variants/tshirt-black.png" },
+  ],
   words: {
     loading: "Loading the shirt…",
     idle: "Drag to turn the shirt. Tap a spot.",
@@ -83,9 +93,11 @@ const SHIRT: SurfaceSpec = {
 export function Tshirt({
   role,
   onWaitlist,
+  onSwap,
 }: {
   role: "creator" | "advertiser";
   onWaitlist: () => void;
+  onSwap: () => void;
 }) {
-  return <Surface3D spec={SHIRT} role={role} onWaitlist={onWaitlist} />;
+  return <Surface3D spec={SHIRT} role={role} onWaitlist={onWaitlist} onSwap={onSwap} />;
 }

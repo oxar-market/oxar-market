@@ -404,13 +404,21 @@ export function Desktop() {
 
       {open?.kind === "suitcase" && (
         <Window title="Suitcase" onClose={() => setOpen(null)} closer={closer} wide>
-          <Suitcase role={role} onWaitlist={() => setOpen({ kind: "waitlist" })} />
+          <Suitcase
+            role={role}
+            onWaitlist={() => setOpen({ kind: "waitlist" })}
+            onSwap={() => setOpen({ kind: "tshirt" })}
+          />
         </Window>
       )}
 
       {open?.kind === "tshirt" && (
         <Window title="T-shirt" onClose={() => setOpen(null)} closer={closer} wide>
-          <Tshirt role={role} onWaitlist={() => setOpen({ kind: "waitlist" })} />
+          <Tshirt
+            role={role}
+            onWaitlist={() => setOpen({ kind: "waitlist" })}
+            onSwap={() => setOpen({ kind: "suitcase" })}
+          />
         </Window>
       )}
 
