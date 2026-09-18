@@ -2963,11 +2963,28 @@ p.ts-hint {
   align-items: flex-start;
 }
 
-/* Правая дуга - окно барабана: сама стоит на середине сцены, а столбец цветов
-   внутри подъезжает так, чтобы выбранный оказался ровно в этой точке. */
+/* Правая дуга - окно закольцованного барабана: пять строк по 72px, выбранная
+   ровно в середине, соседи по кругу сверху и снизу, края тают в маске - по
+   ним видно, что лента продолжается и её можно листать. */
 .ts-arc.right {
   right: 1.25rem;
-  transform: none;
+  width: 9.5rem;
+  height: 360px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 22%,
+    #000 78%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 22%,
+    #000 78%,
+    transparent 100%
+  );
 }
 
 .ts-arc.left > :nth-child(1),
@@ -2982,8 +2999,10 @@ p.ts-hint {
 }
 
 /* Строка барабана одной высоты: сдвиг ленты считается умножением, и разный
-   размер выбранного свотча высоту строки не меняет. */
+   размер выбранного свотча высоту строки не меняет. Строка тянется на всю
+   ширину окна и прижимает содержимое к правому краю. */
 .ts-reel .ts-swatch {
+  width: 100%;
   height: 72px;
   justify-content: flex-end;
   transition: transform 0.45s var(--spring), opacity 0.3s, color 0.14s;
