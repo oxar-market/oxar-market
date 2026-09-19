@@ -78,17 +78,29 @@ describe("oxar-escrow", () => {
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   /** Открыть сделку и вернуть её адреса. Срок задаётся в секундах от текущей. */
-  async function open(opts: { inSeconds: number; lastsSeconds: number; amount?: number }) {
+  async function open(opts: {
+    inSeconds: number;
+    lastsSeconds: number;
+    amount?: number;
+    /** Окно отказа, секунд от текущей. По умолчанию - весь срок, как у потока. */
+    refundableForSeconds?: number;
+  }) {
     const id = booking();
     const deal = dealPda(id);
     const startsAt = (await now()) + opts.inSeconds;
+    const endsAt = startsAt + opts.lastsSeconds;
+    const refundableUntil =
+      opts.refundableForSeconds === undefined
+        ? endsAt
+        : (await now()) + opts.refundableForSeconds;
 
     await program.methods
       .buyerOpensDeal(
         id,
         new anchor.BN(opts.amount ?? AMOUNT),
         new anchor.BN(startsAt),
-        new anchor.BN(startsAt + opts.lastsSeconds),
+        new anchor.BN(endsAt),
+        new anchor.BN(refundableUntil),
         FEE_BPS,
       )
       .accounts({
@@ -175,6 +187,7 @@ describe("oxar-escrow", () => {
           id,
           new anchor.BN(AMOUNT),
           new anchor.BN(startsAt),
+          new anchor.BN(startsAt + 60),
           new anchor.BN(startsAt + 60),
           FEE_BPS,
         )
@@ -354,6 +367,88 @@ describe("oxar-escrow", () => {
     assert.equal(toPlatform.toString(), String(AMOUNT / 10));
   });
 
+  describe("заморозка: сделка, где продавец несёт расходы до начала", () => {
+    it("покупатель не достанет деньги из середины, а после конца всё уходит продавцу", async () => {
+      const sellerBefore = await balance(sellerTokens);
+      const platformBefore = await balance(platformTokens);
+      const buyerBefore = await balance(buyerTokens);
+
+      // Срок нулевой и стоит в конце: до него не натекает никому. Окно отказа
+      // закрывается через две секунды - с этого момента расходы невозвратны.
+      const { deal } = await open({
+        inSeconds: 6,
+        lastsSeconds: 0,
+        refundableForSeconds: 2,
+      });
+
+      await sleep(3000);
+      try {
+        await close(deal, buyer);
+        assert.fail("покупатель забрал деньги из заморозки");
+      } catch (error) {
+        assert.match(String(error), /NotRefundable/);
+      }
+
+      // Продавцу в заморозке тоже не достаётся ничего.
+      try {
+        await program.methods
+          .sellerTakesEarned()
+          .accounts({
+            deal,
+            seller: seller.publicKey,
+            platform: platform.publicKey,
+            mint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .rpc();
+        assert.fail("продавец взял деньги из заморозки");
+      } catch (error) {
+        assert.match(String(error), /NothingToWithdraw/);
+      }
+
+      await sleep(4500);
+      await close(deal, buyer);
+
+      const toSeller = (await balance(sellerTokens)) - sellerBefore;
+      const toPlatform = (await balance(platformTokens)) - platformBefore;
+      const fromBuyer = buyerBefore - (await balance(buyerTokens));
+
+      assert.equal((toSeller + toPlatform).toString(), String(AMOUNT), "ушло не всё");
+      assert.equal(fromBuyer.toString(), String(AMOUNT), "покупателю что-то вернулось");
+    });
+
+    it("до закрытия окна покупатель ещё волен передумать", async () => {
+      const buyerBefore = await balance(buyerTokens);
+      const { deal } = await open({
+        inSeconds: 30,
+        lastsSeconds: 0,
+        refundableForSeconds: 25,
+      });
+      await close(deal, buyer);
+      assert.equal(
+        (await balance(buyerTokens)).toString(),
+        buyerBefore.toString(),
+        "вернулось не всё",
+      );
+    });
+
+    it("продавец может закрыть заморозку сам и отказаться от денег", async () => {
+      const buyerBefore = await balance(buyerTokens);
+      const { deal } = await open({
+        inSeconds: 30,
+        lastsSeconds: 0,
+        refundableForSeconds: 1,
+      });
+      await sleep(2000);
+      await close(deal, seller);
+      assert.equal(
+        (await balance(buyerTokens)).toString(),
+        buyerBefore.toString(),
+        "продавец закрыл, но деньги не вернулись покупателю",
+      );
+    });
+  });
+
   describe("сделку с негодными условиями открыть нельзя", () => {
     const bad = async (
       amount: number,
@@ -370,6 +465,7 @@ describe("oxar-escrow", () => {
             id,
             new anchor.BN(amount),
             new anchor.BN(startsAt),
+            new anchor.BN(startsAt + length),
             new anchor.BN(startsAt + length),
             feeBps,
           )
@@ -389,6 +485,36 @@ describe("oxar-escrow", () => {
         assert.match(String(error), expected);
       }
     };
+
+    it("окно отказа переживает саму сделку", async () => {
+      const id = booking();
+      const startsAt = (await now()) + 30;
+      try {
+        await program.methods
+          .buyerOpensDeal(
+            id,
+            new anchor.BN(AMOUNT),
+            new anchor.BN(startsAt),
+            new anchor.BN(startsAt + 60),
+            new anchor.BN(startsAt + 61), // на секунду дольше сделки
+            FEE_BPS,
+          )
+          .accounts({
+            buyer: buyer.publicKey,
+            seller: seller.publicKey,
+            platform: platform.publicKey,
+            mint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .signers([buyer])
+          .rpc();
+        assert.fail("окно отказа длиннее сделки прошло");
+      } catch (error) {
+        assert.match(String(error), /RefundWindowTooLong/);
+      }
+    });
 
     it("нулевая сумма", async () => bad(0, 30, 60, FEE_BPS, /AmountIsZero/));
     it("конец раньше начала", async () => bad(AMOUNT, 30, -10, FEE_BPS, /EndsBeforeStart/));

@@ -27,9 +27,18 @@ pub mod oxar_escrow {
         amount: u64,
         starts_at: i64,
         ends_at: i64,
+        refundable_until: i64,
         fee_bps: u16,
     ) -> Result<()> {
-        buyer_opens_deal::open_deal(ctx, booking, amount, starts_at, ends_at, fee_bps)
+        buyer_opens_deal::open_deal(
+            ctx,
+            booking,
+            amount,
+            starts_at,
+            ends_at,
+            refundable_until,
+            fee_bps,
+        )
     }
 
     /// Продавец забирает натёкшее, не закрывая сделку.

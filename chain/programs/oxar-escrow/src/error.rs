@@ -22,4 +22,10 @@ pub enum EscrowError {
 
     #[msg("Nothing has accrued yet")]
     NothingToWithdraw,
+
+    #[msg("The refund window has closed and the deal has not ended")]
+    NotRefundable,
+
+    #[msg("The refund window cannot outlast the deal")]
+    RefundWindowTooLong,
 }

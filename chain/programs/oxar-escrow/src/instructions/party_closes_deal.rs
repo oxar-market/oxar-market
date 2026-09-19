@@ -91,6 +91,14 @@ pub fn close_deal(ctx: Context<PartyClosesDeal>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let deal = &ctx.accounts.deal;
 
+    // Продавец волен закрыть когда угодно: он отказывается от своих денег, а не
+    // от чужих. Покупатель - только пока окно отказа открыто или когда срок уже
+    // вышел; между этими моментами деньги заморожены для обеих сторон.
+    require!(
+        ctx.accounts.party.key() != deal.buyer || deal.buyer_may_close(now),
+        EscrowError::NotRefundable
+    );
+
     let earned = deal.earned_at(now)?;
     let payable = earned
         .checked_sub(deal.released)

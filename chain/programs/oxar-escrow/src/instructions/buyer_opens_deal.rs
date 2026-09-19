@@ -69,11 +69,15 @@ pub fn open_deal(
     amount: u64,
     starts_at: i64,
     ends_at: i64,
+    refundable_until: i64,
     fee_bps: u16,
 ) -> Result<()> {
     require!(amount > 0, EscrowError::AmountIsZero);
     require!(ends_at >= starts_at, EscrowError::EndsBeforeStart);
     require!(fee_bps <= 10_000, EscrowError::FeeTooHigh);
+    // Окно отказа, пережившее сделку, означало бы, что покупатель может забрать
+    // деньги уже после того, как размещение отстояло весь срок.
+    require!(refundable_until <= ends_at, EscrowError::RefundWindowTooLong);
 
     // Начало в прошлом означало бы, что часть срока уже «отстояла», хотя
     // размещение ещё не встало: продавец получил бы за время до сделки.
@@ -90,6 +94,7 @@ pub fn open_deal(
     deal.released = 0;
     deal.starts_at = starts_at;
     deal.ends_at = ends_at;
+    deal.refundable_until = refundable_until;
     deal.fee_bps = fee_bps;
     deal.bump = ctx.bumps.deal;
     deal.vault_bump = ctx.bumps.vault;
