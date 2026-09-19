@@ -362,7 +362,7 @@ export function Desktop() {
       )}
 
       {open?.kind === "waitlist" && (
-        <Window title="waitlist" onClose={() => setOpen(null)} closer={closer}>
+        <Window title="Join the waitlist" onClose={() => setOpen(null)} closer={closer}>
           <Waitlist />
         </Window>
       )}

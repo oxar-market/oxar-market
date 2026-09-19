@@ -118,6 +118,24 @@ export async function addListing(
   return error.code === "23505" ? "duplicate" : "error";
 }
 
+/**
+ * Сменить свой хэндл. Уникальность держит индекс в базе: повтор приходит
+ * кодом 23505. Смена снимает галочку - это делает триггер, тоже в базе.
+ */
+export async function setXHandle(
+  sellerId: string,
+  handle: string,
+): Promise<"done" | "taken" | "error"> {
+  if (!auth) return "error";
+  const { error } = await auth
+    .from("sellers")
+    .update({ x_handle: handle })
+    .eq("id", sellerId);
+
+  if (!error) return "done";
+  return error.code === "23505" ? "taken" : "error";
+}
+
 /** Снять с продажи или вернуть. Место не удаляем: на нём висят прошлые сделки. */
 export async function setActive(
   listingId: string,
