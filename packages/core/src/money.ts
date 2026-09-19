@@ -37,36 +37,24 @@ export type Settlement = {
 };
 
 /**
- * Сколько кому причитается, если остановить стрим в этот момент.
+ * Сколько кому причитается, если закрыть сделку в этот момент.
  *
- * Меряется минутами, а не днями, потому что минутами меряет контракт: доля
- * уходит продавцу за каждый целый период, а остаток от деления отдаётся сразу
- * на старте. Дневная арифметика тут была бы своей, отдельной правдой - и она
- * расходилась бы с тем, что реально лежит на счетах.
- *
- * Считается в базовых единицах, а не в центах: остаток от деления суммы на
- * число периодов меньше цента на период, но за неделю набегает больше цента, и
- * в центах он потерялся бы.
+ * Считается в базовых единицах, а не в центах: остаток от целочисленного
+ * деления меньше цента, но за срок он набегает и в центах потерялся бы.
  *
  * Комиссию берём только с заработанного: платить нам за сорванную сделку
  * продавец не должен.
  */
-export function settle(plan: StreamPlan, atUnix: number): Settlement {
-  const capped = Math.min(Math.max(atUnix, plan.startUnix), plan.endUnix);
-  const periods = Math.floor((capped - plan.startUnix) / plan.period);
-
-  const earnedBaseUnits =
-    atUnix < plan.startUnix
-      ? 0
-      : plan.dustBaseUnits + plan.amountPerPeriod * periods;
+export function settle(plan: DealPlan, atUnix: number): Settlement {
+  const earnedBaseUnits = earnedAt(plan, atUnix);
   const feeBaseUnits = Math.round(earnedBaseUnits * FEE_RATE);
 
   return {
-    grossBaseUnits: plan.depositedBaseUnits,
+    grossBaseUnits: plan.amountBaseUnits,
     earnedBaseUnits,
     feeBaseUnits,
     netBaseUnits: earnedBaseUnits - feeBaseUnits,
-    refundBaseUnits: plan.depositedBaseUnits - earnedBaseUnits,
+    refundBaseUnits: plan.amountBaseUnits - earnedBaseUnits,
   };
 }
 
@@ -98,49 +86,58 @@ export function fromUsdcBaseUnits(units: number): number {
 }
 
 /**
- * Шаг выплаты в стриме, в секундах. Минута, а не секунда: на секундном шаге
- * остаток от деления суммы на число шагов растёт, а разницы для сделки,
- * которая меряется днями, никакой.
+ * Как ведут себя деньги по этой сделке.
+ *
+ * `stream` - капают по мере того, как размещение стоит. Годится там, где
+ * состояние места читается автоматически и поток можно остановить.
+ *
+ * `hold` - заперты до конца срока и уходят продавцу целиком. Годится там, где
+ * проверить нечем, а продавец несёт невозвратные расходы до начала: печать,
+ * изготовление, бронь площадки.
  */
-export const STREAM_PERIOD_SECONDS = 60;
+export type DealShape = "stream" | "hold";
 
-export type StreamPlan = {
-  /** Сколько дней стоит размещение. Даты включительно. */
+export type DealPlan = {
+  /** Вся сумма сделки в базовых единицах монеты. */
+  amountBaseUnits: number;
+  /** Секунда, с которой начинает капать. */
+  startsAt: number;
+  /** Секунда, на которой сумма дотекает целиком. */
+  endsAt: number;
+  /** До какой секунды покупатель может передумать и забрать неотработанное. */
+  refundableUntil: number;
+  /** Сколько суток стоит размещение. Для интерфейса, в расчёте не участвует. */
   days: number;
-  /** Полночь UTC дня начала, в секундах. */
-  startUnix: number;
-  /** Когда стрим досчитает до конца, в секундах. */
-  endUnix: number;
-  period: number;
-  periods: number;
-  /** Сколько уходит продавцу за один период. */
-  amountPerPeriod: number;
-  /** Вся сумма сделки в базовых единицах. */
-  depositedBaseUnits: number;
-  /**
-   * Остаток от деления суммы на число периодов. Меньше одной базовой единицы
-   * на период, то есть копейки, но он существует, и притворяться, что нет,
-   * нельзя: где именно он окажется, решает контракт, и это проверяется на
-   * девнете, а не тут.
-   */
-  dustBaseUnits: number;
 };
 
 const DAY_MS = 86_400_000;
+const DAY_SECONDS = 86_400;
 
 /**
- * Как разложить сделку в стрим: с какой секунды, каким шагом и по сколько.
+ * Разложить бронь в условия сделки для контракта.
  *
  * Дата - это день, а не момент: бронь с 3 по 9 ноября включительно длится семь
  * суток и начинается в полночь UTC третьего.
+ *
+ * Периодов и остатка от деления здесь больше нет. Они были формой, которую
+ * навязывал Streamflow: он отдавал деньги шагами, и сумму приходилось делить
+ * на число шагов заранее. Своя программа считает линейно, а остаток от деления
+ * остаётся в хранилище и доходит на последней секунде.
  */
-export function streamPlan(booking: {
+export function dealPlan(booking: {
   priceCents: number;
   /** YYYY-MM-DD */
   startDate: string;
   /** YYYY-MM-DD */
   endDate: string;
-}): StreamPlan {
+  shape: DealShape;
+  /**
+   * Секунда, с которой отказ перестаёт быть бесплатным. Для `hold` это момент,
+   * когда продавец начинает нести невозвратные расходы. Пусто - берём начало
+   * размещения: передумать можно до того дня, когда место должно было встать.
+   */
+  refundableUntil?: number;
+}): DealPlan {
   assertWholeNonNegative(booking.priceCents, "priceCents");
   if (booking.priceCents === 0) throw new Error("priceCents must be positive");
 
@@ -152,20 +149,49 @@ export function streamPlan(booking: {
   if (endUnixMs < startUnixMs) throw new Error("endDate is before startDate");
 
   const days = Math.round((endUnixMs - startUnixMs) / DAY_MS) + 1;
-  const periods = (days * 86_400) / STREAM_PERIOD_SECONDS;
-  const depositedBaseUnits = toUsdcBaseUnits(booking.priceCents);
-  const amountPerPeriod = Math.floor(depositedBaseUnits / periods);
+  const placementStart = startUnixMs / 1000;
+  const placementEnd = placementStart + days * DAY_SECONDS;
+
+  // Заморозка - это сделка нулевой длины, поставленная на конец размещения: до
+  // него не натекает никому, после него достаётся всё.
+  const startsAt = booking.shape === "hold" ? placementEnd : placementStart;
+
+  const refundableUntil =
+    booking.refundableUntil ??
+    (booking.shape === "hold" ? placementStart : placementEnd);
+
+  if (refundableUntil > placementEnd) {
+    throw new Error("refundableUntil must not outlast the deal");
+  }
 
   return {
+    amountBaseUnits: toUsdcBaseUnits(booking.priceCents),
+    startsAt,
+    endsAt: placementEnd,
+    refundableUntil,
     days,
-    startUnix: startUnixMs / 1000,
-    endUnix: startUnixMs / 1000 + periods * STREAM_PERIOD_SECONDS,
-    period: STREAM_PERIOD_SECONDS,
-    periods,
-    amountPerPeriod,
-    depositedBaseUnits,
-    dustBaseUnits: depositedBaseUnits - amountPerPeriod * periods,
   };
+}
+
+/**
+ * Сколько всего причитается продавцу и площадке к этой секунде.
+ *
+ * Повторяет `earned_at` из программы буква в букву. Если эти две функции
+ * разойдутся, интерфейс будет показывать одно, а контракт делать другое - и
+ * расхождение заметят не мы, а покупатель.
+ */
+export function earnedAt(plan: DealPlan, atUnix: number): number {
+  if (atUnix < plan.startsAt) return 0;
+  if (atUnix >= plan.endsAt) return plan.amountBaseUnits;
+
+  const elapsed = atUnix - plan.startsAt;
+  const term = plan.endsAt - plan.startsAt;
+  return Math.floor((plan.amountBaseUnits * elapsed) / term);
+}
+
+/** Может ли покупатель закрыть сделку сам в эту секунду. */
+export function buyerMayClose(plan: DealPlan, atUnix: number): boolean {
+  return atUnix < plan.refundableUntil || atUnix >= plan.endsAt;
 }
 
 export function formatUsd(cents: number): string {

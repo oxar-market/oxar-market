@@ -10,7 +10,7 @@ import {
   createDefaultWalletNotFoundHandler,
   registerMwa,
 } from "@solana-mobile/wallet-standard-mobile";
-import { CLUSTER_URL } from "@/lib/stream.ts";
+import { CLUSTER_URL } from "@/lib/escrow.ts";
 import { OrdersPanel } from "./OrdersPanel";
 import { PayoutPanel } from "./PayoutPanel";
 

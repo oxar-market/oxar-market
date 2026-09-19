@@ -14,17 +14,19 @@ export {
 
 export {
   FEE_RATE,
-  STREAM_PERIOD_SECONDS,
   USDC_DECIMALS,
+  buyerMayClose,
+  dealPlan,
+  earnedAt,
   formatUsd,
   fromUsdcBaseUnits,
   settle,
   splitPayout,
-  streamPlan,
   toUsdcBaseUnits,
+  type DealPlan,
+  type DealShape,
   type Settlement,
   type Split,
-  type StreamPlan,
 } from "./money.ts";
 
 export {

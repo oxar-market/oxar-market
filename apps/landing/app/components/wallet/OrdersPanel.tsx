@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { myOrders, attachPayment, type MyOrder } from "@/lib/payments.ts";
 import { reviewsFor, type Review as ReviewRow } from "@/lib/reviews.ts";
-import { cancelStream, openStream } from "@/lib/stream.ts";
-import { payOnce } from "@/lib/transfer.ts";
+import { closeDeal, openDeal, shapeOf } from "@/lib/escrow.ts";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Notice } from "../Notice";
 import { Review } from "../Review";
@@ -26,7 +25,10 @@ import { ConnectWallet } from "./ConnectWallet";
 
 type Busy = { id: string; what: "paying" | "stopping" } | null;
 
-/** Поток можно остановить, разовый перевод - нет: он уже ушёл. */
+/**
+ * Поток можно остановить в любой момент, заморозку - только пока открыто окно
+ * отказа. Само правило живёт в программе; здесь оно только называет кнопку.
+ */
 const isStream = (order: MyOrder) => order.listing?.payment !== "transfer";
 
 /** Сделки, по которым больше ничего не произойдёт. */
@@ -73,20 +75,16 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
       // Что именно происходит с деньгами, решает место, а не платформа: у
       // профиля X есть автопроверка и поток осмыслен, у футболки проверять
       // нечем и печать оплачена до начала.
-      const paid = isStream(order)
-        ? await openStream({
-            wallet: signer,
-            recipient: seller.payout_wallet,
-            priceCents: order.price_cents,
-            startDate: order.start_date,
-            endDate: order.end_date,
-            name: `${order.listing?.kind ?? "spot"} @${seller.x_handle}`,
-          }).then((stream) => stream.streamId)
-        : await payOnce({
-            wallet: signer,
-            recipient: seller.payout_wallet,
-            priceCents: order.price_cents,
-          });
+      const opened = await openDeal({
+        wallet: signer,
+        bookingId: order.id,
+        seller: seller.payout_wallet,
+        priceCents: order.price_cents,
+        startDate: order.start_date,
+        endDate: order.end_date,
+        shape: shapeOf(order.listing?.payment ?? "stream"),
+      });
+      const paid = opened.dealId;
 
       const saved = await attachPayment({
         bookingId: order.id,
@@ -100,8 +98,8 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
       } else {
         setDone(
           isStream(order)
-            ? "The stream is open. Money moves by the second once the dates start."
-            : "Paid. The seller has the money and your spot is booked.",
+            ? "The deal is open. Money moves to the seller as the placement stands."
+            : "Paid. The money is held until the dates are over, then it goes to the seller.",
         );
       }
       await reload();
@@ -115,15 +113,21 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
   async function stop(order: MyOrder) {
     setError("");
     setDone("");
-    if (!signer || !order.stream_id) {
+    const seller = order.listing?.seller;
+    if (!signer || !order.stream_id || !seller?.payout_wallet) {
       setError("Connect the wallet first.");
       return;
     }
 
     setBusy({ id: order.id, what: "stopping" });
     try {
-      await cancelStream({ wallet: signer, streamId: order.stream_id });
-      setDone("Stopped. The seller keeps the time it ran, the rest comes back to you.");
+      await closeDeal({
+        wallet: signer,
+        bookingId: order.id,
+        seller: seller.payout_wallet,
+        buyer: adapter.publicKey!.toBase58(),
+      });
+      setDone("Closed. The seller keeps the time it stood, the rest came back to you.");
       await reload();
     } catch (cause) {
       setError(reason(cause));
@@ -181,7 +185,7 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
             disabled={busy?.id === order.id}
             onClick={() => stop(order)}
           >
-            {busy?.id === order.id ? "Stopping…" : "Stop the stream"}
+            {busy?.id === order.id ? "Closing…" : "Stop and settle"}
           </button>
         )}
 
