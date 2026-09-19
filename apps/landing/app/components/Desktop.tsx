@@ -25,10 +25,22 @@ type Open =
   | { kind: "orders" }
   | { kind: "tshirt" }
   | { kind: "suitcase" }
+  | { kind: "placements" }
   | { kind: "folder"; slug: string; name: string }
   | null;
 
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
+
+/**
+ * Что вообще продаётся. Список для дока: иконки на столе показывают вещи по
+ * одной и в разных местах - профиль лежит на столе, футболка с чемоданом в
+ * папке, - а покупателю нужен один вход, за которым видно всё сразу.
+ */
+const SURFACES: { kind: "x" | "tshirt" | "suitcase"; name: string; what: string }[] = [
+  { kind: "x", name: "X profile", what: "Seven spots: avatar, banner, bio, pinned post and more." },
+  { kind: "tshirt", name: "T-shirt", what: "Eleven print zones on a shirt someone wears." },
+  { kind: "suitcase", name: "Suitcase", what: "Five panels on a carry-on that lives in airports." },
+];
 
 type Item =
   | { slug: string; kind: "file"; name: string; icon: string; file: DesktopFile }
@@ -330,7 +342,7 @@ export function Desktop() {
             занимал всегда. */}
 
         <DockSlot show={role === "advertiser"}>
-          <button className="dock-item" onClick={() => setOpen({ kind: "x" })}>
+          <button className="dock-item" onClick={() => setOpen({ kind: "placements" })}>
             Browse placements
           </button>
         </DockSlot>
@@ -398,6 +410,27 @@ export function Desktop() {
             {ITEMS.filter((item) => parents[item.slug] === open.slug).map((item) =>
               renderIcon(item),
             )}
+          </div>
+        </Window>
+      )}
+
+      {open?.kind === "placements" && (
+        <Window title="Placements" onClose={() => setOpen(null)} closer={closer}>
+          <p className="muted small">
+            Everything on sale right now. Pick a surface to see its spots and dates.
+          </p>
+          <div className="surface-list">
+            {SURFACES.map((surface) => (
+              <button
+                key={surface.kind}
+                type="button"
+                className="surface-row"
+                onClick={() => setOpen({ kind: surface.kind })}
+              >
+                <strong>{surface.name}</strong>
+                <span className="muted small">{surface.what}</span>
+              </button>
+            ))}
           </div>
         </Window>
       )}
