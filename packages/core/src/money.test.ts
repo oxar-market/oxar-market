@@ -26,38 +26,77 @@ test("комиссия не теряет и не создаёт центы на 
   assert.equal(FEE_RATE, 0.1);
 });
 
-test("размещение отстояло весь срок — возврата нет", () => {
-  const s = settle(10_000, 7, 7);
-  assert.equal(s.refundCents, 0);
-  assert.equal(s.netCents, 9_000);
+// Сделка, на которой считается всё ниже. Числа настоящие: ровно этот стрим
+// открывался на девнете, и контракт разложил его так же.
+const PLAN = streamPlan({
+  priceCents: 15_000,
+  startDate: "2026-11-03",
+  endDate: "2026-11-09",
 });
 
-test("сняли на третий день из пяти — платим за три, остальное возвращаем", () => {
-  const s = settle(10_000, 5, 3);
-  assert.equal(s.refundCents, 4_000);
-  assert.equal(s.feeCents, 600, "комиссия берётся только с заработанного");
-  assert.equal(s.netCents, 5_400);
-  assert.equal(s.netCents + s.feeCents + s.refundCents, s.grossCents);
+test("сделка раскладывается на минутные доли без потерь", () => {
+  assert.equal(PLAN.periods, 10_080, "семь суток по минуте");
+  assert.equal(PLAN.amountPerPeriod, 14_880);
+  assert.equal(PLAN.dustBaseUnits, 9_600);
+  assert.equal(
+    PLAN.amountPerPeriod * PLAN.periods + PLAN.dustBaseUnits,
+    PLAN.depositedBaseUnits,
+  );
 });
 
-test("сняли сразу — продавец не получает ничего, комиссии нет", () => {
-  const s = settle(10_000, 7, 0);
-  assert.equal(s.netCents, 0);
-  assert.equal(s.feeCents, 0);
-  assert.equal(s.refundCents, 10_000);
+test("до старта продавцу ничего, возвращается вся сумма", () => {
+  const s = settle(PLAN, PLAN.startUnix - 1);
+  assert.equal(s.earnedBaseUnits, 0);
+  assert.equal(s.feeBaseUnits, 0);
+  assert.equal(s.refundBaseUnits, PLAN.depositedBaseUnits);
 });
 
-test("простояло дольше срока — считаем как полный срок, не больше", () => {
-  const s = settle(10_000, 7, 30);
-  assert.equal(s.refundCents, 0);
-  assert.equal(s.netCents, 9_000);
+test("через две с половиной минуты продавцу остаток и две целых доли", () => {
+  // Именно это показал контракт на девнете: 9600 + 2 * 14880 = 39360.
+  const s = settle(PLAN, PLAN.startUnix + 150);
+  assert.equal(s.earnedBaseUnits, 39_360);
+  assert.equal(s.refundBaseUnits, PLAN.depositedBaseUnits - 39_360);
+});
+
+test("неполная минута продавцу не засчитывается", () => {
+  const almost = settle(PLAN, PLAN.startUnix + 119);
+  const full = settle(PLAN, PLAN.startUnix + 120);
+  assert.equal(almost.earnedBaseUnits, PLAN.dustBaseUnits + PLAN.amountPerPeriod);
+  assert.equal(full.earnedBaseUnits, PLAN.dustBaseUnits + PLAN.amountPerPeriod * 2);
+});
+
+test("срок дошёл до конца — возврата нет", () => {
+  const s = settle(PLAN, PLAN.endUnix);
+  assert.equal(s.refundBaseUnits, 0);
+  assert.equal(s.earnedBaseUnits, PLAN.depositedBaseUnits);
+});
+
+test("после конца срока больше полной суммы не начисляется", () => {
+  const s = settle(PLAN, PLAN.endUnix + 86_400);
+  assert.equal(s.refundBaseUnits, 0);
+  assert.equal(s.earnedBaseUnits, PLAN.depositedBaseUnits);
+});
+
+test("комиссия берётся только с заработанного, и ничего не теряется", () => {
+  for (const at of [0, 1, 60, 150, 4_000, 302_400, 999_999]) {
+    const s = settle(PLAN, PLAN.startUnix + at);
+    assert.equal(
+      s.earnedBaseUnits + s.refundBaseUnits,
+      s.grossBaseUnits,
+      `сумма разошлась на ${at} с`,
+    );
+    assert.equal(
+      s.feeBaseUnits + s.netBaseUnits,
+      s.earnedBaseUnits,
+      `выплата разошлась на ${at} с`,
+    );
+    assert.equal(s.feeBaseUnits, Math.round(s.earnedBaseUnits * FEE_RATE));
+  }
 });
 
 test("дробные и отрицательные суммы не принимаются", () => {
   assert.throws(() => splitPayout(10.5));
   assert.throws(() => splitPayout(-1));
-  assert.throws(() => settle(10_000, 0, 0));
-  assert.throws(() => settle(10_000, 7, -1));
 });
 
 test("формат денег без лишних нулей", () => {
