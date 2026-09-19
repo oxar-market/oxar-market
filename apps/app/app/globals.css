@@ -1,0 +1,32 @@
+/* Спайк, а не продукт: оформления ровно столько, чтобы читалось. */
+
+body {
+  margin: 0;
+  padding: 2rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.5;
+  color: #17171a;
+}
+
+main {
+  max-width: 40rem;
+}
+
+button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d8d8d2;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.ok {
+  color: #147a4a;
+  font-weight: 600;
+}
+
+.bad {
+  color: #b42318;
+  font-weight: 600;
+}
