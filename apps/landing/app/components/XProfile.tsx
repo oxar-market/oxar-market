@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { formatUsd, placementSpec, type PlacementKind } from "@oxar/core";
 import { offersFor, type Offer } from "@/lib/listings";
 import { closeDueLots, openLots, type Lot } from "@/lib/auctions";
-import { AuctionLot } from "./AuctionLot";
+import { AuctionLot, BidPage } from "./AuctionLot";
 import { LockedOffers } from "./LockedOffers";
 import { RequestPlacement } from "./RequestPlacement";
 import {
@@ -56,6 +56,9 @@ export function XProfile({
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [lots, setLots] = useState<Lot[] | null>(null);
   const [requesting, setRequesting] = useState<Offer | null>(null);
+  // Ставка - отдельная страница, как и заявка: поля, раскрывающиеся под
+  // лотом, толкали список вниз, а сам лот уезжал из виду.
+  const [biddingLot, setBiddingLot] = useState<Lot | null>(null);
 
   useEffect(() => {
     // Продавцу список чужих предложений не показываем, значит и не грузим.
@@ -80,10 +83,24 @@ export function XProfile({
 
   useEffect(() => {
     setRequesting(null);
+    setBiddingLot(null);
   }, [role]);
 
   if (requesting) {
     return <RequestPlacement offer={requesting} onBack={() => setRequesting(null)} />;
+  }
+
+  // Страница ставки: тот же шаг вглубь, что и заявка на место.
+  if (biddingLot && picked) {
+    return (
+      <div className="xp">
+        <BidPage
+          lot={biddingLot}
+          title={placementSpec(picked).label}
+          onBack={() => setBiddingLot(null)}
+        />
+      </div>
+    );
   }
 
   // Выбранное место - отдельный шаг, а не блок под макетом. Клик по месту это
@@ -92,7 +109,14 @@ export function XProfile({
   if (picked) {
     return (
       <div className="xp">
-        <button type="button" className="link-back" onClick={() => setPicked(null)}>
+        <button
+          type="button"
+          className="link-back"
+          onClick={() => {
+            setPicked(null);
+            setBiddingLot(null);
+          }}
+        >
           Back to the profile
         </button>
 
@@ -137,7 +161,7 @@ export function XProfile({
             {/* Торг идёт первым: у него есть срок, а цены на полке никуда не
                 денутся. */}
             {lots?.map((lot) => (
-              <AuctionLot key={lot.id} lot={lot} />
+              <AuctionLot key={lot.id} lot={lot} onBid={() => setBiddingLot(lot)} />
             ))}
 
             {offers?.map((offer) => (

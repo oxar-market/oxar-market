@@ -37,10 +37,14 @@ function day(date: string): string {
   });
 }
 
-export function AuctionLot({ lot }: { lot: Lot }) {
+/**
+ * Карточка лота. Сама ставка живёт на своей странице (BidPage): форма,
+ * раскрывающаяся под лотом, толкала весь экран вниз, а место, на которое
+ * ставят, уезжало из виду. Кнопка здесь только зовёт onBid.
+ */
+export function AuctionLot({ lot, onBid }: { lot: Lot; onBid: () => void }) {
   const [bids, setBids] = useState<PublicBid[] | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [open, setOpen] = useState(false);
 
   const closesAt = Date.parse(lot.closes_at);
 
@@ -63,10 +67,6 @@ export function AuctionLot({ lot }: { lot: Lot }) {
   const top = bids?.[0] ?? null;
   const need = minBidCents(lot.reserve_cents, top?.amount_cents ?? null);
   const running = closesAt > now;
-
-  async function refresh() {
-    setBids(await lotBids(lot.id));
-  }
 
   return (
     <div className="lot">
@@ -97,8 +97,8 @@ export function AuctionLot({ lot }: { lot: Lot }) {
           )}
         </span>
         {running && (
-          <button type="button" className="lot-bid" onClick={() => setOpen(!open)}>
-            {open ? "Close" : `Bid ${formatUsd(need)}+`}
+          <button type="button" className="lot-bid" onClick={onBid}>
+            Bid {formatUsd(need)}+
           </button>
         )}
       </div>
@@ -113,23 +113,69 @@ export function AuctionLot({ lot }: { lot: Lot }) {
         </ul>
       )}
 
-      {open && running && (
-        <BidForm
-          lot={lot}
-          need={need}
-          onPlaced={() => {
-            setOpen(false);
-            refresh();
-          }}
-        />
-      )}
-
       {!running && (
         <p className="muted small">
           Bidding is over. The winner gets the spot for these dates.
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * Страница ставки: стрелка обратно, короткая шапка с контекстом лота и форма.
+ * Свежую верхнюю ставку страница читает сама - между экраном лота и решением
+ * ставить проходит время, и минимум мог вырасти.
+ */
+export function BidPage({
+  lot,
+  title,
+  onBack,
+}: {
+  lot: Lot;
+  title: string;
+  onBack: () => void;
+}) {
+  const [bids, setBids] = useState<PublicBid[] | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    lotBids(lot.id).then((rows) => {
+      if (live) setBids(rows);
+    });
+    return () => {
+      live = false;
+    };
+  }, [lot.id]);
+
+  const top = bids?.[0] ?? null;
+  const need = minBidCents(lot.reserve_cents, top?.amount_cents ?? null);
+
+  return (
+    <>
+      <header className="desk-page-head">
+        <button type="button" className="pill pill-icon" onClick={onBack} aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M19 12H5" />
+            <path d="M11 6l-6 6 6 6" />
+          </svg>
+        </button>
+        <h2>Bid on the {title.toLowerCase()}</h2>
+      </header>
+
+      <p className="muted small">
+        {day(lot.start_date)} - {day(lot.end_date)} · @{lot.listing.seller.x_handle} ·{" "}
+        {top
+          ? `top bid ${formatUsd(top.amount_cents)}`
+          : `reserve ${formatUsd(lot.reserve_cents)}`}
+      </p>
+
+      {bids === null ? (
+        <p className="muted small">Loading…</p>
+      ) : (
+        <BidForm lot={lot} need={need} onPlaced={onBack} />
+      )}
+    </>
   );
 }
 

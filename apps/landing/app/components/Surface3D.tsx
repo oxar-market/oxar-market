@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { lotBids, lotsOnSurface, type Lot, type PublicBid } from "@/lib/auctions";
-import { AuctionLot } from "./AuctionLot";
+import { AuctionLot, BidPage } from "./AuctionLot";
 
 /**
  * Вещь из физического мира, размеченная под рекламу.
@@ -225,8 +225,16 @@ export function Surface3D({
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
   const [lots, setLots] = useState<Lot[]>([]);
   const [picked, setPicked] = useState<string | null>(null);
+  // Форма ставки - отдельная страница, а не поля под лотом: раскрываясь, они
+  // толкали экран вниз и место уезжало из виду.
+  const [bidding, setBidding] = useState(false);
   const [variant, setVariant] = useState(0);
   const [tab, setTab] = useState<"about" | "spots">("about");
+
+  // Смена места - любой дорогой - закрывает страницу ставки: она про прошлый лот.
+  useEffect(() => {
+    setBidding(false);
+  }, [picked]);
   // Клик по месту приходит из сцены, а обработчик живёт в React. Через ref -
   // чтобы сцену не пересобирать на каждый ре-рендер.
   const onPick = useRef<(id: string) => void>(() => {});
@@ -783,15 +791,23 @@ export function Surface3D({
       <p className="ts-hint">{hint()}</p>
 
       {picked && lotFor(picked) ? (
-        <>
-          <button type="button" className="link-back" onClick={() => setPicked(null)}>
-            {spec.words.back}
-          </button>
-          <div className="ts-offers-head">
-            <strong>{label(picked)}</strong>
-          </div>
-          <AuctionLot lot={lotFor(picked)!} />
-        </>
+        bidding ? (
+          <BidPage
+            lot={lotFor(picked)!}
+            title={label(picked)}
+            onBack={() => setBidding(false)}
+          />
+        ) : (
+          <>
+            <button type="button" className="link-back" onClick={() => setPicked(null)}>
+              {spec.words.back}
+            </button>
+            <div className="ts-offers-head">
+              <strong>{label(picked)}</strong>
+            </div>
+            <AuctionLot lot={lotFor(picked)!} onBid={() => setBidding(true)} />
+          </>
+        )
       ) : (
         <>
           {/* Цвета вещи. Миниатюры - снимки этой же модели: по ним видно, как
