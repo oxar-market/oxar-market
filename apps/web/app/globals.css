@@ -1,0 +1,75 @@
+/* Заглушка: оформления ровно столько, чтобы страница выглядела законченной, а
+   не недоделанной. Настоящий лендинг придёт, когда будет что показывать. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: #16181d;
+  background: #fbfbf9;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* По центру экрана, а не по центру страницы: на пустой заглушке текст, сидящий
+   вверху, читается как незагрузившийся. */
+main {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2.5rem;
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.soon {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #6b6b73;
+}
+
+/* Кнопка-пилюля: единственное действие на странице, и оно должно читаться
+   как действие, а не как ссылка в тексте. */
+.launch {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #16181d;
+  padding: 0.8125rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  transition: transform 0.12s ease-out, opacity 0.12s;
+}
+
+.launch:hover {
+  opacity: 0.88;
+}
+
+.launch:active {
+  transform: scale(0.98);
+}
+
+.launch:focus-visible {
+  outline: 2px solid #16181d;
+  outline-offset: 3px;
+}

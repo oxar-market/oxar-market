@@ -1,0 +1,29 @@
+# Заголовки для Cloudflare Pages.
+#
+# Список короче, чем у приложения: здесь нет ни кошелька, ни базы, ни капчи -
+# только своя статика. Всё чужое закрыто, и открывать пока нечего.
+#
+# Общего правила кэша на / нет намеренно: Pages склеивает все подходящие блоки,
+# а не выбирает один, и рядом с частным значением появлялось бы ещё и общее.
+
+/*
+  # 'unsafe-inline' в script-src: Next при статическом экспорте кладёт на
+  # страницу встроенные скрипты, а нонсы требуют сервера, которого у нас нет.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+  # Никто не смеет положить нас в свой iframe. frame-ancestors выше делает то
+  # же самое для новых браузеров, этот - для старых.
+  X-Frame-Options: DENY
+
+  # Браузер не гадает тип файла по содержимому.
+  X-Content-Type-Options: nosniff
+
+  # Чужим сайтам не сообщаем, с какой именно страницы к ним пришли.
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # Ничего из этого лендингу не нужно.
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+# В имени файла хэш сборки, поэтому по этому адресу содержимое не меняется.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
