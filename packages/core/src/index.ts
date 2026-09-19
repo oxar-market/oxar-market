@@ -35,6 +35,7 @@ export {
   MIN_STEP_CENTS,
   closesAfterBid,
   isOpen,
+  lotTerms,
   minBidCents,
   winner,
   type Bid,

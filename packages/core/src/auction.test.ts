@@ -5,6 +5,7 @@ import {
   EXTEND_MS,
   closesAfterBid,
   isOpen,
+  lotTerms,
   minBidCents,
   winner,
   type Bid,
@@ -81,3 +82,20 @@ test("ставки ниже резерва не выигрывают - лот н
 function bid(bidder: string, amountCents: number, at: number): Bid {
   return { bidder, amountCents, at };
 }
+
+test("условия торга переводятся в единицы контракта без потерь", () => {
+  const terms = lotTerms(15_000);
+  assert.equal(terms.reserveBaseUnits, 150_000_000, "резерв в базовых единицах");
+  assert.equal(terms.minStepBaseUnits, 1_000_000, "доллар - это миллион единиц");
+  assert.equal(terms.extendSeconds, 300, "пять минут, как в правилах");
+});
+
+test("наш минимум никогда не строже того, что примет контракт", () => {
+  // Программа считает шаг целым делением вниз, мы - с округлением. Наш ответ
+  // обязан быть не меньше: иначе показанная человеку сумма отлетит.
+  for (const top of [1, 7, 99, 101, 333, 1_234, 99_999]) {
+    const ours = minBidCents(100, top) - top;
+    const theirs = Math.floor((top * 5) / 100);
+    assert.ok(ours >= theirs, `на ${top} наш шаг ${ours} мягче контрактного ${theirs}`);
+  }
+});
