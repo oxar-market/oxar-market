@@ -3,11 +3,16 @@
 // По умолчанию идёт в девнет. Кран публичного девнета исчерпывается на день,
 // поэтому надёжнее поднять локальный валидатор с теми же программами:
 //
+// Программы клонируются как обновляемые: у них код лежит в отдельном аккаунте
+// programdata, и обычный --clone тянет только заголовок. Валидатор такую
+// программу поднимает, но первый же вызов падает с «Program is not deployed».
+//
 //   solana-test-validator --reset --url https://api.devnet.solana.com \
-//     --clone strmRqUCoQUgGUan5YhzUZa6KqdzwX5L6FpUxfmKg5m \
-//     --clone aSTRM2NKoKxNnkmLWk9sz3k74gKBk9t7bpPrTGxMszH \
-//     --clone pardoTarcc6HKsPcbXkVycxsJsoN9QEzrdHgVdHAGY3 \
-//     --clone HqDGZjaVRXJ9MGRQEw7qDc2rAr6iH1n1kAQdCZaCMfMZ \
+//     --clone-upgradeable-program strmRqUCoQUgGUan5YhzUZa6KqdzwX5L6FpUxfmKg5m \
+//     --clone-upgradeable-program aSTRM2NKoKxNnkmLWk9sz3k74gKBk9t7bpPrTGxMszH \
+//     --clone-upgradeable-program pardoTarcc6HKsPcbXkVycxsJsoN9QEzrdHgVdHAGY3 \
+//     --clone-upgradeable-program pardpVtPjC8nLj1Dwncew62mUzfChdCX1EaoZe8oCAa \
+//     --clone-upgradeable-program HqDGZjaVRXJ9MGRQEw7qDc2rAr6iH1n1kAQdCZaCMfMZ \
 //     --clone Aa2JJfFzUN3V54DXUHRBJowFw416xfZHpPk9DaNy3iYs \
 //     --clone B743wFVk2pCYhV91cn287e1xY7f1vt4gdY48hhNiuQmT \
 //     --clone Gssm3vfi8s65R31SBdmQRq6cKeYojGgup7whkw4VCiQj
@@ -94,8 +99,12 @@ console.log("\n=== девнет, живые транзакции ===\n");
 
 const buyer = web3.Keypair.generate();
 const seller = web3.Keypair.generate();
+// Комиссия уходит третьей стороне, поэтому и в прогоне она третий адрес: если
+// бы платформа и продавец совпадали, расщепление сошлось бы само собой.
+const platform = web3.Keypair.generate();
 console.log(`  покупатель ${buyer.publicKey.toBase58()}`);
-console.log(`  продавец   ${seller.publicKey.toBase58()}\n`);
+console.log(`  продавец   ${seller.publicKey.toBase58()}`);
+console.log(`  платформа  ${platform.publicKey.toBase58()}\n`);
 
 try {
   await fund(buyer, 1);
@@ -115,10 +124,11 @@ await token.mintTo(connection, buyer, mint, buyerAta.address, buyer, 1_000_000_0
 ok("монета заведена и начислена", `${mint.toBase58().slice(0, 8)}…`);
 
 process.env.NEXT_PUBLIC_USDC_MINT = mint.toBase58();
+process.env.NEXT_PUBLIC_OXAR_FEE_WALLET = platform.publicKey.toBase58();
 
 const { payOnce } = await import("../lib/transfer.ts");
 const { openStream, cancelStream } = await import("../lib/stream.ts");
-const { settle, streamPlan, toUsdcBaseUnits } = await import("@oxar/core");
+const { settle, splitPayout, streamPlan, toUsdcBaseUnits } = await import("@oxar/core");
 
 const balance = async (owner) => {
   const ata = await token.getAssociatedTokenAddress(mint, owner);
@@ -127,21 +137,42 @@ const balance = async (owner) => {
   return (await token.getAccount(connection, ata)).amount;
 };
 
-// 1. Разовый перевод
+// 1. Разовый перевод с комиссией.
+//
+// Цена намеренно с нечётным центом: 10% от 2505 - это 250.5, то есть ровно тот
+// случай, где выплата, комиссия и сумма сделки могут разъехаться на цент.
 try {
-  const before = await balance(seller.publicKey);
+  const PAY = 2505;
+  const split = splitPayout(PAY);
+  const sellerBefore = await balance(seller.publicKey);
+  const platformBefore = await balance(platform.publicKey);
+  const buyerBefore = await balance(buyer.publicKey);
+
   const signature = await payOnce({
     wallet: asWallet(buyer),
     recipient: seller.publicKey.toBase58(),
-    priceCents: 2500,
+    priceCents: PAY,
   });
-  const after = await balance(seller.publicKey);
-  const moved = after - before;
-  const want = BigInt(toUsdcBaseUnits(2500));
-  if (moved !== want) throw new Error(`дошло ${moved}, ожидали ${want}`);
-  ok("перевод: счёт получателя заведён, сумма дошла", `${signature.slice(0, 12)}…`);
+
+  const toSeller = (await balance(seller.publicKey)) - sellerBefore;
+  const toPlatform = (await balance(platform.publicKey)) - platformBefore;
+  const fromBuyer = buyerBefore - (await balance(buyer.publicKey));
+
+  if (toSeller !== BigInt(toUsdcBaseUnits(split.netCents))) {
+    throw new Error(`продавцу ${toSeller}, а по splitPayout ${toUsdcBaseUnits(split.netCents)}`);
+  }
+  if (toPlatform !== BigInt(toUsdcBaseUnits(split.feeCents))) {
+    throw new Error(`комиссия ${toPlatform}, а по splitPayout ${toUsdcBaseUnits(split.feeCents)}`);
+  }
+  if (toSeller + toPlatform !== fromBuyer) {
+    throw new Error(`покупатель отдал ${fromBuyer}, дошло ${toSeller + toPlatform}`);
+  }
+  ok(
+    "перевод: счета заведены, 10% ушли платформе",
+    `${split.netCents}c продавцу + ${split.feeCents}c нам, ${signature.slice(0, 12)}…`,
+  );
 } catch (cause) {
-  fail("перевод", cause);
+  fail("перевод с комиссией", cause);
 }
 
 // 2. Стрим: вся сумма сделки уходит в контракт
@@ -176,8 +207,8 @@ if (streamId) {
     const before = await balance(buyer.publicKey);
     await cancelStream({ wallet: asWallet(buyer), streamId });
     const back = (await balance(buyer.publicKey)) - before;
-    // Стрим ещё не начался: по settle() за ноль отстоявших дней возвращается всё.
-    const expected = BigInt(settle(plan.depositedBaseUnits, plan.days, 0).refundCents);
+    // Стрим ещё не начался, значит по settle() возвращается вся сумма.
+    const expected = BigInt(settle(plan, plan.startUnix - 1).refundBaseUnits);
     if (back !== expected) throw new Error(`вернулось ${back}, по settle() ${expected}`);
     ok("отмена до старта: вернулось всё, как считает settle()");
   } catch (cause) {

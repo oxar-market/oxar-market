@@ -1,6 +1,6 @@
 "use client";
 
-import { toUsdcBaseUnits } from "@oxar/core";
+import { splitPayout, toUsdcBaseUnits } from "@oxar/core";
 import { CLUSTER_URL, USDC_DEVNET_MINT } from "./stream.ts";
 import type { Wallet } from "./wallet.ts";
 
@@ -38,8 +38,21 @@ type PhantomWallet = Wallet & {
 };
 
 /**
+ * Куда уходит наши 10%. Через переменную по той же причине, что сеть и монета:
+ * адрес разный на девнете и в мейннете, а прогон должен уметь подставить свой.
+ *
+ * Пусто - комиссия не берётся и продавец получает всё. Это рабочее состояние,
+ * а не поломка: на первых сделках мы её не берём, и тогда адреса просто нет.
+ */
+export const FEE_WALLET = process.env.NEXT_PUBLIC_OXAR_FEE_WALLET ?? null;
+
+/**
  * Заплатить за бронь. Возвращает подпись транзакции - по ней сделку видно в
  * обозревателе, и её же мы записываем в бронь.
+ *
+ * Покупатель платит полную цену одной подписью, а делится она уже внутри
+ * транзакции: продавцу за вычетом комиссии, нам - комиссия. Двумя переводами
+ * это делать нельзя - второй мог бы не пройти, и деньги разъехались бы.
  */
 export async function payOnce(input: {
   wallet: PhantomWallet;
@@ -52,32 +65,39 @@ export async function payOnce(input: {
 
   const connection = new web3.Connection(CLUSTER_URL, "confirmed");
   const payer = new web3.PublicKey(from.toBase58());
-  const seller = new web3.PublicKey(input.recipient);
   const mint = new web3.PublicKey(USDC_DEVNET_MINT);
-
   const fromAta = await token.getAssociatedTokenAddress(mint, payer);
-  const toAta = await token.getAssociatedTokenAddress(mint, seller);
 
-  const instructions = [];
-  // У продавца может не быть счёта под этот токен. Заводим его за счёт
-  // покупателя: иначе перевод просто отвалится, а человек не поймёт почему.
-  const sellerAccount = await connection.getAccountInfo(toAta);
-  if (!sellerAccount) {
+  // Тип указан явно: инструкции складывает вложенная функция, а по её вызовам
+  // вывести элемент массива TypeScript уже не может.
+  const instructions: ReturnType<typeof token.createTransferCheckedInstruction>[] = [];
+
+  /**
+   * Перевод одному получателю. У него может не быть счёта под этот токен -
+   * заводим за счёт покупателя: иначе перевод просто отвалится, а человек не
+   * поймёт почему.
+   */
+  async function sendTo(owner: string, baseUnits: number) {
+    const to = new web3.PublicKey(owner);
+    const toAta = await token.getAssociatedTokenAddress(mint, to);
+
+    if (!(await connection.getAccountInfo(toAta))) {
+      instructions.push(
+        token.createAssociatedTokenAccountInstruction(payer, toAta, to, mint),
+      );
+    }
     instructions.push(
-      token.createAssociatedTokenAccountInstruction(payer, toAta, seller, mint),
+      token.createTransferCheckedInstruction(fromAta, mint, toAta, payer, baseUnits, 6),
     );
   }
 
-  instructions.push(
-    token.createTransferCheckedInstruction(
-      fromAta,
-      mint,
-      toAta,
-      payer,
-      toUsdcBaseUnits(input.priceCents),
-      6,
-    ),
-  );
+  // Как делится сумма, считает core: и веб, и мобилка, и тест должны получать
+  // один и тот же ответ, включая округление последнего цента.
+  const split = splitPayout(input.priceCents);
+  const fee = FEE_WALLET && split.feeCents > 0 ? FEE_WALLET : null;
+
+  await sendTo(input.recipient, toUsdcBaseUnits(fee ? split.netCents : split.grossCents));
+  if (fee) await sendTo(fee, toUsdcBaseUnits(split.feeCents));
 
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
   const tx = new web3.Transaction({
