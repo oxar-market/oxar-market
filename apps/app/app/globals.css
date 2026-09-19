@@ -1,0 +1,32 @@
+/* Оформления пока ровно столько, чтобы читалось: дизайн придёт вместе с
+   аукционом, а не раньше. */
+
+body {
+  margin: 0;
+  padding: 2rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.5;
+  color: #17171a;
+}
+
+main {
+  max-width: 40rem;
+}
+
+button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border: 1px solid #d8d8d2;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.muted {
+  color: #6b6b73;
+  font-size: 0.875rem;
+}
+
+.bad {
+  color: #b42318;
+}

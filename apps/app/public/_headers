@@ -1,0 +1,41 @@
+# Заголовки для Cloudflare Pages.
+#
+# Это те две вещи, которые Privy требует подтвердить при переводе в прод, и
+# требует по делу: мы подписываем платежи, а не показываем блог.
+#
+# Правила кэша здесь тоже - Pages склеивает все подходящие блоки, а не выбирает
+# один, поэтому общего правила на / нет намеренно: рядом с частным значением
+# появлялось бы ещё и общее, и браузер читал бы первое.
+
+/*
+  # Кто может исполняться и куда можно ходить. Всё, чего нет в списке, браузер
+  # заблокирует - в том числе чужой скрипт, заехавший через зависимость.
+  #
+  # 'unsafe-inline' в script-src: Next при статическом экспорте кладёт на
+  # страницу встроенные скрипты, а нонсы требуют сервера, которого у нас нет.
+  # Убрать можно будет только вместе со статикой.
+  #
+  # auth.privy.io - iframe встроенного кошелька, без него не подписать.
+  # challenges.cloudflare.com - капча Privy при входе.
+  # walletconnect - подключение мобильных кошельков.
+  # *.rpc.privy.systems - их узлы RPC.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.devnet.solana.com https://api.mainnet-beta.solana.com
+
+  # Никто не смеет положить нас в свой iframe. Защита от кликджекинга: иначе
+  # наш экран накрывают приманкой, человек жмёт «забрать приз», а жмёт «Bid».
+  # frame-ancestors выше делает то же самое для новых браузеров, этот - для старых.
+  X-Frame-Options: DENY
+
+  # Браузер не гадает тип файла по содержимому: загруженная картинка не сможет
+  # притвориться скриптом.
+  X-Content-Type-Options: nosniff
+
+  # Чужим сайтам не сообщаем, с какой именно страницы к ним пришли.
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # Ничего из этого нам не нужно, и пусть будет выключено.
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+# В имени файла хэш сборки, поэтому по этому адресу содержимое не меняется.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
