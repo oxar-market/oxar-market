@@ -1,0 +1,20 @@
+Copyright (c) 2026 OXAR. All rights reserved.
+
+This software and its source code are proprietary and confidential.
+
+No permission is granted to any person or entity to use, copy, modify, merge,
+publish, distribute, sublicense, or sell any part of this software, except
+under a separate written agreement signed by the copyright holder.
+
+This repository may be publicly visible. Visibility is not a license. Viewing,
+cloning, or forking it grants no right to use its contents for any purpose,
+commercial or otherwise.
+
+If you obtained a copy of this software without a written agreement, you are
+not permitted to use it.
+
+Third-party dependencies are listed in package.json and pnpm-lock.yaml and
+remain under their own licenses. This notice covers only the code in this
+repository.
+
+Contact: daniel.l@oxar.app

@@ -1,6 +1,7 @@
 {
   "name": "oxar",
   "private": true,
+  "license": "UNLICENSED",
   "packageManager": "pnpm@9.1.0",
   "scripts": {
     "dev": "turbo run dev",
