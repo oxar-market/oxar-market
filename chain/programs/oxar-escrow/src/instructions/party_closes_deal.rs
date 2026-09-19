@@ -18,6 +18,10 @@ use crate::{error::EscrowError, instructions::payout, state::Deal};
 /// После конца срока результат тот же, что и при отмене: `earned_at` отдаёт всю
 /// сумму, покупателю не возвращается ничего. Отдельной инструкции «завершить»
 /// поэтому нет.
+/// Аккаунты вынесены на кучу через `Box`. Их здесь десять, и Anchor по
+/// умолчанию раскладывает их на стеке, которого у программы четыре килобайта:
+/// без `Box` инструкция падает с «Access violation in stack frame». Поймано
+/// интеграционным тестом, а не рассуждением.
 #[derive(Accounts)]
 pub struct PartyClosesDeal<'info> {
     #[account(mut)]
@@ -36,14 +40,14 @@ pub struct PartyClosesDeal<'info> {
         constraint = party.key() == deal.buyer || party.key() == deal.seller
             @ EscrowError::NotAParty,
     )]
-    pub deal: Account<'info, Deal>,
+    pub deal: Box<Account<'info, Deal>>,
 
     #[account(
         mut,
         seeds = [b"vault", deal.key().as_ref()],
         bump = deal.vault_bump,
     )]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: сверяется с `deal.buyer` через has_one.
     #[account(mut)]
@@ -61,7 +65,7 @@ pub struct PartyClosesDeal<'info> {
         associated_token::authority = buyer,
         associated_token::token_program = token_program,
     )]
-    pub buyer_tokens: InterfaceAccount<'info, TokenAccount>,
+    pub buyer_tokens: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -69,7 +73,7 @@ pub struct PartyClosesDeal<'info> {
         associated_token::authority = seller,
         associated_token::token_program = token_program,
     )]
-    pub seller_tokens: InterfaceAccount<'info, TokenAccount>,
+    pub seller_tokens: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -77,9 +81,9 @@ pub struct PartyClosesDeal<'info> {
         associated_token::authority = platform,
         associated_token::token_program = token_program,
     )]
-    pub platform_tokens: InterfaceAccount<'info, TokenAccount>,
+    pub platform_tokens: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    pub mint: InterfaceAccount<'info, Mint>,
+    pub mint: Box<InterfaceAccount<'info, Mint>>,
     pub token_program: Interface<'info, TokenInterface>,
 }
 
