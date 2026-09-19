@@ -9,10 +9,13 @@ name: Deploy
 #
 # PR по-прежнему только проверяется: тесты и сборка.
 #
-# Шаг деплоя выключен: кодовая база снесена под аукцион, собирать пока нечего.
-# Включить обратно двумя проектами Pages, когда появятся приложения:
-#   apps/web -> oxar.app       (лендинг и игра)
-#   apps/app -> app.oxar.app   (аукцион)
+# Проектов Pages два, по одному на домен:
+#   apps/web -> oxar.app       (лендинг)
+#   apps/app -> app.oxar.app   (приложение)
+#
+# Оба уезжают одним прогоном, без разбора, что именно изменилось. Загрузка
+# готового каталога занимает секунды, а условная логика «деплоить только
+# изменившееся» стоила бы дороже, чем экономит.
 
 on:
   push:
@@ -49,9 +52,8 @@ jobs:
       - run: pnpm build
 
   deploy:
-    # Выключено до появления apps/web и apps/app. Условие оставлено целиком,
-    # чтобы вернуть шаг снятием одного false, а не сборкой заново.
-    if: false && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,19 +69,51 @@ jobs:
       - run: pnpm test
 
       # Ключи публичные - они и так уезжают в браузер, - но в статику их
-      # вписывает сборка, поэтому без них сайт остался бы без данных.
+      # вписывает сборка, поэтому без них приложение осталось бы без входа и
+      # без данных. Лендингу из них не нужно ничего, он статика целиком.
       - run: pnpm build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
 
-      # Wrangler стоит в зависимостях с точной версией, а не тянется из сети на
-      # каждый деплой: в этом шаге есть токен Cloudflare, и подменённый пакет
-      # исполнился бы с ним. Хэш пакета проверяется по lockfile.
-      - name: Deploy to Cloudflare Pages
+      # Сборка без ключей собирается молча и уезжает в прод мёртвой: у Privy
+      # нет приложения, у Supabase нет адреса. Лучше упасть здесь.
+      - name: Проверить, что ключи доехали в сборку
+        run: |
+          test -f apps/app/out/index.html || { echo "нет сборки приложения"; exit 1; }
+          test -f apps/web/out/index.html || { echo "нет сборки лендинга"; exit 1; }
+          grep -rq "${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}" apps/app/out/_next/static \
+            || { echo "в сборке приложения нет app id Privy"; exit 1; }
+
+      # Проект под приложение заводится сам, если его ещё нет: иначе первый
+      # деплой требовал бы похода в дашборд, а забытый шаг выглядел бы как
+      # поломка деплоя. Команда падает, если проект уже есть, - это и есть
+      # обычный случай, поэтому её отказ не считается ошибкой. Если же проект
+      # действительно не удалось создать, следующий шаг упадёт громко.
+      - name: Завести проект приложения, если его нет
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: >-
-          pnpm exec wrangler pages deploy apps/landing/out
+          pnpm exec wrangler pages project create oxar-app
+          --production-branch=main || true
+
+      # Wrangler стоит в зависимостях с точной версией, а не тянется из сети на
+      # каждый деплой: в этом шаге есть токен Cloudflare, и подменённый пакет
+      # исполнился бы с ним. Хэш пакета проверяется по lockfile.
+      - name: Лендинг -> oxar.app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: >-
+          pnpm exec wrangler pages deploy apps/web/out
           --project-name=oxar-landing --branch=main --commit-dirty=true
+
+      - name: Приложение -> app.oxar.app
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: >-
+          pnpm exec wrangler pages deploy apps/app/out
+          --project-name=oxar-app --branch=main --commit-dirty=true
