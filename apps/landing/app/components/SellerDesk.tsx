@@ -15,6 +15,7 @@ import type { SellerAccount } from "@/lib/use-seller-account";
 import {
   addListing,
   decide,
+  deleteListing,
   myBookings,
   myListings,
   myLots,
@@ -27,10 +28,22 @@ import {
   type MyLot,
   type MySeller,
 } from "@/lib/seller";
-import { ArrowLeft, Chevron, Gavel, Pause, Pencil, Play, Plus, SignOut } from "./icons";
+import { reviewsFor, type Review as ReviewRow } from "@/lib/reviews.ts";
+import {
+  ArrowLeft,
+  Chevron,
+  Gavel,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  SignOut,
+  Trash,
+} from "./icons";
 import { Notice } from "./Notice";
 import { PayoutWallet } from "./PayoutWallet";
 import { usePriceFields } from "./PriceFields";
+import { Review } from "./Review";
 import { NewAuction, SpotAuctions } from "./SellerLots";
 
 // Кабинет продавца. Вход по ссылке на почту, дальше свои места и заявки на них.
@@ -285,6 +298,7 @@ function Desk({
   const [bookings, setBookings] = useState<MyBooking[] | null>(null);
   const [lots, setLots] = useState<MyLot[] | null>(null);
   const [view, setView] = useState<View>({ kind: "list" });
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [error, setError] = useState("");
 
   const reload = useCallback(async () => {
@@ -300,6 +314,11 @@ function Desk({
     setListings(spots);
     setBookings(requests);
     setLots(auctions);
+    setReviews(
+      await reviewsFor(
+        requests.filter((b) => b.status === "completed").map((b) => b.id),
+      ),
+    );
   }, [seller.id]);
 
   useEffect(() => {
@@ -307,6 +326,10 @@ function Desk({
   }, [reload]);
 
   const waiting = (bookings ?? []).filter((booking) => booking.status === "requested");
+  // Всё, что уже не ждёт решения продавца: и состоявшееся, и сорвавшееся.
+  const past = (bookings ?? []).filter((booking) =>
+    ["completed", "cancelled", "rejected"].includes(booking.status),
+  );
   const spot =
     view.kind === "list" || view.kind === "add" || view.kind === "handle"
       ? null
@@ -382,6 +405,10 @@ function Desk({
           onEditPrice={() => setView({ kind: "price", id: spot.id })}
           onAuction={() => setView({ kind: "auction", id: spot.id })}
           onChanged={reload}
+          onDeleted={() => {
+            setView({ kind: "list" });
+            reload();
+          }}
         />
       </DeskPage>
     );
@@ -507,6 +534,39 @@ function Desk({
       </section>
       )}
 
+      {/* Что уже прошло. Здесь же продавец оценивает покупателя: другого
+          момента для этого нет, а по горячим следам он ещё помнит, как всё
+          было. */}
+      {past.length > 0 && (
+        <section className="req-row">
+          <span className="field-label">History</span>
+          {past.map((booking) => (
+            <div key={booking.id} className="desk-item desk-past">
+              <div className="desk-lines">
+                <strong>@{booking.buyer_handle}</strong>
+                <span className="muted small">
+                  {booking.start_date} to {booking.end_date} ·{" "}
+                  {formatUsd(booking.price_cents)} · {booking.status}
+                </span>
+              </div>
+              {booking.status === "completed" && (
+                <Review
+                  bookingId={booking.id}
+                  side="seller"
+                  mine={reviews.find(
+                    (r) => r.booking_id === booking.id && r.author === "seller",
+                  )}
+                  theirs={reviews.find(
+                    (r) => r.booking_id === booking.id && r.author === "buyer",
+                  )}
+                  onSaved={reload}
+                />
+              )}
+            </div>
+          ))}
+        </section>
+      )}
+
       <section className="req-row">
         <span className="field-label">Your spots</span>
         {listings === null && <p className="muted small">Loading…</p>}
@@ -559,13 +619,19 @@ function SpotPage({
   onEditPrice,
   onAuction,
   onChanged,
+  onDeleted,
 }: {
   listing: MyListing;
   lots: MyLot[];
   onEditPrice: () => void;
   onAuction: () => void;
   onChanged: () => void;
+  /** Места больше нет: показывать его страницу не на чем. */
+  onDeleted: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState("");
+
   return (
     <>
       <div className="spot-facts">
@@ -601,7 +667,38 @@ function SpotPage({
           <Gavel />
           Start an auction
         </button>
+        {/* Удаление в два нажатия, без окна подтверждения: модальные окна
+            браузера выбиваются из стола, а промахнуться по кнопке, которая
+            сначала переспрашивает, трудно. */}
+        <button
+          type="button"
+          className={confirming ? "pill on" : "pill"}
+          onClick={async () => {
+            if (!confirming) {
+              setConfirming(true);
+              return;
+            }
+            setConfirming(false);
+            const result = await deleteListing(listing.id);
+            if (result === "has_history") {
+              // Место с историей удалить нельзя, и это не ошибка: прошлые
+              // сделки ссылаются на него и должны продолжать ссылаться.
+              setError("This spot has bookings behind it. Pause it instead.");
+              return;
+            }
+            if (result === "error") {
+              setError("Could not delete that. Try again.");
+              return;
+            }
+            onDeleted();
+          }}
+        >
+          <Trash />
+          {confirming ? "Really?" : "Delete"}
+        </button>
       </div>
+
+      {error && <Notice tone="error">{error}</Notice>}
 
       <SpotAuctions lots={lots} onChanged={onChanged} />
     </>

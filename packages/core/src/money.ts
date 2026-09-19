@@ -23,34 +23,50 @@ export function splitPayout(grossCents: number): Split {
   return { grossCents, feeCents, netCents: grossCents - feeCents };
 }
 
-export type Settlement = Split & {
+export type Settlement = {
+  /** вся сумма сделки, базовые единицы */
+  grossBaseUnits: number;
+  /** сколько к этому моменту ушло продавцу */
+  earnedBaseUnits: number;
+  /** наша доля с заработанного */
+  feeBaseUnits: number;
+  /** что остаётся продавцу из заработанного */
+  netBaseUnits: number;
   /** возврат покупателю за время, которое место не стояло */
-  refundCents: number;
+  refundBaseUnits: number;
 };
 
 /**
- * Размещение сняли раньше срока. Продавец получает за отстоявшее время,
- * остальное возвращается покупателю. Комиссию берём только с заработанной
- * части: платить нам за сорванную сделку продавец не должен.
+ * Сколько кому причитается, если остановить стрим в этот момент.
+ *
+ * Меряется минутами, а не днями, потому что минутами меряет контракт: доля
+ * уходит продавцу за каждый целый период, а остаток от деления отдаётся сразу
+ * на старте. Дневная арифметика тут была бы своей, отдельной правдой - и она
+ * расходилась бы с тем, что реально лежит на счетах.
+ *
+ * Считается в базовых единицах, а не в центах: остаток от деления суммы на
+ * число периодов меньше цента на период, но за неделю набегает больше цента, и
+ * в центах он потерялся бы.
+ *
+ * Комиссию берём только с заработанного: платить нам за сорванную сделку
+ * продавец не должен.
  */
-export function settle(
-  grossCents: number,
-  termDays: number,
-  ranDays: number,
-): Settlement {
-  assertWholeNonNegative(grossCents, "grossCents");
-  if (termDays <= 0) throw new Error("termDays must be positive");
-  if (ranDays < 0) throw new Error("ranDays must not be negative");
+export function settle(plan: StreamPlan, atUnix: number): Settlement {
+  const capped = Math.min(Math.max(atUnix, plan.startUnix), plan.endUnix);
+  const periods = Math.floor((capped - plan.startUnix) / plan.period);
 
-  const served = Math.min(ranDays, termDays);
-  const earnedCents = Math.round((grossCents * served) / termDays);
-  const { feeCents, netCents } = splitPayout(earnedCents);
+  const earnedBaseUnits =
+    atUnix < plan.startUnix
+      ? 0
+      : plan.dustBaseUnits + plan.amountPerPeriod * periods;
+  const feeBaseUnits = Math.round(earnedBaseUnits * FEE_RATE);
 
   return {
-    grossCents,
-    feeCents,
-    netCents,
-    refundCents: grossCents - earnedCents,
+    grossBaseUnits: plan.depositedBaseUnits,
+    earnedBaseUnits,
+    feeBaseUnits,
+    netBaseUnits: earnedBaseUnits - feeBaseUnits,
+    refundBaseUnits: plan.depositedBaseUnits - earnedBaseUnits,
   };
 }
 

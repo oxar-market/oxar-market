@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { placementSpec, type PlacementKind, type Pricing } from "@oxar/core";
+import {
+  formatUsd,
+  placementSpec,
+  splitPayout,
+  type PlacementKind,
+  type Pricing,
+} from "@oxar/core";
 
 // Поля цены: пакет или ставка за сутки. Одни и те же при создании места и при
 // правке, поэтому живут отдельно - иначе два места разошлись бы в проверках.
@@ -26,6 +32,14 @@ export function usePriceFields(kind: PlacementKind, initial?: PriceValue) {
   const [transfer, setTransfer] = useState(
     initial ? initial.payment === "transfer" : spec.proof === "image" && kind.includes("_"),
   );
+
+  // Выплата за вычетом наших 10%. null, пока в поле нет годного числа - до
+  // этого показывать нечего.
+  const entered = Number(price.replace(",", "."));
+  const takeHome =
+    Number.isFinite(entered) && entered > 0
+      ? splitPayout(Math.round(entered * 100)).netCents
+      : null;
 
   /** Строка или готовые центы: цену считаем целыми центами, как везде. */
   function read(): { value: PriceValue } | { error: string } {
@@ -106,6 +120,14 @@ export function usePriceFields(kind: PlacementKind, initial?: PriceValue) {
           inputMode="decimal"
         />
       </label>
+
+      {/* Сколько из этого дойдёт до продавца. Стоит под самим полем, потому
+          что цену он назначает здесь, а не там, где потом придут деньги. */}
+      {takeHome !== null && (
+        <p className="muted small price-net">
+          You get {formatUsd(takeHome)}{daily ? " a day" : ""} after the 10% fee.
+        </p>
+      )}
 
       <label>
         {daily ? "Minimum days" : "Term in days"}

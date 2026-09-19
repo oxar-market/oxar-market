@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { myOrders, attachPayment, type MyOrder } from "@/lib/payments.ts";
+import { reviewsFor, type Review as ReviewRow } from "@/lib/reviews.ts";
 import { cancelStream, openStream } from "@/lib/stream.ts";
 import { payOnce } from "@/lib/transfer.ts";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Notice } from "../Notice";
+import { Review } from "../Review";
 import { ConnectWallet } from "./ConnectWallet";
 
 /**
@@ -27,15 +29,25 @@ type Busy = { id: string; what: "paying" | "stopping" } | null;
 /** Поток можно остановить, разовый перевод - нет: он уже ушёл. */
 const isStream = (order: MyOrder) => order.listing?.payment !== "transfer";
 
+/** Сделки, по которым больше ничего не произойдёт. */
+const OVER = new Set(["completed", "cancelled", "rejected"]);
+
 export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
   const adapter = useWallet();
   const [orders, setOrders] = useState<MyOrder[] | null>(null);
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState("");
   const [done, setDone] = useState("");
 
+  async function reload() {
+    const fresh = await myOrders();
+    setOrders(fresh);
+    setReviews(await reviewsFor(fresh.filter((o) => o.status === "completed").map((o) => o.id)));
+  }
+
   useEffect(() => {
-    myOrders().then(setOrders);
+    reload();
   }, []);
 
   // Адаптер отдаёт ровно то, что нужно нашим функциям оплаты: ключ и две
@@ -92,7 +104,7 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
             : "Paid. The seller has the money and your spot is booked.",
         );
       }
-      setOrders(await myOrders());
+      await reload();
     } catch (cause) {
       setError(reason(cause));
     } finally {
@@ -112,7 +124,7 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
     try {
       await cancelStream({ wallet: signer, streamId: order.stream_id });
       setDone("Stopped. The seller keeps the time it ran, the rest comes back to you.");
-      setOrders(await myOrders());
+      await reload();
     } catch (cause) {
       setError(reason(cause));
     } finally {
@@ -121,6 +133,70 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
   }
 
   if (orders === null) return <p className="muted small">Loading…</p>;
+
+  function row(order: MyOrder) {
+    const mine = reviews.find((r) => r.booking_id === order.id && r.author === "buyer");
+    const theirs = reviews.find((r) => r.booking_id === order.id && r.author === "seller");
+    // Остановить можно только то, что ещё идёт: у завершённой сделки стрим уже
+    // закрылся сам, и кнопка вела бы в ошибку контракта.
+    const live = order.status === "approved" || order.status === "running";
+
+    return (
+      <div className="pay-row" key={order.id}>
+        <span className="pay-what">
+          <strong>{order.listing?.kind ?? "spot"}</strong>
+          <span className="muted small">
+            {" "}
+            @{order.listing?.seller.x_handle ?? "unknown"} · {order.start_date} to{" "}
+            {order.end_date}
+          </span>
+        </span>
+
+        <span className="pay-right">
+          <span className="price">{formatUsd(order.price_cents)}</span>
+          <span className="muted small">{label(order)}</span>
+        </span>
+
+        {order.status === "approved" && !order.stream_id && (
+          <button
+            type="button"
+            className="primary"
+            disabled={busy?.id === order.id}
+            onClick={() => pay(order)}
+          >
+            {busy?.id === order.id
+              ? isStream(order)
+                ? "Opening…"
+                : "Paying…"
+              : isStream(order)
+                ? "Pay into the stream"
+                : "Pay now"}
+          </button>
+        )}
+
+        {order.stream_id && isStream(order) && live && (
+          <button
+            type="button"
+            className="dock-item"
+            disabled={busy?.id === order.id}
+            onClick={() => stop(order)}
+          >
+            {busy?.id === order.id ? "Stopping…" : "Stop the stream"}
+          </button>
+        )}
+
+        {order.status === "completed" && (
+          <Review
+            bookingId={order.id}
+            side="buyer"
+            mine={mine}
+            theirs={theirs}
+            onSaved={reload}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="card">
@@ -149,51 +225,17 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
         </>
       )}
 
-      {orders.map((order) => (
-        <div className="pay-row" key={order.id}>
-          <span className="pay-what">
-            <strong>{order.listing?.kind ?? "spot"}</strong>
-            <span className="muted small">
-              {" "}
-              @{order.listing?.seller.x_handle ?? "unknown"} · {order.start_date} to{" "}
-              {order.end_date}
-            </span>
-          </span>
+      {orders.filter((order) => !OVER.has(order.status)).map(row)}
 
-          <span className="pay-right">
-            <span className="price">{formatUsd(order.price_cents)}</span>
-            <span className="muted small">{label(order)}</span>
-          </span>
-
-          {order.status === "approved" && !order.stream_id && (
-            <button
-              type="button"
-              className="primary"
-              disabled={busy?.id === order.id}
-              onClick={() => pay(order)}
-            >
-              {busy?.id === order.id
-                ? isStream(order)
-                  ? "Opening…"
-                  : "Paying…"
-                : isStream(order)
-                  ? "Pay into the stream"
-                  : "Pay now"}
-            </button>
-          )}
-
-          {order.stream_id && isStream(order) && (
-            <button
-              type="button"
-              className="dock-item"
-              disabled={busy?.id === order.id}
-              onClick={() => stop(order)}
-            >
-              {busy?.id === order.id ? "Stopping…" : "Stop the stream"}
-            </button>
-          )}
-        </div>
-      ))}
+      {/* История отделена заголовком, а не просто лежит ниже: завершённая
+          сделка и та, по которой ещё надо платить, требуют разного внимания, а
+          вперемешку они выглядели одинаково. */}
+      {orders.some((order) => OVER.has(order.status)) && (
+        <>
+          <p className="desk-head">History</p>
+          {orders.filter((order) => OVER.has(order.status)).map(row)}
+        </>
+      )}
 
       {done && <Notice tone="success">{done}</Notice>}
       {error && <Notice tone="error">{error}</Notice>}
@@ -202,6 +244,14 @@ export function OrdersPanel({ onWaitlist }: { onWaitlist: () => void }) {
 }
 
 function label(order: MyOrder): string {
+  // Конечные состояния идут первыми: у завершённой сделки платёж тоже привязан,
+  // и без этой проверки она бы годами показывала «paid, streaming».
+  if (order.status === "completed") return "finished";
+  if (order.status === "cancelled") return order.stream_id ? "stopped" : "expired, not paid";
+  if (order.status === "rejected") return "the seller passed";
+  if (order.status === "running") {
+    return order.listing?.payment === "transfer" ? "up now, paid" : "up now, streaming";
+  }
   if (order.stream_id) {
     return order.listing?.payment === "transfer" ? "paid" : "paid, streaming";
   }

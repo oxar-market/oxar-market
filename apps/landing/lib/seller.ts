@@ -136,7 +136,7 @@ export async function setXHandle(
   return error.code === "23505" ? "taken" : "error";
 }
 
-/** Снять с продажи или вернуть. Место не удаляем: на нём висят прошлые сделки. */
+/** Снять с продажи или вернуть. */
 export async function setActive(
   listingId: string,
   active: boolean,
@@ -144,6 +144,28 @@ export async function setActive(
   if (!auth) return "error";
   const { error } = await auth.from("listings").update({ active }).eq("id", listingId);
   return error ? "error" : "done";
+}
+
+/**
+ * Удалить место. Получится только у того, по которому не было ни одной брони и
+ * ни одного торга: политика в базе отдаёт на удаление ровно такие. Место с
+ * историей остаётся и просто снимается с продажи - иначе прошлые сделки
+ * ссылались бы в пустоту.
+ *
+ * Ноль удалённых строк - это не сбой, а ответ «на нём уже что-то было».
+ */
+export async function deleteListing(
+  listingId: string,
+): Promise<"done" | "has_history" | "error"> {
+  if (!auth) return "error";
+  const { data, error } = await auth
+    .from("listings")
+    .delete()
+    .eq("id", listingId)
+    .select("id");
+
+  if (error) return "error";
+  return (data ?? []).length > 0 ? "done" : "has_history";
 }
 
 export type MyLot = {

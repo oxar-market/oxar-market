@@ -421,14 +421,21 @@ body {
 
 /* Окна */
 
+/* Окна прижаты к верхнему краю, а не отцентрированы по вертикали.
+
+   Центрирование выглядело спокойнее ровно до первого изменения высоты: стоит
+   форме подменить поле или показать подсказку, как окно уезжает вверх и вниз
+   на половину разницы, и это читается как рывок всего экрана. Настоящее окно
+   на столе так себя не ведёт - у него неподвижный верхний край, а содержимое
+   растёт вниз. */
 .window-layer {
   position: absolute;
   inset: 58px 0 92px;
   z-index: 2;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 1rem;
+  padding: clamp(1rem, 7vh, 4.5rem) 1rem 1rem;
   pointer-events: none;
 }
 
@@ -639,6 +646,39 @@ body {
 .side.active {
   border-color: var(--accent);
   color: var(--fg);
+}
+
+/* Список поверхностей в окне «Placements»: строка на вещь, как в кабинете
+   строка на место. */
+.surface-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.surface-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  align-items: flex-start;
+  text-align: left;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  padding: 0.875rem 0;
+  font: inherit;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.surface-row:hover strong {
+  color: var(--accent);
+}
+
+/* Выплата за вычетом комиссии: подпись к полю цены, а не отдельная мысль.
+   Отрицательный отступ подтягивает её к самому полю, иначе между ними встаёт
+   зазор формы и строка читается как следующий вопрос. */
+.price-net {
+  margin: -0.375rem 0 0;
 }
 
 label {
@@ -2550,6 +2590,13 @@ a.primary {
   border-bottom: none;
 }
 
+/* Строка истории: сделка сверху, отзыв под ней. В общий ряд отзыв не встаёт -
+   он занимает всю ширину и не спорит с суммой справа. */
+.desk-past {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .desk-lines {
   display: flex;
   flex-direction: column;
@@ -3350,6 +3397,69 @@ p.ts-credit a {
   gap: 0.125rem;
 }
 
+/* Отзыв по завершённой сделке. Занимает всю ширину строки: это не третья
+   колонка к цене, а отдельный разговор о том, как всё прошло. */
+.review {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-top: 0.5rem;
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.review-form input {
+  width: 100%;
+}
+
+/* Звёзды набираются кнопками, а не выпадающим списком: оценка ставится одним
+   касанием, иначе её не ставят вовсе. */
+.review-stars {
+  display: flex;
+  gap: 0.125rem;
+}
+
+.review-star {
+  border: none;
+  background: transparent;
+  padding: 0 0.0625rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--line);
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.review-star.on {
+  color: #e0a800;
+}
+
+.review-rating {
+  color: #e0a800;
+  letter-spacing: 0.0625rem;
+}
+
+.review-rating-off {
+  color: var(--line);
+}
+
+/* Текст отзыва стоит со своей строки: рядом с оценкой он сливался с подписью
+   о том, кто её поставил. */
+.review-body {
+  display: block;
+  padding-top: 0.125rem;
+}
+
+.review-error {
+  color: #b42318;
+}
+
 .pay-right {
   display: flex;
   flex-direction: column;
@@ -3488,6 +3598,91 @@ button.wallet-adapter-button:not([disabled]):hover {
 
 .wallet-copy:active {
   transform: scale(0.97);
+}
+
+/* Адаптер кошельков приносит свою тему: тёмно-синяя модалка, фиолетовые
+   кнопки и чужой шрифт. Рядом со светлым столом это выглядит как окно из
+   другого приложения, поэтому перекрашиваем под себя.
+
+   Переписываем их селекторы, а не форкаем стили: пакет обновится - поедут
+   только цвета, а не разметка модалки. */
+body .wallet-adapter-button,
+body .wallet-adapter-modal-title,
+body .wallet-adapter-modal-wrapper {
+  font-family: var(--font-menbere), system-ui, sans-serif;
+}
+
+body .wallet-adapter-modal-wrapper {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(22, 22, 26, 0.14);
+}
+
+body .wallet-adapter-modal-title {
+  color: var(--fg);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.4;
+  /* У них заголовок отбит на 64px сверху - это поле под баннер, которого у
+     нас нет. */
+  padding: 1.5rem 1.5rem 1rem;
+}
+
+body .wallet-adapter-modal-list li button,
+body .wallet-adapter-modal-list-more,
+body .wallet-adapter-modal-button-close {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+body .wallet-adapter-modal-list li button:not([disabled]):hover,
+body .wallet-adapter-dropdown-list-item:not([disabled]):hover {
+  background-color: #f7f7f5;
+}
+
+body .wallet-adapter-modal-button-close {
+  background: transparent;
+}
+
+body .wallet-adapter-modal-button-close svg,
+body .wallet-adapter-modal-list-more svg {
+  fill: var(--muted);
+}
+
+body .wallet-adapter-dropdown-list {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(22, 22, 26, 0.14);
+}
+
+body .wallet-adapter-dropdown-list-item {
+  color: var(--fg);
+}
+
+/* Кнопки, которые адаптер красит фиолетовым: собственная кнопка подключения и
+   «у меня ещё нет кошелька». */
+body .wallet-adapter-button-trigger,
+body .wallet-adapter-modal-middle-button {
+  background-color: var(--accent);
+  border-radius: 9px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+body .wallet-adapter-button-trigger {
+  height: 2.25rem;
+  line-height: 2.25rem;
+  padding: 0 0.9375rem;
+}
+
+body .wallet-adapter-button:not([disabled]):hover {
+  background-color: #f7f7f5;
+}
+
+/* У кнопки подключения фон уже цветной - подсветка ховером гасила бы его. */
+body .wallet-adapter-button-trigger:not([disabled]):hover {
+  background-color: #1a45c0;
 }
 
 /* Код из письма стоит отдельным блоком, а не в общей колонке карточки: это
