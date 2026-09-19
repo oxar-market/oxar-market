@@ -7,10 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "devnet-check": "node --experimental-strip-types scripts/devnet-check.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anchor-lang/core": "^1.2.0",
     "@oxar/core": "workspace:*",
     "@solana-mobile/wallet-standard-mobile": "^0.6.0",
     "@solana/spl-token": "^0.4.15",
@@ -18,10 +18,7 @@
     "@solana/wallet-adapter-react": "^0.15.40",
     "@solana/wallet-adapter-react-ui": "^0.9.40",
     "@solana/web3.js": "^1.99.0",
-    "@streamflow/stream": "^13.4.0",
     "@supabase/supabase-js": "^2.116.0",
-    "@types/bn.js": "^5.2.0",
-    "bn.js": "^5.2.5",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

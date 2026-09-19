@@ -1,3 +1,5 @@
+import { toUsdcBaseUnits } from "./money.ts";
+
 /**
  * Правила аукциона.
  *
@@ -15,6 +17,32 @@ export const BID_STEP_RATE = 0.05;
 export const MIN_STEP_CENTS = 100;
 /** Ставка в последние пять минут продлевает приём на столько же. */
 export const EXTEND_MS = 5 * 60_000;
+
+/**
+ * Условия торга в том виде, в каком их ждёт программа: базовые единицы монеты
+ * и секунды вместо центов и миллисекунд.
+ *
+ * Одно место, где эти числа превращаются в аргументы контракта. Держать их
+ * порознь нельзя: разойдутся - человек увидит один минимум, а контракт
+ * отвергнет ставку по другому.
+ *
+ * Про округление. Здесь шаг считается с `Math.round`, а в программе целым
+ * делением, то есть вниз. Расхождение меньше базовой единицы и направлено в
+ * безопасную сторону: наш минимум всегда не меньше того, что примет контракт,
+ * поэтому показанная человеку сумма не может оказаться отвергнутой.
+ */
+export function lotTerms(reserveCents: number): {
+  reserveBaseUnits: number;
+  minStepBaseUnits: number;
+  extendSeconds: number;
+} {
+  assertCents(reserveCents, "reserveCents");
+  return {
+    reserveBaseUnits: toUsdcBaseUnits(reserveCents),
+    minStepBaseUnits: toUsdcBaseUnits(MIN_STEP_CENTS),
+    extendSeconds: EXTEND_MS / 1000,
+  };
+}
 
 export type Bid = {
   bidder: string;
