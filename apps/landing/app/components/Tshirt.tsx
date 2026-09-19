@@ -58,6 +58,7 @@ const SPOTS: Spot[] = [
 const SHIRT: SurfaceSpec = {
   surface: "tshirt",
   name: "T-shirt",
+  tagline: "Physical world",
   model: "/models/shirt.glb",
   spots: SPOTS,
   // Было 0.12, и на этом боковые пятна заворачивались на перёд: коробка на боку
@@ -69,19 +70,16 @@ const SHIRT: SurfaceSpec = {
   // серого: на чистом белом под этой выдержкой пропадают складки, а вместе с
   // ними и ощущение вещи.
   repaint: { color: 0xf1f2f5, roughness: 0.92 },
-  // Ходовые цвета мерча. Миниатюры в public/icons/variants сняты с этой же
-  // модели в этих же цветах: three.js, RoomEnvironment, ACES - как в сцене.
-  // Меняются цвета - миниатюры надо переснять.
+  // Ходовые цвета мерча.
   variants: [
-    { label: "White", color: 0xf1f2f5, thumb: "/icons/variants/tshirt-white.png" },
-    { label: "Grey", color: 0xc4c8cf, thumb: "/icons/variants/tshirt-grey.png" },
-    { label: "Navy", color: 0x303c56, thumb: "/icons/variants/tshirt-navy.png" },
-    { label: "Black", color: 0x23252a, thumb: "/icons/variants/tshirt-black.png" },
+    { label: "White", color: 0xf1f2f5 },
+    { label: "Grey", color: 0xc4c8cf },
+    { label: "Navy", color: 0x303c56 },
+    { label: "Black", color: 0x23252a },
   ],
   words: {
     loading: "Loading the shirt…",
     idle: "Drag to turn the shirt. Tap a spot.",
-    back: "Back to the shirt",
     forBuyer:
       "Every marked area is a surface you could rent - on a team shirt, a merch drop, a conference tee.",
     forSeller: "Every marked area is something a club or a team could rent out.",

@@ -29,7 +29,7 @@ function left(closesAt: number, now: number): string {
   return `${minutes}m ${String(seconds).padStart(2, "0")}s left`;
 }
 
-function day(date: string): string {
+export function day(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -131,10 +131,13 @@ export function BidPage({
   lot,
   title,
   onBack,
+  initialAmount,
 }: {
   lot: Lot;
   title: string;
   onBack: () => void;
+  /** Сумма, набранная в быстром поле у сцены: едет в форму с собой. */
+  initialAmount?: number;
 }) {
   const [bids, setBids] = useState<PublicBid[] | null>(null);
 
@@ -173,7 +176,7 @@ export function BidPage({
       {bids === null ? (
         <p className="muted small">Loading…</p>
       ) : (
-        <BidForm lot={lot} need={need} onPlaced={onBack} />
+        <BidForm lot={lot} need={need} initialAmount={initialAmount} onPlaced={onBack} />
       )}
     </>
   );
@@ -182,13 +185,18 @@ export function BidPage({
 function BidForm({
   lot,
   need,
+  initialAmount,
   onPlaced,
 }: {
   lot: Lot;
   need: number;
+  initialAmount?: number;
   onPlaced: () => void;
 }) {
-  const [amount, setAmount] = useState((need / 100).toString());
+  // Минимум мог вырасти, пока сумму набирали в быстром поле, - берём большее.
+  const [amount, setAmount] = useState(
+    (Math.max(initialAmount ?? 0, need) / 100).toString(),
+  );
   const [handle, setHandle] = useState("");
   const [creative, setCreative] = useState("");
   const [file, setFile] = useState<{ name: string; url: string } | null>(null);

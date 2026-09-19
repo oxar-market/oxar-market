@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  avatarLetter,
+  avatarTone,
   formatUsd,
   isValidHandle,
   normalizeHandle,
@@ -250,19 +252,6 @@ function priceLine(listing: MyListing): string {
     : `${formatUsd(listing.price_cents)} for ${listing.term_days} days`;
 }
 
-/**
- * Аватарка продавца: первая буква хэндла на цветной подложке. Аккаунты X мы
- * не подключали, картинки взять неоткуда - буква честнее чужой заглушки.
- * Цвет детерминированный: у одного хэндла он всегда один и тот же.
- */
-const AVATAR_TONES = ["#5a90d2", "#4aada1", "#ef7f4f", "#8a6fd1", "#c98a3d", "#c96a8a"];
-
-function avatarTone(handle: string): string {
-  let hash = 0;
-  for (const char of handle) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return AVATAR_TONES[hash % AVATAR_TONES.length];
-}
-
 /** Страница кабинета: стрелка обратно, заголовок и само дело под ними. */
 function DeskPage({
   title,
@@ -421,7 +410,7 @@ function Desk({
             на страницу смены хэндла - прямо в шапке его не правят. */}
         <div className="desk-id">
           <span className="desk-avatar" style={{ background: avatarTone(seller.x_handle) }} aria-hidden>
-            {seller.x_handle.charAt(0).toUpperCase()}
+            {avatarLetter(seller.x_handle)}
           </span>
           <div className="desk-who">
             <h2>@{seller.x_handle}</h2>

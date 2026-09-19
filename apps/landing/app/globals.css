@@ -2891,15 +2891,28 @@ a.proof-row:hover {
   gap: 1.25rem;
 }
 
-/* Шапка: имя вещи крупно, переход к соседней - тихой ссылкой справа. */
+/* Шапка по центру, как у карточки дропа: тихая строка-надзаголовок и имя
+   крупно. Переход к соседней вещи - тихой ссылкой в углу. */
 .ts-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
+  position: relative;
+  text-align: center;
+}
+
+.ts-top h1 {
+  margin: 0;
+}
+
+.ts-tagline {
+  margin: 0 0 0.125rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
 .ts-swap {
+  position: absolute;
+  right: 0;
+  top: 0.375rem;
   border: none;
   background: transparent;
   padding: 0;
@@ -2912,6 +2925,11 @@ a.proof-row:hover {
 
 .ts-swap:hover {
   color: var(--fg);
+}
+
+/* Обёртка сцены: к ней прижато поле быстрой ставки. */
+.ts-scene {
+  position: relative;
 }
 
 /* Сцена ловит и мышь, и палец: touch-action выключен, иначе браузер на телефоне
@@ -3052,9 +3070,15 @@ p.ts-hint {
    ним видно, что лента продолжается и её можно листать. */
 .ts-arc.right {
   right: 1.25rem;
-  width: 9.5rem;
+  width: 10.5rem;
   height: 360px;
-  overflow: hidden;
+  /* Именно clip, не hidden: hidden делает контейнер прокручиваемым, и клик
+     по строке ленты фокусирует её - браузер молча проматывает окно барабана,
+     сбивая всю арифметику сдвига. clip прокрутки не создаёт вовсе. */
+  overflow: clip;
+  /* Запас слева под изгиб дуги: активная строка выезжает к вещи на 18px, и
+     без запаса её кружок срезало бы краем окна ленты. */
+  padding-left: 1.25rem;
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0,
@@ -3083,44 +3107,50 @@ p.ts-hint {
 }
 
 /* Строка барабана одной высоты: сдвиг ленты считается умножением, и разный
-   размер выбранного свотча высоту строки не меняет. Строка тянется на всю
-   ширину окна и прижимает содержимое к правому краю. */
-.ts-reel .ts-swatch {
+   размер выбранного кружка высоту строки не меняет. */
+.ts-reel .ts-spotrow {
   width: 100%;
   height: 72px;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  text-align: left;
   transition: transform 0.45s var(--spring), opacity 0.3s, color 0.14s;
 }
 
-/* Ставка на дуге: точка и подпись. Вся строка кликается и ведёт к торгу. */
+/* Ставка на дуге: кружок с первой буквой ставящего и сумма. Верхняя ставка -
+   оранжевым нашего знака: она и есть текущая цена. */
 .ts-bid {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: none;
-  background: transparent;
-  padding: 0;
-  font: inherit;
   font-size: 0.75rem;
   color: var(--muted);
-  cursor: pointer;
 }
 
-.ts-bid:hover {
-  color: var(--fg);
-}
-
-.ts-bid-dot {
-  width: 26px;
-  height: 26px;
+.ts-bid-ava {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #16182c;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
 }
 
-/* Лидирующая ставка - оранжевым нашего знака: она и есть текущая цена. */
-.ts-bid-dot.lead {
+.ts-bid.lead {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.ts-bid.lead .ts-bid-ava {
+  width: 36px;
+  height: 36px;
   background: #e5480f;
+  font-size: 0.875rem;
 }
 
 .ts-bid-text {
@@ -3128,8 +3158,24 @@ p.ts-hint {
   white-space: nowrap;
 }
 
-/* Цвет на дуге: круглый снимок вещи и подпись слева от него. */
-.ts-swatch {
+.ts-bid-text em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 0.375rem;
+}
+
+.ts-bid-none {
+  margin: 0;
+  max-width: 8.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Место на барабане: кружок-статус и имя. В кружке первая буква того, кто
+   держит верхнюю ставку; тёмный кружок со знаком доллара - торг без ставок;
+   пустой контур - место, которое ещё не выставлено. */
+.ts-spotrow {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -3142,95 +3188,204 @@ p.ts-hint {
   cursor: pointer;
 }
 
-.ts-swatch:hover {
+.ts-spotrow:hover {
   color: var(--fg);
 }
 
-.ts-swatch-dot {
-  width: 38px;
-  height: 38px;
+.ts-spotrow-dot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  overflow: hidden;
   border: 1px solid var(--line);
-  background: #f6f7f8;
+  background: #fff;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition: width 0.16s var(--spring), height 0.16s var(--spring),
     border-color 0.14s;
 }
 
-/* Снимок вписан целиком, в кружке вещь мельчает - приближаем до заполнения. */
-.ts-swatch-dot img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scale(1.45);
-  display: block;
+.ts-spotrow-dot.live {
+  background: #16182c;
+  border-color: #16182c;
 }
 
-/* Выбранный цвет крупнее и назван в полную силу, как в референсе витрины. */
-.ts-swatch.on {
+.ts-spotrow-dot.taken {
+  border-color: transparent;
+}
+
+.ts-spotrow.on {
   color: var(--fg);
   font-weight: 600;
 }
 
-.ts-swatch.on .ts-swatch-dot {
-  width: 54px;
-  height: 54px;
-  border-color: var(--fg);
+.ts-spotrow.on .ts-spotrow-dot {
+  width: 46px;
+  height: 46px;
 }
 
-/* Дуги живут только на широком экране: на телефоне цвета остаются плитками
-   под сценой, а ставки видны в самом торге. */
+/* Быстрая ставка у подиума: карточка с суммой и кнопкой, прижата к нижнему
+   левому углу сцены. Контекст лота - одной тихой строкой над полем. */
+.ts-quick {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-width: 15rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 24px rgba(15, 18, 25, 0.06);
+}
+
+.ts-quick-ctx {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--muted);
+}
+
+.ts-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ts-quick-cur {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+/* Поле без своей рамки: рамка у всей карточки, вторая внутри - лишняя. */
+.ts-quick-row input {
+  width: 5rem;
+  border: none;
+  background: transparent;
+  padding: 0.25rem 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ts-quick-go {
+  padding: 0.4375rem 1.0625rem;
+  font-size: 0.875rem;
+}
+
+.ts-quick-err {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: #b42318;
+}
+
+/* Место без торга: вместо поля - тихий зов в очередь. */
+.ts-quick-wait {
+  align-self: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  padding: 0.375rem 0.875rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.ts-quick-wait:hover {
+  border-color: #c8c8c2;
+  background: #f7f7f5;
+}
+
+/* Дуги живут только на широком экране: на телефоне места выбирают на самой
+   вещи и во вкладке Spots, а верхнюю ставку показывает строка контекста над
+   быстрым полем, которое встаёт своей строкой под сценой. */
 @media (max-width: 760px) {
   .ts-arc {
     display: none;
   }
+
+  .ts-quick {
+    position: static;
+    max-width: none;
+    margin-top: 0.75rem;
+  }
 }
 
-/* Цвета вещи: снимки модели плитками, как варианты товара в магазине. */
-.ts-variants {
+/* Ракурсы предметной съёмки и цвета - тихим рядом под сценой, по центру. */
+.ts-under {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.ts-thumb {
-  width: 64px;
-  height: 64px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #f6f7f8;
+.ts-angles {
+  display: flex;
+  gap: 0.625rem;
+}
+
+.ts-angle {
+  width: 58px;
+  height: 58px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: #eceef1;
+  font: inherit;
+  font-size: 0.6875rem;
+  color: var(--muted);
   cursor: pointer;
-  transition: border-color 0.14s, transform 0.1s ease-out;
+  transition: background 0.14s, color 0.14s, transform 0.1s ease-out;
 }
 
-.ts-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
+.ts-angle:hover {
+  background: #e2e5e9;
 }
 
-.ts-thumb:hover {
-  border-color: #c8c8c2;
-}
-
-.ts-thumb:active {
+.ts-angle:active {
   transform: scale(0.96);
 }
 
-/* Выбранная плитка обведена цветом текста, не акцентом: акцент здесь у мест
-   на самой вещи, и второй синий спорил бы с ними. */
-.ts-thumb.on {
-  border-color: var(--fg);
-  box-shadow: inset 0 0 0 1px var(--fg);
+/* Активный ракурс тёмный, как в референсе предметной съёмки. */
+.ts-angle.on {
+  background: #565b63;
+  color: #fff;
+  font-weight: 600;
 }
 
-/* Табы карточки: подчёркнута активная, как в любом магазине. */
+.ts-dots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ts-dot {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.14s var(--spring), box-shadow 0.14s;
+}
+
+.ts-dot.on {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--fg);
+}
+
+/* Табы карточки: подчёркнута активная, ряд по центру, как в референсе. */
 .ts-tabs {
   display: flex;
-  gap: 2rem;
+  justify-content: center;
+  gap: 2.75rem;
   border-bottom: 1px solid var(--line);
 }
 
@@ -3298,6 +3453,11 @@ button.ts-row .ts-row-price {
   color: var(--accent);
 }
 
+/* Место, которое ещё не выставлено: выбрать можно, но цены у него нет. */
+button.ts-row .ts-row-price.off {
+  color: var(--muted);
+}
+
 /* Пара кнопок карточки: контурная и залитая, обе пилюли - как в референсе
    продуктовой страницы. Отступ сверху добавляется к общему зазору карточки:
    кнопки - конец истории, им положено стоять чуть отдельно. */
@@ -3352,13 +3512,15 @@ p.ts-credit a {
   color: inherit;
 }
 
-/* На широком экране цвета выбирают на правой дуге - плитки под сценой стали бы
-   вторым способом сказать то же самое. Правило стоит ниже самих плиток,
-   потому что при равной специфичности побеждает последнее. */
-@media (min-width: 761px) {
-  .ts-variants {
-    display: none;
-  }
+/* Правила аукциона во вкладке: спокойный список без лишнего веса. */
+.ts-rules {
+  margin: 0;
+  padding-left: 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+  font-size: 0.875rem;
+  color: var(--muted);
 }
 
 /* Кабинет покупателя: строка брони и деньги по ней. */
@@ -3465,12 +3627,6 @@ p.ts-credit a {
   flex-direction: column;
   align-items: flex-end;
   gap: 0.125rem;
-}
-
-/* Заголовок выбранной зоны футболки: та же роль, что у шапки места в витрине. */
-.ts-offers-head {
-  padding-top: 0.25rem;
-  font-size: 0.9375rem;
 }
 
 /* Кнопка кошелька приходит из wallet-adapter со своим фиолетовым фоном и своим

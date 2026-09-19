@@ -62,6 +62,8 @@ export {
 
 export { MAX_FOLLOWERS, parseFollowers } from "./followers.ts";
 
+export { AVATAR_TONES, avatarLetter, avatarTone } from "./avatar.ts";
+
 export {
   estimate,
   type Estimate,

@@ -44,6 +44,7 @@ const SPOTS: Spot[] = [
 const SUITCASE: SurfaceSpec = {
   surface: "suitcase",
   name: "Suitcase",
+  tagline: "Physical world",
   model: "/models/suitcase.glb",
   spots: SPOTS,
   // Корпус жёсткий и толстый, но грани сходятся под прямым углом: глубокая
@@ -52,14 +53,12 @@ const SUITCASE: SurfaceSpec = {
   // Красится только корпус: в модели он отдельный материал по имени Material,
   // а колёса, ручка и ремень - фурнитура, у неё цвет свой.
   paintMaterial: "Material",
-  // Первый цвет - родной цвет модели. Миниатюры в public/icons/variants сняты
-  // с этой же модели: three.js, RoomEnvironment, ACES - как в сцене. Меняются
-  // цвета - миниатюры надо переснять.
+  // Первый цвет - родной цвет модели.
   variants: [
-    { label: "Sky", color: 0x79b5ca, thumb: "/icons/variants/suitcase-sky.png" },
-    { label: "Graphite", color: 0x45484e, thumb: "/icons/variants/suitcase-graphite.png" },
-    { label: "Sand", color: 0xcfc0a8, thumb: "/icons/variants/suitcase-sand.png" },
-    { label: "Coral", color: 0xde8a63, thumb: "/icons/variants/suitcase-coral.png" },
+    { label: "Sky", color: 0x79b5ca },
+    { label: "Graphite", color: 0x45484e },
+    { label: "Sand", color: 0xcfc0a8 },
+    { label: "Coral", color: 0xde8a63 },
   ],
   // Белая рамка, а не синяя: корпус сам цветной, и синий контур на нём
   // растворялся. У футболки ткань светлая и серая, там читается синий.
@@ -74,7 +73,6 @@ const SUITCASE: SurfaceSpec = {
   words: {
     loading: "Loading the suitcase…",
     idle: "Drag to turn the suitcase. Tap a spot.",
-    back: "Back to the suitcase",
     forBuyer:
       "A suitcase goes through airports, lobbies and baggage belts for days, in front of people who are standing still with nothing to look at.",
     forSeller:
