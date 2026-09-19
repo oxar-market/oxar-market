@@ -83,7 +83,7 @@ pub struct PartyClosesDeal<'info> {
     pub token_program: Interface<'info, TokenInterface>,
 }
 
-pub fn handler(ctx: Context<PartyClosesDeal>) -> Result<()> {
+pub fn close_deal(ctx: Context<PartyClosesDeal>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let deal = &ctx.accounts.deal;
 

@@ -63,7 +63,7 @@ pub struct BuyerOpensDeal<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(
+pub fn open_deal(
     ctx: Context<BuyerOpensDeal>,
     booking: [u8; 16],
     amount: u64,

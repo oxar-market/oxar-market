@@ -54,7 +54,7 @@ pub struct SellerTakesEarned<'info> {
     pub token_program: Interface<'info, TokenInterface>,
 }
 
-pub fn handler(ctx: Context<SellerTakesEarned>) -> Result<()> {
+pub fn take_earned(ctx: Context<SellerTakesEarned>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let deal = &ctx.accounts.deal;
 
