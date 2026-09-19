@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatUsd, PLACEMENTS, placementSpec, type PlacementKind } from "@oxar/core";
+import {
+  formatUsd,
+  isValidHandle,
+  normalizeHandle,
+  PLACEMENTS,
+  placementSpec,
+  type PlacementKind,
+} from "@oxar/core";
 import { sendLink, signInWithCode, signOut } from "@/lib/auth";
 import { closeDueLots } from "@/lib/auctions";
 import type { SellerAccount } from "@/lib/use-seller-account";
@@ -13,6 +20,7 @@ import {
   myLots,
   mySeller,
   setActive,
+  setXHandle,
   updateListing,
   type MyBooking,
   type MyListing,
@@ -69,7 +77,7 @@ export function SellerDesk({
     );
   }
 
-  return <Desk seller={account.seller} />;
+  return <Desk seller={account.seller} onAccount={account.reload} />;
 }
 
 function SignIn({ onSent }: { onSent: (email: string) => void }) {
@@ -218,6 +226,7 @@ function LinkSent({ email, onAgain }: { email: string; onAgain: () => void }) {
 type View =
   | { kind: "list" }
   | { kind: "add" }
+  | { kind: "handle" }
   | { kind: "spot"; id: string }
   | { kind: "price"; id: string }
   | { kind: "auction"; id: string };
@@ -226,6 +235,19 @@ function priceLine(listing: MyListing): string {
   return listing.pricing === "daily"
     ? `${formatUsd(listing.price_cents)} a day · from ${listing.term_days} days`
     : `${formatUsd(listing.price_cents)} for ${listing.term_days} days`;
+}
+
+/**
+ * Аватарка продавца: первая буква хэндла на цветной подложке. Аккаунты X мы
+ * не подключали, картинки взять неоткуда - буква честнее чужой заглушки.
+ * Цвет детерминированный: у одного хэндла он всегда один и тот же.
+ */
+const AVATAR_TONES = ["#5a90d2", "#4aada1", "#ef7f4f", "#8a6fd1", "#c98a3d", "#c96a8a"];
+
+function avatarTone(handle: string): string {
+  let hash = 0;
+  for (const char of handle) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return AVATAR_TONES[hash % AVATAR_TONES.length];
 }
 
 /** Страница кабинета: стрелка обратно, заголовок и само дело под ними. */
@@ -251,7 +273,14 @@ function DeskPage({
   );
 }
 
-function Desk({ seller }: { seller: MySeller }) {
+function Desk({
+  seller,
+  onAccount,
+}: {
+  seller: MySeller;
+  /** Перечитать аккаунт: смена хэндла меняет и шапку, и статус проверки. */
+  onAccount: () => void;
+}) {
   const [listings, setListings] = useState<MyListing[] | null>(null);
   const [bookings, setBookings] = useState<MyBooking[] | null>(null);
   const [lots, setLots] = useState<MyLot[] | null>(null);
@@ -279,9 +308,23 @@ function Desk({ seller }: { seller: MySeller }) {
 
   const waiting = (bookings ?? []).filter((booking) => booking.status === "requested");
   const spot =
-    view.kind === "list" || view.kind === "add"
+    view.kind === "list" || view.kind === "add" || view.kind === "handle"
       ? null
       : (listings ?? []).find((listing) => listing.id === view.id) ?? null;
+
+  if (view.kind === "handle") {
+    return (
+      <DeskPage title="Your X handle" onBack={() => setView({ kind: "list" })}>
+        <EditHandle
+          seller={seller}
+          onSaved={() => {
+            setView({ kind: "list" });
+            onAccount();
+          }}
+        />
+      </DeskPage>
+    );
+  }
 
   if (view.kind === "add") {
     return (
@@ -347,9 +390,28 @@ function Desk({ seller }: { seller: MySeller }) {
   return (
     <div className="card desk">
       <header className="desk-head">
-        {/* Число подписчиков отсюда убрано: продавец знает его и без нас, а
-            строка занимала самое заметное место в кабинете. */}
-        <h2>@{seller.x_handle}</h2>
+        {/* Кто это: буква-аватарка, хэндл и статус проверки. Карандаш ведёт
+            на страницу смены хэндла - прямо в шапке его не правят. */}
+        <div className="desk-id">
+          <span className="desk-avatar" style={{ background: avatarTone(seller.x_handle) }} aria-hidden>
+            {seller.x_handle.charAt(0).toUpperCase()}
+          </span>
+          <div className="desk-who">
+            <h2>@{seller.x_handle}</h2>
+            <span className={seller.verified ? "tag" : "tag off"}>
+              {seller.verified ? "Verified" : "Not verified yet"}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="pill pill-icon"
+            onClick={() => setView({ kind: "handle" })}
+            aria-label="Change the handle"
+            title="Change the handle"
+          >
+            <Pencil />
+          </button>
+        </div>
 
         {/* Выход стоит у имени: он про этот аккаунт, а не про места в списке
             ниже, где он и висел. Иконка без подписи - действие редкое, а место
@@ -547,6 +609,81 @@ function SpotPage({
 }
 
 /** Цена места: те же поля, что при выставлении, только на своей странице. */
+/**
+ * Смена своего хэндла. Проверка аккаунта привязана к имени, поэтому смена
+ * снимает галочку - это делает триггер в базе, здесь только честное
+ * предупреждение. Занятый хэндл отбивает уникальный индекс.
+ */
+function EditHandle({
+  seller,
+  onSaved,
+}: {
+  seller: MySeller;
+  onSaved: () => void;
+}) {
+  const [handle, setHandle] = useState(seller.x_handle);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+
+    const next = normalizeHandle(handle);
+    if (!isValidHandle(next)) {
+      setError("A handle is 1-15 letters, digits or underscores.");
+      return;
+    }
+    if (next === seller.x_handle) {
+      onSaved();
+      return;
+    }
+
+    setSaving(true);
+    const result = await setXHandle(seller.id, next);
+    setSaving(false);
+
+    if (result === "done") {
+      onSaved();
+      return;
+    }
+    setError(
+      result === "taken"
+        ? "That handle is already on OXAR. If it is yours, book a call and we will sort it out."
+        : "Could not save that. Try again in a minute.",
+    );
+  }
+
+  return (
+    <form className="desk-edit" onSubmit={submit} noValidate>
+      <p className="muted small">
+        This is the X account your spots live on. We check it is yours by hand,
+        so a new handle takes the verified mark off until we check again - and
+        your spots leave the marketplace for that time.
+      </p>
+
+      <label>
+        X handle
+        <div className="prefixed">
+          <span className="prefix">@</span>
+          <input
+            value={handle}
+            onChange={(event) => setHandle(event.target.value)}
+            placeholder="yourname"
+            autoComplete="off"
+          />
+        </div>
+      </label>
+
+      {error && <Notice tone="error">{error}</Notice>}
+
+      <button type="submit" className="primary" disabled={saving}>
+        {saving ? "Saving…" : "Save the handle"}
+      </button>
+    </form>
+  );
+}
+
 function EditPrice({
   listing,
   onSaved,

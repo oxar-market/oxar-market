@@ -2287,6 +2287,37 @@ a.primary {
   gap: 0.75rem;
 }
 
+/* Кто это: аватарка, хэндл со статусом, карандаш смены хэндла. */
+.desk-id {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+/* Буква-аватарка. Картинок аккаунтов X у нас нет - буква на цветной подложке
+   честнее чужой заглушки, а цвет у хэндла всегда свой и всегда один. */
+.desk-avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.1875rem;
+  font-weight: 700;
+}
+
+.desk-who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
 /* Шапка страницы внутри кабинета: стрелка обратно и заголовок рядом с ней.
    Крестик окна закрывает весь кабинет, поэтому вернуться на шаг назад можно
    только отсюда. */
