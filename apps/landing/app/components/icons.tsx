@@ -166,6 +166,17 @@ export function Play(props: Props) {
   );
 }
 
+/** Удаление места, по которому ничего не было. */
+export function Trash(props: Props) {
+  return (
+    <Svg {...props}>
+      <path d="M4.5 7h15" />
+      <path d="M9.5 7V5.5a1 1 0 011-1h3a1 1 0 011 1V7" />
+      <path d="M6.5 7l.8 11a1.5 1.5 0 001.5 1.4h6.4a1.5 1.5 0 001.5-1.4l.8-11" />
+    </Svg>
+  );
+}
+
 /** Торг: молоток аукциониста. */
 export function Gavel(props: Props) {
   return (
