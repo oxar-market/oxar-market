@@ -76,7 +76,7 @@ jobs:
       # машине проходила. Расхождение было только в этом: локально приезжал
       # v1.52 с Rust 1.89, в CI - старее.
       - name: Platform-tools
-        run: cargo-build-sbf --install-only --tools-version v1.52
+        run: cargo build-sbf --tools-version v1.52 --install-only
 
       - name: Сборка
         working-directory: chain
