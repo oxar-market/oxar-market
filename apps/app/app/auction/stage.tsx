@@ -219,7 +219,11 @@ export function ThingStage({
 
         // Куда именно легло место, решает сама модель: луч снаружи внутрь
         // находит точку на поверхности и её нормаль, и декаль встаёт по ним.
-        const tint = { idle: 0x2f9fe0, hot: 0x0a7fd4 };
+        // Рамки чёрные, а не синие: синий читается как «интерфейс поверх
+        // вещи», а место под нанесение - часть самой вещи. Выбранное берёт
+        // чернила интерфейса, свободные - на тон мягче, чтобы девять пятен
+        // разом не забивали футболку.
+        const tint = { idle: 0x3a3d45, hot: 0x16181d };
         const raycaster = new THREE.Raycaster();
         const anchor = new THREE.Object3D();
         const decals: { code: string; mesh: InstanceType<typeof THREE.Mesh> }[] = [];
