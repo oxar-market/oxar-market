@@ -13,6 +13,53 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Поля по бокам: рыночная сцена 1603 года, на которой размечены места.
+
+   Это не украшение и не текстура ради текстуры. Рамки на бочке, на рукаве, на
+   корзине - те же самые, что на футболке в приложении, и говорят они то же,
+   что строка посередине: если на это смотрят, это рекламное место. Гравюра
+   старше нас на четыреста лет, а места на ней уже были.
+
+   Отсюда и сила: чуть заметнее, чем просто фактура. Выцвети её до шёпота -
+   пропадут рамки, а вместе с ними и весь смысл; останутся обои.
+
+   Иоганн Матам, «Market Scene in City», 1603. Met Open Access, общественное
+   достояние. Штрих осветлён, рамки дорисованы нами. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: min(30vw, 26rem);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+body::before {
+  left: 0;
+  background-image: url("/side-left.webp");
+  -webkit-mask-image: linear-gradient(to right, #000 35%, transparent);
+  mask-image: linear-gradient(to right, #000 35%, transparent);
+}
+
+body::after {
+  right: 0;
+  background-image: url("/side-right.webp");
+  -webkit-mask-image: linear-gradient(to left, #000 35%, transparent);
+  mask-image: linear-gradient(to left, #000 35%, transparent);
+}
+
+/* На телефоне боков нет - там весь экран и есть середина. */
+@media (max-width: 48rem) {
+  body::before,
+  body::after {
+    display: none;
+  }
+}
+
 /* По центру экрана, а не по центру страницы: на странице из четырёх вещей
    текст, сидящий вверху, читается как незагрузившийся. */
 main {
