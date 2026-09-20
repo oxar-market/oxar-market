@@ -36,12 +36,15 @@ export function ThingStage({
   picked,
   onPick,
   stage,
+  onReady,
 }: {
   /** Код выбранного места: оно горит на вещи постоянно. */
   picked: string | null;
   onPick: (code: string) => void;
   /** Сюда сцена кладёт свои ручки, когда собралась. */
   stage: RefObject<Stage | null>;
+  /** Сцена собралась и готова показывать картинки. */
+  onReady?: () => void;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
@@ -52,6 +55,8 @@ export function ThingStage({
   // загруженная модель и заново выштампованные декали.
   const pick = useRef(onPick);
   pick.current = onPick;
+  const ready = useRef(onReady);
+  ready.current = onReady;
   const pickedNow = useRef(picked);
   const mark = useRef<((code: string | null) => void) | null>(null);
 
@@ -407,6 +412,7 @@ export function ThingStage({
         };
         tick();
         setState("ready");
+        ready.current?.();
 
         cleanup = () => {
           cancelAnimationFrame(frame);

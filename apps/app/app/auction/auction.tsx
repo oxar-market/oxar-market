@@ -39,6 +39,10 @@ export function Auction() {
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
   const [angle, setAngle] = useState(0);
   const [tab, setTab] = useState<"about" | "spots" | "rules">("about");
+  const [sceneReady, setSceneReady] = useState(false);
+  // Какая ставка отматана в истории. null - показываем нынешнюю, ту, что стоит
+  // на вещи прямо сейчас.
+  const [rewound, setRewound] = useState<string | null>(null);
 
   // Что человек примерил в каждое место. Живёт только здесь: на сервер эти
   // картинки не уезжают, чужим они станут видны вместе со ставкой.
@@ -107,6 +111,47 @@ export function Auction() {
     setAngle(((Math.round(spot.azimuth / 90) % 4) + 4) % 4);
   }
 
+  /**
+   * Что стоит на вещи сейчас: креатив верхней ставки каждого места.
+   *
+   * Это видят все, и в этом смысл торга - зашедший должен увидеть чужой
+   * логотип на футболке и понять, что его можно перебить. Своя примерка
+   * главнее: если человек что-то приложил, он смотрит на своё.
+   */
+  useEffect(() => {
+    if (!sceneReady) return;
+    let live = true;
+
+    for (const spot of SPOTS) {
+      if (art[spot.code]) continue;
+      const each = lotOf(spot.code);
+      const holder = each ? tops[each.id] : undefined;
+      // Отмотанная ставка показывается только в выбранном месте: история
+      // читается про одно место, а не про всю вещь разом.
+      const rewoundBid =
+        spot.code === picked && rewound
+          ? bids.find((bid) => bid.id === rewound)
+          : undefined;
+      const show = rewoundBid ?? holder;
+
+      if (!show) {
+        stage.current?.show(spot.code, null);
+        continue;
+      }
+      loadImage(show.media_url).then((image) => {
+        if (live && image) stage.current?.show(spot.code, image);
+      });
+    }
+
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneReady, lots, tops, bids, rewound, picked, art]);
+
+  // Смена места закрывает историю: она про то место, с которого ушли.
+  useEffect(() => setRewound(null), [picked]);
+
   /** Примерить картинку в выбранное место. */
   async function tryOn(file: File | undefined) {
     setArtError("");
@@ -161,7 +206,12 @@ export function Auction() {
       </header>
 
       <div className="lot-scene">
-        <ThingStage picked={picked} onPick={(code) => choose(code, true)} stage={stage} />
+        <ThingStage
+          picked={picked}
+          onPick={(code) => choose(code, true)}
+          stage={stage}
+          onReady={() => setSceneReady(true)}
+        />
 
         {/* Слева от вещи - ставки выбранного места, верхняя первой: она и есть
             текущая цена. На телефоне дуг нет, там их заменяет список ниже. */}
@@ -220,6 +270,45 @@ export function Auction() {
           " · not up for auction yet"
         )}
       </p>
+
+      {/* История места: каждая ставка - деление на ленте, и по ней видно, чей
+          логотип стоял на вещи в этот момент. Свежая справа, как в переписке.
+          Лента появляется со второй ставкой: у одной истории нет. */}
+      {bids.length > 1 && (
+        <ol className="track" aria-label="Bid history">
+          {[...bids].reverse().map((bid, index) => (
+            <li key={bid.id}>
+              <button
+                type="button"
+                className={bid.id === rewound ? "tick on" : "tick"}
+                aria-pressed={bid.id === rewound}
+                onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
+              >
+                <span className="tick-sum">{formatUsd(bid.amount_cents)}</span>
+                <span className="tick-when">
+                  {index === 0 ? "opened" : when(bid.created_at)}
+                </span>
+              </button>
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              className={rewound ? "tick" : "tick on"}
+              aria-pressed={!rewound}
+              onClick={() => setRewound(null)}
+            >
+              <span className="tick-sum">Now</span>
+              <span className="tick-when">on the shirt</span>
+            </button>
+          </li>
+        </ol>
+      )}
+      {rewound && (
+        <p className="muted">
+          Rewound. This is what the shirt looked like at that bid, not now.
+        </p>
+      )}
 
       {/* Примерка: картинка ложится в выбранное место прямо на вещи. Пока это
           только превью - видит его один человек, тот, кто примеряет. */}
@@ -362,6 +451,36 @@ function Row({ bid, lead }: { bid: Bid; lead: boolean }) {
       </span>
     </div>
   );
+}
+
+/**
+ * Загрузить чужую картинку так, чтобы её можно было положить в текстуру.
+ *
+ * `crossOrigin` обязателен: без него картинка с другого домена «пачкает»
+ * холст, и WebGL отказывается брать из него текстуру - молча, целым чёрным
+ * пятном вместо логотипа.
+ */
+function loadImage(url: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    // Картинка могла уехать вместе с хранилищем или прийти битой. Место
+    // останется пустой рамкой, и это лучше, чем пустой экран.
+    image.onerror = () => resolve(null);
+    image.src = url;
+  });
+}
+
+/** Когда была ставка: день и час, без года - торг короче года. */
+function when(at: string): string {
+  return new Date(at).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 /** Сколько осталось до закрытия, крупными делениями: дни, часы, минуты. */
