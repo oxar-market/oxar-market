@@ -57,8 +57,13 @@ jobs:
       - name: Тесты, и они обязаны быть
         run: |
           pnpm test 2>&1 | tee /tmp/test.log
-          grep -qE '^@oxar/core:test: # pass [1-9]' /tmp/test.log \
+          # Без привязки к префиксу пакета: turbo печатает его в терминале,
+          # но не в CI, и проверка ловила бы собственный формат вывода, а не
+          # факт прогона.
+          grep -qE '# pass [1-9]' /tmp/test.log \
             || { echo "ни одного пройденного теста - прогон снова пустышка"; exit 1; }
+          grep -qE '# fail 0' /tmp/test.log \
+            || { echo "есть упавшие тесты"; exit 1; }
 
       - run: pnpm build
 
