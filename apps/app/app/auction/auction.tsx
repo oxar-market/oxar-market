@@ -12,8 +12,9 @@ import {
   type Thing,
 } from "@/lib/auction";
 import { BidForm } from "./bid.tsx";
+import { PhotoView } from "./photo.tsx";
 import { SPOTS } from "./spots.ts";
-import { ThingStage, type Stage } from "./stage.tsx";
+import { ThingStage, type Stage, type Views } from "./stage.tsx";
 
 /**
  * Экран торга: одна вещь, её места, ставки.
@@ -40,7 +41,11 @@ export function Auction() {
   const [tab, setTab] = useState<"about" | "spots" | "rules">("about");
   const [sceneReady, setSceneReady] = useState(false);
   // Снимки вещи по ракурсам. Их делает сама сцена, когда соберётся.
-  const [views, setViews] = useState<string[]>([]);
+  const [views, setViews] = useState<Views>({ shots: [], quads: [] });
+  // Чем смотреть вещь: сценой, которую можно вертеть, или кадром, который
+  // подробнее. Выбор человека, а не наш: одному важно покрутить, другому -
+  // разглядеть.
+  const [look, setLook] = useState<"live" | "shot">("live");
   // Какая ставка отматана в истории. null - показываем нынешнюю, ту, что стоит
   // на вещи прямо сейчас.
   const [rewound, setRewound] = useState<string | null>(null);
@@ -206,6 +211,14 @@ export function Auction() {
     loadTopBids(lots.map((one) => one.id)).then(setTops);
   }
 
+  /** Что стоит в каждом месте: своя примерка главнее чужого креатива. */
+  const shownArt: Record<string, string | undefined> = {};
+  for (const spot of SPOTS) {
+    const each = lotOf(spot.code);
+    shownArt[spot.code] =
+      art[spot.code]?.url ?? (each ? tops[each.id]?.media_url : undefined);
+  }
+
   const top = bids[0] ?? null;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null) : 0;
   const running = lot ? isOpen(Date.parse(lot.closes_at), Date.now()) : false;
@@ -218,15 +231,30 @@ export function Auction() {
       </header>
 
       <div className="lot-scene">
+        {/* Сцена остаётся собранной и в фото-режиме, просто спрятана: она
+            держит модель и все пятнадцать декалей, и пересобирать её на
+            каждое переключение значило бы грузить вещь заново. */}
+        <div className={look === "live" ? "look" : "look away"}>
         <ThingStage
           picked={picked}
           onPick={(code) => choose(code, true)}
           stage={stage}
-          onReady={(shots) => {
+          onReady={(ready) => {
             setSceneReady(true);
-            setViews(shots);
+            setViews(ready);
           }}
         />
+        </div>
+
+        {look === "shot" && views.shots[angle] && (
+          <PhotoView
+            shot={views.shots[angle]}
+            quads={views.quads[angle] ?? {}}
+            picked={picked}
+            onPick={(code) => choose(code, true)}
+            art={shownArt}
+          />
+        )}
 
         {/* Слева от вещи - ставки выбранного места, верхняя первой: она и есть
             текущая цена. На телефоне дуг нет, там их заменяет список ниже. */}
@@ -366,6 +394,26 @@ export function Auction() {
           стороны смотрим» быстрее, чем слово «Back». Пока сцена не собралась
           (или её нет вовсе), остаются подписи - кнопка обязана работать и без
           картинки. */}
+      {/* Чем смотреть вещь. Кадр подробнее сцены - он снят с запасом и без
+          оглядки на скорость, - но вертеть его нельзя, ракурсов четыре. */}
+      <div className="looks" role="group" aria-label="How to view">
+        {([
+          ["live", "3D"],
+          ["shot", "Photo"],
+        ] as const).map(([which, name]) => (
+          <button
+            key={which}
+            type="button"
+            className={look === which ? "look-tab on" : "look-tab"}
+            aria-pressed={look === which}
+            disabled={which === "shot" && views.shots.length === 0}
+            onClick={() => setLook(which)}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
       <div className="angles" role="group" aria-label="View">
         {ANGLES.map((name, index) => (
           <button
@@ -380,7 +428,11 @@ export function Auction() {
               stage.current?.face(index * 90);
             }}
           >
-            {views[index] ? <img src={views[index]} alt="" /> : name}
+            {views.shots[index] ? (
+              <img src={views.shots[index]} alt="" />
+            ) : (
+              name
+            )}
           </button>
         ))}
       </div>
