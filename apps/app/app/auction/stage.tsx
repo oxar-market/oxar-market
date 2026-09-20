@@ -133,6 +133,11 @@ export function ThingStage({
         controls.maxPolarAngle = Math.PI * 0.72;
 
         const gltf = await new GLTFLoader().loadAsync("/models/shirt.glb");
+
+        // Номера мест рисуются в канвас, а текстура кэшируется навсегда.
+        // Успей мы до того, как доехал шрифт, - цифры на вещи остались бы
+        // системными, и переснять их было бы нечем.
+        await document.fonts.ready;
         if (stop) {
           renderer.dispose();
           return;
@@ -583,7 +588,9 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   ctx.textBaseline = "middle";
 
   const room = canvas.width - (pad + line) * 2 - short * 0.2;
-  const font = (size: number) => `600 ${size}px ui-sans-serif, system-ui, sans-serif`;
+  // Шрифт берём у страницы: в канвас переменная из CSS не приходит, а имя
+  // семейства next/font собирает сам и на каждой сборке заново.
+  const font = (size: number) => `600 ${size}px ${getComputedStyle(document.body).fontFamily}`;
   let size = short * 0.34;
   ctx.letterSpacing = `${size * 0.04}px`;
   ctx.font = font(size);
