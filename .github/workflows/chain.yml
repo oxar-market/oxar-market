@@ -97,33 +97,33 @@ jobs:
           "$sbf" --version
           "$sbf" --tools-version v1.52 --install-only
 
-      # Программа собирается своим вызовом, с явной версией инструментов, и
-      # только потом anchor build.
+      # Всё, что зовёт cargo, идёт через `rustup run 1.89.0`, и это не
+      # перестраховка.
       #
-      # Anchor зовёт cargo build-sbf без версии, а тот берёт ту, на которую
-      # смотрит ссылка в rustup, - и в CI она указывала на v1.48 с cargo 1.84,
-      # оставшуюся от avm. Отсюда падение на edition2024 при уже поставленном
-      # v1.52. Прямой вызов переставляет ссылку на нужный набор, дальше anchor
-      # берёт готовое. Версии печатаются: если снова разъедется, это будет
-      # видно в логе, а не выясняться заново.
+      # На раннере свой cargo 1.84 стоит в пути раньше поставленного нами, а
+      # `rustup default` его не перебивает - это отдельный бинарь, а не шим.
+      # Саму программу собирает cargo из platform-tools, и она собиралась; но
+      # сразу за ней anchor строит IDL обычным cargo, и вот он падал на
+      # зависимости с edition2024. Снаружи это выглядело как «не собирается
+      # программа», хотя программа к тому моменту уже была собрана.
+      #
+      # Версии печатаются: если наборы снова разъедутся, это будет видно в
+      # логе, а не выясняться заново.
       - name: Сборка
         working-directory: chain
         run: |
           solana --version
           cargo-build-sbf --version
-          cargo-build-sbf \
-            --manifest-path programs/oxar-escrow/Cargo.toml \
-            --tools-version v1.52
-          anchor build
+          rustup run 1.89.0 anchor build
 
       # Арифметика: сколько натекло продавцу, сколько вернётся покупателю,
       # сколько комиссии. Считается в целых, и переполнение здесь дороже всего.
       - name: Юнит-тесты арифметики
         working-directory: chain
-        run: cargo test --manifest-path programs/oxar-escrow/Cargo.toml
+        run: rustup run 1.89.0 cargo test --manifest-path programs/oxar-escrow/Cargo.toml
 
       # Против настоящего валидатора: возврат перебитому, продление торга,
       # запрет закрыть идущий торг и прочее, что на чистой арифметике не видно.
       - name: Интеграционные тесты
         working-directory: chain
-        run: anchor test --skip-build
+        run: rustup run 1.89.0 anchor test --skip-build
