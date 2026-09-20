@@ -43,8 +43,11 @@ export function ThingStage({
   onPick: (code: string) => void;
   /** Сюда сцена кладёт свои ручки, когда собралась. */
   stage: RefObject<Stage | null>;
-  /** Сцена собралась и готова показывать картинки. */
-  onReady?: () => void;
+  /**
+   * Сцена собралась и готова показывать картинки. Вместе с этим отдаёт четыре
+   * снимка вещи - перёд, правый бок, спину, левый, - по одному на ракурс.
+   */
+  onReady?: (views: string[]) => void;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
@@ -197,6 +200,9 @@ export function ThingStage({
         ring.position.y = floor;
         scene.add(ring);
 
+        // Тень держим в переменной: её, как и кольцо, надо убрать со снимков
+        // для кнопок - в кнопке размером с ноготь подиум читается как грязь.
+        let shadow: InstanceType<typeof THREE.Mesh> | null = null;
         const shade = document.createElement("canvas");
         shade.width = shade.height = 256;
         const shadeCtx = shade.getContext("2d");
@@ -218,6 +224,7 @@ export function ThingStage({
           disc.rotation.x = -Math.PI / 2;
           disc.position.y = floor - 0.001;
           scene.add(disc);
+          shadow = disc;
         }
 
         // Куда именно легло место, решает сама модель: луч снаружи внутрь
@@ -397,6 +404,63 @@ export function ThingStage({
           },
         };
 
+        /**
+         * Четыре снимка вещи - по одному на ракурс, для кнопок под сценой.
+         *
+         * Снимает тот же рендерер и та же сцена, сразу после сборки: кнопка
+         * показывает саму вещь, а не слово «Back», и показывает её ровно
+         * такой, какая она на экране. Отдельные картинки в репозитории для
+         * этого не нужны, а главное - они разошлись бы с моделью молча.
+         *
+         * Снимок один раз и навсегда: примеренный логотип на кнопках не
+         * появится. Кнопка отвечает на «с какой стороны смотрим», а не «что
+         * сейчас на вещи», и перерисовывать её на каждую картинку значило бы
+         * гонять рендер ради ногтя.
+         */
+        const views = (() => {
+          const side = 320;
+          const paper = document.createElement("canvas");
+          paper.width = paper.height = side;
+          const ink = paper.getContext("2d");
+          if (!ink) return [];
+
+          const target = new THREE.WebGLRenderTarget(side, side);
+          target.texture.colorSpace = THREE.SRGBColorSpace;
+          const lens = new THREE.PerspectiveCamera(camera.fov, 1, 0.1, 100);
+          // Кадр теснее, чем на сцене: в кнопке каждый пиксель на счету.
+          const back = (reach / Math.tan(fov / 2)) * 1.12;
+          const pixels = new Uint8Array(side * side * 4);
+          const shots: string[] = [];
+
+          ring.visible = false;
+          if (shadow) shadow.visible = false;
+
+          for (let quarter = 0; quarter < 4; quarter++) {
+            const angle = (quarter * Math.PI) / 2;
+            lens.position.set(Math.sin(angle) * back, 0, Math.cos(angle) * back);
+            lens.lookAt(0, 0, 0);
+            renderer.setRenderTarget(target);
+            renderer.render(scene, lens);
+            renderer.readRenderTargetPixels(target, 0, 0, side, side, pixels);
+
+            const image = ink.createImageData(side, side);
+            // Строки переворачиваются: GL считает их от нижнего края кадра,
+            // канвас - от верхнего, и без этого вещь встаёт на голову.
+            for (let row = 0; row < side; row++) {
+              const from = (side - 1 - row) * side * 4;
+              image.data.set(pixels.subarray(from, from + side * 4), row * side * 4);
+            }
+            ink.putImageData(image, 0, 0);
+            shots.push(paper.toDataURL("image/webp", 0.85));
+          }
+
+          renderer.setRenderTarget(null);
+          target.dispose();
+          ring.visible = true;
+          if (shadow) shadow.visible = true;
+          return shots;
+        })();
+
         const resize = () => {
           if (!host.clientWidth || !host.clientHeight) return;
           camera.aspect = host.clientWidth / host.clientHeight;
@@ -419,7 +483,7 @@ export function ThingStage({
         };
         tick();
         setState("ready");
-        ready.current?.();
+        ready.current?.(views);
 
         cleanup = () => {
           cancelAnimationFrame(frame);

@@ -452,10 +452,31 @@ input:focus {
   transition: border-color 0.14s, color 0.14s, background 0.14s;
 }
 
+/* Кнопка со снимком вещи. Отступ мельче текстового: картинка сама себе поля,
+   и рамка по её краю читалась бы как вторая рамка вокруг футболки. */
+.angle:has(img) {
+  padding: 0.25rem;
+  line-height: 0;
+}
+
+.angle img {
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: contain;
+}
+
 .angle.on {
   border-color: #16181d;
   background: #16181d;
   color: #fff;
+}
+
+/* Вещь на снимке светлая, и на чёрной кнопке она тонет. Подложку выбранной
+   кнопке оставляем светлой, а выбор показываем рамкой. */
+.angle.on:has(img) {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #16181d;
 }
 
 .lot-tabs {

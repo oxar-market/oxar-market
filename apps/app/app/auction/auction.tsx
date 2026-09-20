@@ -39,6 +39,8 @@ export function Auction() {
   const [angle, setAngle] = useState(0);
   const [tab, setTab] = useState<"about" | "spots" | "rules">("about");
   const [sceneReady, setSceneReady] = useState(false);
+  // Снимки вещи по ракурсам. Их делает сама сцена, когда соберётся.
+  const [views, setViews] = useState<string[]>([]);
   // Какая ставка отматана в истории. null - показываем нынешнюю, ту, что стоит
   // на вещи прямо сейчас.
   const [rewound, setRewound] = useState<string | null>(null);
@@ -220,7 +222,10 @@ export function Auction() {
           picked={picked}
           onPick={(code) => choose(code, true)}
           stage={stage}
-          onReady={() => setSceneReady(true)}
+          onReady={(shots) => {
+            setSceneReady(true);
+            setViews(shots);
+          }}
         />
 
         {/* Слева от вещи - ставки выбранного места, верхняя первой: она и есть
@@ -357,6 +362,10 @@ export function Auction() {
         )
       )}
 
+      {/* Ракурсы - самой вещью, а не словами: снимок отвечает на «с какой
+          стороны смотрим» быстрее, чем слово «Back». Пока сцена не собралась
+          (или её нет вовсе), остаются подписи - кнопка обязана работать и без
+          картинки. */}
       <div className="angles" role="group" aria-label="View">
         {ANGLES.map((name, index) => (
           <button
@@ -364,12 +373,14 @@ export function Auction() {
             type="button"
             className={index === angle ? "angle on" : "angle"}
             aria-pressed={index === angle}
+            aria-label={name}
+            title={name}
             onClick={() => {
               setAngle(index);
               stage.current?.face(index * 90);
             }}
           >
-            {name}
+            {views[index] ? <img src={views[index]} alt="" /> : name}
           </button>
         ))}
       </div>
