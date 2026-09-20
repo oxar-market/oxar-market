@@ -26,7 +26,16 @@
   # входа состояло из одного поля для почты.
   #
   # relay.walletconnect - сам канал связи с мобильным кошельком.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://explorer-api.walletconnect.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co https://explorer-api.walletconnect.com https://api.web3modal.org wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.devnet.solana.com https://api.mainnet-beta.solana.com
+  #
+  # blob: в connect-src - для модели вещи. GLTFLoader достаёт запечённые в
+  # .glb текстуры и грузит их по blob:-адресу через fetch, а не как картинку,
+  # поэтому одного blob: в img-src мало. Без него в консоли прода две ошибки
+  # «Couldn't load texture» на каждом открытии сцены. Локально не всплывает:
+  # dev-сервер заголовки из этого файла не применяет.
+  #
+  # Supabase в img-src - креативы ставок. Они лежат в его хранилище, и без
+  # адреса на вещи оказалась бы пустая рамка вместо логотипа лидера.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://explorer-api.walletconnect.com https://islmypspqjxuhplcibam.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' blob: https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co https://explorer-api.walletconnect.com https://api.web3modal.org wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.devnet.solana.com https://api.mainnet-beta.solana.com
 
   # Никто не смеет положить нас в свой iframe. Защита от кликджекинга: иначе
   # наш экран накрывают приманкой, человек жмёт «забрать приз», а жмёт «Bid».
