@@ -107,8 +107,12 @@ export function Auction() {
     const spot = SPOTS.find((one) => one.code === code);
     if (!spot) return;
     setPicked(code);
-    stage.current?.face(spot.azimuth);
-    setAngle(((Math.round(spot.azimuth / 90) % 4) + 4) % 4);
+    // Вещь встаёт той гранью, на которой место, а не точно под его угол. Угол
+    // у места двойной службы - он же сдвиг вбок внутри грани, - и доворот под
+    // него качал бы футболку на каждый выбор соседней клетки сетки.
+    const face = ((Math.round(spot.azimuth / 90) % 4) + 4) % 4;
+    stage.current?.face(face * 90);
+    setAngle(face);
   }
 
   /**

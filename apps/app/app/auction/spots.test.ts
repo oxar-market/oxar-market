@@ -14,14 +14,14 @@ import { SPOTS } from "./spots.ts";
 
 const sql = readFileSync(
   new URL(
-    "../../../../supabase/migrations/20260920120000_superteam_tee.sql",
+    "../../../../supabase/migrations/20260920170000_tee_grid.sql",
     import.meta.url,
   ),
   "utf8",
 );
 
 /** Строки каталога из миграции: ('код', 'подпись', порядок). */
-const catalog = [...sql.matchAll(/\(\s*'(tshirt_\w+)',\s*'([^']+)',\s*(\d+)\s*\)/g)].map(
+const catalog = [...sql.matchAll(/\(\s*'(slot_\w+)',\s*'([^']+)',\s*(\d+)\s*\)/g)].map(
   (row) => ({ code: row[1], label: row[2], sort: Number(row[3]) }),
 );
 
