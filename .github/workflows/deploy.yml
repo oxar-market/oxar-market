@@ -117,3 +117,60 @@ jobs:
         run: >-
           pnpm exec wrangler pages deploy apps/app/out
           --project-name=oxar-app --branch=main --commit-dirty=true
+
+      # Вторая половина продукта живёт в Supabase, и она не уезжала вовсе.
+      #
+      # Так мы уже обожглись: фронт выкатился и работал, вход проходил, а мост
+      # до базы падал - потому что ни таблицы, ни функции на проде не было.
+      # Снаружи это выглядело как поломка входа, хотя код был верный.
+      #
+      # Пока это делалось руками, «забыл выкатить» оставалось возможным. Здесь
+      # оно становится невозможным.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Схема меняется только миграциями. Push применяет те, которых на проде
+      # ещё нет, и ничего не трогает сверх этого.
+      #
+      # Пароль от базы не нужен: CLI поднимает временную роль по токену.
+      # Проверено с закрытым вводом - будь пароль нужен, команда упала бы на
+      # запросе, а не прошла молча.
+      - name: Схема -> Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref islmypspqjxuhplcibam
+          supabase db push
+
+      # Секреты функций ставятся перед выкаткой: функция, поднявшаяся без
+      # PRIVY_APP_ID, принимала бы токены чужих приложений.
+      - name: Секреты функций -> Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase secrets set
+          PRIVY_APP_ID=${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          --project-ref islmypspqjxuhplcibam
+
+      - name: Функции -> Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: >-
+          supabase functions deploy privy-session
+          --project-ref islmypspqjxuhplcibam
+
+      # Проверка после выкатки, а не «должно работать»: функция обязана
+      # отбивать запрос без токена и запрос с поддельным. Если она отвечает
+      # иначе, значит уехала не та версия или не поднялись секреты.
+      - name: Проверить, что мост жив
+        env:
+          URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          ANON: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          fn="$URL/functions/v1/privy-session"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$fn" -H "Authorization: Bearer $ANON")
+          test "$code" = "401" || { echo "без токена ожидали 401, получили $code"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$fn" -H "Authorization: Bearer $ANON" -H 'X-Privy-Token: не.настоящий')
+          test "$code" = "401" || { echo "с поддельным токеном ожидали 401, получили $code"; exit 1; }
+          echo "мост отвечает и отбивает чужое"
