@@ -17,9 +17,16 @@
   #
   # auth.privy.io - iframe встроенного кошелька, без него не подписать.
   # challenges.cloudflare.com - капча Privy при входе.
-  # walletconnect - подключение мобильных кошельков.
   # *.rpc.privy.systems - их узлы RPC.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.devnet.solana.com https://api.mainnet-beta.solana.com
+  #
+  # explorer-api.walletconnect.com - реестр кошельков. Без него Privy не
+  # строит список и показывает одну почту: ни Phantom, ни Solflare, ни
+  # Backpack в окне не появляются. Оттуда же приходят их значки, поэтому
+  # адрес стоит и в img-src. Проверено на проде: пока адрес был закрыт, окно
+  # входа состояло из одного поля для почты.
+  #
+  # relay.walletconnect - сам канал связи с мобильным кошельком.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://explorer-api.walletconnect.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co https://explorer-api.walletconnect.com https://api.web3modal.org wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.devnet.solana.com https://api.mainnet-beta.solana.com
 
   # Никто не смеет положить нас в свой iframe. Защита от кликджекинга: иначе
   # наш экран накрывают приманкой, человек жмёт «забрать приз», а жмёт «Bid».
