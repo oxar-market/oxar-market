@@ -36,17 +36,23 @@ jobs:
         run: |
           rustup toolchain install 1.89.0 --profile minimal
           rustup default 1.89.0
+          rustc --version
+          cargo --version
 
       - name: Solana CLI
         run: |
           sh -c "$(curl -sSfL https://release.anza.xyz/v3.1.10/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
+      # Через rustup run, а не просто cargo: на раннере есть свой cargo 1.84,
+      # который перебивает поставленный выше и падает на edition2024.
       - name: Anchor
         run: |
-          cargo install --git https://github.com/solana-foundation/anchor avm --force
+          rustup run 1.89.0 cargo install \
+            --git https://github.com/solana-foundation/anchor avm --force
           avm install 0.32.2
           avm use 0.32.2
+          anchor --version
 
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
