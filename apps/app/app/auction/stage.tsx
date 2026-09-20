@@ -104,8 +104,8 @@ export function ThingStage({
 
         const scene = new THREE.Scene();
         const pmrem = new THREE.PMREMGenerator(renderer);
-        scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-        scene.environmentIntensity = 0.55;
+        scene.environment = pmrem.fromScene(studio(THREE), 0.03).texture;
+        scene.environmentIntensity = 1;
 
         const key = new THREE.DirectionalLight(0xffffff, 0.75);
         key.position.set(1.2, 1.6, 1.4);
@@ -153,11 +153,21 @@ export function ThingStage({
         });
         if (meshes.length === 0) throw new Error("в модели нет поверхностей");
 
+        // Ткань, а не пластик. Три вещи делают разницу: карта нормалей под
+        // переплетение, sheen - физический параметр ворса, - и высокая
+        // шершавость. Без них свет ложится ровным пятном, и вещь читается
+        // как отливка.
+        const weave = knitMap(THREE);
         for (const mesh of meshes) {
-          mesh.material = new THREE.MeshStandardMaterial({
+          mesh.material = new THREE.MeshPhysicalMaterial({
             color: REPAINT.color,
-            roughness: REPAINT.roughness,
+            roughness: 0.96,
             metalness: 0,
+            sheen: 1,
+            sheenRoughness: 0.85,
+            sheenColor: new THREE.Color(0xffffff),
+            normalMap: weave,
+            normalScale: new THREE.Vector2(0.55, 0.55),
           });
         }
 
@@ -169,6 +179,11 @@ export function ThingStage({
         thing.position.sub(center.multiplyScalar(scale));
         scene.add(thing);
         thing.updateMatrixWorld(true);
+
+        // Кромки: горловина, низ рукавов, подол. Их в модели нет вовсе -
+        // она гладкая труба с рукавами, - а в настоящей вещи именно они и
+        // читаются как шитьё.
+        for (const edge of hems(THREE, meshes)) scene.add(edge);
 
         const reach = 0.62 * 0.5;
         const fov = (camera.fov * Math.PI) / 180;
@@ -666,4 +681,237 @@ function roundRect(
   ctx.arcTo(x, y + tall, x, y, r);
   ctx.arcTo(x, y, x + wide, y, r);
   ctx.closePath();
+}
+
+/**
+ * Карта нормалей трикотажа, нарисованная на месте.
+ *
+ * Своя, а не скачанная: чужой файл - это лицензия, вес и ещё одна вещь,
+ * которая разойдётся с моделью молча. Здесь двести пятьдесят шесть точек в
+ * квадрате и немного синусов.
+ *
+ * Без неё ткань освещается как гладкий пластик: свет ложится ровным пятном, и
+ * вещь читается как отливка, а не как полотно. Здесь - ряды петель со сдвигом
+ * через ряд, поперечный рубчик и мелкое зерно под ворс, а из высот считаются
+ * нормали разностями.
+ */
+function knitMap(THREE: typeof import("three")) {
+  const side = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = side;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("нет 2d-контекста");
+
+  const cols = 14;
+  const rows = 18;
+  const height = new Float32Array(side * side);
+  for (let y = 0; y < side; y++) {
+    const row = Math.floor((y / side) * rows);
+    const shift = row % 2 ? Math.PI : 0;
+    for (let x = 0; x < side; x++) {
+      const loop = Math.sin((x / side) * cols * Math.PI * 2 + shift) * 0.5 + 0.5;
+      const rib = Math.sin((y / side) * rows * Math.PI * 2) * 0.5 + 0.5;
+      height[y * side + x] = loop * 0.5 + rib * 0.32 + Math.random() * 0.18;
+    }
+  }
+
+  const at = (x: number, y: number) =>
+    height[((y + side) % side) * side + ((x + side) % side)];
+
+  const image = ctx.createImageData(side, side);
+  const strength = 2.4;
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) {
+      const nx = -(at(x + 1, y) - at(x - 1, y)) * strength;
+      const ny = -(at(x, y + 1) - at(x, y - 1)) * strength;
+      const len = Math.hypot(nx, ny, 1);
+      const at4 = (y * side + x) * 4;
+      image.data[at4] = Math.round(((nx / len) * 0.5 + 0.5) * 255);
+      image.data[at4 + 1] = Math.round(((ny / len) * 0.5 + 0.5) * 255);
+      image.data[at4 + 2] = Math.round(((1 / len) * 0.5 + 0.5) * 255);
+      image.data[at4 + 3] = 255;
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+
+  const made = new THREE.CanvasTexture(canvas);
+  made.wrapS = made.wrapT = THREE.RepeatWrapping;
+  made.repeat.set(26, 26);
+  made.anisotropy = 8;
+  return made;
+}
+
+/**
+ * Съёмочный павильон вместо типовой комнаты three.
+ *
+ * `RoomEnvironment` освещает вещь как интерьер: свет ровный и со всех сторон.
+ * Белая футболка в нём теряет края - ей нечем отделиться от белого фона.
+ * В предметной съёмке делают обратное: тёмное окружение и несколько крупных
+ * мягких источников, и тогда по краю вещи идёт тонкая серая грань, которая и
+ * рисует форму.
+ */
+function studio(THREE: typeof import("three")) {
+  const room = new THREE.Scene();
+
+  const panel = (
+    width: number,
+    height: number,
+    glow: number,
+    place: [number, number, number],
+    look: [number, number, number] = [0, 0, 0],
+  ) => {
+    const light = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, height),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(glow, glow, glow) }),
+    );
+    light.position.set(...place);
+    light.lookAt(...look);
+    room.add(light);
+    return light;
+  };
+
+  // Тёмные стены - это и есть то, от чего белая вещь отделяется.
+  const walls = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 10, 10),
+    new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0.06, 0.06, 0.065),
+      side: THREE.BackSide,
+    }),
+  );
+  room.add(walls);
+
+  // Крупный верхний софтбокс спереди - главный. Он же даёт блик по плечам.
+  panel(6, 4, 4.2, [0.6, 3.2, 2.6]);
+  // Заполняющий слева, вдвое тише: без него левая половина проваливается.
+  panel(5, 5, 1.5, [-3.4, 0.6, 1.4]);
+  // Справа ещё тише - разница между сторонами и делает объём.
+  panel(4, 5, 0.7, [3.4, 0.4, 0.6]);
+  // Контровой сзади: тонкая светлая грань по силуэту, как в каталоге.
+  panel(4, 4, 2.6, [-1.2, 1.4, -3.4]);
+  // Отражение от пола, слабое: снизу вещь не должна быть черной.
+  panel(6, 6, 0.5, [0, -2.6, 0], [0, 1, 0]);
+
+  return room;
+}
+
+/**
+ * Кромки вещи, построенные по её собственным дыркам.
+ *
+ * Горловина, низ рукавов и подол - это границы полотна: рёбра, у которых
+ * только один треугольник. Найти их можно прямо в геометрии, ничего не
+ * покупая и не рисуя. Дальше по каждой границе идёт трубка - так выглядит
+ * подвёрнутый и прошитый край, - а у горловины она толще, потому что там
+ * вязаная резинка, а не подгиб.
+ *
+ * Вершины сначала склеиваются по координате: glTF режет их по швам UV, и без
+ * склейки каждое такое ребро выглядело бы границей.
+ */
+function hems(
+  THREE: typeof import("three"),
+  meshes: InstanceType<typeof import("three").Mesh>[],
+) {
+  const made: InstanceType<typeof import("three").Mesh>[] = [];
+
+  for (const mesh of meshes) {
+    const position = mesh.geometry.attributes.position;
+    const index = mesh.geometry.index;
+    const grid = 1e4;
+
+    const points: InstanceType<typeof THREE.Vector3>[] = [];
+    const seen = new Map<string, number>();
+    const weld = (raw: number) => {
+      const spot = new THREE.Vector3().fromBufferAttribute(position, raw);
+      const key = `${Math.round(spot.x * grid)},${Math.round(spot.y * grid)},${Math.round(spot.z * grid)}`;
+      let id = seen.get(key);
+      if (id === undefined) {
+        id = points.length;
+        seen.set(key, id);
+        points.push(spot);
+      }
+      return id;
+    };
+
+    const times = new Map<string, number>();
+    const total = index ? index.count : position.count;
+    for (let at = 0; at < total; at += 3) {
+      const corners = [0, 1, 2].map((step) =>
+        weld(index ? index.getX(at + step) : at + step),
+      );
+      for (let side = 0; side < 3; side++) {
+        const from = corners[side];
+        const to = corners[(side + 1) % 3];
+        const key = from < to ? `${from}:${to}` : `${to}:${from}`;
+        times.set(key, (times.get(key) ?? 0) + 1);
+      }
+    }
+
+    // Соседи по границе: у каждой вершины края их ровно двое.
+    const next = new Map<number, number[]>();
+    for (const [key, count] of times) {
+      if (count !== 1) continue;
+      const [from, to] = key.split(":").map(Number);
+      (next.get(from) ?? next.set(from, []).get(from)!).push(to);
+      (next.get(to) ?? next.set(to, []).get(to)!).push(from);
+    }
+
+    const walked = new Set<number>();
+    const loops: number[][] = [];
+    for (const start of next.keys()) {
+      if (walked.has(start)) continue;
+      const loop = [start];
+      walked.add(start);
+      let here = start;
+      for (;;) {
+        const step = (next.get(here) ?? []).find((one) => !walked.has(one));
+        if (step === undefined) break;
+        walked.add(step);
+        loop.push(step);
+        here = step;
+      }
+      // Меньше десятка точек - это дырка в сетке, а не край вещи.
+      if (loop.length > 12) loops.push(loop);
+    }
+    if (loops.length === 0) continue;
+
+    // Горловина - самая высокая из границ. У неё резинка, она толще.
+    const heights = loops.map((loop) =>
+      loop.reduce((sum, one) => sum + points[one].y, 0) / loop.length,
+    );
+    const collar = heights.indexOf(Math.max(...heights));
+
+    mesh.geometry.computeBoundingBox();
+    const span = (mesh.geometry.boundingBox ?? new THREE.Box3()).getSize(
+      new THREE.Vector3(),
+    );
+    const thin = Math.max(span.x, span.y) * 0.004;
+
+    loops.forEach((loop, which) => {
+      const curve = new THREE.CatmullRomCurve3(
+        loop.map((one) => points[one]),
+        true,
+        "centripetal",
+      );
+      const edge = new THREE.Mesh(
+        new THREE.TubeGeometry(
+          curve,
+          Math.min(loop.length, 420),
+          which === collar ? thin * 2.4 : thin,
+          8,
+          true,
+        ),
+        new THREE.MeshPhysicalMaterial({
+          color: REPAINT.color,
+          roughness: 0.98,
+          metalness: 0,
+          sheen: 1,
+          sheenRoughness: 0.9,
+          sheenColor: new THREE.Color(0xffffff),
+        }),
+      );
+      edge.applyMatrix4(mesh.matrixWorld);
+      made.push(edge);
+    });
+  }
+
+  return made;
 }
