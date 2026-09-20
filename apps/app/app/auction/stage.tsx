@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { fitInside } from "./fit.ts";
 import { DECAL_DEPTH, REPAINT, SPOTS, type Spot } from "./spots.ts";
 
 /**
@@ -22,6 +23,13 @@ import { DECAL_DEPTH, REPAINT, SPOTS, type Spot } from "./spots.ts";
 export type Stage = {
   /** Довернуть вещь к азимуту. Зовут ряд ракурсов и выбор места из списка. */
   face(azimuth: number): void;
+  /**
+   * Показать картинку в месте. `null` возвращает пустую рамку.
+   *
+   * Это превью и только превью: оно живёт в браузере и никуда не уезжает.
+   * Чужим оно станет видно, когда картинка приедет вместе со ставкой.
+   */
+  show(code: string, image: HTMLImageElement | null): void;
 };
 
 export function ThingStage({
@@ -262,8 +270,14 @@ export function ThingStage({
         // есть предмет торга на этом экране.
         let over: string | null = null;
         let chosen: string | null = pickedNow.current;
+        // Картинки, которые человек примерил сам. Лежат отдельно от общих
+        // пустых рамок: те делятся между местами одного размера, а эти свои.
+        const mine = new Map<string, InstanceType<typeof THREE.Texture>>();
         const restyle = () => {
           for (const decal of decals) {
+            // Место с примеренной картинкой подсветка не трогает: цвет там
+            // принадлежит логотипу, а не рамке.
+            if (mine.has(decal.code)) continue;
             const material = decal.mesh.material as InstanceType<
               typeof THREE.MeshStandardMaterial
             >;
@@ -329,6 +343,36 @@ export function ThingStage({
         const up = new THREE.Vector3(0, 1, 0);
         let turning = 0;
         stage.current = {
+          show(code, image) {
+            const decal = decals.find((one) => one.code === code);
+            const spot = SPOTS.find((one) => one.code === code);
+            if (!decal || !spot) return;
+            const material = decal.mesh.material as InstanceType<
+              typeof THREE.MeshStandardMaterial
+            >;
+            // Своя текстура у каждого места: пустые рамки одного размера
+            // делятся одной на всех, а картинка у каждого своя, и чужую
+            // освобождать нельзя.
+            const own = mine.get(code);
+            if (own) own.dispose();
+
+            if (!image) {
+              mine.delete(code);
+              material.map = placeholder(THREE, spot);
+              // Рамке цвет возвращает общая подсветка.
+              restyle();
+              return;
+            }
+
+            const texture = artwork(THREE, spot, image);
+            mine.set(code, texture);
+            material.map = texture;
+            // Логотип показываем как есть: синий налёт рамки на нём читался
+            // бы как часть печати, а печатать будут именно то, что видно.
+            material.color.set(0xffffff);
+            material.opacity = 1;
+            material.needsUpdate = true;
+          },
           face(azimuth) {
             const target = (azimuth * Math.PI) / 180;
             const current = Math.atan2(camera.position.x, camera.position.z);
@@ -366,6 +410,8 @@ export function ThingStage({
 
         cleanup = () => {
           cancelAnimationFrame(frame);
+          for (const texture of mine.values()) texture.dispose();
+          mine.clear();
           stage.current = null;
           mark.current = null;
           observer.disconnect();
@@ -478,6 +524,37 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   made.colorSpace = THREE.SRGBColorSpace;
   made.anisotropy = 8;
   sheets.set(key, made);
+  return made;
+}
+
+/**
+ * Логотип в месте: картинка, вписанная в пропорции самого места.
+ *
+ * Холст делается по форме места, а картинка ложится в него целиком, с полями.
+ * Растянуть её по месту нельзя - напечатают ровно то, что видно.
+ */
+function artwork(
+  THREE: typeof import("three"),
+  spot: Spot,
+  image: HTMLImageElement,
+) {
+  const [wide, tall] = spot.size;
+  const span = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = wide >= tall ? span : Math.round((span * wide) / tall);
+  canvas.height = wide >= tall ? Math.round((span * tall) / wide) : span;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("нет 2d-контекста");
+
+  const box = fitInside(
+    { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height },
+    { width: canvas.width, height: canvas.height },
+  );
+  ctx.drawImage(image, box.x, box.y, box.width, box.height);
+
+  const made = new THREE.CanvasTexture(canvas);
+  made.colorSpace = THREE.SRGBColorSpace;
+  made.anisotropy = 8;
   return made;
 }
 
