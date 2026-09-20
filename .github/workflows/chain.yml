@@ -117,6 +117,15 @@ jobs:
           chmod +x "$HOME/bin/cargo-build-sbf"
           echo "$HOME/bin" >> $GITHUB_PATH
 
+          # Старый набор от avm убираем совсем: пока он лежит рядом, его
+          # кто-то находит, и это «кто-то» не нашлось ни по пути, ни по
+          # ссылке в rustup. Печатаем, куда смотрит sdk - если версия снова
+          # уедет, будет видно куда.
+          rm -rf "$HOME/.cache/solana/v1.48"
+          readlink -f \
+            "$HOME/.local/share/solana/install/active_release/bin/platform-tools-sdk/sbf/dependencies/platform-tools" \
+            || true
+
       # Всё, что зовёт cargo, идёт через `rustup run 1.89.0`, и это не
       # перестраховка.
       #
