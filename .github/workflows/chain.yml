@@ -69,6 +69,15 @@ jobs:
       - name: Кошелёк для тестов
         run: solana-keygen new --no-bip39-passphrase --silent --force
 
+      # Версия platform-tools закреплена явно.
+      #
+      # Без этого CI ставил старый набор с cargo 1.84, и сборка падала на
+      # зависимости, требующей edition2024, - при том что та же сборка на
+      # машине проходила. Расхождение было только в этом: локально приезжал
+      # v1.52 с Rust 1.89, в CI - старее.
+      - name: Platform-tools
+        run: cargo-build-sbf --install-only --tools-version v1.52
+
       - name: Сборка
         working-directory: chain
         run: anchor build
