@@ -105,14 +105,26 @@ jobs:
           rustup toolchain link solana "$HOME/.cache/solana/v1.52/platform-tools/rust"
           rustup run solana cargo --version
 
-          # И обёртка, которая подставляет версию инструментов всем, кто зовёт
-          # `cargo build-sbf` без неё, - а зовёт её anchor, и без версии.
-          # Перебрать все места, откуда в CI берётся старый набор, оказалось
-          # дороже, чем задать его один раз на входе.
+          # И обёртка, которая навязывает версию инструментов всем, кто зовёт
+          # `cargo build-sbf`.
+          #
+          # Виноват оказался сам anchor 0.32.2: он зовёт build-sbf со своей
+          # закреплённой версией, v1.48, и его ключ шёл последним, перебивая
+          # наш - видно по строке «Installed platform-tools v1.48» прямо в
+          # шаге сборки. Поэтому обёртка не добавляет версию, а
+          # вырезает чужую и ставит свою. Наш Cargo.lock собран новым cargo, и
+          # старый его манифесты не читает вовсе.
           mkdir -p "$HOME/bin"
           printf '%s\n' \
             '#!/usr/bin/env bash' \
-            'exec "$HOME/.local/share/solana/install/active_release/bin/cargo-build-sbf" --tools-version v1.52 "$@"' \
+            'args=()' \
+            'skip=0' \
+            'for a in "$@"; do' \
+            '  if [ "$skip" = 1 ]; then skip=0; continue; fi' \
+            '  if [ "$a" = "--tools-version" ]; then skip=1; continue; fi' \
+            '  args+=("$a")' \
+            'done' \
+            'exec "$HOME/.local/share/solana/install/active_release/bin/cargo-build-sbf" --tools-version v1.52 "${args[@]}"' \
             > "$HOME/bin/cargo-build-sbf"
           chmod +x "$HOME/bin/cargo-build-sbf"
           echo "$HOME/bin" >> $GITHUB_PATH
