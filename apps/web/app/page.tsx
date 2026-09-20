@@ -16,10 +16,10 @@ const APP_URL = "https://app.oxar.app";
 export default function Home() {
   return (
     <main>
-      {/* Метка растровая и мелкая - другой у нас нет. Поэтому она и стоит в
-          44 пикселя при 84 в самом файле: на плотном экране это ровно два
-          пикселя на точку, и она не мылится. */}
-      <img className="mark" src="/mark.png" width={44} height={63} alt="" />
+      {/* Метка стоит крупно: она перелив от почти белого к чёрному, и мелкой
+          этот перелив превращается в серое пятно. В файле она втрое больше
+          показанного - хватит любой плотности экрана. */}
+      <img className="mark" src="/mark.png" width={96} height={137} alt="" />
       <h1>OXAR</h1>
       <p className="lead">If people look at it, it&apos;s ad space.</p>
       <a className="launch" href={APP_URL}>
