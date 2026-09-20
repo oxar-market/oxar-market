@@ -1,0 +1,1715 @@
+{
+  "address": "Hzh8CjF8ZmmtqVro2dVR54uFVcyjWfp3Aenvh782QYr5",
+  "metadata": {
+    "name": "oxar_escrow",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "OXAR escrow: money is released for the time a placement actually stood"
+  },
+  "docs": [
+    "Эскроу OXAR: деньги отдаются за время, которое размещение реально простояло.",
+    "",
+    "Две половины. Сделка - то, что было и раньше: покупатель отдал сумму,",
+    "продавец получает её по расписанию. Торг - то, что появилось потом: ставки",
+    "обеспечены деньгами, а выигравшая переезжает в сделку, не возвращаясь в",
+    "кошелёк. Победителю не надо платить отдельно, и «выиграл и пропал»",
+    "перестаёт быть возможным.",
+    "",
+    "Типа места здесь нет и не будет: блокчейну всё равно, аватарка это или бок",
+    "чемодана. Все различия между поверхностями живут в нашей базе."
+  ],
+  "instructions": [
+    {
+      "name": "bidder_places_bid",
+      "docs": [
+        "Ставка: деньги уходят в хранилище, прежнему лидеру возвращаются тут же."
+      ],
+      "discriminator": [
+        172,
+        147,
+        26,
+        172,
+        0,
+        179,
+        171,
+        148
+      ],
+      "accounts": [
+        {
+          "name": "bidder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "lot",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lot.auction",
+                "account": "Lot"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lot"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bidder_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "bidder"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "previous_bidder",
+          "docs": [
+            "Когда ставок ещё не было, сюда передаётся сам участник - возврата не",
+            "будет, и счёт остаётся нетронутым."
+          ]
+        },
+        {
+          "name": "previous_bidder_tokens",
+          "docs": [
+            "Счёт, на который вернётся прежняя ставка.",
+            "",
+            "`init_if_needed` здесь не для удобства, а против атаки: прежний лидер",
+            "может закрыть свой токен-счёт, и тогда возврат провалится, а вместе с",
+            "ним и любая новая ставка - торг замёрз бы на его сумме навсегда. Счёт",
+            "заводится заново за счёт того, кто ставит: атакующий теряет свою аренду,",
+            "новый участник - доли цента, торг идёт дальше."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "previous_bidder"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "lot"
+          ]
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "buyer_opens_deal",
+      "docs": [
+        "Покупатель кладёт всю сумму в хранилище сделки."
+      ],
+      "discriminator": [
+        192,
+        234,
+        40,
+        12,
+        126,
+        246,
+        216,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "seller",
+          "docs": [
+            "покупателя: он платит и он же выбирает, кому."
+          ]
+        },
+        {
+          "name": "platform"
+        },
+        {
+          "name": "deal",
+          "docs": [
+            "Идентификатор брони из нашей базы - шестнадцать байт uuid. Сделка на одну",
+            "бронь может быть только одна: повторный вызов упрётся в уже занятый PDA."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "booking"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Хранилище сделки. Владеет им сама сделка, то есть никто из людей: ключа",
+            "от него нет ни у покупателя, ни у продавца, ни у площадки."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "deal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "buyer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "booking",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "starts_at",
+          "type": "i64"
+        },
+        {
+          "name": "ends_at",
+          "type": "i64"
+        },
+        {
+          "name": "refundable_until",
+          "type": "i64"
+        },
+        {
+          "name": "fee_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "lot_becomes_deal",
+      "docs": [
+        "Торг кончился с победителем: ставка переезжает в сделку."
+      ],
+      "discriminator": [
+        142,
+        200,
+        89,
+        192,
+        21,
+        205,
+        28,
+        10
+      ],
+      "accounts": [
+        {
+          "name": "crank",
+          "docs": [
+            "Кто двигает торг дальше. Платит за два аккаунта сделки и подписи не",
+            "требует ни от кого: условия уже записаны в лоте."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "lot",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lot.auction",
+                "account": "Lot"
+              }
+            ]
+          }
+        },
+        {
+          "name": "lot_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lot"
+              }
+            ]
+          }
+        },
+        {
+          "name": "seller",
+          "writable": true,
+          "relations": [
+            "lot"
+          ]
+        },
+        {
+          "name": "platform"
+        },
+        {
+          "name": "deal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "booking"
+              }
+            ]
+          }
+        },
+        {
+          "name": "deal_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "deal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "lot"
+          ]
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "booking",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "starts_at",
+          "type": "i64"
+        },
+        {
+          "name": "ends_at",
+          "type": "i64"
+        },
+        {
+          "name": "refundable_until",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "party_closes_deal",
+      "docs": [
+        "Любая из сторон закрывает сделку: продавцу за отстоявшее, остальное назад."
+      ],
+      "discriminator": [
+        134,
+        23,
+        80,
+        14,
+        159,
+        21,
+        124,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "party",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "deal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "deal.booking",
+                "account": "Deal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "deal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "relations": [
+            "deal"
+          ]
+        },
+        {
+          "name": "seller",
+          "relations": [
+            "deal"
+          ]
+        },
+        {
+          "name": "platform",
+          "relations": [
+            "deal"
+          ]
+        },
+        {
+          "name": "buyer_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "buyer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "seller_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "seller"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "platform_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "platform"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "deal"
+          ]
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "seller_closes_lot",
+      "docs": [
+        "Торг кончился ничем: ставка ниже резерва возвращается, аккаунты закрываются."
+      ],
+      "discriminator": [
+        129,
+        14,
+        183,
+        226,
+        173,
+        58,
+        222,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "crank",
+          "signer": true
+        },
+        {
+          "name": "lot",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lot.auction",
+                "account": "Lot"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lot"
+              }
+            ]
+          }
+        },
+        {
+          "name": "seller",
+          "writable": true,
+          "relations": [
+            "lot"
+          ]
+        },
+        {
+          "name": "last_bidder"
+        },
+        {
+          "name": "last_bidder_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "last_bidder"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "lot"
+          ]
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "seller_opens_lot",
+      "docs": [
+        "Продавец открывает торг. Денег в хранилище ещё нет."
+      ],
+      "discriminator": [
+        219,
+        91,
+        199,
+        189,
+        78,
+        98,
+        42,
+        205
+      ],
+      "accounts": [
+        {
+          "name": "seller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "lot",
+          "docs": [
+            "Идентификатор лота из нашей базы - шестнадцать байт uuid. Торг на один",
+            "лот может быть только один: повторный вызов упрётся в занятый PDA."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "auction"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Хранилище торга. Владеет им сам лот: ни у продавца, ни у участников, ни",
+            "у площадки ключа от него нет."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "lot"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "auction",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "reserve",
+          "type": "u64"
+        },
+        {
+          "name": "min_step",
+          "type": "u64"
+        },
+        {
+          "name": "closes_at",
+          "type": "i64"
+        },
+        {
+          "name": "extend_seconds",
+          "type": "i64"
+        },
+        {
+          "name": "fee_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "seller_takes_earned",
+      "docs": [
+        "Продавец забирает натёкшее, не закрывая сделку."
+      ],
+      "discriminator": [
+        163,
+        152,
+        28,
+        236,
+        161,
+        16,
+        74,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "deal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "deal.booking",
+                "account": "Deal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "deal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "seller",
+          "relations": [
+            "deal"
+          ]
+        },
+        {
+          "name": "platform",
+          "relations": [
+            "deal"
+          ]
+        },
+        {
+          "name": "seller_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "seller"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "platform_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "platform"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "deal"
+          ]
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Deal",
+      "discriminator": [
+        125,
+        223,
+        160,
+        234,
+        71,
+        162,
+        182,
+        219
+      ]
+    },
+    {
+      "name": "Lot",
+      "discriminator": [
+        2,
+        198,
+        93,
+        153,
+        205,
+        31,
+        101,
+        252
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflowed"
+    },
+    {
+      "code": 6001,
+      "name": "AmountIsZero",
+      "msg": "A deal must move a positive amount"
+    },
+    {
+      "code": 6002,
+      "name": "EndsBeforeStart",
+      "msg": "A deal cannot end before it starts"
+    },
+    {
+      "code": 6003,
+      "name": "StartsInThePast",
+      "msg": "A deal cannot start in the past"
+    },
+    {
+      "code": 6004,
+      "name": "FeeTooHigh",
+      "msg": "The fee cannot be more than the whole deal"
+    },
+    {
+      "code": 6005,
+      "name": "NotAParty",
+      "msg": "Only the buyer or the seller can close this deal"
+    },
+    {
+      "code": 6006,
+      "name": "NothingToWithdraw",
+      "msg": "Nothing has accrued yet"
+    },
+    {
+      "code": 6007,
+      "name": "NotRefundable",
+      "msg": "The refund window has closed and the deal has not ended"
+    },
+    {
+      "code": 6008,
+      "name": "RefundWindowTooLong",
+      "msg": "The refund window cannot outlast the deal"
+    },
+    {
+      "code": 6009,
+      "name": "LotClosed",
+      "msg": "This lot is not taking bids"
+    },
+    {
+      "code": 6010,
+      "name": "BidTooLow",
+      "msg": "The bid is below the minimum for this lot"
+    },
+    {
+      "code": 6011,
+      "name": "LotStillOpen",
+      "msg": "The lot is still taking bids"
+    },
+    {
+      "code": 6012,
+      "name": "WrongPreviousBidder",
+      "msg": "This is not the bidder who is currently leading"
+    },
+    {
+      "code": 6013,
+      "name": "NoWinner",
+      "msg": "Nobody met the reserve on this lot"
+    },
+    {
+      "code": 6014,
+      "name": "LotHasWinner",
+      "msg": "A lot with a winner cannot simply be closed"
+    },
+    {
+      "code": 6015,
+      "name": "ClosesInThePast",
+      "msg": "A lot cannot close in the past"
+    },
+    {
+      "code": 6016,
+      "name": "ExtensionTooLong",
+      "msg": "The extension window is too long"
+    }
+  ],
+  "types": [
+    {
+      "name": "Deal",
+      "docs": [
+        "Одна сделка: покупатель отдал деньги, продавец получает их за время, которое",
+        "размещение реально простояло.",
+        "",
+        "Здесь нет ни аукциона, ни типа места, ни способа оплаты - и это осознанно.",
+        "Аукцион решает, кто покупатель и почём; к моменту, когда появляются деньги,",
+        "он уже кончился, и блокчейну про него знать нечего. Разовый платёж - это та",
+        "же сделка с нулевым сроком: `ends_at == starts_at`, и вся сумма доступна",
+        "продавцу сразу. Поток - та же сделка со сроком. Одна структура на три",
+        "случая вместо трёх похожих, которые разъедутся."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "buyer",
+            "docs": [
+              "Кто заплатил. Только он и продавец могут закрыть сделку досрочно."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "seller",
+            "docs": [
+              "Кому идут деньги за отстоявшее время."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "platform",
+            "docs": [
+              "Владелец счёта, на который уходит комиссия площадки."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Монета сделки. В хранилище может лежать только она."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Вся сумма сделки в базовых единицах монеты."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "released",
+            "docs": [
+              "Сколько уже ушло из хранилища: продавцу плюс комиссия."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "starts_at",
+            "docs": [
+              "Секунда, с которой начинает капать."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "ends_at",
+            "docs": [
+              "Секунда, на которой сумма дотекает целиком. Равна началу у разового",
+              "платежа."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "refundable_until",
+            "docs": [
+              "До какой секунды покупатель может передумать и забрать неотработанное.",
+              "",
+              "Одно поле вместо трёх режимов. Там, где размещение проверяется само -",
+              "профиль в сети, - ставим конец срока: покупатель волен отменить в любой",
+              "момент, и это и есть обещание «платим за простоявшее время». Там, где",
+              "проверить нечем, а продавец несёт невозвратные расходы до начала -",
+              "печать, изготовление, бронь площадки, - ставим момент, с которого эти",
+              "расходы начались. После него деньги заперты для обеих сторон: покупатель",
+              "не вернёт, продавец не возьмёт, пока не наступит `ends_at`.",
+              "",
+              "Слова «печать» здесь нет намеренно. Программа не знает, что продают: она",
+              "знает только, с какой секунды отказ перестаёт быть бесплатным."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "booking",
+            "docs": [
+              "Идентификатор брони из нашей базы, шестнадцать байт uuid. Он же входит в",
+              "сиды PDA, поэтому хранить его обязательно: без него сделка не может",
+              "подписать выплату из собственного хранилища."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "fee_bps",
+            "docs": [
+              "Комиссия площадки в сотых долях процента. 1000 - это 10%."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "docs": [
+              "Запас под поля, которых ещё нет. Без него добавить поле означает сломать",
+              "раскладку уже существующих сделок."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Lot",
+      "docs": [
+        "Одни торги: деньги участников лежат здесь, а не на честном слове.",
+        "",
+        "Ставка обеспечена всегда. Пока ставка высшая, её сумма заперта в хранилище",
+        "лота; как только её перебили, деньги той же транзакцией возвращаются",
+        "прежнему участнику. Поэтому хранилище на лот одно, а не по одному на",
+        "каждого: в нём в любой момент лежит ровно текущая высшая ставка.",
+        "",
+        "Так закрывается дыра, из-за которой можно было выиграть торг суммой,",
+        "которой у тебя нет: ставка не принимается, если денег не хватило на перевод."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "seller",
+            "docs": [
+              "Кто продаёт. Только он открывает торг и получает аренду назад."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Монета торга. В хранилище может лежать только она."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "top_bidder",
+            "docs": [
+              "Кто сейчас ведёт. Пусто, пока ставок нет."
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "top_bid",
+            "docs": [
+              "Сколько стоит высшая ставка. Ровно столько лежит в хранилище."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "reserve",
+            "docs": [
+              "Ниже этого ставки не принимаются вовсе."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_step",
+            "docs": [
+              "Наименьшая прибавка к высшей ставке.",
+              "",
+              "Приходит снаружи, а не считается здесь, потому что «не меньше доллара»",
+              "зависит от числа знаков у монеты, а программе про монеты знать нечего."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "closes_at",
+            "docs": [
+              "Когда торг закрывается. Ставка под конец двигает это вперёд и никогда",
+              "назад."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "extend_seconds",
+            "docs": [
+              "На сколько секунд ставка под конец отодвигает закрытие.",
+              "",
+              "Поле, а не константа. Без продления весь аукцион сводится к одной ставке",
+              "в последнюю секунду: выигрывает не тот, кто дал больше, а тот, у кого",
+              "быстрее интернет. Но сколько именно давать на ответ - свойство торга, а",
+              "не программы: недельному лоту пять минут в самый раз, а часовому много."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "auction",
+            "docs": [
+              "Идентификатор лота из нашей базы, шестнадцать байт uuid. Он же входит в",
+              "сиды PDA, поэтому хранить его обязательно: без него лот не может",
+              "подписать возврат из собственного хранилища."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "fee_bps",
+            "docs": [
+              "Комиссия площадки в сотых долях процента. Переезжает в сделку как есть."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "docs": [
+              "Запас под поля, которых ещё нет. Без него добавить поле означает сломать",
+              "чтение уже открытых лотов."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "SEED",
+      "type": "string",
+      "value": "\"anchor\""
+    }
+  ]
+}

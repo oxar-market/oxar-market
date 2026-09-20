@@ -1,0 +1,129 @@
+name: Chain
+
+# Программа на Solana проверяется отдельным прогоном, а не вместе с сайтом.
+#
+# Причина простая: установка Rust, Solana CLI и Anchor занимает минуты, а
+# меняется программа редко. Вешать это на каждый пуш значило бы платить за
+# правку текста на лендинге временем сборки компилятора.
+#
+# Поэтому прогон запускается только когда тронут сам chain/.
+
+on:
+  push:
+    branches: [main]
+    paths: ["chain/**", ".github/workflows/chain.yml"]
+  pull_request:
+    paths: ["chain/**", ".github/workflows/chain.yml"]
+
+concurrency:
+  group: chain-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: program
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Версии закреплены ровно те, на которых программа собрана и развёрнута
+      # на devnet. Anchor ломает совместимость между минорными версиями, и
+      # «latest» однажды молча собрал бы другую программу под тем же адресом.
+      - name: Rust
+        run: |
+          rustup toolchain install 1.89.0 --profile minimal
+          rustup default 1.89.0
+          rustc --version
+          cargo --version
+
+      # Через rustup run, а не просто cargo: на раннере есть свой cargo 1.84,
+      # который перебивает поставленный выше и падает на edition2024.
+      - name: Anchor
+        run: |
+          rustup run 1.89.0 cargo install \
+            --git https://github.com/solana-foundation/anchor avm --force
+          avm install 0.32.2
+          avm use 0.32.2
+          anchor --version
+
+      # Solana ставится ПОСЛЕ Anchor, и порядок тут - не вкусовщина.
+      #
+      # avm тянет за собой свою Solana - ту, на которую закреплён anchor 0.32.2,
+      # то есть 2.3.0 с platform-tools v1.48 и rustc 1.84. Она приезжает в тот
+      # же каталог и перетирает поставленную нами. Прошлый прогон падал именно
+      # на этом: по пути 3.1.10 лежал build-sbf 2.3.0, который не знает
+      # --install-only, - и это было видно только потому, что шаг печатает
+      # версию. Ставим свою последней, чтобы победила она.
+      - name: Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v3.1.10/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+          "$HOME/.local/share/solana/install/active_release/bin/solana" --version
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Свой install, без воркспейса: у программы мир зависимостей другой -
+      # web3.js первой версии и mocha, - и общий lockfile сводил бы их с
+      # версиями приложения без нужды.
+      - name: Зависимости тестов
+        working-directory: chain
+        run: pnpm install --ignore-workspace --frozen-lockfile
+
+      - name: Кошелёк для тестов
+        run: solana-keygen new --no-bip39-passphrase --silent --force
+
+      # Версия platform-tools закреплена явно, и это оказалось самым дорогим
+      # местом во всём прогоне.
+      #
+      # Anchor зовёт `cargo build-sbf` со своей закреплённой версией, v1.48, а
+      # там cargo 1.84, который не читает манифесты с edition2024 - на них
+      # собран наш Cargo.lock. Перебить его ключ не вышло ничем: ни порядком
+      # установки, ни ссылкой `solana` в rustup, ни обёрткой поверх build-sbf.
+      # Поэтому .so собирается прямым вызовом с нужной версией, а anchor
+      # остаётся только на том, что умеет один он, - IDL и тесты.
+      #
+      # Ссылка в rustup переставляется заодно: anchor трогает её при сборке
+      # IDL, и старый набор там ни к чему.
+      - name: Platform-tools
+        run: |
+          sbf="$HOME/.local/share/solana/install/active_release/bin/cargo-build-sbf"
+          "$sbf" --version
+          "$sbf" --tools-version v1.52 --install-only
+          rustup toolchain link solana "$HOME/.cache/solana/v1.52/platform-tools/rust"
+          rustup run solana cargo --version
+
+      # IDL пишется через временный файл не для красоты: `anchor idl build`
+      # читает target/idl, а перенаправление обнуляет файл раньше запуска, и
+      # команда падает на разборе пустого JSON.
+      - name: Сборка
+        working-directory: chain
+        run: |
+          solana --version
+          cargo-build-sbf --version
+          cargo-build-sbf \
+            --manifest-path programs/oxar-escrow/Cargo.toml \
+            --tools-version v1.52 \
+            --sbf-out-dir target/deploy
+          mkdir -p target/idl target/types
+          rustup run 1.89.0 anchor idl build > /tmp/idl.json
+          cp /tmp/idl.json target/idl/oxar_escrow.json
+          anchor idl type target/idl/oxar_escrow.json > /tmp/types.ts
+          cp /tmp/types.ts target/types/oxar_escrow.ts
+
+      # Арифметика: сколько натекло продавцу, сколько вернётся покупателю,
+      # сколько комиссии. Считается в целых, и переполнение здесь дороже всего.
+      - name: Юнит-тесты арифметики
+        working-directory: chain
+        run: rustup run 1.89.0 cargo test --manifest-path programs/oxar-escrow/Cargo.toml
+
+      # Против настоящего валидатора: возврат перебитому, продление торга,
+      # запрет закрыть идущий торг и прочее, что на чистой арифметике не видно.
+      - name: Интеграционные тесты
+        working-directory: chain
+        run: rustup run 1.89.0 anchor test --skip-build
