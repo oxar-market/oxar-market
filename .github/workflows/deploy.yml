@@ -173,4 +173,13 @@ jobs:
           test "$code" = "401" || { echo "без токена ожидали 401, получили $code"; exit 1; }
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$fn" -H "Authorization: Bearer $ANON" -H 'X-Privy-Token: не.настоящий')
           test "$code" = "401" || { echo "с поддельным токеном ожидали 401, получили $code"; exit 1; }
-          echo "мост отвечает и отбивает чужое"
+          # Предзапрос CORS. Заголовок X-Privy-Token нестандартный, поэтому
+          # браузер шлёт OPTIONS первым и без разрешения до POST не доходит.
+          # Локально не видно: тамошний шлюз подставляет CORS сам.
+          ok=$(curl -s -D- -o /dev/null -X OPTIONS "$fn" \
+            -H 'Origin: https://app.oxar.app' \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: authorization,content-type,x-privy-token' \
+            | grep -ci 'access-control-allow-origin: https://app.oxar.app' || true)
+          test "$ok" = "1" || { echo "предзапрос CORS не разрешён - браузер до функции не дойдёт"; exit 1; }
+          echo "мост отвечает, отбивает чужое и пускает наш домен"
