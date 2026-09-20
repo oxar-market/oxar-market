@@ -53,6 +53,29 @@ export function fromUsdcBaseUnits(units: number): number {
   return units / UNITS_PER_CENT;
 }
 
+/**
+ * Разобрать то, что человек набрал в поле ставки, в целые центы.
+ *
+ * Возвращает `null`, если в строке не число: пустое поле, одни пробелы, буквы,
+ * минус, больше двух знаков после разделителя. Молча округлить третий знак
+ * нельзя - человек видел бы одну сумму, а ставил другую.
+ *
+ * Запятая и точка равноправны: половина мира набирает «12,50», и отбивать их
+ * не за что.
+ *
+ * Живёт в core, потому что то же поле будет в мобильном приложении, и разбор
+ * денег - ровно то, что нельзя написать дважды.
+ */
+export function parseUsd(text: string): number | null {
+  const clean = text.trim().replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(clean)) return null;
+
+  // Через строку, а не умножением: 12.10 * 100 в двоичной дроби даёт
+  // 1209.9999999999998, и ставка уезжает на цент вниз.
+  const [dollars, cents = ""] = clean.split(".");
+  return Number(dollars) * 100 + Number(cents.padEnd(2, "0"));
+}
+
 export function formatUsd(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
