@@ -15,6 +15,7 @@ export {
   USDC_DECIMALS,
   formatUsd,
   fromUsdcBaseUnits,
+  parseUsd,
   splitPayout,
   toUsdcBaseUnits,
   type Split,

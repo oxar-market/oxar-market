@@ -6,6 +6,7 @@ import {
   USDC_DECIMALS,
   formatUsd,
   fromUsdcBaseUnits,
+  parseUsd,
   splitPayout,
   toUsdcBaseUnits,
 } from "./money.ts";
@@ -69,4 +70,36 @@ test("суммы показываются без лишних нулей, но �
 
 test("большие суммы разделяются запятыми", () => {
   assert.equal(formatUsd(1_234_567), "$12,345.67");
+});
+
+test("поле ставки разбирается в целые центы", () => {
+  assert.equal(parseUsd("12"), 1200);
+  assert.equal(parseUsd("12.5"), 1250);
+  assert.equal(parseUsd("12.50"), 1250);
+  assert.equal(parseUsd("0.01"), 1);
+  assert.equal(parseUsd(" 40 "), 4000);
+});
+
+test("запятая и точка равноправны", () => {
+  assert.equal(parseUsd("12,50"), parseUsd("12.50"));
+});
+
+test("центы не уезжают на двоичной дроби", () => {
+  // 12.10 * 100 в плавающей точке даёт 1209.9999999999998, и наивное
+  // округление вниз стоило бы ставящему цент.
+  assert.equal(parseUsd("12.10"), 1210);
+  assert.equal(parseUsd("0.29"), 29);
+  assert.equal(parseUsd("1.15"), 115);
+});
+
+test("не-число - это отказ, а не ноль", () => {
+  // Ноль был бы хуже всего: поле пустое, а ставка ушла бы как нулевая.
+  for (const bad of ["", " ", "abc", "-5", "1.2.3", "$5", "1e3", "."]) {
+    assert.equal(parseUsd(bad), null, `«${bad}» должно отклоняться`);
+  }
+});
+
+test("третий знак после запятой отклоняется, а не округляется молча", () => {
+  // Человек видел бы одну сумму, а поставил другую.
+  assert.equal(parseUsd("12.505"), null);
 });
