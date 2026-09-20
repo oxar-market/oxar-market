@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { fitInside } from "./fit.ts";
 import { DECAL_DEPTH, REPAINT, SPOTS, type Spot } from "./spots.ts";
+import { develop } from "./tone.ts";
 
 /**
  * Сама вещь: футболка, которую можно вертеть, с местами под нанесение.
@@ -429,8 +430,11 @@ export function ThingStage({
           const ink = paper.getContext("2d");
           if (!ink) return [];
 
+          // Цветовое пространство у цели не задаётся намеренно: three всё
+          // равно пишет в неё рабочий линейный цвет, а не то, что здесь
+          // попросишь, - ветка на sRGB есть только у холста и у XR. Прежняя
+          // строка выглядела как настройка, а не делала ничего.
           const target = new THREE.WebGLRenderTarget(side, side);
-          target.texture.colorSpace = THREE.SRGBColorSpace;
           const lens = new THREE.PerspectiveCamera(camera.fov, 1, 0.1, 100);
           // Кадр теснее, чем на сцене: в кнопке каждый пиксель на счету.
           const back = (reach / Math.tan(fov / 2)) * 1.12;
@@ -447,6 +451,12 @@ export function ThingStage({
             renderer.setRenderTarget(target);
             renderer.render(scene, lens);
             renderer.readRenderTargetPixels(target, 0, 0, side, side, pixels);
+
+            // Плёночная кривая и перевод в sRGB - руками: в рендер-цель three
+            // последний проход не выполняет, и без проявки светлая вещь на
+            // кнопке выбивалась в чистый белый. Выдержку берём у рендерера,
+            // чтобы снимок не разошёлся со сценой при её правке.
+            develop(pixels, renderer.toneMappingExposure);
 
             const image = ink.createImageData(side, side);
             // Строки переворачиваются: GL считает их от нижнего края кадра,
