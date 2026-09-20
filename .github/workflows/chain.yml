@@ -90,12 +90,20 @@ jobs:
       # ронял шаг, хотя у поставленной здесь версии этот ключ есть. Заодно
       # печатаем, что нашлось на пути: в следующий раз причина будет в логе,
       # а не в догадках.
+      #
+      # И отдельно - ссылка `solana` в rustup. Anchor строит IDL через
+      # `cargo +solana`, а эту ссылку avm оставил смотреть на v1.48 с cargo
+      # 1.84. Отсюда падение на edition2024 через четыре секунды после старта
+      # сборки - до того, как скомпилировалась хоть одна строка. Переставляем
+      # её на тот же набор, которым собирается сама программа.
       - name: Platform-tools
         run: |
           which -a cargo-build-sbf || true
           sbf="$HOME/.local/share/solana/install/active_release/bin/cargo-build-sbf"
           "$sbf" --version
           "$sbf" --tools-version v1.52 --install-only
+          rustup toolchain link solana "$HOME/.cache/solana/v1.52/platform-tools/rust"
+          rustup run solana cargo --version
 
       # Всё, что зовёт cargo, идёт через `rustup run 1.89.0`, и это не
       # перестраховка.
