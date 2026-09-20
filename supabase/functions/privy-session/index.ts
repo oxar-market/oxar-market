@@ -50,9 +50,46 @@ function mailbox(privyId: string): string {
   return `${privyId.replace(/[^a-zA-Z0-9]/g, "-")}@privy.invalid`;
 }
 
+/**
+ * Откуда разрешено звать. Список, а не звёздочка: функция выдаёт ключ от
+ * сессии, и пускать к ней любой сайт незачем.
+ *
+ * Без этого браузер до функции вообще не доходит. Заголовок X-Privy-Token -
+ * нестандартный, поэтому перед запросом летит предзапрос OPTIONS, и если на
+ * него не ответить разрешением, fetch падает ещё до POST.
+ *
+ * На локальной машине это не видно: тамошний шлюз Supabase подставляет CORS
+ * сам. В облаке не подставляет, и баг живёт только в проде.
+ */
+const ORIGINS = new Set([
+  "https://app.oxar.app",
+  "https://oxar-app.pages.dev",
+  "http://localhost:3000",
+]);
+
+function cors(origin: string | null): Record<string, string> {
+  if (!origin || !ORIGINS.has(origin)) return {};
+  return {
+    "Access-Control-Allow-Origin": origin,
+    // Список заголовков перечислен целиком: браузер сверяет его с тем, что
+    // собирался послать, и молча отказывает, если чего-то не хватает.
+    "Access-Control-Allow-Headers": "authorization, content-type, x-privy-token",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "3600",
+    // Ответ зависит от Origin, и без этого его закэшировали бы для чужого.
+    Vary: "Origin",
+  };
+}
+
 Deno.serve(async (request) => {
+  const allow = cors(request.headers.get("Origin"));
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: allow });
+  }
+
   if (request.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return new Response("Method not allowed", { status: 405, headers: allow });
   }
 
   // Токен Privy идёт своим заголовком, а не в Authorization. Authorization
@@ -60,7 +97,7 @@ Deno.serve(async (request) => {
   // отбивался бы на шлюзе, не доходя сюда. Заодно так остаётся включённой
   // штатная проверка анонимного ключа - лишний барьер перед функцией.
   const token = request.headers.get("X-Privy-Token") ?? "";
-  if (!token) return new Response("No token", { status: 401 });
+  if (!token) return new Response("No token", { status: 401, headers: allow });
 
   // Подпись, издатель и получатель - все три. Без проверки aud чужое
   // приложение Privy могло бы войти к нам своим токеном.
@@ -73,7 +110,7 @@ Deno.serve(async (request) => {
     if (!payload.sub) throw new Error("no sub");
     privyId = payload.sub;
   } catch {
-    return new Response("Bad token", { status: 401 });
+    return new Response("Bad token", { status: 401, headers: allow });
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
@@ -88,7 +125,7 @@ Deno.serve(async (request) => {
   });
 
   if (error || !data.properties?.hashed_token) {
-    return new Response("Could not issue a session", { status: 500 });
+    return new Response("Could not issue a session", { status: 500, headers: allow });
   }
 
   // Связь «кто это у Privy» с «кто это у нас». Нужна, чтобы политики RLS и
@@ -102,6 +139,6 @@ Deno.serve(async (request) => {
 
   return new Response(
     JSON.stringify({ token_hash: data.properties.hashed_token }),
-    { headers: { "Content-Type": "application/json" } },
+    { headers: { ...allow, "Content-Type": "application/json" } },
   );
 });
