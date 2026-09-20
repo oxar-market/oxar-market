@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import { db, exchange } from "@/lib/session";
+import { Auction } from "./auction/auction";
 import { Market } from "./market";
 import { Tabs, useTab } from "./tabs";
 import { You } from "./you";
@@ -53,40 +54,11 @@ export default function Home() {
       )}
 
       {tab === "market" && <Market />}
-      {tab === "auction" && <Auction onSignIn={login} signedIn={authenticated} />}
+      {tab === "auction" && <Auction />}
       {tab === "you" && (authenticated ? <You /> : <Guest onSignIn={login} />)}
 
       <Tabs tab={tab} onPick={setTab} />
     </main>
-  );
-}
-
-/**
- * Заглушка торга. Вещь, места и ставка приезжают следующим шагом - здесь пока
- * только имя лота, чтобы вкладка не была пустой.
- */
-function Auction({
-  signedIn,
-  onSignIn,
-}: {
-  signedIn: boolean;
-  onSignIn: () => void;
-}) {
-  return (
-    <section className="screen">
-      <p className="over">Superteam Ukraine</p>
-      <h1>Local Event Tee</h1>
-      <p className="lead">
-        Ad spots on a shirt that will be worn at the event. The highest bid when
-        the clock runs out gets printed.
-      </p>
-      <p className="muted">The shirt and its spots land here next.</p>
-      {!signedIn && (
-        <button type="button" className="primary" onClick={onSignIn}>
-          Sign in to bid
-        </button>
-      )}
-    </section>
   );
 }
 
