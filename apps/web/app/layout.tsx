@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Anybody } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 
 /**
@@ -14,9 +14,9 @@ import "./globals.css";
  * домен пришлось бы открывать в CSP, и он же видел бы каждого нашего
  * посетителя.
  */
-const anybody = Anybody({
+const oxar = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-anybody",
+  variable: "--font-oxar",
   display: "swap",
 });
 
@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={anybody.variable}>
+    <html lang="en" className={oxar.variable}>
       <body>{children}</body>
     </html>
   );

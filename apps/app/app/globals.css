@@ -8,7 +8,7 @@
 body {
   margin: 0;
   /* Системный стек остаётся запасным: пока шрифт едет, экран уже читается. */
-  font-family: var(--font-anybody), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-oxar), ui-sans-serif, system-ui, sans-serif;
   color: #16181d;
   background: #fbfbf9;
   -webkit-font-smoothing: antialiased;
