@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { fitInside } from "./fit.ts";
 import { DECAL_DEPTH, REPAINT, SPOTS, type Spot } from "./spots.ts";
 import { develop } from "./tone.ts";
+import type { Corners } from "./quad.ts";
 
 /**
  * Сама вещь: футболка, которую можно вертеть, с местами под нанесение.
@@ -20,6 +21,13 @@ import { develop } from "./tone.ts";
  * Без WebGL сцена не поднимется, и это не повод ронять экран: торг, ставки и
  * сроки остаются на месте, вещь заменяется строкой.
  */
+
+/** Снимки вещи и разметка мест на них. */
+export type Views = {
+  shots: string[];
+  /** На ракурс - по углу на место. `null`, если с этой стороны не видно. */
+  quads: Record<string, Corners | null>[];
+};
 
 export type Stage = {
   /** Довернуть вещь к азимуту. Зовут ряд ракурсов и выбор места из списка. */
@@ -46,9 +54,11 @@ export function ThingStage({
   stage: RefObject<Stage | null>;
   /**
    * Сцена собралась и готова показывать картинки. Вместе с этим отдаёт четыре
-   * снимка вещи - перёд, правый бок, спину, левый, - по одному на ракурс.
+   * снимка вещи - перёд, правый бок, спину, левый - и для каждого те четыре
+   * угла, в которых на нём видно каждое место. По ним фото-режим кладёт
+   * креатив в кадр.
    */
-  onReady?: (views: string[]) => void;
+  onReady?: (views: Views) => void;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
@@ -258,6 +268,14 @@ export function ThingStage({
         const raycaster = new THREE.Raycaster();
         const anchor = new THREE.Object3D();
         const decals: { code: string; mesh: InstanceType<typeof THREE.Mesh> }[] = [];
+        // Где место лежит в пространстве: четыре угла и нормаль. Нужно
+        // фото-режиму - по ним креатив ложится в кадр той же трапецией, какой
+        // место на нём видно.
+        const frames: {
+          code: string;
+          corners: InstanceType<typeof THREE.Vector3>[];
+          normal: InstanceType<typeof THREE.Vector3>;
+        }[] = [];
 
         for (const spot of SPOTS) {
           const angle = (spot.azimuth * Math.PI) / 180;
@@ -279,6 +297,26 @@ export function ThingStage({
               .clone()
               .add(hit.normal.clone().transformDirection(surface.matrixWorld)),
           );
+
+          // Углы места в мире - по часовой от левого верхнего. Берутся из
+          // той же рамки, по которой штампуется декаль, поэтому совпадают с
+          // ней по определению, а не по совпадению.
+          anchor.updateMatrixWorld(true);
+          const half = [spot.size[0] / 2, spot.size[1] / 2];
+          frames.push({
+            code: spot.code,
+            corners: [
+              [-half[0], half[1]],
+              [half[0], half[1]],
+              [half[0], -half[1]],
+              [-half[0], -half[1]],
+            ].map(([x, y]) =>
+              new THREE.Vector3(x, y, 0).applyMatrix4(anchor.matrixWorld),
+            ),
+            normal: new THREE.Vector3(0, 0, 1).transformDirection(
+              anchor.matrixWorld,
+            ),
+          });
 
           const geometry = new DecalGeometry(
             surface,
@@ -439,11 +477,13 @@ export function ThingStage({
          * гонять рендер ради ногтя.
          */
         const views = (() => {
-          const side = 320;
+          // Крупнее, чем нужно кнопке: этот же кадр показывает фото-режим во
+          // всю сцену, и там триста двадцать точек читались бы как каша.
+          const side = 1024;
           const paper = document.createElement("canvas");
           paper.width = paper.height = side;
           const ink = paper.getContext("2d");
-          if (!ink) return [];
+          if (!ink) return { shots: [], quads: [] };
 
           // Цветовое пространство у цели не задаётся намеренно: three всё
           // равно пишет в неё рабочий линейный цвет, а не то, что здесь
@@ -455,6 +495,9 @@ export function ThingStage({
           const back = (reach / Math.tan(fov / 2)) * 1.12;
           const pixels = new Uint8Array(side * side * 4);
           const shots: string[] = [];
+          // Куда попали места на каждом кадре: доля от стороны, чтобы кадр
+          // можно было показывать любого размера.
+          const quads: Record<string, Corners | null>[] = [];
 
           ring.visible = false;
           if (shadow) shadow.visible = false;
@@ -481,14 +524,38 @@ export function ThingStage({
               image.data.set(pixels.subarray(from, from + side * 4), row * side * 4);
             }
             ink.putImageData(image, 0, 0);
-            shots.push(paper.toDataURL("image/webp", 0.85));
+            shots.push(paper.toDataURL("image/webp", 0.82));
+
+            // Где на этом кадре лежат места. Считается той же камерой, что
+            // снимала, поэтому совпадает с картинкой точно, а не примерно.
+            const seen: Record<string, Corners | null> = {};
+            for (const frame of frames) {
+              const middle = frame.corners
+                .reduce(
+                  (sum, one) => sum.add(one),
+                  new THREE.Vector3(),
+                )
+                .multiplyScalar(0.25);
+              // Место на дальней стороне вещи с этого ракурса не видно.
+              // Рисовать его значило бы показать логотип сквозь ткань.
+              const towards = lens.position.clone().sub(middle);
+              if (frame.normal.dot(towards) <= 0) {
+                seen[frame.code] = null;
+                continue;
+              }
+              seen[frame.code] = frame.corners.map((corner) => {
+                const flat = corner.clone().project(lens);
+                return [(flat.x * 0.5 + 0.5), (1 - (flat.y * 0.5 + 0.5))];
+              }) as Corners;
+            }
+            quads.push(seen);
           }
 
           renderer.setRenderTarget(null);
           target.dispose();
           ring.visible = true;
           if (shadow) shadow.visible = true;
-          return shots;
+          return { shots, quads };
         })();
 
         const resize = () => {
