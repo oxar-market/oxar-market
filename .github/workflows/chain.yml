@@ -75,8 +75,18 @@ jobs:
       # зависимости, требующей edition2024, - при том что та же сборка на
       # машине проходила. Расхождение было только в этом: локально приезжал
       # v1.52 с Rust 1.89, в CI - старее.
+      #
+      # Зовём по полному пути, а не через `cargo build-sbf`. Короткая форма в
+      # CI находила чужой одноимённый бинарь - тот не знает `--install-only` и
+      # ронял шаг, хотя у поставленной здесь версии этот ключ есть. Заодно
+      # печатаем, что нашлось на пути: в следующий раз причина будет в логе,
+      # а не в догадках.
       - name: Platform-tools
-        run: cargo build-sbf --tools-version v1.52 --install-only
+        run: |
+          which -a cargo-build-sbf || true
+          sbf="$HOME/.local/share/solana/install/active_release/bin/cargo-build-sbf"
+          "$sbf" --version
+          "$sbf" --tools-version v1.52 --install-only
 
       - name: Сборка
         working-directory: chain
