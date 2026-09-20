@@ -11,6 +11,7 @@ import {
   type Lot,
   type Thing,
 } from "@/lib/auction";
+import { BidForm } from "./bid.tsx";
 import { SPOTS } from "./spots.ts";
 import { ThingStage, type Stage } from "./stage.tsx";
 
@@ -22,10 +23,8 @@ import { ThingStage, type Stage } from "./stage.tsx";
  * самой вещи, строкой в списке справа и вкладкой Spots. Все три ведут в одно и
  * то же состояние, и вещь доворачивается к выбранному сама.
  *
- * Ставить отсюда пока нельзя, и это не забытая кнопка: ставка обязана прийти с
- * подписью транзакции - так устроена схема, - а программа ещё не развёрнута.
- * Показывать поле, которое ничего не сделает, хуже, чем честно сказать, что
- * торг откроется.
+ * Ставка живёт отдельным куском ниже строки состояния: она про одно место -
+ * то же, что выбрано, - и появляется только у места, торг которого идёт.
  */
 
 /** Ракурсы предметной съёмки. Отсчёт - от главной грани вещи. */
@@ -45,8 +44,9 @@ export function Auction() {
   const [rewound, setRewound] = useState<string | null>(null);
 
   // Что человек примерил в каждое место. Живёт только здесь: на сервер эти
-  // картинки не уезжают, чужим они станут видны вместе со ставкой.
-  const [art, setArt] = useState<Record<string, string>>({});
+  // картинки не уезжают, чужим они станут видны вместе со ставкой. Файл лежит
+  // рядом с адресом превью - его и отправит ставка, когда до неё дойдёт.
+  const [art, setArt] = useState<Record<string, { url: string; file: File }>>({});
   const [artError, setArtError] = useState("");
 
   const stage = useRef<Stage | null>(null);
@@ -177,8 +177,8 @@ export function Auction() {
     stage.current?.show(picked, image);
     setArt((was) => {
       const old = was[picked];
-      if (old) URL.revokeObjectURL(old);
-      return { ...was, [picked]: url };
+      if (old) URL.revokeObjectURL(old.url);
+      return { ...was, [picked]: { url, file } };
     });
   }
 
@@ -187,11 +187,17 @@ export function Auction() {
     stage.current?.show(picked, null);
     setArt((was) => {
       const old = was[picked];
-      if (old) URL.revokeObjectURL(old);
+      if (old) URL.revokeObjectURL(old.url);
       const next = { ...was };
       delete next[picked];
       return next;
     });
+  }
+
+  /** Перечитать ставки после своей: и ленту места, и кружки всех мест. */
+  function refresh() {
+    if (lot) loadBids(lot.id).then(setBids);
+    loadTopBids(lots.map((one) => one.id)).then(setTops);
   }
 
   const top = bids[0] ?? null;
@@ -270,6 +276,12 @@ export function Auction() {
           " · not up for auction yet"
         )}
       </p>
+
+      {/* Ставка - про выбранное место, и только пока его торг идёт. У места без
+          торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия. */}
+      {lot && running && (
+        <BidForm lot={lot} need={need} art={art[picked]} onPlaced={refresh} />
+      )}
 
       {/* История места: каждая ставка - деление на ленте, и по ней видно, чей
           логотип стоял на вещи в этот момент. Свежая справа, как в переписке.

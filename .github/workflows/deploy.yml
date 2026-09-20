@@ -92,6 +92,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          # Сеть торга. Пусто - девнет: боевые деньги включаются решением, а не
+          # забытой переменной.
+          NEXT_PUBLIC_SOLANA_CLUSTER: ${{ secrets.NEXT_PUBLIC_SOLANA_CLUSTER }}
 
       # Сборка без ключей собирается молча и уезжает в прод мёртвой: у Privy
       # нет приложения, у Supabase нет адреса. Лучше упасть здесь.

@@ -128,6 +128,63 @@ export async function loadTopBids(
   return top;
 }
 
+/**
+ * Положить креатив в хранилище.
+ *
+ * Уезжает он до отправки транзакции, а не после: у ставки в базе картинка
+ * обязательна, и узнать её адрес надо раньше, чем появится строка. Если
+ * ставка потом не пройдёт, в хранилище останется никому не нужный файл - это
+ * дешевле, чем ставка в цепочке, к которой нечего напечатать.
+ */
+export async function uploadCreative(
+  lotId: string,
+  file: File,
+): Promise<string | null> {
+  if (!db) return null;
+
+  const dot = file.name.lastIndexOf(".");
+  const ext = dot > 0 ? file.name.slice(dot + 1).toLowerCase() : "png";
+  const path = `${lotId}/${crypto.randomUUID()}.${ext}`;
+
+  const { error } = await db.storage
+    .from("creatives")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) return null;
+
+  return db.storage.from("creatives").getPublicUrl(path).data.publicUrl;
+}
+
+/**
+ * Записать ставку, которая уже прошла в цепочке.
+ *
+ * База здесь витрина, а не касса: деньги лежат в программе, и подпись в строке
+ * - это то, по чему ставку можно проверить, не веря нам на слово. Поэтому
+ * запись идёт последней, и её неудача денег не трогает.
+ */
+export async function recordBid(bid: {
+  lotId: string;
+  wallet: string;
+  amountCents: number;
+  mediaUrl: string;
+  signature: string;
+}): Promise<boolean> {
+  if (!db) return false;
+
+  const { data } = await db.auth.getUser();
+  if (!data.user) return false;
+
+  const { error } = await db.from("lot_bids").insert({
+    lot_id: bid.lotId,
+    bidder: data.user.id,
+    bidder_wallet: bid.wallet,
+    amount_cents: bid.amountCents,
+    media_url: bid.mediaUrl,
+    signature: bid.signature,
+  });
+
+  return !error;
+}
+
 /** Короткий вид кошелька: первые и последние символы, как их и узнают. */
 export function shortWallet(address: string): string {
   return address.length > 10
