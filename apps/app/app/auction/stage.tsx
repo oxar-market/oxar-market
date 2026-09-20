@@ -167,7 +167,10 @@ export function ThingStage({
         // сцена собиралась.
         const startSpot =
           SPOTS.find((spot) => spot.code === pickedNow.current) ?? SPOTS[0];
-        const first = (startSpot.azimuth * Math.PI) / 180;
+        // К грани, на которой место, а не точно под его угол: угол у места
+        // двойной службы, он же сдвиг вбок внутри грани, и камера, поставленная
+        // под него, показывала бы вещь вполоборота с первого кадра.
+        const first = (Math.round(startSpot.azimuth / 90) * 90 * Math.PI) / 180;
         const far = (reach / Math.tan(fov / 2)) * 1.35;
         camera.position.set(Math.sin(first) * far, 0, Math.cos(first) * far);
         camera.updateProjectionMatrix();
@@ -463,19 +466,22 @@ export function ThingStage({
 
 /**
  * Свободное место рисуется рамкой, как пустующий щит: пунктир по контуру, чуть
- * заметная заливка, подпись внутри. Сплошная заливка читалась как брак печати,
- * а не как место, которое можно занять.
+ * заметная заливка, номер внутри. Сплошная заливка читалась как брак печати, а
+ * не как место, которое можно занять.
+ *
+ * Номер, а не «your ad here»: мест пятнадцать, клетка мелкая, и фраза в ней
+ * превратилась бы в грязь. Номер же - это то, чем место называют вслух: «беру
+ * седьмое». Он и в списке справа, и на самой вещи один и тот же.
  *
  * Рисунок белый, а цвет задаёт материал: тогда наведение по-прежнему меняет
  * один color, а не пересобирает текстуру.
  */
 const sheets = new Map<string, InstanceType<typeof import("three").CanvasTexture>>();
 
-const PLACEHOLDER = "YOUR AD HERE";
-
 function placeholder(THREE: typeof import("three"), spot: Spot) {
   const [wide, tall] = spot.size;
-  const key = `${wide}x${tall}`;
+  // Ключ - размер и номер: клетки одного размера отличаются только им.
+  const key = `${wide}x${tall}:${spot.label}`;
   const known = sheets.get(key);
   if (known) return known;
 
@@ -505,30 +511,25 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   frame();
   ctx.stroke();
 
-  // Подпись только там, где её прочитают, и мера тут - размер места на вещи, а
-  // не размер холста. На полоске у подола или на рукаве буквы превратились бы
-  // в грязь, и рамка справляется одна.
-  if (Math.min(wide, tall) >= 0.1) {
-    ctx.setLineDash([]);
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+  // Номер посередине клетки. Кегль подбирается под ширину рамки, а не берётся
+  // долей от холста: иначе на широком месте цифры вылезают за пунктир.
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
 
-    // Кегль подбирается под ширину рамки, а не берётся долей от холста: на
-    // широком месте надпись вылезала за пунктир.
-    const room = canvas.width - (pad + line) * 2 - short * 0.14;
-    const font = (size: number) => `600 ${size}px ui-sans-serif, system-ui, sans-serif`;
-    let size = short * 0.17;
-    ctx.letterSpacing = `${size * 0.08}px`;
+  const room = canvas.width - (pad + line) * 2 - short * 0.2;
+  const font = (size: number) => `600 ${size}px ui-sans-serif, system-ui, sans-serif`;
+  let size = short * 0.34;
+  ctx.letterSpacing = `${size * 0.04}px`;
+  ctx.font = font(size);
+  const width = ctx.measureText(spot.label).width;
+  if (width > room) {
+    size *= room / width;
+    ctx.letterSpacing = `${size * 0.04}px`;
     ctx.font = font(size);
-    const width = ctx.measureText(PLACEHOLDER).width;
-    if (width > room) {
-      size *= room / width;
-      ctx.letterSpacing = `${size * 0.08}px`;
-      ctx.font = font(size);
-    }
-    ctx.fillText(PLACEHOLDER, canvas.width / 2, canvas.height / 2);
   }
+  ctx.fillText(spot.label, canvas.width / 2, canvas.height / 2);
 
   const made = new THREE.CanvasTexture(canvas);
   made.colorSpace = THREE.SRGBColorSpace;
