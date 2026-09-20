@@ -97,9 +97,24 @@ jobs:
           "$sbf" --version
           "$sbf" --tools-version v1.52 --install-only
 
+      # Программа собирается своим вызовом, с явной версией инструментов, и
+      # только потом anchor build.
+      #
+      # Anchor зовёт cargo build-sbf без версии, а тот берёт ту, на которую
+      # смотрит ссылка в rustup, - и в CI она указывала на v1.48 с cargo 1.84,
+      # оставшуюся от avm. Отсюда падение на edition2024 при уже поставленном
+      # v1.52. Прямой вызов переставляет ссылку на нужный набор, дальше anchor
+      # берёт готовое. Версии печатаются: если снова разъедется, это будет
+      # видно в логе, а не выясняться заново.
       - name: Сборка
         working-directory: chain
-        run: anchor build
+        run: |
+          solana --version
+          cargo-build-sbf --version
+          cargo-build-sbf \
+            --manifest-path programs/oxar-escrow/Cargo.toml \
+            --tools-version v1.52
+          anchor build
 
       # Арифметика: сколько натекло продавцу, сколько вернётся покупателю,
       # сколько комиссии. Считается в целых, и переполнение здесь дороже всего.
