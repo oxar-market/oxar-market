@@ -40,6 +40,11 @@ export function Auction() {
   const [angle, setAngle] = useState(0);
   const [tab, setTab] = useState<"about" | "spots" | "rules">("about");
 
+  // Что человек примерил в каждое место. Живёт только здесь: на сервер эти
+  // картинки не уезжают, чужим они станут видны вместе со ставкой.
+  const [art, setArt] = useState<Record<string, string>>({});
+  const [artError, setArtError] = useState("");
+
   const stage = useRef<Stage | null>(null);
   // Пока человек ничего не трогал, выбор по умолчанию можно передвинуть на
   // первое место с торгом. После первого клика - нельзя: это уже его выбор.
@@ -100,6 +105,48 @@ export function Auction() {
     setPicked(code);
     stage.current?.face(spot.azimuth);
     setAngle(((Math.round(spot.azimuth / 90) % 4) + 4) % 4);
+  }
+
+  /** Примерить картинку в выбранное место. */
+  async function tryOn(file: File | undefined) {
+    setArtError("");
+    if (!file) return;
+    // Восемь мегабайт - это уже фотография, а не логотип. Рисовать её в
+    // текстуру можно, но телефон на этом подвиснет.
+    if (file.size > 8 * 1024 * 1024) {
+      setArtError("That file is over 8 MB. A logo should be far smaller.");
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.src = url;
+    try {
+      await image.decode();
+    } catch {
+      URL.revokeObjectURL(url);
+      setArtError("Could not read that image. PNG, JPEG, WebP or SVG.");
+      return;
+    }
+
+    stage.current?.show(picked, image);
+    setArt((was) => {
+      const old = was[picked];
+      if (old) URL.revokeObjectURL(old);
+      return { ...was, [picked]: url };
+    });
+  }
+
+  /** Снять примеренное: место снова показывает пустую рамку. */
+  function takeOff() {
+    stage.current?.show(picked, null);
+    setArt((was) => {
+      const old = was[picked];
+      if (old) URL.revokeObjectURL(old);
+      const next = { ...was };
+      delete next[picked];
+      return next;
+    });
   }
 
   const top = bids[0] ?? null;
@@ -173,6 +220,37 @@ export function Auction() {
           " · not up for auction yet"
         )}
       </p>
+
+      {/* Примерка: картинка ложится в выбранное место прямо на вещи. Пока это
+          только превью - видит его один человек, тот, кто примеряет. */}
+      <div className="tryon">
+        <label className="ghost small">
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            onChange={(event) => {
+              void tryOn(event.target.files?.[0]);
+              // Сбрасываем поле: иначе тот же файл второй раз не выберется.
+              event.target.value = "";
+            }}
+          />
+          {art[picked] ? "Change the artwork" : "Try your artwork here"}
+        </label>
+        {art[picked] && (
+          <button type="button" className="quiet" onClick={takeOff}>
+            Remove
+          </button>
+        )}
+      </div>
+      {artError ? (
+        <p className="bad">{artError}</p>
+      ) : (
+        art[picked] && (
+          <p className="muted">
+            Only you can see this. It goes public when you bid with it.
+          </p>
+        )
+      )}
 
       <div className="angles" role="group" aria-label="View">
         {ANGLES.map((name, index) => (

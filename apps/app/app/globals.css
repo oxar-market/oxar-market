@@ -541,3 +541,24 @@ input:focus {
     border-color: transparent;
   }
 }
+
+/* Примерка логотипа: кнопка выбора файла и снятие. Само поле файла скрыто -
+   его вид браузер рисует по-своему в каждом, а кнопка тут общая с остальными. */
+.tryon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tryon input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tryon .small {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
