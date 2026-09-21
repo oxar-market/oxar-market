@@ -15,6 +15,14 @@
   # страницу встроенные скрипты, а нонсы требуют сервера, которого у нас нет.
   # Убрать можно будет только вместе со статикой.
   #
+  # 'wasm-unsafe-eval' - распаковщик геометрии. Модель сжата meshopt, и его
+  # декодер это WebAssembly; без этого разрешения браузер глушит его, сцена
+  # падает целиком и экран показывает вещь строкой. Проверено на проде: пока
+  # разрешения не было, вместо футболки висело «This view needs WebGL».
+  #
+  # Это не то же самое, что 'unsafe-eval': запускать eval() по-прежнему
+  # нельзя, разрешается ровно компиляция wasm.
+  #
   # auth.privy.io - iframe встроенного кошелька, без него не подписать.
   # challenges.cloudflare.com - капча Privy при входе.
   # *.rpc.privy.systems - их узлы RPC.
@@ -35,7 +43,7 @@
   #
   # Supabase в img-src - креативы ставок. Они лежат в его хранилище, и без
   # адреса на вещи оказалась бы пустая рамка вместо логотипа лидера.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://explorer-api.walletconnect.com https://islmypspqjxuhplcibam.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' blob: https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co https://explorer-api.walletconnect.com https://api.web3modal.org wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.devnet.solana.com https://api.mainnet-beta.solana.com
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://explorer-api.walletconnect.com https://islmypspqjxuhplcibam.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' blob: https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co https://explorer-api.walletconnect.com https://api.web3modal.org wss://relay.walletconnect.com wss://relay.walletconnect.org https://api.devnet.solana.com https://api.mainnet-beta.solana.com
 
   # Никто не смеет положить нас в свой iframe. Защита от кликджекинга: иначе
   # наш экран накрывают приманкой, человек жмёт «забрать приз», а жмёт «Bid».

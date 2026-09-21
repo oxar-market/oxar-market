@@ -107,8 +107,8 @@ export function ThingStage({
         const { GLTFLoader } = await import(
           "three/examples/jsm/loaders/GLTFLoader.js"
         );
-        // Геометрия сжата meshopt: шестьсот восемьдесят пять тысяч граней
-        // укладываются в пять мегабайт вместо тридцати. Декодер идёт в
+        // Геометрия сжата meshopt: сто девяносто пять тысяч граней
+        // укладываются в 1,8 МБ вместо десяти. Декодер идёт в
         // поставке three, отдельной зависимости не нужно.
         const { MeshoptDecoder } = await import(
           "three/examples/jsm/libs/meshopt_decoder.module.js"
@@ -304,6 +304,99 @@ export function ThingStage({
         // разом не забивали футболку.
         const tint = { idle: 0x3a3d45, hot: 0x16181d };
         const raycaster = new THREE.Raycaster();
+
+        /**
+         * Кусок вещи вокруг точки - и только он.
+         *
+         * Декаль штампуется перебором всех граней поверхности: каждая
+         * проверяется и режется по коробке места. На сетке в двести тысяч
+         * граней это два с лишним миллиона проверок на пятнадцать мест, и
+         * страница замирала на двадцать секунд.
+         *
+         * Но место занимает сотую долю вещи. Поэтому сначала отбираем грани,
+         * попавшие в шар вокруг него, и штампуем по ним. Отбор - один проход
+         * по центрам граней, он дешёвый; штамповка после него идёт по сотне
+         * граней вместо двухсот тысяч.
+         *
+         * Результат тот же до вершины: выброшены только грани, которых
+         * коробка места всё равно не коснулась бы.
+         */
+        function around(
+          mesh: InstanceType<typeof THREE.Mesh>,
+          center: InstanceType<typeof THREE.Vector3>,
+          radius: number,
+        ) {
+          const from = mesh.geometry;
+          const position = from.getAttribute("position");
+          const normal = from.getAttribute("normal");
+          const uv = from.getAttribute("uv");
+          const index = from.getIndex();
+          const faces = index ? index.count / 3 : position.count / 3;
+
+          // Шар и центр - в системе самой сетки: так не надо гонять каждую
+          // вершину через матрицу мира.
+          const local = center
+            .clone()
+            .applyMatrix4(new THREE.Matrix4().copy(mesh.matrixWorld).invert());
+          const scale = new THREE.Vector3();
+          mesh.matrixWorld.decompose(
+            new THREE.Vector3(),
+            new THREE.Quaternion(),
+            scale,
+          );
+          const reach = radius / Math.max(scale.x, scale.y, scale.z);
+          const reachSquared = reach * reach;
+
+          const keep: number[] = [];
+          const corner = new THREE.Vector3();
+          for (let face = 0; face < faces; face++) {
+            let near = false;
+            for (let at = 0; at < 3 && !near; at++) {
+              const vertex = index ? index.getX(face * 3 + at) : face * 3 + at;
+              corner.fromBufferAttribute(position, vertex);
+              near = corner.distanceToSquared(local) < reachSquared;
+            }
+            if (near) keep.push(face);
+          }
+          if (keep.length === 0) return null;
+
+          const positions = new Float32Array(keep.length * 9);
+          const normals = normal ? new Float32Array(keep.length * 9) : null;
+          const uvs = uv ? new Float32Array(keep.length * 6) : null;
+          keep.forEach((face, slot) => {
+            for (let at = 0; at < 3; at++) {
+              const vertex = index ? index.getX(face * 3 + at) : face * 3 + at;
+              const to = slot * 9 + at * 3;
+              positions[to] = position.getX(vertex);
+              positions[to + 1] = position.getY(vertex);
+              positions[to + 2] = position.getZ(vertex);
+              if (normals && normal) {
+                normals[to] = normal.getX(vertex);
+                normals[to + 1] = normal.getY(vertex);
+                normals[to + 2] = normal.getZ(vertex);
+              }
+              if (uvs && uv) {
+                uvs[slot * 6 + at * 2] = uv.getX(vertex);
+                uvs[slot * 6 + at * 2 + 1] = uv.getY(vertex);
+              }
+            }
+          });
+
+          const piece = new THREE.BufferGeometry();
+          piece.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+          if (normals) {
+            piece.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+          }
+          if (uvs) piece.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+
+          // Подставка под штамповку: своей позиции у неё нет, она повторяет
+          // матрицу исходной сетки, поэтому декаль встаёт там же, где встала
+          // бы на целой вещи.
+          const stand = new THREE.Mesh(piece);
+          stand.matrixWorld.copy(mesh.matrixWorld);
+          stand.matrixAutoUpdate = false;
+          return stand;
+        }
         const anchor = new THREE.Object3D();
         const decals: { code: string; mesh: InstanceType<typeof THREE.Mesh> }[] = [];
         // Где место лежит в пространстве: четыре угла и нормаль. Нужно
@@ -371,12 +464,22 @@ export function ThingStage({
             normal: facing,
           });
 
+          // Штампуем по куску вокруг места, а не по всей вещи. Запас в
+          // полтора радиуса - чтобы в шар наверняка попали все грани, углы
+          // которых коробка задевает.
+          const patch =
+            around(
+              surface,
+              hit.point,
+              Math.max(spot.size[0], spot.size[1], DECAL_DEPTH) * 1.5,
+            ) ?? surface;
           const geometry = new DecalGeometry(
-            surface,
+            patch,
             hit.point,
             anchor.rotation,
             new THREE.Vector3(spot.size[0], spot.size[1], DECAL_DEPTH),
           );
+          if (patch !== surface) patch.geometry.dispose();
           const material = new THREE.MeshStandardMaterial({
             map: placeholder(THREE, spot),
             color: tint.idle,
@@ -675,7 +778,7 @@ export function ThingStage({
     <div className="stage" ref={mount}>
       {state === "loading" && <span className="stage-note">Loading the shirt…</span>}
       {state === "failed" && (
-        <span className="stage-note">This view needs WebGL, which is off here.</span>
+        <span className="stage-note">The shirt could not be shown here.</span>
       )}
       {state === "ready" && (
         <span className="stage-hint">
