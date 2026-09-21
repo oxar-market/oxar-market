@@ -33,6 +33,7 @@ export function PhotoView({
   picked,
   onPick,
   art,
+  drawFrames = false,
 }: {
   shot: string;
   /** Углы каждого места на этом кадре, долями стороны. */
@@ -41,6 +42,14 @@ export function PhotoView({
   onPick: (code: string) => void;
   /** Что показать в месте: свой примеренный файл или креатив лидера. */
   art: Record<string, string | undefined>;
+  /**
+   * Рисовать ли рамку и номер самой накладкой.
+   *
+   * На наших кадрах они уже отпечатаны - их проставила та же разметка, что и
+   * на сцене, - и рисовать второй раз значило бы двоить. На чужом снимке
+   * рисовать некому, и тогда это единственное, чем место видно.
+   */
+  drawFrames?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState({ side: 0, left: 0, top: 0 });
@@ -104,7 +113,13 @@ export function PhotoView({
             <button
               key={spot.code}
               type="button"
-              className={spot.code === picked ? "photo-spot on" : "photo-spot"}
+              className={[
+                "photo-spot",
+                spot.code === picked ? "on" : "",
+                drawFrames ? "drawn" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               aria-label={spot.label}
               aria-pressed={spot.code === picked}
               onClick={() => onPick(spot.code)}
@@ -115,7 +130,11 @@ export function PhotoView({
                 transform: `matrix3d(${matrix.join(",")}) scale(${1 / BASE}, ${1 / BASE})`,
               }}
             >
-              {image && <img src={image} alt="" draggable={false} />}
+              {image ? (
+                <img src={image} alt="" draggable={false} />
+              ) : (
+                drawFrames && <span>{spot.label}</span>
+              )}
             </button>
           );
         })}

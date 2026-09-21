@@ -13,6 +13,9 @@ import {
 } from "@/lib/auction";
 import { BidForm } from "./bid.tsx";
 import { PhotoView } from "./photo.tsx";
+// TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
+// надо удалить, - в шапке temp-photo.ts.
+import { TEMP_FRONT_QUADS, TEMP_FRONT_SHOT } from "./temp-photo.ts";
 import { SPOTS } from "./spots.ts";
 import { ThingStage, type Stage, type Views } from "./stage.tsx";
 
@@ -247,9 +250,13 @@ export function Auction() {
         </div>
 
         {look === "shot" && views.shots[angle] && (
+          // TEMP_FRONT: перёд показываем чужой фотографией, остальные ракурсы
+          // своим рендером. Так видно разницу между ними - ради чего замер и
+          // затеян. Удаляется вместе с temp-photo.ts.
           <PhotoView
-            shot={views.shots[angle]}
-            quads={views.quads[angle] ?? {}}
+            shot={angle === 0 ? TEMP_FRONT_SHOT : views.shots[angle]}
+            quads={angle === 0 ? TEMP_FRONT_QUADS : views.quads[angle] ?? {}}
+            drawFrames={angle === 0}
             picked={picked}
             onPick={(code) => choose(code, true)}
             art={shownArt}
