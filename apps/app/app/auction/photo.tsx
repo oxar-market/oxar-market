@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { quadTransform, type Corners } from "./quad.ts";
-import { FRAME_PAD, FRAME_ROUND, SPOTS } from "./spots.ts";
+import { SPOTS } from "./spots.ts";
 
 /**
  * Вещь кадром, а не сценой.
@@ -103,14 +103,6 @@ export function PhotoView({
           );
           if (!matrix) return null;
 
-          // Углы у рамки скруглены, и обводка обязана повторить их, иначе по
-          // четырём углам она торчит за пунктир.
-          const short = Math.min(spot.size[0], spot.size[1]);
-          const inner = [
-            spot.size[0] - short * FRAME_PAD * 2,
-            spot.size[1] - short * FRAME_PAD * 2,
-          ];
-          const round = short * FRAME_ROUND;
           const image = art[spot.code];
           return (
             <button
@@ -129,7 +121,6 @@ export function PhotoView({
               style={{
                 width: BASE,
                 height: BASE,
-                borderRadius: `${(round / inner[0]) * 100}% / ${(round / inner[1]) * 100}%`,
                 transform: `matrix3d(${matrix.join(",")}) scale(${1 / BASE}, ${1 / BASE})`,
               }}
             >
