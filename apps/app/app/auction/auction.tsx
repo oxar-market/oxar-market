@@ -441,9 +441,11 @@ export function Auction() {
         <BidForm lot={lot} need={need} art={art[picked]} onPlaced={refresh} />
       )}
 
-      {/* История места: каждая ставка - деление на ленте, и по ней видно, чей
-          логотип стоял на вещи в этот момент. Свежая справа, как в переписке.
-          Лента появляется со второй ставкой: у одной истории нет. */}
+      {/* История места: каждое деление - ставка, и в нём стоит сам логотип,
+          который в тот момент был на вещи. Без картинки лента отвечала бы
+          только «сколько и когда», а главный вопрос к истории торга - что на
+          футболке стояло. Свежая справа, как в переписке. Лента появляется со
+          второй ставкой: у одной истории нет. */}
       {bids.length > 1 && (
         <ol className="track" aria-label="Bid history">
           {[...bids].reverse().map((bid, index) => (
@@ -454,6 +456,7 @@ export function Auction() {
                 aria-pressed={bid.id === rewound}
                 onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
               >
+                <img className="tick-art" src={bid.media_url} alt="" />
                 <span className="tick-sum">{formatUsd(bid.amount_cents)}</span>
                 <span className="tick-when">
                   {index === 0 ? "opened" : when(bid.created_at)}
@@ -468,6 +471,8 @@ export function Auction() {
               aria-pressed={!rewound}
               onClick={() => setRewound(null)}
             >
+              {/* Верхняя ставка и есть то, что стоит на вещи сейчас. */}
+              <img className="tick-art" src={bids[0].media_url} alt="" />
               <span className="tick-sum">Now</span>
               <span className="tick-when">on the shirt</span>
             </button>
