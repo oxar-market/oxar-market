@@ -53,6 +53,15 @@ export type Stage = {
    * Чужим оно станет видно, когда картинка приедет вместе со ставкой.
    */
   show(code: string, image: HTMLImageElement | null): void;
+  /**
+   * Подъехать к месту вплотную. `null` возвращает вещь целиком.
+   *
+   * Отдельно от `face`, хотя выбор места зовёт оба: ряд ракурсов поворачивает
+   * вещь и обязан при этом отъехать, а выбор места поворачивает и подъезжает.
+   * Слей их в одно - и кнопка «Back» либо не отпускала бы приближение, либо
+   * отменяла его сразу после выбора.
+   */
+  frame(code: string | null): void;
 };
 
 export function ThingStage({
@@ -159,7 +168,10 @@ export function ThingStage({
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enablePan = false;
-        controls.enableZoom = false;
+        // Приближение разрешено: места мелкие - пятнадцать клеток на переде, -
+        // и разглядеть чужой логотип, не подойдя ближе, нельзя. Пределы
+        // ставятся ниже, когда известен габарит вещи.
+        controls.zoomSpeed = 0.8;
         controls.enableDamping = true;
         controls.dampingFactor = 0.08;
         controls.rotateSpeed = 0.9;
@@ -248,6 +260,16 @@ export function ThingStage({
         // под него, показывала бы вещь вполоборота с первого кадра.
         const first = (Math.round(startSpot.azimuth / 90) * 90 * Math.PI) / 180;
         const far = (reach / Math.tan(fov / 2)) * 1.35;
+        // Ближе к месту, но не в упор. Первый замер ставил камеру так, что
+        // клетка занимала треть кадра, - и вещь пропадала: на экране
+        // оставалась стена из уголков, по которой не понять, куда ты заехал.
+        // Половина пути к месту оставляет футболку в кадре, а выбранное место
+        // всё равно вдвое крупнее прежнего.
+        const near = far * 0.55;
+        // Пределы для колеса и щипка - с запасом по обе стороны от того, куда
+        // возит подъезд: руками можно подойти заметно ближе и отойти дальше.
+        controls.minDistance = far * 0.3;
+        controls.maxDistance = far * 1.15;
         camera.position.set(Math.sin(first) * far, 0, Math.cos(first) * far);
         camera.updateProjectionMatrix();
         controls.update();
@@ -402,7 +424,11 @@ export function ThingStage({
           return stand;
         }
         const anchor = new THREE.Object3D();
-        const decals: { code: string; mesh: InstanceType<typeof THREE.Mesh> }[] = [];
+        const decals: {
+          code: string;
+          mesh: InstanceType<typeof THREE.Mesh>;
+          point: InstanceType<typeof THREE.Vector3>;
+        }[] = [];
         // Где место лежит в пространстве: четыре угла и нормаль. Нужно
         // фото-режиму - по ним креатив ложится в кадр той же трапецией, какой
         // место на нём видно.
@@ -501,7 +527,11 @@ export function ThingStage({
           });
           const mesh = new THREE.Mesh(geometry, material);
           scene.add(mesh);
-          decals.push({ code: spot.code, mesh });
+          // Точка на ткани - она же цель камеры, когда место выбирают. Взята
+          // отсюда, а не посчитана заново по высоте и углу: подъезжать надо
+          // туда, где место в самом деле лежит, а не где оно должно было бы
+          // лечь на ровной поверхности.
+          decals.push({ code: spot.code, mesh, point: hit.point.clone() });
         }
 
         // Горят место под курсором и выбранное. Выбранное - постоянно: оно и
@@ -580,6 +610,17 @@ export function ThingStage({
         // затухание, что у самих контролов, поэтому вещь не дёргается.
         const up = new THREE.Vector3(0, 1, 0);
         let turning = 0;
+
+        // Куда смотреть и с какого расстояния. Доезжает в том же цикле, и так
+        // же долями: подъезд к месту обязан идти с той же скоростью, что и
+        // доворот, иначе вещь сперва повернётся, а потом отдельно приблизится.
+        const aimAt = new THREE.Vector3();
+        let aimFrom = far;
+        // Пока доезжаем - расстояние наше, доехали - отпускаем, и дальше им
+        // распоряжается колесо. Без этого свободное приближение не работало бы
+        // вовсе: каждый кадр тянул бы камеру обратно.
+        let arriving = false;
+
         stage.current = {
           show(code, image) {
             const decal = decals.find((one) => one.code === code);
@@ -626,13 +667,25 @@ export function ThingStage({
           },
           face(azimuth) {
             const target = (azimuth * Math.PI) / 180;
-            const current = Math.atan2(camera.position.x, camera.position.z);
+            // Угол считаем от точки, на которую смотрим, а не от начала
+            // координат: подъехав к месту, камера стоит не вокруг центра вещи,
+            // и разница между этими отсчётами как раз и есть перекос.
+            const eye = camera.position.clone().sub(controls.target);
+            const current = Math.atan2(eye.x, eye.z);
             let delta = target - current - turning;
             // В короткую сторону круга, с учётом ещё не доеденного поворота.
             delta =
               ((((delta + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) -
               Math.PI;
             turning += delta;
+          },
+          frame(code) {
+            const decal = code
+              ? decals.find((one) => one.code === code)
+              : undefined;
+            aimAt.copy(decal ? decal.point : new THREE.Vector3());
+            aimFrom = decal ? near : far;
+            arriving = true;
           },
         };
 
@@ -756,8 +809,26 @@ export function ThingStage({
           }
           if (Math.abs(turning) > 0.0005) {
             const step = turning * 0.14;
-            camera.position.applyAxisAngle(up, step);
+            // Вокруг точки взгляда, а не вокруг начала координат. Пока камера
+            // смотрела в центр вещи, это было одно и то же; у подъехавшей к
+            // месту - уже нет, и поворот вокруг центра то подтаскивал бы её к
+            // ткани, то отбрасывал.
+            camera.position
+              .sub(controls.target)
+              .applyAxisAngle(up, step)
+              .add(controls.target);
             turning -= step;
+          }
+          if (arriving) {
+            controls.target.lerp(aimAt, 0.12);
+            const eye = camera.position.clone().sub(controls.target);
+            const span = eye.length();
+            const next = span + (aimFrom - span) * 0.12;
+            camera.position.copy(controls.target).add(eye.setLength(next));
+            // Доехали - дальше расстоянием распоряжается человек.
+            arriving =
+              Math.abs(next - aimFrom) > 0.002 ||
+              controls.target.distanceTo(aimAt) > 0.002;
           }
           controls.update();
           renderer.render(scene, camera);

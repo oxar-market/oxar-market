@@ -167,6 +167,10 @@ export function Auction() {
     const face = ((Math.round(spot.azimuth / 90) % 4) + 4) % 4;
     stage.current?.face(face * 90);
     setAngle(face);
+    // Подъезжаем только к тому месту, которое выбрали руками. Первое место
+    // экран выбирает за человека, пока лоты доезжают, и въехать вплотную в
+    // чужой выбор - значит начать разговор с того, что его уже куда-то завели.
+    if (byHand) stage.current?.frame(code);
   }
 
   /**
@@ -432,6 +436,10 @@ export function Auction() {
             onClick={() => {
               setAngle(index);
               stage.current?.face(index * 90);
+              // Ракурс - про вещь целиком, поэтому он же и есть выход из
+              // приближения: иначе, подъехав к месту, отъехать было бы нечем,
+              // кроме колеса, которого на телефоне нет.
+              stage.current?.frame(null);
             }}
           >
             {thumb ? <img src={thumb} alt="" /> : name}
