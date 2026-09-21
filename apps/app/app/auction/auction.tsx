@@ -436,10 +436,13 @@ export function Auction() {
             <strong>
               {art[picked] ? "Your artwork is on the shirt" : "Add your artwork"}
             </strong>
+            {/* Про чёрно-белое сказано здесь, а не плашкой ниже: это условие
+                к файлу, и читать его надо там, где файл выбирают. Цветной
+                логотип выясняется на ткани, когда печатать уже поздно. */}
             <em>
               {art[picked]
-                ? "Tap to swap it for another one"
-                : "Required - a bid without artwork has nothing to print"}
+                ? "Tap to swap it - black and white prints best"
+                : "Required, black and white - fabric takes flat ink"}
             </em>
           </span>
         </label>
@@ -449,15 +452,6 @@ export function Auction() {
           </button>
         )}
       </div>
-      {/* Предупреждение стоит до выбора файла, а не после: цветной логотип
-          выяснится на ткани, когда печатать уже поздно. */}
-      {look !== "ghost" && (
-        <p className="warn">
-          Upload a black and white version of your logo. Print puts flat ink on
-          fabric, so gradients and thin color turn to mud.
-        </p>
-      )}
-
       {artError ? (
         <p className="bad">{artError}</p>
       ) : (
