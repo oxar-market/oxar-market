@@ -769,9 +769,65 @@ input:focus {
   pointer-events: none;
 }
 
-.tryon .small {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+/* Шаг «приложить картинку». Пунктир, пока пусто: незакрытый шаг должен
+   выглядеть незакрытым, иначе его проходят мимо - а без картинки ставка не
+   уйдёт. Приложили - рамка становится обычной, и в ней стоит сама картинка. */
+.art-step {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px dashed #c7c7c0;
+  border-radius: 20px;
+  padding: 0.75rem;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.art-step:hover {
+  border-color: #16181d;
+}
+
+.art-step.done {
+  border-style: solid;
+  border-color: #e3e3df;
+}
+
+.art-thumb {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 12px;
+  object-fit: contain;
+  background: radial-gradient(70% 70% at 50% 40%, #ffffff 0%, #eef0f3 100%);
+}
+
+.art-thumb.empty {
+  border: 1px solid #e3e3df;
+  background: #fbfbf9;
+  font-size: 1.25rem;
+  color: #8a8a93;
+}
+
+.art-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.art-text strong {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.art-text em {
+  font-style: normal;
+  font-size: 0.8125rem;
+  color: #6b6b73;
 }
 
 /* Лента истории ставок: деления слева направо, свежее справа, как в

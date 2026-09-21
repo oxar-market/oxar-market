@@ -382,6 +382,58 @@ export function Auction() {
       </p>
       )}
 
+      {/* Картинка - первый шаг ставки, а не украшение рядом с ней: без неё
+          ставка не уйдёт, печатать было бы нечего. Поэтому она стоит выше
+          суммы и до примерки выглядит незакрытым шагом - пунктиром и словом
+          «required», а не тихой кнопкой, которую можно пройти мимо.
+
+          На голограмме шага нет: примерять некуда, пока мест не показывают.
+          Пока это только превью - видит его один человек, тот, кто примеряет. */}
+      <div className={look === "ghost" ? "tryon away" : "tryon"}>
+        <label className={art[picked] ? "art-step done" : "art-step"}>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            onChange={(event) => {
+              void tryOn(event.target.files?.[0]);
+              // Сбрасываем поле: иначе тот же файл второй раз не выберется.
+              event.target.value = "";
+            }}
+          />
+          {art[picked] ? (
+            <img className="art-thumb" src={art[picked].url} alt="" />
+          ) : (
+            <span className="art-thumb empty" aria-hidden>
+              +
+            </span>
+          )}
+          <span className="art-text">
+            <strong>
+              {art[picked] ? "Your artwork is on the shirt" : "Add your artwork"}
+            </strong>
+            <em>
+              {art[picked]
+                ? "Tap to swap it for another one"
+                : "Required - a bid without artwork has nothing to print"}
+            </em>
+          </span>
+        </label>
+        {art[picked] && (
+          <button type="button" className="quiet" onClick={takeOff}>
+            Remove
+          </button>
+        )}
+      </div>
+      {artError ? (
+        <p className="bad">{artError}</p>
+      ) : (
+        art[picked] && (
+          <p className="muted">
+            Only you can see this. It goes public when you bid with it.
+          </p>
+        )
+      )}
+
       {/* Ставка - про выбранное место, и только пока его торг идёт. У места без
           торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
           На голограмме её тоже нет: торг там ещё не начался. */}
@@ -426,38 +478,6 @@ export function Auction() {
         <p className="muted">
           Rewound. This is what the shirt looked like at that bid, not now.
         </p>
-      )}
-
-      {/* Примерка: картинка ложится в выбранное место прямо на вещи. На
-          голограмме её нет - примерять некуда, пока мест не показывают. Пока это
-          только превью - видит его один человек, тот, кто примеряет. */}
-      <div className={look === "ghost" ? "tryon away" : "tryon"}>
-        <label className="ghost small">
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
-            onChange={(event) => {
-              void tryOn(event.target.files?.[0]);
-              // Сбрасываем поле: иначе тот же файл второй раз не выберется.
-              event.target.value = "";
-            }}
-          />
-          {art[picked] ? "Change the artwork" : "Try your artwork here"}
-        </label>
-        {art[picked] && (
-          <button type="button" className="quiet" onClick={takeOff}>
-            Remove
-          </button>
-        )}
-      </div>
-      {artError ? (
-        <p className="bad">{artError}</p>
-      ) : (
-        art[picked] && (
-          <p className="muted">
-            Only you can see this. It goes public when you bid with it.
-          </p>
-        )
       )}
 
       {/* Ракурсы - самой вещью, а не словами: снимок отвечает на «с какой
