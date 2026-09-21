@@ -866,6 +866,18 @@ input:focus {
   background: #16181d;
 }
 
+/* Логотип в делении. Подложка та же, что под вещью на сцене: белое лого на
+   белой кнопке пропало бы целиком. */
+.tick-art {
+  display: block;
+  width: 3rem;
+  height: 2rem;
+  margin-bottom: 0.1875rem;
+  border-radius: 6px;
+  object-fit: contain;
+  background: radial-gradient(70% 70% at 50% 40%, #ffffff 0%, #eef0f3 100%);
+}
+
 .tick-sum {
   font-size: 0.8125rem;
   font-weight: 600;
