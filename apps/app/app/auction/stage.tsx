@@ -111,8 +111,8 @@ export function ThingStage({
         const { GLTFLoader } = await import(
           "three/examples/jsm/loaders/GLTFLoader.js"
         );
-        // Геометрия сжата meshopt: сто девяносто пять тысяч граней
-        // укладываются в 1,8 МБ вместо десяти. Декодер идёт в
+        // Геометрия сжата meshopt: девяносто семь тысяч граней ретопологии
+        // укладываются в мегабайт вместо восемнадцати. Декодер идёт в
         // поставке three, отдельной зависимости не нужно.
         const { MeshoptDecoder } = await import(
           "three/examples/jsm/libs/meshopt_decoder.module.js"
