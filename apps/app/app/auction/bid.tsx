@@ -153,7 +153,7 @@ export function BidForm({
 
   return (
     <div className="bidding">
-      <div className="bid-row">
+      <div className="bid-card">
         <label className="bid-field">
           <span className="bid-sign">$</span>
           <input
@@ -163,22 +163,23 @@ export function BidForm({
             aria-label="Your bid in USDC"
           />
         </label>
+
+        <div className="bumps">
+          {BUMPS.map((by) => (
+            <button key={by} type="button" className="bump" onClick={() => bump(by)}>
+              +{formatUsd(by)}
+            </button>
+          ))}
+        </div>
+
         <button
           type="button"
-          className="primary"
+          className="primary bid-go"
           disabled={busy || !art}
           onClick={() => void place()}
         >
           {busy ? "Bidding…" : "Bid"}
         </button>
-      </div>
-
-      <div className="bumps">
-        {BUMPS.map((by) => (
-          <button key={by} type="button" className="bump" onClick={() => bump(by)}>
-            +{formatUsd(by)}
-          </button>
-        ))}
       </div>
 
       {error ? (
