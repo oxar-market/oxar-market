@@ -60,12 +60,6 @@ describe("oxar-escrow: торг", () => {
       program.programId,
     )[0];
 
-  const dealPda = (id: number[]) =>
-    PublicKey.findProgramAddressSync(
-      [Buffer.from("deal"), Buffer.from(id)],
-      program.programId,
-    )[0];
-
   const balance = async (ata: PublicKey) => {
     const info = await connection.getAccountInfo(ata);
     return info ? (await getAccount(connection, ata)).amount : 0n;
@@ -101,6 +95,7 @@ describe("oxar-escrow: торг", () => {
       )
       .accounts({
         seller: seller.publicKey,
+        platform: platform.publicKey,
         mint,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -282,28 +277,20 @@ describe("oxar-escrow: торг", () => {
     );
   });
 
-  it("выигравшая ставка переезжает в сделку, не возвращаясь в кошелёк", async () => {
+  it("выигранная ставка делится между продавцом и площадкой", async () => {
     const { lot, vault } = await openLot(2);
     await bid(lot, alice, RESERVE);
     await sleep(3500);
 
-    const booking = auctionId();
-    const deal = dealPda(booking);
-    const dealVault = PublicKey.findProgramAddressSync(
-      [Buffer.from("vault"), deal.toBuffer()],
-      program.programId,
-    )[0];
+    const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
+    const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
 
+    const sellerBefore = await balance(sellerTokens);
+    const platformBefore = await balance(platformTokens);
     const aliceBefore = await balance(aliceTokens);
-    const startsAt = (await now()) + 2;
 
     await program.methods
-      .lotBecomesDeal(
-        booking,
-        new anchor.BN(startsAt),
-        new anchor.BN(startsAt + 60),
-        new anchor.BN(startsAt + 60),
-      )
+      .lotPaysSeller()
       .accounts({
         crank: seller.publicKey,
         lot,
@@ -311,26 +298,97 @@ describe("oxar-escrow: торг", () => {
         platform: platform.publicKey,
         mint,
         tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
       })
       .signers([seller])
       .rpc();
 
+    const fee = BigInt(RESERVE) / 10n; // FEE_BPS = 1000, то есть 10%
+    assert.equal(
+      await balance(platformTokens),
+      platformBefore + fee,
+      "площадка недополучила комиссию",
+    );
+    assert.equal(
+      await balance(sellerTokens),
+      sellerBefore + (BigInt(RESERVE) - fee),
+      "продавец получил не остаток",
+    );
     assert.equal(
       await balance(aliceTokens),
       aliceBefore,
-      "деньги победителя вернулись в кошелёк, а должны были переехать",
+      "победителю вернули деньги, а он купил место",
     );
-    assert.equal(await balance(dealVault), BigInt(RESERVE), "сделка недополучила");
-    assert.isNull(await connection.getAccountInfo(lot), "лот остался открытым");
-    assert.isNull(await connection.getAccountInfo(vault), "хранилище торга осталось");
+    assert.isNull(await connection.getAccountInfo(vault), "хранилище не закрылось");
+    assert.isNull(await connection.getAccountInfo(lot), "лот не закрылся");
+  });
 
-    const state = await program.account.deal.fetch(deal);
-    assert.equal(state.buyer.toBase58(), alice.publicKey.toBase58());
-    assert.equal(state.seller.toBase58(), seller.publicKey.toBase58());
-    assert.equal(state.amount.toNumber(), RESERVE);
-    assert.equal(state.feeBps, FEE_BPS);
+  it("выплату зовёт кто угодно, но комиссия идёт только тому, кто записан в лоте", async () => {
+    const { lot } = await openLot(2);
+    await bid(lot, alice, RESERVE);
+    await sleep(3500);
+
+    // Боб не продавец и не площадка. Позвать выплату он вправе - иначе она
+    // зависела бы от того, откроет ли кто-то вкладку. А вот подставить себя
+    // получателем комиссии не может: адрес сверяется с записанным в лоте.
+    try {
+      await program.methods
+        .lotPaysSeller()
+        .accounts({
+          crank: bob.publicKey,
+          lot,
+          seller: seller.publicKey,
+          platform: bob.publicKey,
+          mint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([bob])
+        .rpc();
+      assert.fail("комиссию увели на чужой кошелёк");
+    } catch (error) {
+      assert.include(String(error), "ConstraintHasOne");
+    }
+
+    // А с правильным получателем та же выплата от того же Боба проходит.
+    await program.methods
+      .lotPaysSeller()
+      .accounts({
+        crank: bob.publicKey,
+        lot,
+        seller: seller.publicKey,
+        platform: platform.publicKey,
+        mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([bob])
+      .rpc();
+
+    assert.isNull(await connection.getAccountInfo(lot), "лот не закрылся");
+  });
+
+  it("торг без победителя выплатить нельзя", async () => {
+    // Ставок не было вовсе - хранилище пустое, платить не из чего и некому.
+    // Ставки ниже резерва здесь не проверить: такую программа не принимает на
+    // входе, поэтому лота со ставкой и без победителя просто не бывает.
+    const { lot } = await openLot(2);
+    await sleep(3500);
+
+    try {
+      await program.methods
+        .lotPaysSeller()
+        .accounts({
+          crank: seller.publicKey,
+          lot,
+          seller: seller.publicKey,
+          platform: platform.publicKey,
+          mint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([seller])
+        .rpc();
+      assert.fail("продавцу отдали чужие деньги");
+    } catch (error) {
+      assert.include(String(error), "NoWinner");
+    }
   });
 
   it("торг с победителем нельзя закрыть как несостоявшийся", async () => {
@@ -357,7 +415,7 @@ describe("oxar-escrow: торг", () => {
     }
   });
 
-  it("идущий торг нельзя ни закрыть, ни превратить в сделку", async () => {
+  it("идущий торг нельзя ни закрыть, ни выплатить", async () => {
     const { lot } = await openLot(120);
     await bid(lot, alice, RESERVE);
 
@@ -375,6 +433,26 @@ describe("oxar-escrow: торг", () => {
         .signers([seller])
         .rpc();
       assert.fail("закрыли торг, который ещё идёт");
+    } catch (error) {
+      assert.include(String(error), "LotStillOpen");
+    }
+
+    // Выплата на идущем торге опаснее закрытия: Алису ещё могут перебить, и
+    // тогда деньги в хранилище - её, а не продавца.
+    try {
+      await program.methods
+        .lotPaysSeller()
+        .accounts({
+          crank: seller.publicKey,
+          lot,
+          seller: seller.publicKey,
+          platform: platform.publicKey,
+          mint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([seller])
+        .rpc();
+      assert.fail("выплатили с торга, который ещё идёт");
     } catch (error) {
       assert.include(String(error), "LotStillOpen");
     }

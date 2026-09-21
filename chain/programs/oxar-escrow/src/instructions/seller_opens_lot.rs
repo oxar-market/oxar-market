@@ -41,6 +41,11 @@ pub struct SellerOpensLot<'info> {
     )]
     pub vault: InterfaceAccount<'info, TokenAccount>,
 
+    /// CHECK: владелец счёта, на который пойдёт комиссия. Записывается в лот и
+    /// дальше не меняется. Называет его продавец, открывая торг, и только он:
+    /// к моменту выплаты спорить об этом уже поздно, а выплату зовёт кто угодно.
+    pub platform: UncheckedAccount<'info>,
+
     pub mint: InterfaceAccount<'info, Mint>,
 
     pub token_program: Interface<'info, TokenInterface>,
@@ -82,7 +87,8 @@ pub fn open_lot(
     lot.fee_bps = fee_bps;
     lot.bump = ctx.bumps.lot;
     lot.vault_bump = ctx.bumps.vault;
-    lot.reserved = [0u8; 64];
+    lot.platform = ctx.accounts.platform.key();
+    lot.reserved = [0u8; 32];
 
     Ok(())
 }
