@@ -201,6 +201,7 @@ export function ThingStage({
         // sheen - физический параметр ворса. Без него белый хлопок отражает
         // свет поверхностью и выглядит пластиком.
         const ghost = ghostMaterial(THREE);
+        let showingGhost = false;
         const cloth = new Map<
           InstanceType<typeof THREE.Mesh>,
           InstanceType<typeof THREE.Material>
@@ -614,6 +615,8 @@ export function ThingStage({
           look(mode) {
             const ghosting = mode === "ghost";
             setGhosting(ghosting);
+            if (ghosting && !showingGhost) ghostFrom = performance.now();
+            showingGhost = ghosting;
             for (const mesh of meshes) {
               mesh.material = ghosting ? ghost : cloth.get(mesh)!;
             }
@@ -739,8 +742,19 @@ export function ThingStage({
         observer.observe(host);
 
         let frame = 0;
+        // Голограмму двигает своё время, а не системные часы: оно идёт
+        // только пока она на экране, и обнуляется при каждом показе - значит
+        // помеха всегда начинается снизу, а не с середины.
+        const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+        let ghostClock = 0;
+        let ghostFrom = 0;
+
         const tick = () => {
           frame = requestAnimationFrame(tick);
+          if (showingGhost && !calm.matches) {
+            ghostClock = (performance.now() - ghostFrom) / 1000;
+            ghost.uniforms.time.value = ghostClock;
+          }
           if (Math.abs(turning) > 0.0005) {
             const step = turning * 0.14;
             camera.position.applyAxisAngle(up, step);
@@ -1130,6 +1144,8 @@ function ghostMaterial(THREE: typeof import("three")) {
       // светят: холодная зелень читается излучением, глубокий синий - краской.
       tint: { value: new THREE.Color(0x8ff0d8) },
       edge: { value: new THREE.Color(0x2ee6b8) },
+      // Секунды с начала показа. Двигает полосы, помеху и дыхание свечения.
+      time: { value: 0 },
     },
     vertexShader: `
       varying vec3 vNormalW;
@@ -1146,9 +1162,17 @@ function ghostMaterial(THREE: typeof import("three")) {
     fragmentShader: `
       uniform vec3 tint;
       uniform vec3 edge;
+      uniform float time;
       varying vec3 vNormalW;
       varying vec3 vToEye;
       varying float vHeight;
+
+      // Дешёвый шум по одному числу. Нужен только для мерцания, поэтому
+      // качество тут неважно - важно, чтобы соседние мгновения не совпадали.
+      float hash(float x) {
+        return fract(sin(x * 91.7) * 4375.85);
+      }
+
       void main() {
         // Изнанку тоже видно, поэтому нормаль разворачиваем к зрителю -
         // иначе дальняя стенка считалась бы отвёрнутой и гасла.
@@ -1157,12 +1181,29 @@ function ghostMaterial(THREE: typeof import("three")) {
         float grazing = 1.0 - abs(dot(n, normalize(vToEye)));
         float rim = pow(grazing, 2.2);
 
-        // Полосы по высоте. Частые, слабые: заметны, но не рябят.
-        float scan = 0.5 + 0.5 * sin(vHeight * 420.0);
+        // Полосы ползут вверх. Неподвижная сетка читается текстурой на ткани,
+        // ползущая - развёрткой луча, то есть собственно голограммой.
+        float scan = 0.5 + 0.5 * sin(vHeight * 420.0 - time * 2.4);
         float lines = 0.06 * scan;
 
-        float alpha = clamp(0.10 + rim * 0.72 + lines, 0.0, 0.92);
-        gl_FragColor = vec4(mix(tint, edge, rim), alpha);
+        // Помеха: узкая полоса, проходящая по вещи снизу вверх раз в пять
+        // секунд. Она и светлее, и шире полос - взгляд её ловит, но она не
+        // мешает разглядывать форму.
+        float sweepY = -0.35 + fract(time * 0.2) * 0.8;
+        float band = smoothstep(0.03, 0.0, abs(vHeight - sweepY));
+
+        // Дыхание и редкое подмигивание. Ступенькой, а не плавно: ровное
+        // затухание читается как анимация прозрачности, а скачок - как
+        // неустойчивость источника.
+        float breath = 0.96 + 0.04 * sin(time * 1.7);
+        float blink = 1.0 - 0.07 * step(0.93, hash(floor(time * 14.0)));
+
+        float alpha = clamp(
+          (0.10 + rim * 0.72 + lines + band * 0.28) * breath * blink,
+          0.0,
+          0.94
+        );
+        gl_FragColor = vec4(mix(tint, edge, rim) + band * 0.3, alpha);
       }
     `,
   });
