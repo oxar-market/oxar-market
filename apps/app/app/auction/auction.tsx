@@ -15,7 +15,7 @@ import { BidForm } from "./bid.tsx";
 import { PhotoView } from "./photo.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
-import { TEMP_FRONT_QUADS, TEMP_FRONT_SHOT } from "./temp-photo.ts";
+import { TEMP_ANGLES, TEMP_FRONT_QUADS, TEMP_SHOTS } from "./temp-photo.ts";
 import { SPOTS } from "./spots.ts";
 import { ThingStage, type Stage, type Views } from "./stage.tsx";
 
@@ -254,9 +254,9 @@ export function Auction() {
           // своим рендером. Так видно разницу между ними - ради чего замер и
           // затеян. Удаляется вместе с temp-photo.ts.
           <PhotoView
-            shot={angle === 0 ? TEMP_FRONT_SHOT : views.shots[angle]}
-            quads={angle === 0 ? TEMP_FRONT_QUADS : views.quads[angle] ?? {}}
-            drawFrames={angle === 0}
+            shot={TEMP_SHOTS[angle] ?? views.shots[angle]}
+            quads={angle === 0 ? TEMP_FRONT_QUADS : {}}
+            drawFrames={TEMP_SHOTS[angle] !== undefined}
             picked={picked}
             onPick={(code) => choose(code, true)}
             art={shownArt}
@@ -414,15 +414,28 @@ export function Auction() {
             className={look === which ? "look-tab on" : "look-tab"}
             aria-pressed={look === which}
             disabled={which === "shot" && views.shots.length === 0}
-            onClick={() => setLook(which)}
+            onClick={() => {
+              setLook(which);
+              // TEMP_FRONT: в фото-режиме боков нет. Пришли с бокового
+              // ракурса - разворачиваем на перёд, иначе экран пуст.
+              if (which === "shot" && !TEMP_ANGLES.includes(angle)) {
+                setAngle(0);
+                stage.current?.face(0);
+              }
+            }}
           >
             {name}
           </button>
         ))}
       </div>
 
+      {/* TEMP_FRONT: в фото-режиме ракурсов два, по числу снимков. */}
       <div className="angles" role="group" aria-label="View">
-        {ANGLES.map((name, index) => (
+        {(look === "shot" ? TEMP_ANGLES : ANGLES.map((_, at) => at)).map((index) => {
+          const name = ANGLES[index];
+          const thumb =
+            look === "shot" ? TEMP_SHOTS[index] : views.shots[index];
+          return (
           <button
             key={name}
             type="button"
@@ -435,13 +448,10 @@ export function Auction() {
               stage.current?.face(index * 90);
             }}
           >
-            {views.shots[index] ? (
-              <img src={views.shots[index]} alt="" />
-            ) : (
-              name
-            )}
+            {thumb ? <img src={thumb} alt="" /> : name}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       <nav className="lot-tabs">
