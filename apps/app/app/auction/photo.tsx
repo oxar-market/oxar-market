@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { quadTransform, type Corners } from "./quad.ts";
-import { SPOTS } from "./spots.ts";
+import { FRAME_PAD, FRAME_ROUND, SPOTS } from "./spots.ts";
 
 /**
  * Вещь кадром, а не сценой.
@@ -43,16 +43,32 @@ export function PhotoView({
   art: Record<string, string | undefined>;
 }) {
   const box = useRef<HTMLDivElement>(null);
-  const [side, setSide] = useState(0);
+  const [fit, setFit] = useState({ side: 0, left: 0, top: 0 });
 
-  // Матрица считается в пикселях, поэтому размер кадра надо знать. Следим, а
-  // не меряем однажды: сцена резиновая, и поворот телефона её меняет.
+  /**
+   * Куда именно легла картинка внутри рамки.
+   *
+   * Рамка повторяет сцену - четыре к пяти, - а кадр квадратный, и лежит он в
+   * ней с полями. Разметка задана долями кадра, а не рамки, поэтому без этой
+   * поправки места уехали бы вместе с полями.
+   *
+   * Следим, а не меряем однажды: рамка резиновая, и поворот телефона её
+   * меняет.
+   */
   useEffect(() => {
     const host = box.current;
     if (!host) return;
-    const watch = new ResizeObserver(() => setSide(host.clientWidth));
+    const measure = () => {
+      const side = Math.min(host.clientWidth, host.clientHeight);
+      setFit({
+        side,
+        left: (host.clientWidth - side) / 2,
+        top: (host.clientHeight - side) / 2,
+      });
+    };
+    const watch = new ResizeObserver(measure);
     watch.observe(host);
-    setSide(host.clientWidth);
+    measure();
     return () => watch.disconnect();
   }, []);
 
@@ -60,7 +76,7 @@ export function PhotoView({
     <div className="photo" ref={box}>
       <img className="photo-shot" src={shot} alt="" draggable={false} />
 
-      {side > 0 &&
+      {fit.side > 0 &&
         SPOTS.map((spot) => {
           const quad = quads[spot.code];
           // Места с этой стороны не видно - накладки нет вовсе. Прозрачная
@@ -68,10 +84,21 @@ export function PhotoView({
           if (!quad) return null;
 
           const matrix = quadTransform(
-            quad.map(([x, y]) => [x * side, y * side]) as Corners,
+            quad.map(([x, y]) => [
+              fit.left + x * fit.side,
+              fit.top + y * fit.side,
+            ]) as Corners,
           );
           if (!matrix) return null;
 
+          // Углы у рамки скруглены, и обводка обязана повторить их, иначе по
+          // четырём углам она торчит за пунктир.
+          const short = Math.min(spot.size[0], spot.size[1]);
+          const inner = [
+            spot.size[0] - short * FRAME_PAD * 2,
+            spot.size[1] - short * FRAME_PAD * 2,
+          ];
+          const round = short * FRAME_ROUND;
           const image = art[spot.code];
           return (
             <button
@@ -84,6 +111,7 @@ export function PhotoView({
               style={{
                 width: BASE,
                 height: BASE,
+                borderRadius: `${(round / inner[0]) * 100}% / ${(round / inner[1]) * 100}%`,
                 transform: `matrix3d(${matrix.join(",")}) scale(${1 / BASE}, ${1 / BASE})`,
               }}
             >
