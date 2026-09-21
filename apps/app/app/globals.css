@@ -274,6 +274,7 @@ input:focus {
 .spot:active,
 .tick:active,
 .row:active,
+.art-clear:active,
 .lot-tab:active {
   transform: scale(0.97);
 }
@@ -291,6 +292,7 @@ input:focus {
   .spot,
   .tick,
   .row,
+  .art-clear,
   .lot-tab {
     transition: none;
   }
@@ -864,6 +866,27 @@ input:focus {
     center / 100% 100% no-repeat;
   font-size: 1.25rem;
   color: #8a8a93;
+}
+
+/* Очистить место. Квадрат под палец, а рисунок внутри мелкий: цель нажатия
+   должна быть больше значка, иначе по нему промахиваются. */
+.art-clear {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b6b73;
+  cursor: pointer;
+  transition: color 0.14s, background 0.14s, transform 0.1s ease-out;
+}
+
+.art-clear:hover {
+  background: rgba(22, 24, 29, 0.05);
+  color: #16181d;
 }
 
 .art-text {

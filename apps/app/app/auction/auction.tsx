@@ -446,9 +446,25 @@ export function Auction() {
             </em>
           </span>
         </label>
+        {/* Корзина, а не слово: рядом с полем стоит действие над тем, что в
+            поле лежит, и словом оно занимало места больше, чем значит. */}
         {art[picked] && (
-          <button type="button" className="quiet" onClick={takeOff}>
-            Remove
+          <button
+            type="button"
+            className="art-clear"
+            onClick={takeOff}
+            aria-label="Remove artwork"
+          >
+            <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden>
+              <path
+                d="M4.5 6.75h15M9.75 6.75V4.5h4.5v2.25M6.75 6.75l.9 12.75h8.7l.9-12.75M10.25 10v6M13.75 10v6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         )}
       </div>
