@@ -2,7 +2,9 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   BID_STEP_RATE,
+  BRAND_MAX,
   EXTEND_MS,
+  cleanBrand,
   closesAfterBid,
   hasOpened,
   isOpen,
@@ -36,6 +38,22 @@ test("аукцион открыт до времени закрытия вклю�
   assert.equal(isOpen(CLOSE, CLOSE - 1), true);
   assert.equal(isOpen(CLOSE, CLOSE), false, "в момент закрытия уже закрыт");
   assert.equal(isOpen(CLOSE, CLOSE + 1), false);
+});
+
+test("имя стартапа подрезается и склеивается", () => {
+  assert.equal(cleanBrand("  Delora  "), "Delora");
+  assert.equal(cleanBrand("Solana\tFoundation"), "Solana Foundation");
+  assert.equal(cleanBrand("Jupiter   Exchange"), "Jupiter Exchange");
+});
+
+test("пустое имя стартапа не имя", () => {
+  assert.equal(cleanBrand(""), null);
+  assert.equal(cleanBrand("   "), null);
+});
+
+test("имя стартапа длиннее сорока знаков не берём", () => {
+  assert.equal(cleanBrand("x".repeat(BRAND_MAX)), "x".repeat(BRAND_MAX));
+  assert.equal(cleanBrand("x".repeat(BRAND_MAX + 1)), null);
 });
 
 test("торг начинается в назначенный момент, а не секундой позже", () => {

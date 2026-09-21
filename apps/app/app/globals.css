@@ -469,6 +469,33 @@ input:focus {
   border-color: #16181d;
 }
 
+/* Имя стартапа - первая строка карточки, над суммой: сначала «чьё лого»,
+   потом «сколько». Своей рамки у поля нет, её роль играет тонкая черта под
+   ним - в карточке рамка одна, и это рамка самой карточки. */
+.bid-brand {
+  display: block;
+  border-bottom: 1px solid #ecece8;
+  padding: 0 0.5rem 0.5rem;
+}
+
+.bid-brand input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.25rem 0;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  outline: none;
+}
+
+.bid-brand input::placeholder {
+  color: #8a8a93;
+  font-weight: 400;
+}
+
 .bid-field {
   display: flex;
   align-items: center;
@@ -720,14 +747,21 @@ input:focus {
     border-color: transparent;
   }
 
-  /* Сумма и кнопка в одну строку, прибавки под ними во всю ширину. */
+  /* Имя во всю ширину сверху, сумма и кнопка в одну строку, прибавки под ними.
+     Имени нужна своя строка в раскладке: без неё поле встало бы под прибавки,
+     в первую свободную клетку, а читается карточка сверху вниз. */
   .bid-card {
     grid-template-columns: 1fr auto;
     grid-template-areas:
+      "brand brand"
       "field go"
       "bumps bumps";
     align-items: center;
     padding: 0.875rem;
+  }
+
+  .bid-brand {
+    grid-area: brand;
   }
 
   .bid-field {

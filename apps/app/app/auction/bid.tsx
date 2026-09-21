@@ -8,7 +8,7 @@ import {
 } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
-import { formatUsd, parseUsd } from "@oxar/core";
+import { BRAND_MAX, cleanBrand, formatUsd, parseUsd } from "@oxar/core";
 import {
   WALLET_CHAIN,
   bidTransaction,
@@ -54,6 +54,7 @@ export function BidForm({
   const { signAndSendTransaction } = useStandardSignAndSendTransaction();
 
   const [amount, setAmount] = useState("");
+  const [brand, setBrand] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -76,6 +77,10 @@ export function BidForm({
     if (!art) return setError("Add your artwork first - it goes in with the bid.");
     if (!wallet) return setError("No wallet connected. Sign in again to get one.");
     if (cents === null) return setError("That is not an amount. Try 75 or 75.50.");
+    const name = cleanBrand(brand);
+    if (!name) {
+      return setError("Name the startup - people have to know whose logo this is.");
+    }
 
     setBusy(true);
     try {
@@ -120,6 +125,7 @@ export function BidForm({
         wallet: wallet.address,
         amountCents: cents,
         mediaUrl,
+        brand: name,
         signature,
       });
       if (!written) {
@@ -154,6 +160,19 @@ export function BidForm({
   return (
     <div className="bidding">
       <div className="bid-card">
+        {/* Чьё лого - вопрос той же важности, что сумма: картинка без имени
+            остаётся картинкой без хозяина, по кошельку его не узнать.
+            Поэтому имя стоит в той же рамке, а не отдельным шагом. */}
+        <label className="bid-brand">
+          <input
+            value={brand}
+            maxLength={BRAND_MAX}
+            placeholder="Startup name"
+            aria-label="Whose logo is this"
+            onChange={(event) => setBrand(event.target.value)}
+          />
+        </label>
+
         <label className="bid-field">
           <span className="bid-sign">$</span>
           <input
