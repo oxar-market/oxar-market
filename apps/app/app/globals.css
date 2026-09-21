@@ -196,6 +196,24 @@ input:focus {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   box-shadow: 0 12px 32px rgba(15, 18, 25, 0.1);
+
+  /* Слой выделен насовсем. Без этого браузер пересобирает панель на каждый
+     переезд подсветки, и в этот миг скруглённый клип теряется - панель
+     мигает прямоугольником. Панель и так сдвинута трансформом, так что
+     обещание честное. */
+  will-change: transform;
+  isolation: isolate;
+}
+
+/* Светлая грань сверху: так материал ловит свет и читается предметом, а не
+   залитым прямоугольником. */
+.tabs::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border-top: 1px solid rgba(255, 255, 255, 0.55);
+  pointer-events: none;
 }
 
 /* Подсветка одна на все вкладки и переезжает между ними: так переход читается
@@ -209,6 +227,8 @@ input:focus {
   border-radius: 999px;
   background: #16181d;
   transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+  /* Подсветка ездит постоянно - её слой тоже держим выделенным. */
+  will-change: transform;
 }
 
 .tab {
@@ -229,14 +249,67 @@ input:focus {
   color: #fff;
 }
 
+/* Отклик на нажатие, а не на отпускание.
+ *
+ * Ожидание click ощущается мёртвым: палец уже на кнопке, а на экране ничего.
+ * Кнопка проседает мгновенно, возвращается за сто миллисекунд.
+ *
+ * Накладки мест в фото-режиме сюда не входят намеренно: они уже несут
+ * матрицу перспективы, и scale поверх неё её бы стёр. */
+.tab,
+.look-tab,
+.bump,
+.angle,
+.spot,
+.tick,
+.row,
+.lot-tab {
+  transition: transform 0.1s ease-out;
+}
+
+.tab:active,
+.look-tab:active,
+.bump:active,
+.angle:active,
+.spot:active,
+.tick:active,
+.row:active,
+.lot-tab:active {
+  transform: scale(0.97);
+}
+
 /* Движение выключено там, где его просили не показывать. */
 @media (prefers-reduced-motion: reduce) {
   .tabs-pill,
   .tab,
   .primary,
   .ghost,
-  .quiet {
+  .quiet,
+  .look-tab,
+  .bump,
+  .angle,
+  .spot,
+  .tick,
+  .row,
+  .lot-tab {
     transition: none;
+  }
+
+  /* Проседание оставляем - это отклик, а не украшение, и вестибулярного
+     аппарата оно не трогает. Убираем только переезд подсветки. */
+  .tabs-pill {
+    transition: none;
+  }
+}
+
+/* Прозрачность выключена - панель становится плотной, а не мутной.
+   Полупрозрачное поверх полупрозрачного нечитаемо, и это тот случай. */
+@media (prefers-reduced-transparency: reduce) {
+  .tabs {
+    background: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: rgba(22, 24, 29, 0.14);
   }
 }
 
