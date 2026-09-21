@@ -424,6 +424,15 @@ export function Auction() {
           </button>
         )}
       </div>
+      {/* Предупреждение стоит до выбора файла, а не после: цветной логотип
+          выяснится на ткани, когда печатать уже поздно. */}
+      {look !== "ghost" && (
+        <p className="warn">
+          Upload a black and white version of your logo. Print puts flat ink on
+          fabric, so gradients and thin color turn to mud.
+        </p>
+      )}
+
       {artError ? (
         <p className="bad">{artError}</p>
       ) : (
@@ -566,9 +575,9 @@ export function Auction() {
 
       {tab === "about" && (
         <p className="muted">
-          A shirt worn at a Superteam Ukraine event. Every marked area on it is a
-          spot you can rent: the highest bid when the clock runs out is what gets
-          printed, and the shirt is worn as printed.
+          One of the Superteam Ukraine leads wears this shirt. Every marked area
+          on it is a spot you can rent: the highest bid when the clock runs out
+          is what gets printed, and the shirt is worn as printed.
         </p>
       )}
 
