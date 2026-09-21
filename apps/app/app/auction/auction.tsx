@@ -376,6 +376,72 @@ export function Auction() {
         </div>
       </div>
 
+      {/* Ракурсы - самой вещью, а не словами: снимок отвечает на «с какой
+          стороны смотрим» быстрее, чем слово «Back». Пока сцена не собралась
+          (или её нет вовсе), остаются подписи - кнопка обязана работать и без
+          картинки. */}
+      {/* Чем смотреть вещь. Кадр подробнее сцены - он снят с запасом и без
+          оглядки на скорость, - но вертеть его нельзя, ракурсов четыре.
+
+          До открытия торга выбора нет вовсе: вещь показывается голограммой, и
+          кнопка «посмотреть по-настоящему» обещала бы то, чего ещё нет.
+          После открытия голограммы в списке нет по той же причине с другой
+          стороны - торг идёт, смотреть надо вещь. */}
+      {started && (
+      <>
+      <div className="looks" role="group" aria-label="How to view">
+        {([
+          ["live", "Shirt"],
+          ["shot", "Photo"],
+        ] as const).map(([which, name]) => (
+          <button
+            key={which}
+            type="button"
+            className={look === which ? "look-tab on" : "look-tab"}
+            aria-pressed={look === which}
+            disabled={which === "shot" && views.shots.length === 0}
+            onClick={() => {
+              setLook(which);
+              // TEMP_FRONT: в фото-режиме боков нет. Пришли с бокового
+              // ракурса - разворачиваем на перёд, иначе экран пуст.
+              if (which === "shot" && !TEMP_ANGLES.includes(angle)) {
+                setAngle(0);
+                stage.current?.face(0);
+              }
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
+      {/* TEMP_FRONT: в фото-режиме ракурсов два, по числу снимков. */}
+      <div className="angles" role="group" aria-label="View">
+        {(look === "shot" ? TEMP_ANGLES : ANGLES.map((_, at) => at)).map((index) => {
+          const name = ANGLES[index];
+          const thumb =
+            look === "shot" ? TEMP_SHOTS[index] : views.shots[index];
+          return (
+          <button
+            key={name}
+            type="button"
+            className={index === angle ? "angle on" : "angle"}
+            aria-pressed={index === angle}
+            aria-label={name}
+            title={name}
+            onClick={() => {
+              setAngle(index);
+              stage.current?.face(index * 90);
+            }}
+          >
+            {thumb ? <img src={thumb} alt="" /> : name}
+          </button>
+          );
+        })}
+      </div>
+      </>
+      )}
+
       {/* Состояние выбранного места одной строкой: что это, почём и сколько
           осталось. Это же место - предмет ставки, когда она появится. */}
       {!started ? (
@@ -527,72 +593,6 @@ export function Auction() {
         <p className="muted">
           Rewound. This is what the shirt looked like at that bid, not now.
         </p>
-      )}
-
-      {/* Ракурсы - самой вещью, а не словами: снимок отвечает на «с какой
-          стороны смотрим» быстрее, чем слово «Back». Пока сцена не собралась
-          (или её нет вовсе), остаются подписи - кнопка обязана работать и без
-          картинки. */}
-      {/* Чем смотреть вещь. Кадр подробнее сцены - он снят с запасом и без
-          оглядки на скорость, - но вертеть его нельзя, ракурсов четыре.
-
-          До открытия торга выбора нет вовсе: вещь показывается голограммой, и
-          кнопка «посмотреть по-настоящему» обещала бы то, чего ещё нет.
-          После открытия голограммы в списке нет по той же причине с другой
-          стороны - торг идёт, смотреть надо вещь. */}
-      {started && (
-      <>
-      <div className="looks" role="group" aria-label="How to view">
-        {([
-          ["live", "Shirt"],
-          ["shot", "Photo"],
-        ] as const).map(([which, name]) => (
-          <button
-            key={which}
-            type="button"
-            className={look === which ? "look-tab on" : "look-tab"}
-            aria-pressed={look === which}
-            disabled={which === "shot" && views.shots.length === 0}
-            onClick={() => {
-              setLook(which);
-              // TEMP_FRONT: в фото-режиме боков нет. Пришли с бокового
-              // ракурса - разворачиваем на перёд, иначе экран пуст.
-              if (which === "shot" && !TEMP_ANGLES.includes(angle)) {
-                setAngle(0);
-                stage.current?.face(0);
-              }
-            }}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
-
-      {/* TEMP_FRONT: в фото-режиме ракурсов два, по числу снимков. */}
-      <div className="angles" role="group" aria-label="View">
-        {(look === "shot" ? TEMP_ANGLES : ANGLES.map((_, at) => at)).map((index) => {
-          const name = ANGLES[index];
-          const thumb =
-            look === "shot" ? TEMP_SHOTS[index] : views.shots[index];
-          return (
-          <button
-            key={name}
-            type="button"
-            className={index === angle ? "angle on" : "angle"}
-            aria-pressed={index === angle}
-            aria-label={name}
-            title={name}
-            onClick={() => {
-              setAngle(index);
-              stage.current?.face(index * 90);
-            }}
-          >
-            {thumb ? <img src={thumb} alt="" /> : name}
-          </button>
-          );
-        })}
-      </div>
-      </>
       )}
 
       <nav className="lot-tabs">
