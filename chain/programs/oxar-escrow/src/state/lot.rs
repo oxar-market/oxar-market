@@ -53,15 +53,27 @@ pub struct Lot {
     /// подписать возврат из собственного хранилища.
     pub auction: [u8; 16],
 
-    /// Комиссия площадки в сотых долях процента. Переезжает в сделку как есть.
+    /// Комиссия площадки в сотых долях процента. 1000 - это 10%.
     pub fee_bps: u16,
 
     pub bump: u8,
     pub vault_bump: u8,
 
+    /// Владелец счёта, на который уйдёт комиссия.
+    ///
+    /// Записывается при открытии торга и дальше не меняется. Это не мелочь:
+    /// пока получателя комиссии называл тот, кто двигает торг, он мог назвать
+    /// себя - выплату зовёт кто угодно, и десять процентов уходили бы ему.
+    ///
+    /// Поле стоит в конце, за `vault_bump`, и откусано от запаса, а не
+    /// добавлено сверху. Раскладка начала записи от этого не съезжает, и
+    /// разбор лота в приложении продолжает читать те же байты на тех же
+    /// местах.
+    pub platform: Pubkey,
+
     /// Запас под поля, которых ещё нет. Без него добавить поле означает сломать
     /// чтение уже открытых лотов.
-    pub reserved: [u8; 64],
+    pub reserved: [u8; 32],
 }
 
 impl Lot {
@@ -103,6 +115,22 @@ impl Lot {
         self.top_bidder.is_some() && self.top_bid >= self.reserve
     }
 
+    /// Как делится выигравшая ставка: комиссия площадке, остальное продавцу.
+    ///
+    /// Комиссия считается вниз, остаток от деления достаётся продавцу. Сумма
+    /// двух частей равна исходной всегда - в хранилище не должно оставаться ни
+    /// одной базовой единицы, иначе его не закрыть.
+    pub fn split(&self, payout: u64) -> Result<(u64, u64)> {
+        let fee = (payout as u128)
+            .checked_mul(self.fee_bps as u128)
+            .and_then(|v| v.checked_div(10_000))
+            .ok_or(EscrowError::MathOverflow)? as u64;
+
+        let to_seller = payout.checked_sub(fee).ok_or(EscrowError::MathOverflow)?;
+
+        Ok((fee, to_seller))
+    }
+
     /// Куда отодвинуть закрытие, если ставка пришла под конец.
     ///
     /// Возвращает новое время закрытия или прежнее, если двигать не нужно.
@@ -114,5 +142,84 @@ impl Lot {
         } else {
             self.closes_at
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Торг с комиссией в 10% и высшей ставкой, которую и делим.
+    fn lot(fee_bps: u16, top_bid: u64) -> Lot {
+        Lot {
+            seller: Pubkey::default(),
+            mint: Pubkey::default(),
+            top_bidder: Some(Pubkey::default()),
+            top_bid,
+            reserve: 1,
+            min_step: 1,
+            closes_at: 0,
+            extend_seconds: 0,
+            auction: [0u8; 16],
+            fee_bps,
+            bump: 0,
+            vault_bump: 0,
+            platform: Pubkey::default(),
+            reserved: [0u8; 32],
+        }
+    }
+
+    #[test]
+    fn комиссия_десять_процентов_и_ничего_не_теряется() {
+        let (fee, to_seller) = lot(1_000, 100).split(100).unwrap();
+        assert_eq!(fee, 10);
+        assert_eq!(to_seller, 90);
+        assert_eq!(fee + to_seller, 100, "в хранилище не должно остаться ничего");
+    }
+
+    #[test]
+    fn нулевая_комиссия_отдаёт_всё_продавцу() {
+        let (fee, to_seller) = lot(0, 100).split(100).unwrap();
+        assert_eq!(fee, 0);
+        assert_eq!(to_seller, 100);
+    }
+
+    #[test]
+    fn остаток_от_деления_достаётся_продавцу_а_не_виснет() {
+        // 10% от 105 это 10.5 базовой единицы. Комиссия вниз, половинка
+        // продавцу: иначе она осталась бы в хранилище и закрыть его не вышло бы.
+        let (fee, to_seller) = lot(1_000, 105).split(105).unwrap();
+        assert_eq!(fee, 10);
+        assert_eq!(to_seller, 95);
+        assert_eq!(fee + to_seller, 105);
+    }
+
+    #[test]
+    fn комиссия_во_все_сто_процентов_не_уводит_продавца_в_минус() {
+        let (fee, to_seller) = lot(10_000, 100).split(100).unwrap();
+        assert_eq!(fee, 100);
+        assert_eq!(to_seller, 0);
+    }
+
+    #[test]
+    fn большая_ставка_не_переполняет_счёт() {
+        // Промежуточное умножение на 10 000 не влезает в u64, поэтому считается
+        // в u128. Без этого комиссия с крупной ставки обернулась бы мусором.
+        let (fee, to_seller) = lot(1_000, u64::MAX).split(u64::MAX).unwrap();
+        assert_eq!(fee, u64::MAX / 10);
+        assert_eq!(fee as u128 + to_seller as u128, u64::MAX as u128);
+    }
+
+    #[test]
+    fn торг_состоялся_только_если_ставка_не_ниже_резерва() {
+        let mut one = lot(1_000, 40);
+        one.reserve = 50;
+        assert!(!one.has_winner(), "ставка ниже резерва - лот не продан");
+
+        one.top_bid = 50;
+        assert!(one.has_winner(), "ровно резерв уже победа");
+
+        one.top_bidder = None;
+        assert!(!one.has_winner(), "без ставок победителя нет");
     }
 }

@@ -47,6 +47,15 @@ function env(name: string): string {
   throw new Error(`в .env.local нет ${name}`);
 }
 
+/** То же, но пусто и отсутствие - не ошибка, а «не задано». */
+function optionalEnv(name: string): string {
+  try {
+    return env(name);
+  } catch {
+    return "";
+  }
+}
+
 const url = env("NEXT_PUBLIC_SUPABASE_URL");
 const key = env("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -104,6 +113,16 @@ async function main() {
   const idl = JSON.parse(readFileSync("idl/oxar_escrow.json", "utf8"));
   const program = new anchor.Program(idl, provider);
 
+  // Куда пойдёт комиссия. Адрес вмерзает в лот при открытии и больше не
+  // меняется: выплату зовёт кто угодно, и называй получателя он - комиссию
+  // уводили бы себе. Нет адреса - нет и комиссии, тогда в лот идёт сам
+  // продавец, и делить будет нечего.
+  const feeWallet = arg("platform") ?? optionalEnv("NEXT_PUBLIC_OXAR_FEE_WALLET");
+  if (feeBps > 0 && !feeWallet) {
+    throw new Error("комиссия задана, а получатель (--platform) не указан");
+  }
+  const platform = feeWallet ? new PublicKey(feeWallet) : seller.publicKey;
+
   const mint = new PublicKey(mintArg);
   const { decimals } = await getMint(connection, mint);
   if (decimals < 2) throw new Error(`у монеты ${decimals} знаков, центы в неё не лягут`);
@@ -151,6 +170,7 @@ async function main() {
     )
     .accounts({
       seller: seller.publicKey,
+      platform,
       mint,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
