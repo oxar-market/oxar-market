@@ -45,7 +45,19 @@ const CLUSTER = (process.env.NEXT_PUBLIC_SOLANA_CLUSTER ?? "devnet") as
 export const WALLET_CHAIN =
   CLUSTER === "devnet" ? "solana:devnet" : "solana:mainnet";
 
-export const connection = new Connection(clusterApiUrl(CLUSTER), "confirmed");
+/**
+ * Своя нода, если она есть.
+ *
+ * `clusterApiUrl` отдаёт публичную ноду Solana Labs. Для девнета этого хватает,
+ * для боевой сети - нет: она режет частые запросы и отвечает отказом тем
+ * чаще, чем больше людей на экране, а экран спрашивает её на каждую ставку и
+ * на каждый выбор места. Адрес своей ноды публичный, как и всё остальное
+ * здесь: он уезжает в браузер вместе с бандлом.
+ */
+export const connection = new Connection(
+  process.env.NEXT_PUBLIC_SOLANA_RPC || clusterApiUrl(CLUSTER),
+  "confirmed",
+);
 
 export type ChainLot = {
   mint: PublicKey;

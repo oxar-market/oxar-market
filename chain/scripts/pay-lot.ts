@@ -23,7 +23,8 @@ import {
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 
-const RPC = "https://api.devnet.solana.com";
+/** Та же сеть, что у открытия лота: девнет, пока не сказано иное. */
+const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 
 function arg(name: string): string | undefined {
   const found = process.argv.find((one) => one.startsWith(`--${name}=`));
