@@ -17,9 +17,39 @@ const oxar = Bricolage_Grotesque({
   display: "swap",
 });
 
+/**
+ * `metadataBase` обязателен: адрес картинки в превью читает чужой сервер, и
+ * относительный путь ему ничего не говорит. Без него Next подставляет
+ * localhost, и превью пустое у всех, кроме нас.
+ *
+ * Картинка названа руками: она лежит обычным маршрутом с `.png` в имени, а не
+ * готовым `opengraph-image.tsx`, и сама себя в теги не пропишет. Почему именно
+ * так - в самом маршруте.
+ */
 export const metadata: Metadata = {
+  metadataBase: new URL("https://app.oxar.app"),
   title: "OXAR",
   description: "Auctions for ad spots on things people carry.",
+  openGraph: {
+    title: "OXAR",
+    description: "The highest bid when the clock runs out is what gets printed.",
+    url: "https://app.oxar.app",
+    siteName: "OXAR",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "OXAR - the highest bid when the clock runs out is what gets printed",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OXAR",
+    description: "The highest bid when the clock runs out is what gets printed.",
+  },
 };
 
 export default function RootLayout({
