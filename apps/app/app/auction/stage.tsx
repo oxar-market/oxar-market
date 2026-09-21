@@ -107,6 +107,12 @@ export function ThingStage({
         const { GLTFLoader } = await import(
           "three/examples/jsm/loaders/GLTFLoader.js"
         );
+        // Геометрия сжата meshopt: шестьсот восемьдесят пять тысяч граней
+        // укладываются в пять мегабайт вместо тридцати. Декодер идёт в
+        // поставке three, отдельной зависимости не нужно.
+        const { MeshoptDecoder } = await import(
+          "three/examples/jsm/libs/meshopt_decoder.module.js"
+        );
         const { OrbitControls } = await import(
           "three/examples/jsm/controls/OrbitControls.js"
         );
@@ -158,7 +164,9 @@ export function ThingStage({
         controls.minPolarAngle = Math.PI * 0.28;
         controls.maxPolarAngle = Math.PI * 0.72;
 
-        const gltf = await new GLTFLoader().loadAsync("/models/shirt.glb");
+        const gltf = await new GLTFLoader()
+          .setMeshoptDecoder(MeshoptDecoder)
+          .loadAsync("/models/shirt.glb");
 
         // Номера мест рисуются в канвас, а текстура кэшируется навсегда.
         // Успей мы до того, как доехал шрифт, - цифры на вещи остались бы
@@ -178,17 +186,25 @@ export function ThingStage({
         });
         if (meshes.length === 0) throw new Error("в модели нет поверхностей");
 
-        // Ткань, а не пластик. Три вещи делают разницу: карта нормалей под
-        // переплетение, sheen - физический параметр ворса, - и высокая
-        // шершавость. Без них свет ложится ровным пятном, и вещь читается
-        // как отливка.
-        const weave = knitMap(THREE);
+        // Ткань, а не пластик.
+        //
+        // Цвет у модели свой - чужая запечённая съёмка с чужими тенями, - и
+        // он выброшен ещё при сборке файла. Карта нормалей оставлена: в ней
+        // швы, кромка горловины и фактура полотна, то есть ровно то, из-за
+        // чего вещь читается сшитой, а не отлитой. Рисовать переплетение
+        // самим больше не нужно - у нас есть снятое с самой вещи.
+        //
+        // sheen - физический параметр ворса. Без него белый хлопок отражает
+        // свет поверхностью и выглядит пластиком.
         const ghost = ghostMaterial(THREE);
         const cloth = new Map<
           InstanceType<typeof THREE.Mesh>,
           InstanceType<typeof THREE.Material>
         >();
         for (const mesh of meshes) {
+          const came = mesh.material as InstanceType<
+            typeof THREE.MeshStandardMaterial
+          >;
           mesh.material = new THREE.MeshPhysicalMaterial({
             color: REPAINT.color,
             roughness: 0.96,
@@ -196,8 +212,8 @@ export function ThingStage({
             sheen: 1,
             sheenRoughness: 0.85,
             sheenColor: new THREE.Color(0xffffff),
-            normalMap: weave,
-            normalScale: new THREE.Vector2(0.55, 0.55),
+            normalMap: came?.normalMap ?? null,
+            normalScale: new THREE.Vector2(0.7, 0.7),
           });
           cloth.set(mesh, mesh.material);
         }
@@ -801,63 +817,6 @@ function roundRect(
   ctx.closePath();
 }
 
-/**
- * Карта нормалей трикотажа, нарисованная на месте.
- *
- * Своя, а не скачанная: чужой файл - это лицензия, вес и ещё одна вещь,
- * которая разойдётся с моделью молча. Здесь двести пятьдесят шесть точек в
- * квадрате и немного синусов.
- *
- * Без неё ткань освещается как гладкий пластик: свет ложится ровным пятном, и
- * вещь читается как отливка, а не как полотно. Здесь - ряды петель со сдвигом
- * через ряд, поперечный рубчик и мелкое зерно под ворс, а из высот считаются
- * нормали разностями.
- */
-function knitMap(THREE: typeof import("three")) {
-  const side = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = side;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("нет 2d-контекста");
-
-  const cols = 14;
-  const rows = 18;
-  const height = new Float32Array(side * side);
-  for (let y = 0; y < side; y++) {
-    const row = Math.floor((y / side) * rows);
-    const shift = row % 2 ? Math.PI : 0;
-    for (let x = 0; x < side; x++) {
-      const loop = Math.sin((x / side) * cols * Math.PI * 2 + shift) * 0.5 + 0.5;
-      const rib = Math.sin((y / side) * rows * Math.PI * 2) * 0.5 + 0.5;
-      height[y * side + x] = loop * 0.5 + rib * 0.32 + Math.random() * 0.18;
-    }
-  }
-
-  const at = (x: number, y: number) =>
-    height[((y + side) % side) * side + ((x + side) % side)];
-
-  const image = ctx.createImageData(side, side);
-  const strength = 2.4;
-  for (let y = 0; y < side; y++) {
-    for (let x = 0; x < side; x++) {
-      const nx = -(at(x + 1, y) - at(x - 1, y)) * strength;
-      const ny = -(at(x, y + 1) - at(x, y - 1)) * strength;
-      const len = Math.hypot(nx, ny, 1);
-      const at4 = (y * side + x) * 4;
-      image.data[at4] = Math.round(((nx / len) * 0.5 + 0.5) * 255);
-      image.data[at4 + 1] = Math.round(((ny / len) * 0.5 + 0.5) * 255);
-      image.data[at4 + 2] = Math.round(((1 / len) * 0.5 + 0.5) * 255);
-      image.data[at4 + 3] = 255;
-    }
-  }
-  ctx.putImageData(image, 0, 0);
-
-  const made = new THREE.CanvasTexture(canvas);
-  made.wrapS = made.wrapT = THREE.RepeatWrapping;
-  made.repeat.set(26, 26);
-  made.anisotropy = 8;
-  return made;
-}
 
 /**
  * Съёмочный павильон вместо типовой комнаты three.
