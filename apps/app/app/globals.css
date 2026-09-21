@@ -893,3 +893,10 @@ input:focus {
   border-style: solid;
   border-color: #16181d;
 }
+
+/* Всё, что про выбор места, на голограмме не показывается: торг ещё не
+   начался, и выбирать пока нечего. */
+.arc.away,
+.tryon.away {
+  display: none;
+}
