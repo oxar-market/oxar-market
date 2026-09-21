@@ -978,22 +978,35 @@ input:focus {
 /* TEMP_FRONT: рамка, нарисованная самой накладкой. Нужна там, где снимок
    чужой и разметки на нём нет. Удаляется вместе с temp-photo.ts, если
    настоящих снимков так и не появится. */
+/* Уголки вместо рамки, как и на сцене: место - отметка на вещи, а не коробка
+   поверх неё. Рисуются двумя градиентами - по одному на пару углов, - потому
+   что рамкой уголок не задать, а четыре вложенных элемента ради этого заводить
+   незачем. */
 .photo-spot.drawn {
-  border: 2px dashed rgba(58, 61, 69, 0.85);
-  background: rgba(255, 255, 255, 0.14);
   display: grid;
   place-items: center;
+  --arm: 20%;
+  --ink: rgba(224, 56, 28, 0.9);
+  background:
+    linear-gradient(var(--ink), var(--ink)) left top / var(--arm) 2px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) left top / 2px var(--arm) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) right top / var(--arm) 2px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) right top / 2px var(--arm) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) left bottom / var(--arm) 2px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) left bottom / 2px var(--arm) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) right bottom / var(--arm) 2px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) right bottom / 2px var(--arm) no-repeat;
 }
 
 .photo-spot.drawn span {
-  font-size: 30px;
-  font-weight: 600;
-  color: rgba(58, 61, 69, 0.85);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--ink);
 }
 
 .photo-spot.drawn.on {
-  border-style: solid;
-  border-color: #16181d;
+  --ink: #96210c;
 }
 
 /* Всё, что про выбор места, на голограмме не показывается: торг ещё не

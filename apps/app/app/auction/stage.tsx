@@ -5,7 +5,6 @@ import { fitInside } from "./fit.ts";
 import {
   DECAL_DEPTH,
   FRAME_PAD,
-  FRAME_ROUND,
   REPAINT,
   SPOTS,
   type Spot,
@@ -303,11 +302,11 @@ export function ThingStage({
 
         // Куда именно легло место, решает сама модель: луч снаружи внутрь
         // находит точку на поверхности и её нормаль, и декаль встаёт по ним.
-        // Рамки чёрные, а не синие: синий читается как «интерфейс поверх
-        // вещи», а место под нанесение - часть самой вещи. Выбранное берёт
-        // чернила интерфейса, свободные - на тон мягче, чтобы девять пятен
-        // разом не забивали футболку.
-        const tint = { idle: 0x3a3d45, hot: 0x16181d };
+        // Отметки красные, как краска на печатной пробе, а не синие: синий
+        // читался бы интерфейсом поверх вещи, а место под нанесение - часть
+        // самой вещи. Выбранное берёт краску погуще, свободные - пожиже,
+        // чтобы пятнадцать отметок разом не забивали футболку.
+        const tint = { idle: 0xe0381c, hot: 0x96210c };
         const raycaster = new THREE.Raycaster();
 
         /**
@@ -491,8 +490,8 @@ export function ThingStage({
             roughness: 0.95,
             metalness: 0,
             transparent: true,
-            // Сквозь место по-прежнему читается сама вещь: заливка под рамкой
-            // почти прозрачная, и держит внимание сам контур.
+            // Отметка чуть прозрачная: она на ткани, а не поверх неё, и
+            // складка под ней обязана читаться.
             opacity: 0.88,
             // Декаль лежит ровно на поверхности, поэтому её надо чуть
             // приподнять - иначе они спорят и пятно мерцает полосами.
@@ -842,39 +841,56 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
 
   const short = Math.min(canvas.width, canvas.height);
   const pad = short * FRAME_PAD;
-  const line = Math.max(2, short * 0.035);
-  const frame = () =>
-    roundRect(ctx, pad, pad, canvas.width - pad * 2, canvas.height - pad * 2, short * FRAME_ROUND);
 
-  ctx.fillStyle = "rgba(255,255,255,0.16)";
-  frame();
-  ctx.fill();
+  // Уголки, а не рамка по всему периметру, и линия волосяная.
+  //
+  // Пятнадцать пунктирных коробок с крупной цифрой внутри читались рельефом
+  // на ткани, вроде кубиков пресса: заливка давала им объём, толстый пунктир -
+  // вес, цифра - лицо. А место под нанесение - это отметка на вещи, и ей
+  // положено быть тише самой вещи.
+  //
+  // Уголки при этом говорят то же, что говорила рамка: вот площадь, и
+  // напечатают ровно её. Углы у них те же, что у четырёхугольника мест в
+  // фото-режиме, поэтому обводка выбранного по-прежнему ложится ровно.
+  const line = Math.max(2, short * 0.018);
+  const arm = short * 0.2;
+  const right = canvas.width - pad;
+  const bottom = canvas.height - pad;
 
-  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.strokeStyle = "rgba(255,255,255,0.92)";
   ctx.lineWidth = line;
-  ctx.lineCap = "round";
-  ctx.setLineDash([short * 0.14, short * 0.09]);
-  frame();
+  ctx.lineCap = "butt";
+  ctx.beginPath();
+  for (const [x, y, alongX, alongY] of [
+    [pad, pad, 1, 1],
+    [right, pad, -1, 1],
+    [right, bottom, -1, -1],
+    [pad, bottom, 1, -1],
+  ]) {
+    ctx.moveTo(x + alongX * arm, y);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y + alongY * arm);
+  }
   ctx.stroke();
 
-  // Номер посередине клетки. Кегль подбирается под ширину рамки, а не берётся
-  // долей от холста: иначе на широком месте цифры вылезают за пунктир.
-  ctx.setLineDash([]);
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  // Номер посередине, но подписью, а не заголовком: мелко, с разрядкой, как
+  // номер в каталоге. Кегль всё равно проверяется по ширине - на узком месте
+  // и мелкая разрядка вылезает за уголки.
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  const room = canvas.width - (pad + line) * 2 - short * 0.2;
+  const room = canvas.width - (pad + arm) * 2;
   // Шрифт берём у страницы: в канвас переменная из CSS не приходит, а имя
   // семейства next/font собирает сам и на каждой сборке заново.
-  const font = (size: number) => `600 ${size}px ${getComputedStyle(document.body).fontFamily}`;
-  let size = short * 0.34;
-  ctx.letterSpacing = `${size * 0.04}px`;
+  const font = (size: number) => `500 ${size}px ${getComputedStyle(document.body).fontFamily}`;
+  let size = short * 0.19;
+  ctx.letterSpacing = `${size * 0.18}px`;
   ctx.font = font(size);
   const width = ctx.measureText(spot.label).width;
   if (width > room) {
     size *= room / width;
-    ctx.letterSpacing = `${size * 0.04}px`;
+    ctx.letterSpacing = `${size * 0.18}px`;
     ctx.font = font(size);
   }
   ctx.fillText(spot.label, canvas.width / 2, canvas.height / 2);
@@ -920,25 +936,6 @@ function artwork(
   made.anisotropy = 8;
   return made;
 }
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  wide: number,
-  tall: number,
-  radius: number,
-) {
-  const r = Math.min(radius, wide / 2, tall / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + wide, y, x + wide, y + tall, r);
-  ctx.arcTo(x + wide, y + tall, x, y + tall, r);
-  ctx.arcTo(x, y + tall, x, y, r);
-  ctx.arcTo(x, y, x + wide, y, r);
-  ctx.closePath();
-}
-
 
 /**
  * Съёмочный павильон вместо типовой комнаты three.
