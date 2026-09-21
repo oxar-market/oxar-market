@@ -15,6 +15,7 @@ import {
   minNextCents,
   readLot,
   settled,
+  walletUnits,
 } from "@/lib/chain";
 import { recordBid, uploadCreative, type Lot } from "@/lib/auction";
 
@@ -57,6 +58,9 @@ export function BidForm({
   const [brand, setBrand] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Сколько USDC на кошельке, в центах. null - ещё не прочитали или прочитать
+  // не вышло: тогда строку баланса просто не показываем, а не врём нулём.
+  const [balance, setBalance] = useState<number | null>(null);
 
   // Поле само встаёт на минимум: набирать сумму с нуля, когда она известна, -
   // лишняя работа. Своё, уже набранное, не трогаем.
@@ -65,6 +69,24 @@ export function BidForm({
   }, [need, busy]);
 
   const wallet = wallets[0];
+
+  // Баланс кошелька по монете торга. Читаем, когда кошелёк известен, и заново
+  // после каждой прошедшей ставки: она меняет остаток. Монету берём из лота в
+  // цепочке - ставка идёт в неё. Всё в try внутри walletUnits, рендер этим не
+  // уронить.
+  useEffect(() => {
+    if (!wallet) return;
+    let live = true;
+    (async () => {
+      const chainLot = await readLot(lot.id);
+      if (!chainLot || !live) return;
+      const units = await walletUnits(chainLot.mint, new PublicKey(wallet.address));
+      if (live) setBalance(Number(units / 10_000n));
+    })().catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [wallet, lot.id, busy]);
   const cents = parseUsd(amount);
   // Чего не хватает до ставки. Оба условия обязательны и проверяются всё
   // равно - но проверялись они только при нажатии, а кнопка к этому моменту
@@ -211,6 +233,18 @@ export function BidForm({
           {busy ? "Bidding…" : "Bid"}
         </button>
       </div>
+
+      {/* Баланс кошелька по монете торга. Стоит под самой формой, где набирают
+          сумму: ставить, не зная, сколько у тебя есть, - это ставить вслепую.
+          Красным, когда набранной ставки не хватает, - до нажатия, а не после
+          отказа. Нет числа - строки нет: пустого «Wallet: $0.00» на непрочитанном
+          балансе быть не должно. */}
+      {balance !== null && (
+        <p className={cents !== null && cents > balance ? "bad" : "muted"}>
+          Wallet: {formatUsd(balance)}
+          {cents !== null && cents > balance && " - not enough for this bid"}
+        </p>
+      )}
 
       {error ? (
         <p className="bad">{error}</p>

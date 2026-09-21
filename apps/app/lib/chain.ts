@@ -37,13 +37,29 @@ const PROGRAM_ID = new PublicKey("Hzh8CjF8ZmmtqVro2dVR54uFVcyjWfp3Aenvh782QYr5")
 /** `bidder_places_bid` из IDL. */
 const PLACE_BID = new Uint8Array([172, 147, 26, 172, 0, 179, 171, 148]);
 
-const CLUSTER = (process.env.NEXT_PUBLIC_SOLANA_CLUSTER ?? "devnet") as
+// `||`, а не `??`: на проде переменная приходит пустой строкой, а не
+// отсутствует, и `??` пропускал бы её как заданное значение. Пустая строка -
+// это «не задано», и тогда девнет. Иначе `""` !== `"devnet"` уводило кошелёк
+// в mainnet, пока торги шли на девнете.
+const CLUSTER = (process.env.NEXT_PUBLIC_SOLANA_CLUSTER || "devnet") as
   | "devnet"
   | "mainnet-beta";
 
 /** Как сеть называется у кошелька: он говорит на языке wallet-standard. */
 export const WALLET_CHAIN =
   CLUSTER === "devnet" ? "solana:devnet" : "solana:mainnet";
+
+/**
+ * Сеть и её нода - для конфигурации Privy.
+ *
+ * Кошелёк Privy сам шлёт транзакцию в сеть и требует, чтобы нода этой сети была
+ * названа в его конфиге, иначе `signAndSendTransaction` падает с «No RPC
+ * configuration found». Значит и экран, и Privy обязаны знать одну и ту же
+ * сеть, и берут они её отсюда, а не каждый из своего `process.env`.
+ */
+export const SOLANA_CLUSTER = CLUSTER;
+export const SOLANA_RPC_URL =
+  process.env.NEXT_PUBLIC_SOLANA_RPC || clusterApiUrl(CLUSTER);
 
 /**
  * Своя нода, если она есть.
@@ -54,10 +70,7 @@ export const WALLET_CHAIN =
  * на каждый выбор места. Адрес своей ноды публичный, как и всё остальное
  * здесь: он уезжает в браузер вместе с бандлом.
  */
-export const connection = new Connection(
-  process.env.NEXT_PUBLIC_SOLANA_RPC || clusterApiUrl(CLUSTER),
-  "confirmed",
-);
+export const connection = new Connection(SOLANA_RPC_URL, "confirmed");
 
 export type ChainLot = {
   mint: PublicKey;
@@ -120,6 +133,30 @@ export async function readLot(lotId: string): Promise<ChainLot | null> {
   // Лота в цепочке может не быть: строка заводится раньше него. Такой торг
   // ещё не принимает ставок, и это не сбой.
   return account ? decodeLot(account.data) : null;
+}
+
+/**
+ * Сколько монеты торга лежит на кошельке - в базовых единицах.
+ *
+ * Ставить вслепую нельзя: человек должен видеть, хватает ли ему. Монету берём
+ * не из базы, а из самого лота - ставка идёт в неё, и баланс надо показывать
+ * ровно по ней.
+ *
+ * Счёта монеты у кошелька может не быть вовсе - тогда на нём ноль, а не ошибка:
+ * `getTokenAccountBalance` на несуществующем счёте кидает, и мы гасим это в
+ * ноль. Иначе чтение баланса роняло бы форму у всякого, кто монету ещё не
+ * держал.
+ */
+export async function walletUnits(
+  mint: PublicKey,
+  owner: PublicKey,
+): Promise<bigint> {
+  try {
+    const balance = await connection.getTokenAccountBalance(ata(mint, owner));
+    return BigInt(balance.value.amount);
+  } catch {
+    return 0n;
+  }
 }
 
 /**

@@ -1,10 +1,20 @@
 "use client";
 
+import { Bricolage_Grotesque } from "next/font/google";
+import "./globals.css";
+
 /**
  * Тот же перехват, но для падения в самом корне - в layout или во входе Privy,
- * выше обычного error.tsx. Он заменяет весь документ, поэтому несёт свои
- * <html> и <body>: показать ему нечего снаружи, всё уже рухнуло.
+ * выше обычного error.tsx. Он заменяет весь документ, поэтому несёт своё
+ * <html>, свой шрифт и свои стили: layout сюда не оборачивает, и без этого
+ * экран выходит голым системным шрифтом, не нашим.
  */
+const oxar = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-oxar",
+  display: "swap",
+});
+
 export default function GlobalError({
   error,
   reset,
@@ -13,7 +23,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={oxar.variable}>
       <body>
         <main className="crash">
           <h1>Something broke</h1>

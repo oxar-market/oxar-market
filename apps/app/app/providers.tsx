@@ -2,6 +2,7 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
+import { SOLANA_CLUSTER, SOLANA_RPC_URL } from "@/lib/chain";
 
 /**
  * Вход. Два пути намеренно.
@@ -29,6 +30,11 @@ export function Login({ children }: { children: React.ReactNode }) {
       appId={appId}
       config={{
         loginMethods: ["wallet", "email"],
+        // Нода сети, в которую кошелёк шлёт ставку. Без неё Privy не знает, куда
+        // отправлять транзакцию, и падает с «No RPC configuration found for
+        // chain». Сеть и адрес - те же, что у экрана: берём из одного места,
+        // чтобы кошелёк и чтение лота не разошлись по разным сетям.
+        solanaClusters: [{ name: SOLANA_CLUSTER, rpcUrl: SOLANA_RPC_URL }],
         appearance: {
           walletChainType: "solana-only",
           theme: "light",
