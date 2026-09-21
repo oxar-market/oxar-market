@@ -5,6 +5,7 @@ export {
   MIN_STEP_CENTS,
   cleanBrand,
   closesAfterBid,
+  escrowedCents,
   hasOpened,
   isOpen,
   minBidCents,

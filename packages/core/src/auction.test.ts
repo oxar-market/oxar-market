@@ -6,6 +6,7 @@ import {
   EXTEND_MS,
   cleanBrand,
   closesAfterBid,
+  escrowedCents,
   hasOpened,
   isOpen,
   minBidCents,
@@ -106,6 +107,25 @@ test("без ставок победителя нет", () => {
 
 test("ставки ниже резерва не выигрывают - лот не продан", () => {
   assert.equal(winner([bid("a", 40_000, CLOSE - 1_000)], 50_000), null);
+});
+
+test("в эскроу лежит сумма лидирующих ставок", () => {
+  assert.equal(escrowedCents([50_000, 12_500]), 62_500);
+});
+
+test("место без ставок в сумму не входит", () => {
+  assert.equal(escrowedCents([50_000, null]), 50_000);
+  assert.equal(escrowedCents([null, null]), 0);
+});
+
+test("торга без мест в эскроу нет ничего", () => {
+  assert.equal(escrowedCents([]), 0);
+});
+
+test("перебитые ставки складывать нечего: считаем по одной на место", () => {
+  // Два места, на каждом торговались втроём. В хранилищах лежит по лидеру,
+  // остальным деньги вернулись той же транзакцией, что их перебила.
+  assert.equal(escrowedCents([30_000, 20_000]), 50_000);
 });
 
 function bid(bidder: string, amountCents: number, at: number): Bid {

@@ -101,6 +101,27 @@ export function winner(bids: Bid[], reserveCents: number): Bid | null {
   return best;
 }
 
+/**
+ * Сколько денег заперто в торге прямо сейчас.
+ *
+ * Складываются только текущие лидирующие ставки, по одной на место: ровно
+ * столько и лежит в хранилищах программы. Перебитая ставка вернулась хозяину
+ * той же транзакцией, что её перебила, поэтому сумма всех ставок за всё время
+ * - это не собранные деньги, а число, которого нет ни у кого.
+ *
+ * Место без ставок передаётся как null и в сумму не идёт. Ноль на его месте
+ * значил бы ставку в ноль центов, а такой не бывает.
+ */
+export function escrowedCents(topBids: (number | null)[]): number {
+  let total = 0;
+  for (const amount of topBids) {
+    if (amount === null) continue;
+    assertCents(amount, "topBids");
+    total += amount;
+  }
+  return total;
+}
+
 function assertCents(value: number, name: string): void {
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(`${name} must be a positive whole number of cents`);
