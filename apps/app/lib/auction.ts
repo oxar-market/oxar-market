@@ -29,6 +29,8 @@ export type Lot = {
   status: string;
   reserve_cents: number;
   min_step_cents: number;
+  /** Когда торг начинается. Пусто - уже начался. */
+  opens_at: string | null;
   closes_at: string;
 };
 
@@ -75,7 +77,9 @@ export async function loadThing(): Promise<{
 
   const { data: lots } = await db
     .from("lots")
-    .select("id, spot_id, status, reserve_cents, min_step_cents, closes_at")
+    .select(
+      "id, spot_id, status, reserve_cents, min_step_cents, opens_at, closes_at",
+    )
     .eq("thing_id", thing.id)
     .eq("status", "open");
 

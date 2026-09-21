@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { avatarTone, formatUsd, isOpen, minBidCents } from "@oxar/core";
+import { avatarTone, formatUsd, hasOpened, isOpen, minBidCents } from "@oxar/core";
 import {
   loadBids,
   loadThing,
@@ -48,10 +48,16 @@ export function Auction() {
   // Чем смотреть вещь: сценой, которую можно вертеть, или кадром, который
   // подробнее. Выбор человека, а не наш: одному важно покрутить, другому -
   // разглядеть.
-  const [look, setLook] = useState<"live" | "ghost" | "shot">("live");
+  // Первый кадр - голограмма, и это не вкусовщина: пока лоты не доехали, мы
+  // не знаем, начался ли торг, а показать вещь и отнять её через секунду хуже,
+  // чем показать голограмму и раскрыть вещь.
+  const [look, setLook] = useState<"live" | "ghost" | "shot">("ghost");
   // Какая ставка отматана в истории. null - показываем нынешнюю, ту, что стоит
   // на вещи прямо сейчас.
   const [rewound, setRewound] = useState<string | null>(null);
+  // Часы экрана. Отдельным состоянием, потому что до открытия торга страница
+  // обязана ожить сама, без обновления руками.
+  const [now, setNow] = useState(() => Date.now());
 
   // Что человек примерил в каждое место. Живёт только здесь: на сервер эти
   // картинки не уезжают, чужим они станут видны вместе со ставкой. Файл лежит
@@ -80,6 +86,38 @@ export function Auction() {
 
   const lotOf = (code: string) => lots.find((lot) => lot.spot_code === code) ?? null;
   const lot = lotOf(picked);
+
+  /**
+   * Когда торг начинается - и начался ли.
+   *
+   * Срок общий на всю вещь, а не на место: места одной футболки уходят с
+   * торгов вместе. Поэтому берём самый ранний из сроков её лотов, а стоит
+   * хоть одному лоту быть без срока - считаем, что торг уже идёт.
+   */
+  const waiting = lots.filter((one) => one.opens_at !== null);
+  const startsAt =
+    lots.length > 0 && waiting.length === lots.length
+      ? Math.min(...waiting.map((one) => Date.parse(one.opens_at as string)))
+      : null;
+  const started = hasOpened(startsAt, now);
+
+  // Секундная стрелка идёт только до открытия: после него на экране нет
+  // ничего, что менялось бы само каждую секунду.
+  useEffect(() => {
+    if (started) return;
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [started]);
+
+  // До открытия вещь показывается голограммой, и выбора тут нет: смотреть
+  // нечего, торг ещё не начался. В назначенную минуту голограмма сама
+  // сменяется сценой - дождавшийся не должен ещё и искать, куда нажать.
+  useEffect(() => {
+    // Пока лоты не доехали, про торг ничего не известно - остаёмся на
+    // голограмме.
+    if (lots.length === 0) return;
+    setLook((was) => (started ? (was === "ghost" ? "live" : was) : "ghost"));
+  }, [started, lots.length]);
 
   // Лоты доехали, человек ещё ничего не выбирал - встаём на первое место с
   // торгом: пустое место в роли выбранного делает экран немым.
@@ -230,7 +268,7 @@ export function Auction() {
 
   const top = bids[0] ?? null;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null) : 0;
-  const running = lot ? isOpen(Date.parse(lot.closes_at), Date.now()) : false;
+  const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
 
   return (
     <section className="lot">
@@ -315,10 +353,12 @@ export function Auction() {
 
       {/* Состояние выбранного места одной строкой: что это, почём и сколько
           осталось. Это же место - предмет ставки, когда она появится. */}
-      {look === "ghost" ? (
+      {!started ? (
         <p className="lot-state">
-          <strong>Not open yet</strong>
-          {" · this is the thing that goes up for auction"}
+          <strong>Bidding opens in {until(startsAt as number, now)}</strong>
+          {` · ${lots.length} ${lots.length === 1 ? "spot" : "spots"} on this shirt`}
+          {lots.length > 0 &&
+            ` · from ${formatUsd(Math.min(...lots.map((one) => one.reserve_cents)))}`}
         </p>
       ) : (
       <p className="lot-state">
@@ -425,11 +465,17 @@ export function Auction() {
           (или её нет вовсе), остаются подписи - кнопка обязана работать и без
           картинки. */}
       {/* Чем смотреть вещь. Кадр подробнее сцены - он снят с запасом и без
-          оглядки на скорость, - но вертеть его нельзя, ракурсов четыре. */}
+          оглядки на скорость, - но вертеть его нельзя, ракурсов четыре.
+
+          До открытия торга выбора нет вовсе: вещь показывается голограммой, и
+          кнопка «посмотреть по-настоящему» обещала бы то, чего ещё нет.
+          После открытия голограммы в списке нет по той же причине с другой
+          стороны - торг идёт, смотреть надо вещь. */}
+      {started && (
+      <>
       <div className="looks" role="group" aria-label="How to view">
         {([
           ["live", "Shirt"],
-          ["ghost", "Hologram"],
           ["shot", "Photo"],
         ] as const).map(([which, name]) => (
           <button
@@ -477,6 +523,8 @@ export function Auction() {
           );
         })}
       </div>
+      </>
+      )}
 
       <nav className="lot-tabs">
         {(["about", "spots", "rules"] as const).map((name) => (
@@ -601,6 +649,21 @@ function when(at: string): string {
     minute: "2-digit",
     hour12: false,
   });
+}
+
+/**
+ * Сколько осталось до начала. В последний час - с секундами: человек, пришедший
+ * к открытию, смотрит на эту строку, и она обязана двигаться у него на глазах.
+ */
+function until(at: number, now: number): string {
+  const seconds = Math.floor((at - now) / 1000);
+  if (seconds <= 0) return "moments";
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
+  }
+  const hours = Math.floor(seconds / 3600);
+  if (hours < 48) return `${hours}h ${Math.floor((seconds % 3600) / 60)}m`;
+  return `${Math.floor(hours / 24)}d`;
 }
 
 /** Сколько осталось до закрытия, крупными делениями: дни, часы, минуты. */
