@@ -78,6 +78,10 @@ export function ThingStage({
   const mount = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
   const [hovered, setHovered] = useState<string | null>(null);
+  // Голограмма светится, а светиться можно только на тёмном. На белом фоне
+  // свечение физически нечем показать - остаётся только затемнять, и вещь
+  // читается грязным пятном. Поэтому в этом режиме гаснет сама подложка.
+  const [ghosting, setGhosting] = useState(false);
 
   // Клик по месту приходит из сцены, а обработчик живёт в React. Через ref,
   // чтобы сцену не пересобирать на каждый ре-рендер: пересборка - это заново
@@ -609,6 +613,7 @@ export function ThingStage({
           },
           look(mode) {
             const ghosting = mode === "ghost";
+            setGhosting(ghosting);
             for (const mesh of meshes) {
               mesh.material = ghosting ? ghost : cloth.get(mesh)!;
             }
@@ -775,7 +780,7 @@ export function ThingStage({
   }, [stage]);
 
   return (
-    <div className="stage" ref={mount}>
+    <div className={ghosting ? "stage dark" : "stage"} ref={mount}>
       {state === "loading" && <span className="stage-note">Loading the shirt…</span>}
       {state === "failed" && (
         <span className="stage-note">The shirt could not be shown here.</span>
@@ -1121,8 +1126,10 @@ function ghostMaterial(THREE: typeof import("three")) {
     depthWrite: false,
     side: THREE.DoubleSide,
     uniforms: {
-      tint: { value: new THREE.Color(0x2f6ea8) },
-      edge: { value: new THREE.Color(0x0e3f68) },
+      // Мятный, а не синий. Голограмма - это свет, и цвет у неё тот, каким
+      // светят: холодная зелень читается излучением, глубокий синий - краской.
+      tint: { value: new THREE.Color(0x8ff0d8) },
+      edge: { value: new THREE.Color(0x2ee6b8) },
     },
     vertexShader: `
       varying vec3 vNormalW;
