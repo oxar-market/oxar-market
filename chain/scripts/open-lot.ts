@@ -93,6 +93,10 @@ async function main() {
   const days = Number(arg("days") ?? "7");
   const mintArg = arg("mint");
   const feeBps = Number(arg("fee") ?? "0");
+  // Вещь по умолчанию одна, но прогон всей цепочки нельзя делать на витрине:
+  // её места заняты идущими торгами, и подменять их ради проверки значит
+  // ломать то, что люди в эту минуту смотрят.
+  const thingSlug = arg("thing") ?? THING_SLUG;
 
   if (!spotCode || !reserve || !mintArg) {
     throw new Error("нужны --spot, --reserve и --mint");
@@ -134,8 +138,8 @@ async function main() {
   if (decimals < 2) throw new Error(`у монеты ${decimals} знаков, центы в неё не лягут`);
   const units = (cents: number) => cents * Math.pow(10, decimals - 2);
 
-  const [thing] = await rest(`things?slug=eq.${THING_SLUG}&select=id,title`);
-  if (!thing) throw new Error(`вещи ${THING_SLUG} нет в каталоге`);
+  const [thing] = await rest(`things?slug=eq.${thingSlug}&select=id,title`);
+  if (!thing) throw new Error(`вещи ${thingSlug} нет в каталоге`);
   const [spot] = await rest(
     `thing_spots?thing_id=eq.${thing.id}&code=eq.${spotCode}&select=id,label`,
   );
