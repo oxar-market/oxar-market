@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { fitInside } from "./fit.ts";
-import { DECAL_DEPTH, REPAINT, SPOTS, type Spot } from "./spots.ts";
+import {
+  DECAL_DEPTH,
+  FRAME_PAD,
+  FRAME_ROUND,
+  REPAINT,
+  SPOTS,
+  type Spot,
+} from "./spots.ts";
 import { develop } from "./tone.ts";
 import type { Corners } from "./quad.ts";
 
@@ -302,7 +309,13 @@ export function ThingStage({
           // той же рамки, по которой штампуется декаль, поэтому совпадают с
           // ней по определению, а не по совпадению.
           anchor.updateMatrixWorld(true);
-          const half = [spot.size[0] / 2, spot.size[1] / 2];
+          // Поля те же, что у рисунка рамки, поэтому углы ложатся ровно на
+          // пунктир: обводка в фото-режиме обязана совпасть с ним.
+          const pad = Math.min(spot.size[0], spot.size[1]) * FRAME_PAD;
+          const half = [spot.size[0] / 2 - pad, spot.size[1] / 2 - pad];
+          const facing = new THREE.Vector3(0, 0, 1).transformDirection(
+            anchor.matrixWorld,
+          );
           frames.push({
             code: spot.code,
             corners: [
@@ -310,12 +323,21 @@ export function ThingStage({
               [half[0], half[1]],
               [half[0], -half[1]],
               [-half[0], -half[1]],
-            ].map(([x, y]) =>
-              new THREE.Vector3(x, y, 0).applyMatrix4(anchor.matrixWorld),
-            ),
-            normal: new THREE.Vector3(0, 0, 1).transformDirection(
-              anchor.matrixWorld,
-            ),
+            ].map(([x, y]) => {
+              const flat = new THREE.Vector3(x, y, 0).applyMatrix4(
+                anchor.matrixWorld,
+              );
+              // Угол сажаем на саму ткань, а не оставляем на плоскости перед
+              // ней: поверхность выгнута, и рамка, отпечатанная на выгнутом,
+              // от плоского четырёхугольника заметно уезжает.
+              const probe = new THREE.Raycaster(
+                flat.clone().addScaledVector(facing, 0.2),
+                facing.clone().negate(),
+              );
+              const landed = probe.intersectObjects(meshes, true)[0];
+              return landed ? landed.point : flat;
+            }),
+            normal: facing,
           });
 
           const geometry = new DecalGeometry(
@@ -656,10 +678,10 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   if (!ctx) throw new Error("нет 2d-контекста");
 
   const short = Math.min(canvas.width, canvas.height);
-  const pad = short * 0.06;
+  const pad = short * FRAME_PAD;
   const line = Math.max(2, short * 0.035);
   const frame = () =>
-    roundRect(ctx, pad, pad, canvas.width - pad * 2, canvas.height - pad * 2, short * 0.12);
+    roundRect(ctx, pad, pad, canvas.width - pad * 2, canvas.height - pad * 2, short * FRAME_ROUND);
 
   ctx.fillStyle = "rgba(255,255,255,0.16)";
   frame();
@@ -720,11 +742,15 @@ function artwork(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("нет 2d-контекста");
 
+  // Креатив ложится внутрь рамки, а не на весь штамп. Рамка - это и есть
+  // проданное место: напечатать обязаны ровно то, что обведено, иначе
+  // человек видит одну площадь, а получает другую.
+  const pad = Math.min(canvas.width, canvas.height) * FRAME_PAD;
   const box = fitInside(
     { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height },
-    { width: canvas.width, height: canvas.height },
+    { width: canvas.width - pad * 2, height: canvas.height - pad * 2 },
   );
-  ctx.drawImage(image, box.x, box.y, box.width, box.height);
+  ctx.drawImage(image, pad + box.x, pad + box.y, box.width, box.height);
 
   const made = new THREE.CanvasTexture(canvas);
   made.colorSpace = THREE.SRGBColorSpace;
