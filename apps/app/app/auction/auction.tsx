@@ -436,28 +436,38 @@ export function Auction() {
             <strong>
               {art[picked] ? "Your artwork is on the shirt" : "Add your artwork"}
             </strong>
+            {/* Про чёрно-белое сказано здесь, а не плашкой ниже: это условие
+                к файлу, и читать его надо там, где файл выбирают. Цветной
+                логотип выясняется на ткани, когда печатать уже поздно. */}
             <em>
               {art[picked]
-                ? "Tap to swap it for another one"
-                : "Required - a bid without artwork has nothing to print"}
+                ? "Tap to swap it - black and white prints best"
+                : "Required, black and white - fabric takes flat ink"}
             </em>
           </span>
         </label>
+        {/* Корзина, а не слово: рядом с полем стоит действие над тем, что в
+            поле лежит, и словом оно занимало места больше, чем значит. */}
         {art[picked] && (
-          <button type="button" className="quiet" onClick={takeOff}>
-            Remove
+          <button
+            type="button"
+            className="art-clear"
+            onClick={takeOff}
+            aria-label="Remove artwork"
+          >
+            <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden>
+              <path
+                d="M4.5 6.75h15M9.75 6.75V4.5h4.5v2.25M6.75 6.75l.9 12.75h8.7l.9-12.75M10.25 10v6M13.75 10v6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         )}
       </div>
-      {/* Предупреждение стоит до выбора файла, а не после: цветной логотип
-          выяснится на ткани, когда печатать уже поздно. */}
-      {look !== "ghost" && (
-        <p className="warn">
-          Upload a black and white version of your logo. Print puts flat ink on
-          fabric, so gradients and thin color turn to mud.
-        </p>
-      )}
-
       {artError ? (
         <p className="bad">{artError}</p>
       ) : (
