@@ -4,6 +4,7 @@ import {
   BID_STEP_RATE,
   EXTEND_MS,
   closesAfterBid,
+  hasOpened,
   isOpen,
   minBidCents,
   winner,
@@ -35,6 +36,17 @@ test("аукцион открыт до времени закрытия вклю�
   assert.equal(isOpen(CLOSE, CLOSE - 1), true);
   assert.equal(isOpen(CLOSE, CLOSE), false, "в момент закрытия уже закрыт");
   assert.equal(isOpen(CLOSE, CLOSE + 1), false);
+});
+
+test("торг начинается в назначенный момент, а не секундой позже", () => {
+  const start = Date.parse("2026-09-21T18:00:00Z");
+  assert.equal(hasOpened(start, start - 1), false);
+  assert.equal(hasOpened(start, start), true, "в назначенный момент уже начался");
+  assert.equal(hasOpened(start, start + 1), true);
+});
+
+test("торг без назначенного начала начался давно", () => {
+  assert.equal(hasOpened(null, 0), true);
 });
 
 test("ставка в последние пять минут продлевает приём", () => {

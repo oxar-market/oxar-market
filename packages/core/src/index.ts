@@ -3,6 +3,7 @@ export {
   EXTEND_MS,
   MIN_STEP_CENTS,
   closesAfterBid,
+  hasOpened,
   isOpen,
   minBidCents,
   winner,
