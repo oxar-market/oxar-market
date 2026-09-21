@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { avatarTone, formatUsd, hasOpened, isOpen, minBidCents } from "@oxar/core";
+import {
+  avatarTone,
+  escrowedCents,
+  formatUsd,
+  hasOpened,
+  isOpen,
+  minBidCents,
+} from "@oxar/core";
 import {
   loadBids,
   loadThing,
@@ -269,11 +276,30 @@ export function Auction() {
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null) : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
 
+  // Сколько денег торг держит прямо сейчас - по всей вещи, а не по выбранному
+  // месту. Считается по тем же верхним ставкам, что и кружки в списке справа:
+  // база тут витрина цепочки, и расходиться этим числам нельзя.
+  const escrowed = escrowedCents(
+    lots.map((one) => tops[one.id]?.amount_cents ?? null),
+  );
+
   return (
     <section className="lot">
       <header className="lot-top">
         <p className="over">{thing?.tagline ?? "Superteam Ukraine"}</p>
         <h1>{thing?.title ?? "Local Event Tee"}</h1>
+
+        {/* Сколько денег стоит на кону по всей вещи. Это ровно то, что лежит
+            в хранилищах программы: перебитые ставки уже вернулись хозяевам,
+            складывать их с этой суммой значило бы назвать деньги, которых нет.
+
+            Пока не поставили ни разу, строки нет вовсе: «$0 in escrow» над
+            живым торгом читается как «сюда никто не пришёл». */}
+        {escrowed > 0 && (
+          <p className="lot-pot">
+            <strong>{formatUsd(escrowed)}</strong> in escrow
+          </p>
+        )}
       </header>
 
       <div className="lot-scene">
