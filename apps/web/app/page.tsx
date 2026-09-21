@@ -23,7 +23,7 @@ export default function Home() {
       <h1>OXAR</h1>
       <p className="lead">If people look at it, it&apos;s ad space.</p>
       <a className="launch" href={APP_URL}>
-        See the auction
+        Launch the app
       </a>
     </main>
   );
