@@ -41,7 +41,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image.png",
         width: 1200,
         height: 630,
-        alt: "OXAR - the highest bid gets printed",
+        alt: "OXAR - if people look at it, it's ad space",
       },
     ],
   },
