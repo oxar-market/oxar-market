@@ -1,25 +1,24 @@
 /**
- * Закрыть торг деньгами: выручка продавцу, комиссия площадке.
+ * Закрыть торг, который кончился ничем.
  *
- * Программа не умеет просыпаться сама - в Solana нет таймеров, - поэтому после
- * того, как срок вышел, кто-то должен позвать выплату. Этот скрипт и есть тот
- * кто-то. Подписи именно продавца он не требует: адреса получателей записаны в
- * лоте при открытии, и позвавший не может увести деньги ни себе, ни третьему.
+ * Пара к `pay-lot.ts`: тот закрывает состоявшийся торг деньгами, этот -
+ * несостоявшийся. Разделяет их одно правило - есть ли ставка не ниже резерва,
+ * и спрашиваем мы о нём саму цепочку, а не базу.
+ *
+ * Единственная ставка ниже резерва всё равно лежит в хранилище, и её здесь
+ * возвращают хозяину. Без этого вызова деньги участника остались бы запертыми
+ * навсегда: программа сама не просыпается, таймеров в Solana нет.
  *
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
- *     scripts/pay-lot.ts --lot=<uuid>
+ *     scripts/close-lot.ts --lot=<uuid>
  *
- * Строку в базе скрипт переводит в `settled` после того, как транзакция
- * прошла, а не до: база здесь витрина, и опережать цепочку ей нельзя.
+ * Строку в базе скрипт переводит в `unsold` после того, как транзакция прошла:
+ * база здесь витрина, и опережать цепочку ей нельзя.
  */
 import * as anchor from "@anchor-lang/core";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import {
-  getAssociatedTokenAddressSync,
-  getMint,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { getAssociatedTokenAddressSync, getMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { fetchLot } from "./lot";
@@ -83,39 +82,50 @@ async function main() {
     program.programId,
   );
 
-  // Кому и сколько - спрашиваем у цепочки, а не у базы. База может отстать или
-  // разойтись, а платим мы по тому, что записано в лоте.
   const lot = await fetchLot(program, lotPda);
-  const fee = (BigInt(lot.topBid.toString()) * BigInt(lot.feeBps)) / 10_000n;
-  const toSeller = BigInt(lot.topBid.toString()) - fee;
+  const topBid = BigInt(lot.topBid.toString());
+  const reserve = BigInt(lot.reserve.toString());
+
+  // То же правило, что у программы: ставка есть и она не ниже резерва. Если
+  // торг состоялся, звать надо выплату, а не это - программа откажет сама, но
+  // сказать об этом лучше до транзакции, чем после её отказа.
+  if (lot.topBidder && topBid >= reserve) {
+    throw new Error("торг состоялся - это pay-lot.ts, а не close-lot.ts");
+  }
+
+  // Участника может не быть вовсе, а аккаунт в инструкции обязателен. Тогда
+  // ставим продавца: его счёт заведомо существует, а возврата программа не
+  // делает - возвращать нечего.
+  const lastBidder = (lot.topBidder as PublicKey | null) ?? lot.seller;
 
   const signature = await program.methods
-    .lotPaysSeller()
+    .sellerClosesLot()
     .accounts({
       crank: crank.publicKey,
       lot: lotPda,
       seller: lot.seller,
-      platform: lot.platform,
+      lastBidder,
       mint: lot.mint,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
     .rpc();
 
-  // Торг состоялся - это и есть `won`. Отдельного «деньги ушли» в схеме нет
-  // намеренно: выплата и есть то, чем состоявшийся торг заканчивается.
   await rest(`lots?id=eq.${id}`, {
     method: "PATCH",
-    body: JSON.stringify({ status: "won" }),
+    body: JSON.stringify({ status: "unsold" }),
   });
 
   const { decimals } = await getMint(connection, lot.mint);
-  const money = (units: bigint) =>
-    (Number(units) / Math.pow(10, decimals)).toFixed(2);
+  const money = (units: bigint) => (Number(units) / Math.pow(10, decimals)).toFixed(2);
   console.log(`\n  лот       ${id}`);
   console.log(`  в цепи    ${lotPda.toBase58()}`);
-  console.log(`  продавцу  $${money(toSeller)} → ${lot.seller.toBase58()}`);
-  console.log(`  комиссия  $${money(fee)} → ${lot.platform.toBase58()}`);
-  console.log(`  счёт      ${getAssociatedTokenAddressSync(lot.mint, lot.seller).toBase58()}`);
+  if (lot.topBidder) {
+    console.log(`  возврат   $${money(topBid)} → ${lastBidder.toBase58()}`);
+    console.log(`  счёт      ${getAssociatedTokenAddressSync(lot.mint, lastBidder).toBase58()}`);
+  } else {
+    console.log(`  ставок    не было, возвращать нечего`);
+  }
+  console.log(`  аренда    → ${lot.seller.toBase58()}`);
   console.log(`  подпись   ${signature}\n`);
 }
 
