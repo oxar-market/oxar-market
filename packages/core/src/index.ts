@@ -1,7 +1,9 @@
 export {
   BID_STEP_RATE,
+  BRAND_MAX,
   EXTEND_MS,
   MIN_STEP_CENTS,
+  cleanBrand,
   closesAfterBid,
   hasOpened,
   isOpen,

@@ -41,6 +41,8 @@ export type Bid = {
   bidder_wallet: string;
   amount_cents: number;
   media_url: string;
+  /** Чьё это лого. */
+  brand: string;
 };
 
 /** Имя вещи в адресе. Пока она одна, и это её код в каталоге. */
@@ -103,7 +105,9 @@ export async function loadBids(lotId: string): Promise<Bid[]> {
 
   const { data } = await db
     .from("lot_bids")
-    .select("id, created_at, lot_id, bidder_wallet, amount_cents, media_url")
+    .select(
+      "id, created_at, lot_id, bidder_wallet, amount_cents, media_url, brand",
+    )
     .eq("lot_id", lotId)
     .order("amount_cents", { ascending: false })
     .order("created_at", { ascending: true });
@@ -119,7 +123,9 @@ export async function loadTopBids(
 
   const { data } = await db
     .from("lot_bids")
-    .select("id, created_at, lot_id, bidder_wallet, amount_cents, media_url")
+    .select(
+      "id, created_at, lot_id, bidder_wallet, amount_cents, media_url, brand",
+    )
     .in("lot_id", lotIds)
     .order("amount_cents", { ascending: false });
 
@@ -170,6 +176,7 @@ export async function recordBid(bid: {
   wallet: string;
   amountCents: number;
   mediaUrl: string;
+  brand: string;
   signature: string;
 }): Promise<boolean> {
   if (!db) return false;
@@ -183,15 +190,9 @@ export async function recordBid(bid: {
     bidder_wallet: bid.wallet,
     amount_cents: bid.amountCents,
     media_url: bid.mediaUrl,
+    brand: bid.brand,
     signature: bid.signature,
   });
 
   return !error;
-}
-
-/** Короткий вид кошелька: первые и последние символы, как их и узнают. */
-export function shortWallet(address: string): string {
-  return address.length > 10
-    ? `${address.slice(0, 4)}…${address.slice(-4)}`
-    : address;
 }

@@ -6,7 +6,6 @@ import {
   loadBids,
   loadThing,
   loadTopBids,
-  shortWallet,
   type Bid,
   type Lot,
   type Thing,
@@ -320,7 +319,7 @@ export function Auction() {
 
         {/* Справа - все места вещи. На голограмме списка нет: выбирать пока
             нечего, и список, который ни на что не показывает, только врёт. Выбранное подсвечено, в кружке - первая
-            буква кошелька того, кто сейчас держит место. */}
+            буква имени того, чьё лого сейчас держит место. */}
         <div
           className={look === "ghost" ? "arc right away" : "arc right"}
           role="group"
@@ -342,7 +341,7 @@ export function Auction() {
                   style={holder ? { background: avatarTone(holder.bidder_wallet) } : undefined}
                   aria-hidden
                 >
-                  {holder ? holder.bidder_wallet[0]?.toUpperCase() : each ? "$" : ""}
+                  {holder ? holder.brand[0]?.toUpperCase() : each ? "$" : ""}
                 </span>
                 <span className="spot-text">{spot.label}</span>
               </button>
@@ -640,7 +639,9 @@ function Row({ bid, lead }: { bid: Bid; lead: boolean }) {
       </span>
       <span className="bid-text">
         {formatUsd(bid.amount_cents)}
-        <em>{shortWallet(bid.bidder_wallet)}</em>
+        {/* Под суммой - имя, а не кошелёк: вопрос к чужой ставке «чьё это
+            лого», и «7xKq…f3» на него не отвечает. */}
+        <em>{bid.brand}</em>
       </span>
     </div>
   );

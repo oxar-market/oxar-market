@@ -15,6 +15,11 @@ export const BID_STEP_RATE = 0.05;
 export const MIN_STEP_CENTS = 100;
 /** Ставка в последние пять минут продлевает приём на столько же. */
 export const EXTEND_MS = 5 * 60_000;
+/**
+ * Сколько знаков даём имени стартапа. Сорок - это «Solana Foundation» с
+ * запасом и вдвое меньше того, что влезет в строку ставки на телефоне.
+ */
+export const BRAND_MAX = 40;
 
 export type Bid = {
   bidder: string;
@@ -50,6 +55,21 @@ export function isOpen(closesAt: number, now: number): boolean {
  */
 export function hasOpened(opensAt: number | null, now: number): boolean {
   return opensAt === null || now >= opensAt;
+}
+
+/**
+ * Имя стартапа при ставке - то, чьё это лого.
+ *
+ * Без него на футболке остаётся картинка без хозяина: по кошельку понять,
+ * чей логотип, нельзя. Пробелы по краям режем, внутренние склеиваем в один:
+ * «Delora  Labs» и «Delora Labs» - одно имя, и в ленте они обязаны совпасть.
+ *
+ * Не имя - null, а не исключение: это ввод человека, и отвечать на него надо
+ * подсказкой, а не падением.
+ */
+export function cleanBrand(raw: string): string | null {
+  const name = raw.trim().replace(/\s+/g, " ");
+  return name.length > 0 && name.length <= BRAND_MAX ? name : null;
 }
 
 /**
