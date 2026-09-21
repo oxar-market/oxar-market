@@ -25,7 +25,13 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 
-const RPC = "https://api.devnet.solana.com";
+/**
+ * Сеть, в которой открываем торг. По умолчанию девнет: боевые деньги
+ * включаются переменной, а не забытым значением в коде.
+ *
+ *   SOLANA_RPC=https://api.mainnet-beta.solana.com pnpm exec ts-node ...
+ */
+const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 const THING_SLUG = "superteam-ua-tee";
 /** Наименьшая прибавка к ставке. Те же центы лежат в базе у лота. */
 const MIN_STEP_CENTS = 100;
