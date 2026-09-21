@@ -167,6 +167,12 @@ input:focus {
   cursor: default;
 }
 
+/* Приглушена, но жива: шаг ещё не сделан, а нажать можно - и она скажет,
+   какой именно. Настоящий `disabled` тут был бы хуже: он молчит. */
+.primary.waiting {
+  opacity: 0.55;
+}
+
 .ghost:hover {
   background: #f5f5f2;
 }

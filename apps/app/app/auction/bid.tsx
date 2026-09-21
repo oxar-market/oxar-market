@@ -66,6 +66,12 @@ export function BidForm({
 
   const wallet = wallets[0];
   const cents = parseUsd(amount);
+  // Чего не хватает до ставки. Оба условия обязательны и проверяются всё
+  // равно - но проверялись они только при нажатии, а кнопка к этому моменту
+  // уже стояла серой, и человек оставался с недоступной кнопкой и без причины.
+  const needsArt = !art;
+  const needsName = !cleanBrand(brand);
+  const ready = !needsArt && !needsName;
 
   function bump(by: number) {
     const from = cents ?? need;
@@ -191,10 +197,15 @@ export function BidForm({
           ))}
         </div>
 
+        {/* Кнопка приглушена, но нажимается. Недоступная кнопка не отвечает
+            на «почему», и человек остаётся гадать; эта на нажатие называет
+            недостающий шаг - проверки для этого уже написаны в `place`. */}
         <button
           type="button"
-          className="primary bid-go"
-          disabled={busy || !art}
+          className={ready ? "primary bid-go" : "primary bid-go waiting"}
+          aria-disabled={!ready}
+          aria-describedby="bid-hint"
+          disabled={busy}
           onClick={() => void place()}
         >
           {busy ? "Bidding…" : "Bid"}
@@ -204,10 +215,14 @@ export function BidForm({
       {error ? (
         <p className="bad">{error}</p>
       ) : (
-        <p className="muted">
-          {art
-            ? "Your artwork goes public with the bid. The money leaves your wallet now and comes back if someone outbids you."
-            : "Try your artwork on the shirt first - a bid without it has nothing to print."}
+        <p className="muted" id="bid-hint">
+          {needsArt && needsName
+            ? "Two things before you can bid: your artwork on the shirt, and the name of the startup it belongs to."
+            : needsArt
+              ? "Try your artwork on the shirt first - a bid without it has nothing to print."
+              : needsName
+                ? "Name the startup - people have to know whose logo they are looking at."
+                : "Your artwork goes public with the bid. The money leaves your wallet now and comes back if someone outbids you."}
         </p>
       )}
     </div>
