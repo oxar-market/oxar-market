@@ -68,6 +68,38 @@ h1 {
   color: #b42318;
 }
 
+/* Экран упавшего рендера. Тесно посередине, текст ошибки читаемым моноширинным
+   блоком - его читают и присылают, а не любуются им. */
+.crash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 100dvh;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.crash-msg {
+  max-width: 32rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: #fdf0ee;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #b42318;
+  word-break: break-word;
+}
+
+.crash-digest {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #8a8a93;
+}
+
 .banner {
   width: 100%;
   margin-bottom: 1rem;
