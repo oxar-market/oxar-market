@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 /**
@@ -31,27 +33,23 @@ const size = { width: 1200, height: 630 };
  * Тот же Bricolage Grotesque, что на странице. Превью видят чаще самого сайта
  * - его репостят, - и чужие буквы в нём читались бы как чужой бренд.
  *
- * `User-Agent` подставлен намеренно и именно такой. Google Fonts отдаёт
- * современным браузерам woff2, а рисовальщик картинки его не понимает; под
- * древним агентом приезжает ttf, который понимает.
+ * Файлы лежат рядом, а не тянутся из Google Fonts. Сначала тянулись, и на этом
+ * деплой прода встал: ответа не было, таймаута у запроса тоже, и сборка
+ * провисела девять минут вместо полутора, пока её не сняли. Шрифт под
+ * открытой лицензией, весит по восемьдесят килобайт на начертание, и держать
+ * его у себя дешевле, чем сетевой запрос в пути выкатки.
  *
- * Сборка от этого зависит от сети, но зависела и раньше: шрифт страницы
- * приезжает оттуда же при каждой сборке.
+ * Шрифт страницы по-прежнему приезжает из сети через `next/font/google`, и это
+ * другое дело: там Next сам отмеряет время и падает с внятной ошибкой, а не
+ * ждёт молча.
  */
-async function bricolage(weight: number): Promise<ArrayBuffer> {
-  const css = await fetch(
-    `https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@${weight}`,
-    { headers: { "User-Agent": "Mozilla/5.0" } },
-  ).then((answer) => answer.text());
-
-  const url = css.match(/src: url\((https:[^)]+)\)/)?.[1];
-  if (!url) throw new Error("Google Fonts ответил без ссылки на файл шрифта");
-
-  return fetch(url).then((answer) => answer.arrayBuffer());
+function bricolage(file: string): Buffer {
+  return readFileSync(join(process.cwd(), "app/opengraph-image.png", file));
 }
 
-export async function GET() {
-  const [regular, bold] = await Promise.all([bricolage(400), bricolage(700)]);
+export function GET() {
+  const regular = bricolage("Bricolage-Regular.ttf");
+  const bold = bricolage("Bricolage-Bold.ttf");
 
   return new ImageResponse(
     (
