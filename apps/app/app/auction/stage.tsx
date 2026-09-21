@@ -40,6 +40,14 @@ export type Stage = {
   /** Довернуть вещь к азимуту. Зовут ряд ракурсов и выбор места из списка. */
   face(azimuth: number): void;
   /**
+   * Чем показывать вещь: тканью или голограммой.
+   *
+   * Голограмма - это материал, а не вторая модель. Вторая модель разошлась бы
+   * с первой: другой крой, другие места, и человек увидел бы одну футболку до
+   * старта торга и другую после.
+   */
+  look(mode: "cloth" | "ghost"): void;
+  /**
    * Показать картинку в месте. `null` возвращает пустую рамку.
    *
    * Это превью и только превью: оно живёт в браузере и никуда не уезжает.
@@ -175,6 +183,11 @@ export function ThingStage({
         // шершавость. Без них свет ложится ровным пятном, и вещь читается
         // как отливка.
         const weave = knitMap(THREE);
+        const ghost = ghostMaterial(THREE);
+        const cloth = new Map<
+          InstanceType<typeof THREE.Mesh>,
+          InstanceType<typeof THREE.Material>
+        >();
         for (const mesh of meshes) {
           mesh.material = new THREE.MeshPhysicalMaterial({
             color: REPAINT.color,
@@ -186,6 +199,7 @@ export function ThingStage({
             normalMap: weave,
             normalScale: new THREE.Vector2(0.55, 0.55),
           });
+          cloth.set(mesh, mesh.material);
         }
 
         const box = new THREE.Box3().setFromObject(thing);
@@ -197,10 +211,11 @@ export function ThingStage({
         scene.add(thing);
         thing.updateMatrixWorld(true);
 
-        // Кромки: горловина, низ рукавов, подол. Их в модели нет вовсе -
-        // она гладкая труба с рукавами, - а в настоящей вещи именно они и
-        // читаются как шитьё.
-        for (const edge of hems(THREE, meshes)) scene.add(edge);
+        // Кромки дорисовывались руками, потому что прежняя модель была
+        // гладкой трубой без шитья. У новой горловина, рукава и подол уже
+        // есть в самой геометрии, и накладные кромки поверх них читаются
+        // бахромой. Поэтому выключены.
+        void hems;
 
         const reach = 0.62 * 0.5;
         const fov = (camera.fov * Math.PI) / 180;
@@ -472,6 +487,16 @@ export function ThingStage({
             material.color.set(0xffffff);
             material.opacity = 1;
             material.needsUpdate = true;
+          },
+          look(mode) {
+            const ghosting = mode === "ghost";
+            for (const mesh of meshes) {
+              mesh.material = ghosting ? ghost : cloth.get(mesh)!;
+            }
+            // Мест на голограмме нет намеренно: торг ещё не начался, и
+            // обводить то, чего пока не продают, значит обещать лишнее.
+            for (const decal of decals) decal.mesh.visible = !ghosting;
+            if (shadow) shadow.visible = !ghosting;
           },
           face(azimuth) {
             const target = (azimuth * Math.PI) / 180;
@@ -1007,4 +1032,69 @@ function hems(
   }
 
   return made;
+}
+
+/**
+ * Голограмма: вещь, которой ещё нет.
+ *
+ * Так выглядит торг, который заведён, но не начался. Не украшение, а
+ * состояние: по вещи сразу видно, что смотреть можно, а ставить пока нет.
+ *
+ * Это материал, а не вторая модель. Вторая модель разошлась бы с первой -
+ * другой крой, другие места, - и человек увидел бы одну футболку до старта и
+ * другую после. Один меш, два материала: переход возможен без скачка.
+ *
+ * Считается по Френелю: чем круче поверхность уходит от взгляда, тем она
+ * плотнее. Поэтому кромки светятся, а плоскости почти прозрачны - так
+ * читается объём, хотя вещь насквозь видно. Поперечные полосы поверх - тот
+ * самый признак, по которому голограмму узнают, и заодно они показывают
+ * форму там, где Френель молчит.
+ *
+ * Холодный синий, а не неон: фон у нас светлый, и на нём неон выгорает в
+ * белое пятно. Синий по светло-серому читается чертежом, что и нужно.
+ */
+function ghostMaterial(THREE: typeof import("three")) {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms: {
+      tint: { value: new THREE.Color(0x2f6ea8) },
+      edge: { value: new THREE.Color(0x0e3f68) },
+    },
+    vertexShader: `
+      varying vec3 vNormalW;
+      varying vec3 vToEye;
+      varying float vHeight;
+      void main() {
+        vec4 world = modelMatrix * vec4(position, 1.0);
+        vNormalW = normalize(mat3(modelMatrix) * normal);
+        vToEye = normalize(cameraPosition - world.xyz);
+        vHeight = world.y;
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 tint;
+      uniform vec3 edge;
+      varying vec3 vNormalW;
+      varying vec3 vToEye;
+      varying float vHeight;
+      void main() {
+        // Изнанку тоже видно, поэтому нормаль разворачиваем к зрителю -
+        // иначе дальняя стенка считалась бы отвёрнутой и гасла.
+        vec3 n = normalize(vNormalW);
+        if (!gl_FrontFacing) n = -n;
+        float grazing = 1.0 - abs(dot(n, normalize(vToEye)));
+        float rim = pow(grazing, 2.2);
+
+        // Полосы по высоте. Частые, слабые: заметны, но не рябят.
+        float scan = 0.5 + 0.5 * sin(vHeight * 420.0);
+        float lines = 0.06 * scan;
+
+        float alpha = clamp(0.10 + rim * 0.72 + lines, 0.0, 0.92);
+        gl_FragColor = vec4(mix(tint, edge, rim), alpha);
+      }
+    `,
+  });
 }

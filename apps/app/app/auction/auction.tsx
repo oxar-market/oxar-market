@@ -48,7 +48,7 @@ export function Auction() {
   // Чем смотреть вещь: сценой, которую можно вертеть, или кадром, который
   // подробнее. Выбор человека, а не наш: одному важно покрутить, другому -
   // разглядеть.
-  const [look, setLook] = useState<"live" | "shot">("live");
+  const [look, setLook] = useState<"live" | "ghost" | "shot">("live");
   // Какая ставка отматана в истории. null - показываем нынешнюю, ту, что стоит
   // на вещи прямо сейчас.
   const [rewound, setRewound] = useState<string | null>(null);
@@ -163,6 +163,12 @@ export function Auction() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneReady, lots, tops, bids, rewound, picked, art]);
 
+  // Ткань или голограмма. Сцену не пересобираем - меняется только материал,
+  // поэтому переключение мгновенное и вещь не перезагружается.
+  useEffect(() => {
+    stage.current?.look(look === "ghost" ? "ghost" : "cloth");
+  }, [look, sceneReady]);
+
   // Смена места закрывает историю: она про то место, с которого ушли.
   useEffect(() => setRewound(null), [picked]);
 
@@ -237,7 +243,7 @@ export function Auction() {
         {/* Сцена остаётся собранной и в фото-режиме, просто спрятана: она
             держит модель и все пятнадцать декалей, и пересобирать её на
             каждое переключение значило бы грузить вещь заново. */}
-        <div className={look === "live" ? "look" : "look away"}>
+        <div className={look === "shot" ? "look away" : "look"}>
         <ThingStage
           picked={picked}
           onPick={(code) => choose(code, true)}
@@ -265,15 +271,23 @@ export function Auction() {
 
         {/* Слева от вещи - ставки выбранного места, верхняя первой: она и есть
             текущая цена. На телефоне дуг нет, там их заменяет список ниже. */}
-        <div className="arc left" aria-hidden={bids.length === 0}>
+        <div
+          className={look === "ghost" ? "arc left away" : "arc left"}
+          aria-hidden={look === "ghost" || bids.length === 0}
+        >
           {bids.slice(0, 4).map((bid, index) => (
             <Row key={bid.id} bid={bid} lead={index === 0} />
           ))}
         </div>
 
-        {/* Справа - все места вещи. Выбранное подсвечено, в кружке - первая
+        {/* Справа - все места вещи. На голограмме списка нет: выбирать пока
+            нечего, и список, который ни на что не показывает, только врёт. Выбранное подсвечено, в кружке - первая
             буква кошелька того, кто сейчас держит место. */}
-        <div className="arc right" role="group" aria-label="Ad spots">
+        <div
+          className={look === "ghost" ? "arc right away" : "arc right"}
+          role="group"
+          aria-label="Ad spots"
+        >
           {SPOTS.map((spot) => {
             const each = lotOf(spot.code);
             const holder = each ? tops[each.id] : undefined;
@@ -301,6 +315,12 @@ export function Auction() {
 
       {/* Состояние выбранного места одной строкой: что это, почём и сколько
           осталось. Это же место - предмет ставки, когда она появится. */}
+      {look === "ghost" ? (
+        <p className="lot-state">
+          <strong>Not open yet</strong>
+          {" · this is the thing that goes up for auction"}
+        </p>
+      ) : (
       <p className="lot-state">
         <strong>{SPOTS.find((spot) => spot.code === picked)?.label}</strong>
         {lot ? (
@@ -320,10 +340,12 @@ export function Auction() {
           " · not up for auction yet"
         )}
       </p>
+      )}
 
       {/* Ставка - про выбранное место, и только пока его торг идёт. У места без
-          торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия. */}
-      {lot && running && (
+          торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
+          На голограмме её тоже нет: торг там ещё не начался. */}
+      {lot && running && look !== "ghost" && (
         <BidForm lot={lot} need={need} art={art[picked]} onPlaced={refresh} />
       )}
 
@@ -366,9 +388,10 @@ export function Auction() {
         </p>
       )}
 
-      {/* Примерка: картинка ложится в выбранное место прямо на вещи. Пока это
+      {/* Примерка: картинка ложится в выбранное место прямо на вещи. На
+          голограмме её нет - примерять некуда, пока мест не показывают. Пока это
           только превью - видит его один человек, тот, кто примеряет. */}
-      <div className="tryon">
+      <div className={look === "ghost" ? "tryon away" : "tryon"}>
         <label className="ghost small">
           <input
             type="file"
@@ -405,7 +428,8 @@ export function Auction() {
           оглядки на скорость, - но вертеть его нельзя, ракурсов четыре. */}
       <div className="looks" role="group" aria-label="How to view">
         {([
-          ["live", "3D"],
+          ["live", "Shirt"],
+          ["ghost", "Hologram"],
           ["shot", "Photo"],
         ] as const).map(([which, name]) => (
           <button
