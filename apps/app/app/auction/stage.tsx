@@ -428,6 +428,7 @@ export function ThingStage({
           code: string;
           mesh: InstanceType<typeof THREE.Mesh>;
           point: InstanceType<typeof THREE.Vector3>;
+          frame: InstanceType<typeof THREE.Mesh>;
         }[] = [];
         // Где место лежит в пространстве: четыре угла и нормаль. Нужно
         // фото-режиму - по ним креатив ложится в кадр той же трапецией, какой
@@ -527,11 +528,31 @@ export function ThingStage({
           });
           const mesh = new THREE.Mesh(geometry, material);
           scene.add(mesh);
+
+          // Рамка выбора поверх места - той же геометрией, поэтому ложится на
+          // ткань ровно так же, как сама декаль. Базовый материал, не свет:
+          // рамка не должна темнеть в тени вещи. polygonOffset больше, чем у
+          // декали, - рамка лежит поверх логотипа, а не спорит с ним. Скрыта,
+          // пока место не выбрано.
+          const frame = new THREE.Mesh(
+            geometry,
+            new THREE.MeshBasicMaterial({
+              map: selectionSheet(THREE, spot),
+              transparent: true,
+              polygonOffset: true,
+              polygonOffsetFactor: -8,
+              depthWrite: false,
+            }),
+          );
+          frame.visible = false;
+          frame.renderOrder = 2;
+          scene.add(frame);
+
           // Точка на ткани - она же цель камеры, когда место выбирают. Взята
           // отсюда, а не посчитана заново по высоте и углу: подъезжать надо
           // туда, где место в самом деле лежит, а не где оно должно было бы
           // лечь на ровной поверхности.
-          decals.push({ code: spot.code, mesh, point: hit.point.clone() });
+          decals.push({ code: spot.code, mesh, point: hit.point.clone(), frame });
         }
 
         // Горят место под курсором и выбранное. Выбранное - постоянно: оно и
@@ -543,8 +564,13 @@ export function ThingStage({
         const mine = new Map<string, InstanceType<typeof THREE.Texture>>();
         const restyle = () => {
           for (const decal of decals) {
-            // Место с примеренной картинкой подсветка не трогает: цвет там
-            // принадлежит логотипу, а не рамке.
+            // Выбранное место всегда несёт рамку - и пустое, и занятое.
+            // Это единственный сигнал, одинаковый в обоих случаях: на занятом
+            // цвет менять нельзя, а рамка ложится поверх логотипа, не трогая
+            // его.
+            decal.frame.visible = decal.code === chosen;
+            // Место с примеренной картинкой подсветка цвета не трогает: цвет
+            // там принадлежит логотипу, а не рамке.
             if (mine.has(decal.code)) continue;
             const material = decal.mesh.material as InstanceType<
               typeof THREE.MeshStandardMaterial
@@ -651,6 +677,10 @@ export function ThingStage({
             material.color.set(0xffffff);
             material.opacity = 1;
             material.needsUpdate = true;
+            // Место только что стало занятым - подсветку выбора вернуть ему
+            // здесь же, иначе выбранное занятое место засветится лишь при
+            // следующем наведении.
+            restyle();
           },
           look(mode) {
             const ghosting = mode === "ghost";
@@ -662,7 +692,13 @@ export function ThingStage({
             }
             // Мест на голограмме нет намеренно: торг ещё не начался, и
             // обводить то, чего пока не продают, значит обещать лишнее.
-            for (const decal of decals) decal.mesh.visible = !ghosting;
+            for (const decal of decals) {
+              decal.mesh.visible = !ghosting;
+              // Рамку прячем вместе с местами; при возврате её вернёт restyle
+              // выбранному месту.
+              if (ghosting) decal.frame.visible = false;
+            }
+            if (!ghosting) restyle();
             if (shadow) shadow.visible = !ghosting;
           },
           face(azimuth) {
@@ -970,6 +1006,65 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   made.colorSpace = THREE.SRGBColorSpace;
   made.anisotropy = 8;
   sheets.set(key, made);
+  return made;
+}
+
+/**
+ * Рамка выбора: яркие уголки на прозрачном холсте, которые ложатся поверх места.
+ *
+ * Нужна затем, что у пустого места выбор видно по смене цвета рамки, а у
+ * занятого - нет: там цвет принадлежит логотипу, трогать его нельзя. Одна и та
+ * же рамка поверх любого места отвечает на «я выбрал его или промахнулся»
+ * одинаково - и на пустом, и на занятом.
+ *
+ * Уголки те же, что у пустой рамки, но толще и цветом сразу в текстуре, а не
+ * через материал: рамка всегда одного яркого цвета, подсветкой её красить
+ * незачем. Центр прозрачный - логотип под ней виден целиком.
+ */
+const marks = new Map<string, InstanceType<typeof import("three").CanvasTexture>>();
+
+function selectionSheet(THREE: typeof import("three"), spot: Spot) {
+  const [wide, tall] = spot.size;
+  const key = `${wide}x${tall}`;
+  const known = marks.get(key);
+  if (known) return known;
+
+  const span = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = wide >= tall ? span : Math.round((span * wide) / tall);
+  canvas.height = wide >= tall ? Math.round((span * tall) / wide) : span;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("нет 2d-контекста");
+
+  const short = Math.min(canvas.width, canvas.height);
+  const pad = short * FRAME_PAD;
+  // Толще пустой рамки и чуть длиннее плечо: это активный сигнал, он обязан
+  // читаться поверх пёстрого логотипа, а не теряться в нём.
+  const line = Math.max(4, short * 0.045);
+  const arm = short * 0.26;
+  const right = canvas.width - pad;
+  const bottom = canvas.height - pad;
+
+  ctx.strokeStyle = "#e0381c";
+  ctx.lineWidth = line;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  for (const [x, y, alongX, alongY] of [
+    [pad, pad, 1, 1],
+    [right, pad, -1, 1],
+    [right, bottom, -1, -1],
+    [pad, bottom, 1, -1],
+  ]) {
+    ctx.moveTo(x + alongX * arm, y);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y + alongY * arm);
+  }
+  ctx.stroke();
+
+  const made = new THREE.CanvasTexture(canvas);
+  made.colorSpace = THREE.SRGBColorSpace;
+  made.anisotropy = 8;
+  marks.set(key, made);
   return made;
 }
 
