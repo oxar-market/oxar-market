@@ -187,7 +187,7 @@ describe("oxar-escrow: торг", () => {
     // Здесь права нет ни у кого: валидатор поднимает программу сразу
     // замороженной, и эту ветку прогон не покрывает.
     await program.methods
-      .adminSetsTerms(FEE_BPS)
+      .adminSetsTerms(FEE_BPS, null)
       .accounts({ platform: platform.publicKey, mint, programData: programData() })
       .rpc();
   });
@@ -198,7 +198,7 @@ describe("oxar-escrow: торг", () => {
     // аукцион, ставил бы себе ноль процентов.
     try {
       await program.methods
-        .adminSetsTerms(0)
+        .adminSetsTerms(0, null)
         .accounts({
           admin: bob.publicKey,
           platform: bob.publicKey,
@@ -219,6 +219,40 @@ describe("oxar-escrow: торг", () => {
       platform.publicKey.toBase58(),
       "получатель комиссии уехал",
     );
+  });
+
+  it("админство передаётся, и только вперёд", async () => {
+    // Владелец заводит настройки рабочим ключом и отдаёт их основному - так
+    // выглядит боевой порядок. Здесь то же в миниатюре: передали Бобу,
+    // прежний админ тут же перестал быть админом.
+    const terms = (who: Keypair, fee: number, next: PublicKey | null) =>
+      program.methods
+        .adminSetsTerms(fee, next)
+        .accounts({
+          admin: who.publicKey,
+          platform: platform.publicKey,
+          mint,
+          programData: programData(),
+        })
+        .signers([who])
+        .rpc();
+
+    const me = provider.wallet as anchor.Wallet;
+    await terms(me.payer, FEE_BPS, bob.publicKey);
+
+    try {
+      await terms(me.payer, 0, null);
+      assert.fail("прежний админ переписал условия после передачи");
+    } catch (error) {
+      assert.include(String(error), "NotTheAdmin");
+    }
+
+    // Новый админ распоряжается полностью - и возвращает админство обратно,
+    // чтобы остальные проверки шли при прежнем хозяине.
+    await terms(bob, FEE_BPS, me.payer.publicKey);
+    const config = await program.account.config.fetch(configPda());
+    assert.equal(config.admin.toBase58(), me.payer.publicKey.toBase58());
+    assert.equal(config.feeBps, FEE_BPS);
   });
 
   it("место в чужой монете не открыть", async () => {
