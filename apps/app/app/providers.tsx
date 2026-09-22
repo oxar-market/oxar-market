@@ -2,7 +2,13 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
-import { SOLANA_CLUSTER, SOLANA_RPC_URL } from "@/lib/chain";
+import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
+import {
+  SOLANA_CLUSTER,
+  SOLANA_RPC_URL,
+  SOLANA_WS_URL,
+  WALLET_CHAIN,
+} from "@/lib/chain";
 
 /**
  * Вход. Два пути намеренно.
@@ -30,11 +36,23 @@ export function Login({ children }: { children: React.ReactNode }) {
       appId={appId}
       config={{
         loginMethods: ["wallet", "email"],
-        // Нода сети, в которую кошелёк шлёт ставку. Без неё Privy не знает, куда
-        // отправлять транзакцию, и падает с «No RPC configuration found for
-        // chain». Сеть и адрес - те же, что у экрана: берём из одного места,
-        // чтобы кошелёк и чтение лота не разошлись по разным сетям.
+        // Нода сети, в которую кошелёк шлёт ставку. Без неё Privy падает с
+        // «No RPC configuration found for chain». Двумя способами, и оба нужны:
+        //
+        // solanaClusters - для общих нужд SDK (пополнение, старые хуки).
+        // solana.rpcs - именно для standard-кошелька (useStandardSignAndSend),
+        //   которым мы и шлём ставку. Он не читает solanaClusters, ему нужны
+        //   объекты @solana/kit под ключом вида «solana:devnet». Отсюда и была
+        //   ошибка: cluster мы задали, а rpcs - нет.
         solanaClusters: [{ name: SOLANA_CLUSTER, rpcUrl: SOLANA_RPC_URL }],
+        solana: {
+          rpcs: {
+            [WALLET_CHAIN]: {
+              rpc: createSolanaRpc(SOLANA_RPC_URL),
+              rpcSubscriptions: createSolanaRpcSubscriptions(SOLANA_WS_URL),
+            },
+          },
+        },
         appearance: {
           walletChainType: "solana-only",
           theme: "light",
