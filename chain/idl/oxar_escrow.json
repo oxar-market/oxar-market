@@ -102,15 +102,13 @@
           ]
         },
         {
-          "name": "program",
+          "name": "program_data",
           "docs": [
-            "Сама программа и её служебный аккаунт - только чтобы узнать, у кого",
-            "право на обновление. Ни то, ни другое здесь не меняется."
-          ],
-          "address": "Hzh8CjF8ZmmtqVro2dVR54uFVcyjWfp3Aenvh782QYr5"
-        },
-        {
-          "name": "program_data"
+            "обновление. Адрес не передаётся на веру, а выводится в обработчике из",
+            "адреса самой программы; байты разбираются руками. Готовый тип Anchor",
+            "делал бы то же самое через универсальный десериализатор, который тянет",
+            "в бинарник заметный кусок кода, - а залог на выкате платится за байты."
+          ]
         },
         {
           "name": "system_program",
@@ -340,7 +338,8 @@
           ]
         },
         {
-          "name": "token_program"
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "associated_token_program",
@@ -577,7 +576,8 @@
           ]
         },
         {
-          "name": "token_program"
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": []
@@ -796,7 +796,8 @@
           ]
         },
         {
-          "name": "token_program"
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
       ],
       "args": []
@@ -930,7 +931,8 @@
           "name": "mint"
         },
         {
-          "name": "token_program"
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "system_program",

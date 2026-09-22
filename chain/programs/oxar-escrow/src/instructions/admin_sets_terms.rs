@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
 
-use crate::{error::EscrowError, program::OxarEscrow, state::Config};
+use crate::{error::EscrowError, state::Config};
 
 /// Завести настройки площадки или поменять их.
 ///
@@ -57,16 +57,40 @@ pub struct AdminSetsTerms<'info> {
     /// хук отдаёт третьей стороне рубильник. Проще не пускать их вовсе.
     pub mint: Account<'info, Mint>,
 
-    /// Сама программа и её служебный аккаунт - только чтобы узнать, у кого
-    /// право на обновление. Ни то, ни другое здесь не меняется.
-    #[account(
-        constraint = program.programdata_address()? == Some(program_data.key())
-            @ EscrowError::NotTheAdmin
-    )]
-    pub program: Program<'info, OxarEscrow>,
-    pub program_data: Account<'info, ProgramData>,
+    /// CHECK: служебный аккаунт программы у загрузчика - в нём лежит право на
+    /// обновление. Адрес не передаётся на веру, а выводится в обработчике из
+    /// адреса самой программы; байты разбираются руками. Готовый тип Anchor
+    /// делал бы то же самое через универсальный десериализатор, который тянет
+    /// в бинарник заметный кусок кода, - а залог на выкате платится за байты.
+    pub program_data: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
+}
+
+/// У кого право на обновление этой программы.
+///
+/// Пусто - права нет ни у кого: либо в аккаунте так и записано, либо аккаунт
+/// не о том. Строгость здесь не нужна: ответ дальше сверяется с подписью, и
+/// «не разобрал» отличается от «хозяина нет» только словами.
+fn upgrade_authority(program_data: &UncheckedAccount) -> Option<Pubkey> {
+    // Адрес единственный: он выводится из адреса программы, как и любой PDA.
+    // Чужой аккаунт на это место не встанет, чей бы он ни был.
+    let (expected, _) = Pubkey::find_program_address(
+        &[crate::ID.as_ref()],
+        &anchor_lang::solana_program::bpf_loader_upgradeable::ID,
+    );
+    if program_data.key() != expected {
+        return None;
+    }
+
+    // Раскладка ProgramData у загрузчика: четыре байта вида записи (3 - это
+    // programdata), восемь - слот выката, байт «есть ли хозяин», тридцать два
+    // - сам хозяин.
+    let data = program_data.try_borrow_data().ok()?;
+    if data.len() < 45 || data[0] != 3 || data[12] != 1 {
+        return None;
+    }
+    Pubkey::try_from(&data[13..45]).ok()
 }
 
 pub fn set_terms(ctx: Context<AdminSetsTerms>, fee_bps: u16) -> Result<()> {
@@ -88,14 +112,10 @@ pub fn set_terms(ctx: Context<AdminSetsTerms>, fee_bps: u16) -> Result<()> {
         // которую нельзя ни настроить, ни починить. Случай бессмысленный, и
         // стеречь его нечем: спрашивать подпись не у кого.
         //
-        // Пустым оно бывает двух видов: `None` и нулевой ключ. Второй кладёт
+        // Пустым оно бывает двух видов: «нет» и нулевой ключ. Второй кладёт
         // валидатор на прогоне - он поднимает программу сразу замороженной, -
         // и различать их незачем: хозяина нет ни там, ни там.
-        let owner = ctx
-            .accounts
-            .program_data
-            .upgrade_authority_address
-            .unwrap_or_default();
+        let owner = upgrade_authority(&ctx.accounts.program_data).unwrap_or_default();
         if owner != Pubkey::default() {
             require_keys_eq!(owner, ctx.accounts.admin.key(), EscrowError::NotTheAdmin);
         }
