@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import {
   useConnectedStandardWallets,
-  useStandardSignAndSendTransaction,
+  useStandardSignTransaction,
 } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
-import bs58 from "bs58";
 import { BRAND_MAX, cleanBrand, formatUsd, parseUsd } from "@oxar/core";
 import {
   WALLET_CHAIN,
   bidTransaction,
   minNextCents,
   readLot,
+  sendSigned,
   settled,
   walletUnits,
 } from "@/lib/chain";
@@ -52,7 +52,7 @@ export function BidForm({
   const { authenticated } = usePrivy();
   const { login } = useLogin();
   const { wallets } = useConnectedStandardWallets();
-  const { signAndSendTransaction } = useStandardSignAndSendTransaction();
+  const { signTransaction } = useStandardSignTransaction();
 
   const [amount, setAmount] = useState("");
   const [brand, setBrand] = useState("");
@@ -128,12 +128,18 @@ export function BidForm({
 
       const bidder = new PublicKey(wallet.address);
       const transaction = await bidTransaction(lot.id, chainLot, bidder, cents);
-      const sent = await signAndSendTransaction({
+      // Privy только подписывает, а шлём и ждём подтверждения мы сами.
+      // Раньше звали signAndSendTransaction - он отправляет и ждёт по своему
+      // WebSocket, и на нестабильном сокете падал «Something went wrong» уже
+      // после того, как транзакция ушла в сеть: деньги списывались, а ставка
+      // до записи в базу не доходила. Своя отправка ждёт по HTTP (`settled`),
+      // и один сорванный сокет её не роняет.
+      const { signedTransaction } = await signTransaction({
         transaction: transaction.serialize(),
         wallet,
         chain: WALLET_CHAIN,
       });
-      const signature = bs58.encode(sent.signature);
+      const signature = await sendSigned(signedTransaction);
 
       const outcome = await settled(signature);
       if (outcome === "failed") {
