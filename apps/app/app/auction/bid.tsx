@@ -201,15 +201,35 @@ export function BidForm({
           />
         </label>
 
-        <label className="bid-field">
-          <span className="bid-sign">$</span>
-          <input
-            inputMode="decimal"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            aria-label="Your bid in USDC"
-          />
-        </label>
+        {/* Поле суммы и под ним баланс - одним блоком, чтобы баланс читался
+            как свойство этой суммы, а не как отдельная строка где-то ниже.
+            Ставить, не видя своих денег, - вслепую; красным, когда набранной
+            ставки не хватает, до нажатия, а не после отказа. Нет числа -
+            строки нет: пустого «$0.00» на непрочитанном балансе быть не должно. */}
+        <div className="bid-amount">
+          <label className="bid-field">
+            <span className="bid-sign">$</span>
+            <input
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              aria-label="Your bid in USDC"
+            />
+          </label>
+          {balance !== null && (
+            <span
+              className={
+                cents !== null && cents > balance
+                  ? "bid-balance short"
+                  : "bid-balance"
+              }
+            >
+              {cents !== null && cents > balance
+                ? `Balance ${formatUsd(balance)} - not enough`
+                : `Balance ${formatUsd(balance)}`}
+            </span>
+          )}
+        </div>
 
         <div className="bumps">
           {BUMPS.map((by) => (
@@ -233,18 +253,6 @@ export function BidForm({
           {busy ? "Bidding…" : "Bid"}
         </button>
       </div>
-
-      {/* Баланс кошелька по монете торга. Стоит под самой формой, где набирают
-          сумму: ставить, не зная, сколько у тебя есть, - это ставить вслепую.
-          Красным, когда набранной ставки не хватает, - до нажатия, а не после
-          отказа. Нет числа - строки нет: пустого «Wallet: $0.00» на непрочитанном
-          балансе быть не должно. */}
-      {balance !== null && (
-        <p className={cents !== null && cents > balance ? "bad" : "muted"}>
-          Wallet: {formatUsd(balance)}
-          {cents !== null && cents > balance && " - not enough for this bid"}
-        </p>
-      )}
 
       {error ? (
         <p className="bad">{error}</p>

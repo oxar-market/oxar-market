@@ -29,6 +29,15 @@ body {
   gap: 0.875rem;
 }
 
+/* Версия сборки: самая тихая строка на экране, моноширинная - это техметка,
+   а не текст для чтения. */
+.build {
+  margin: 0.5rem 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: #b8b8bf;
+}
+
 h1 {
   margin: 0;
   font-size: 1.75rem;
@@ -550,11 +559,29 @@ input:focus {
   font-weight: 400;
 }
 
+.bid-amount {
+  display: flex;
+  flex-direction: column;
+}
+
 .bid-field {
   display: flex;
   align-items: center;
   gap: 0.375rem;
   padding: 0.25rem 0.5rem;
+}
+
+/* Баланс под самой суммой, мелко и в тон подписей. Отступ слева равняет его по
+   цифрам, а не по знаку доллара. Красным - тем же классом-модификатором, что и
+   ошибки: «не хватает» это ошибка ввода, а не сноска. */
+.bid-balance {
+  padding: 0 0.5rem;
+  font-size: 0.8125rem;
+  color: #6b6b73;
+}
+
+.bid-balance.short {
+  color: #b42318;
 }
 
 .bid-sign {
@@ -818,7 +845,7 @@ input:focus {
     grid-area: brand;
   }
 
-  .bid-field {
+  .bid-amount {
     grid-area: field;
   }
 
