@@ -1,5 +1,5 @@
 /**
- * Чтение лота из цепочки - общее для скриптов закрытия.
+ * Чтение аккаунтов программы - общее для скриптов.
  *
  * Приведение типа здесь не украшательство, а единственный способ вообще
  * запустить скрипт: IDL читается с диска обычным JSON, и Anchor выводит из
@@ -37,6 +37,27 @@ export async function fetchLot(
     lot: { fetch(address: PublicKey): Promise<ChainLot> };
   };
   return accounts.lot.fetch(address);
+}
+
+/** Настройки площадки: комиссия и её получатель, одни на всю программу. */
+export type ChainConfig = {
+  admin: PublicKey;
+  platform: PublicKey;
+  feeBps: number;
+};
+
+/**
+ * Прочитать настройки площадки. Пусто - их ещё не заводили: аккаунт появляется
+ * первым вызовом `set-terms.ts` сразу за выкатом программы.
+ */
+export async function fetchConfig(
+  program: InstanceType<typeof anchor.Program>,
+  address: PublicKey,
+): Promise<ChainConfig | null> {
+  const accounts = program.account as unknown as {
+    config: { fetchNullable(address: PublicKey): Promise<ChainConfig | null> };
+  };
+  return accounts.config.fetchNullable(address);
 }
 
 /** Прочитать торг вещи: срок и комиссию, общие на все места. */
