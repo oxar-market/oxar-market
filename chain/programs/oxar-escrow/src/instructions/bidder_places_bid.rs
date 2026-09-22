@@ -29,11 +29,7 @@ pub struct BidderPlacesBid<'info> {
     pub bidder: Signer<'info>,
 
     /// Торг вещи. Меняется: ставка под конец двигает его срок.
-    #[account(
-        mut,
-        seeds = [b"sale", sale.sale.as_ref()],
-        bump = sale.bump,
-    )]
+    #[account(mut)]
     pub sale: Account<'info, Sale>,
 
     #[account(

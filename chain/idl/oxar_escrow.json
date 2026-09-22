@@ -57,24 +57,6 @@
             "Торг вещи. Меняется: ставка под конец двигает его срок."
           ],
           "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  97,
-                  108,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sale.sale",
-                "account": "Sale"
-              }
-            ]
-          },
           "relations": [
             "lot"
           ]
@@ -309,24 +291,6 @@
           "docs": [
             "Торг вещи: из него срок, комиссия, продавец и получатель комиссии."
           ],
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  97,
-                  108,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sale.sale",
-                "account": "Sale"
-              }
-            ]
-          },
           "relations": [
             "lot"
           ]
@@ -549,24 +513,6 @@
           "docs": [
             "Торг вещи: из него срок и продавец."
           ],
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  115,
-                  97,
-                  108,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "sale.sale",
-                "account": "Sale"
-              }
-            ]
-          },
           "relations": [
             "lot"
           ]

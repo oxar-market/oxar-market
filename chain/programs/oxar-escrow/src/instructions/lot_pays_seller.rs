@@ -28,9 +28,10 @@ pub struct LotPaysSeller<'info> {
     pub crank: Signer<'info>,
 
     /// Торг вещи: из него срок, комиссия, продавец и получатель комиссии.
+    // Связь с местом даёт `has_one = sale` у лота: адрес торга обязан совпасть
+    // с записанным в лоте при открытии. Сиды тут не нужны - они проверяли бы
+    // то же самое второй раз, а вывести их из самого себя Anchor не может.
     #[account(
-        seeds = [b"sale", sale.sale.as_ref()],
-        bump = sale.bump,
         has_one = seller,
         has_one = platform,
     )]

@@ -54,6 +54,12 @@ describe("oxar-escrow: торг", () => {
       program.programId,
     )[0];
 
+  const salePda = (id: number[]) =>
+    PublicKey.findProgramAddressSync(
+      [Buffer.from("sale"), Buffer.from(id)],
+      program.programId,
+    )[0];
+
   const lotVaultPda = (lot: PublicKey) =>
     PublicKey.findProgramAddressSync(
       [Buffer.from("lot_vault"), lot.toBuffer()],
@@ -79,16 +85,14 @@ describe("oxar-escrow: торг", () => {
    * закрытие шёл бы пять минут, потому что ставка сама двигает срок. Само
    * продление проверяется отдельно, с боевым значением.
    */
-  async function openLot(closesInSeconds: number, extendSeconds = 1, reserve = RESERVE) {
-    const id = auctionId();
-    const lot = lotPda(id);
+  async function openSale(closesInSeconds: number, extendSeconds = 1) {
+    const saleId = auctionId();
+    const sale = salePda(saleId);
     const closesAt = (await now()) + closesInSeconds;
 
     await program.methods
-      .sellerOpensLot(
-        id,
-        new anchor.BN(reserve),
-        new anchor.BN(MIN_STEP),
+      .sellerOpensSale(
+        saleId,
         new anchor.BN(closesAt),
         new anchor.BN(extendSeconds),
         FEE_BPS,
@@ -96,6 +100,23 @@ describe("oxar-escrow: торг", () => {
       .accounts({
         seller: seller.publicKey,
         platform: platform.publicKey,
+      })
+      .signers([seller])
+      .rpc();
+
+    return { saleId, sale, closesAt };
+  }
+
+  /** Повесить место на уже открытый торг. */
+  async function addLot(sale: PublicKey, reserve = RESERVE) {
+    const id = auctionId();
+    const lot = lotPda(id);
+
+    await program.methods
+      .sellerOpensLot(id, new anchor.BN(reserve), new anchor.BN(MIN_STEP))
+      .accountsPartial({
+        seller: seller.publicKey,
+        sale,
         mint,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -103,19 +124,34 @@ describe("oxar-escrow: торг", () => {
       .signers([seller])
       .rpc();
 
-    return { id, lot, vault: lotVaultPda(lot), closesAt };
+    return { id, lot, vault: lotVaultPda(lot) };
+  }
+
+  /** Торг с одним местом: самый частый случай в этих проверках. */
+  async function openLot(closesInSeconds: number, extendSeconds = 1, reserve = RESERVE) {
+    const { sale, closesAt } = await openSale(closesInSeconds, extendSeconds);
+    const { id, lot, vault } = await addLot(sale, reserve);
+    return { id, lot, vault, sale, closesAt };
   }
 
   /**
    * Поставить. `previous` - тот, кого перебиваем; когда ставок ещё не было,
    * передаём самого участника, и возврата не происходит.
    */
-  async function bid(lot: PublicKey, who: Keypair, amount: number, previous?: PublicKey) {
+  async function bid(
+    lot: PublicKey,
+    who: Keypair,
+    amount: number,
+    previous?: PublicKey,
+    sale?: PublicKey,
+  ) {
     const prev = previous ?? who.publicKey;
+    const saleKey = sale ?? (await program.account.lot.fetch(lot)).sale;
     await program.methods
       .bidderPlacesBid(new anchor.BN(amount))
-      .accounts({
+      .accountsPartial({
         bidder: who.publicKey,
+        sale: saleKey,
         lot,
         previousBidder: prev,
         mint,
@@ -228,15 +264,29 @@ describe("oxar-escrow: торг", () => {
     }
   });
 
-  it("ставка под конец продлевает торг", async () => {
-    const { lot } = await openLot(4, 300);
-    const before = (await program.account.lot.fetch(lot)).closesAt.toNumber();
+  it("ставка под конец продлевает торг всей вещи, а не одного места", async () => {
+    // Два места одного торга: ставим только на первое, а сдвинуться обязаны оба.
+    // Это и есть главное правило - футболка продаётся целиком.
+    const { sale } = await openSale(4, 300);
+    const first = await addLot(sale);
+    const second = await addLot(sale);
 
-    await bid(lot, alice, RESERVE);
+    const before = (await program.account.sale.fetch(sale)).closesAt.toNumber();
 
-    const after = (await program.account.lot.fetch(lot)).closesAt.toNumber();
+    await bid(first.lot, alice, RESERVE, undefined, sale);
+
+    const after = (await program.account.sale.fetch(sale)).closesAt.toNumber();
     assert.ok(after > before, "срок не сдвинулся");
     assert.ok(after - (await now()) >= 290, "продлили меньше чем на пять минут");
+
+    // У второго места своего срока нет вовсе: оно смотрит в тот же торг, и
+    // значит закрывается ровно тогда же.
+    const secondLot = await program.account.lot.fetch(second.lot);
+    assert.equal(
+      secondLot.sale.toBase58(),
+      sale.toBase58(),
+      "второе место должно принадлежать тому же торгу",
+    );
   });
 
   it("после закрытия ставки не принимаются", async () => {
@@ -258,8 +308,9 @@ describe("oxar-escrow: торг", () => {
     const before = await connection.getBalance(seller.publicKey);
     await program.methods
       .sellerClosesLot()
-      .accounts({
+      .accountsPartial({
         crank: seller.publicKey,
+        sale: (await program.account.lot.fetch(lot)).sale,
         lot,
         seller: seller.publicKey,
         lastBidder: seller.publicKey,
@@ -291,8 +342,9 @@ describe("oxar-escrow: торг", () => {
 
     await program.methods
       .lotPaysSeller()
-      .accounts({
+      .accountsPartial({
         crank: seller.publicKey,
+        sale: (await program.account.lot.fetch(lot)).sale,
         lot,
         seller: seller.publicKey,
         platform: platform.publicKey,
@@ -333,8 +385,9 @@ describe("oxar-escrow: торг", () => {
     try {
       await program.methods
         .lotPaysSeller()
-        .accounts({
+        .accountsPartial({
           crank: bob.publicKey,
+          sale: (await program.account.lot.fetch(lot)).sale,
           lot,
           seller: seller.publicKey,
           platform: bob.publicKey,
@@ -351,8 +404,9 @@ describe("oxar-escrow: торг", () => {
     // А с правильным получателем та же выплата от того же Боба проходит.
     await program.methods
       .lotPaysSeller()
-      .accounts({
+      .accountsPartial({
         crank: bob.publicKey,
+        sale: (await program.account.lot.fetch(lot)).sale,
         lot,
         seller: seller.publicKey,
         platform: platform.publicKey,
@@ -375,8 +429,9 @@ describe("oxar-escrow: торг", () => {
     try {
       await program.methods
         .lotPaysSeller()
-        .accounts({
+        .accountsPartial({
           crank: seller.publicKey,
+          sale: (await program.account.lot.fetch(lot)).sale,
           lot,
           seller: seller.publicKey,
           platform: platform.publicKey,
@@ -392,15 +447,18 @@ describe("oxar-escrow: торг", () => {
   });
 
   it("торг с победителем нельзя закрыть как несостоявшийся", async () => {
-    const { lot } = await openLot(2);
+    // Срок с запасом: ставку надо успеть сделать, пока торг идёт, а открытие
+    // места и сама ставка - это две транзакции на валидаторе.
+    const { lot } = await openLot(5);
     await bid(lot, alice, RESERVE);
-    await sleep(3500);
+    await sleep(6500);
 
     try {
       await program.methods
         .sellerClosesLot()
-        .accounts({
+        .accountsPartial({
           crank: seller.publicKey,
+          sale: (await program.account.lot.fetch(lot)).sale,
           lot,
           seller: seller.publicKey,
           lastBidder: alice.publicKey,
@@ -422,8 +480,9 @@ describe("oxar-escrow: торг", () => {
     try {
       await program.methods
         .sellerClosesLot()
-        .accounts({
+        .accountsPartial({
           crank: seller.publicKey,
+          sale: (await program.account.lot.fetch(lot)).sale,
           lot,
           seller: seller.publicKey,
           lastBidder: alice.publicKey,
@@ -442,8 +501,9 @@ describe("oxar-escrow: торг", () => {
     try {
       await program.methods
         .lotPaysSeller()
-        .accounts({
+        .accountsPartial({
           crank: seller.publicKey,
+          sale: (await program.account.lot.fetch(lot)).sale,
           lot,
           seller: seller.publicKey,
           platform: platform.publicKey,

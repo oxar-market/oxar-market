@@ -22,11 +22,7 @@ pub struct SellerClosesLot<'info> {
     pub crank: Signer<'info>,
 
     /// Торг вещи: из него срок и продавец.
-    #[account(
-        seeds = [b"sale", sale.sale.as_ref()],
-        bump = sale.bump,
-        has_one = seller,
-    )]
+    #[account(has_one = seller)]
     pub sale: Account<'info, Sale>,
 
     #[account(
