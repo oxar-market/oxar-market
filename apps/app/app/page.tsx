@@ -44,8 +44,11 @@ export default function Home() {
     };
   }, [ready, authenticated, getAccessToken]);
 
-  if (!ready) return <main />;
-
+  // Торг виден до входа, поэтому весь экран на готовность Privy не держим:
+  // раньше `if (!ready) return <main />` отдавал белый лист, пока Privy
+  // поднимается, и на медленной инициализации это выглядело как «сайт не
+  // загрузился, надо перезайти». Оболочку и торг показываем сразу, а на Privy
+  // ждёт только то, что без него бессмысленно, - вкладка You.
   return (
     <main className="app">
       {linked === "failed" && (
@@ -56,7 +59,16 @@ export default function Home() {
 
       {tab === "market" && <Market />}
       {tab === "auction" && <Auction />}
-      {tab === "you" && (authenticated ? <You /> : <Guest onSignIn={login} />)}
+      {tab === "you" &&
+        // Пока Privy не готов, не показываем ни Guest, ни You: иначе вошедшему
+        // на миг мелькнёт «Sign in», пока не подтвердится сессия.
+        (!ready ? (
+          <section className="screen" />
+        ) : authenticated ? (
+          <You />
+        ) : (
+          <Guest onSignIn={login} />
+        ))}
 
       <Tabs tab={tab} onPick={setTab} />
     </main>
