@@ -107,13 +107,13 @@ export function Auction() {
       : null;
   const started = hasOpened(startsAt, now);
 
-  // Секундная стрелка идёт только до открытия: после него на экране нет
-  // ничего, что менялось бы само каждую секунду.
+  // Секундная стрелка идёт всегда: и до открытия, и во время торга. Раньше она
+  // останавливалась после старта, потому что менять на экране было нечего -
+  // теперь наверху висят часы до конца торга, и они обязаны идти на глазах.
   useEffect(() => {
-    if (started) return;
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
-  }, [started]);
+  }, []);
 
   // До открытия вещь показывается голограммой, и выбора тут нет: смотреть
   // нечего, торг ещё не начался. В назначенную минуту голограмма сама
@@ -298,6 +298,18 @@ export function Auction() {
     lots.map((one) => tops[one.id]?.amount_cents ?? null),
   );
 
+  // Конец торга - свойство вещи, а не места: у всех её мест он один и тот же,
+  // поэтому берём его у любого. Самый поздний из них на случай, если строка
+  // какого-то места отстала от цепочки: часы не должны обещать конец раньше,
+  // чем он есть.
+  const closesAt = lots.length
+    ? Math.max(...lots.map((one) => Date.parse(one.closes_at)))
+    : null;
+  // Последние пять минут - то самое окно, в котором ставка двигает конец всей
+  // вещи. Его и подсвечиваем: там решается торг.
+  const endingSoon =
+    closesAt !== null && closesAt - now > 0 && closesAt - now <= 5 * 60_000;
+
   return (
     <section className="lot">
       <header className="lot-top">
@@ -313,6 +325,20 @@ export function Auction() {
         {escrowed > 0 && (
           <p className="lot-pot">
             <strong>{formatUsd(escrowed)}</strong> in escrow
+          </p>
+        )}
+
+        {/* Часы всей вещи, а не выбранного места: торг идёт за футболку
+            целиком, и конец у её мест один. Поэтому они здесь, под именем
+            вещи, а не в строке места - там они говорили бы про одно место и
+            путали бы.
+
+            По секундам, потому что последние минуты и есть весь смысл:
+            ставка под конец двигает конец всем местам, и видеть, сколько
+            осталось, нужно точно. */}
+        {started && closesAt !== null && (
+          <p className={endingSoon ? "lot-clock soon" : "lot-clock"}>
+            {countdown(closesAt, now)}
           </p>
         )}
       </header>
@@ -464,8 +490,10 @@ export function Auction() {
       </>
       )}
 
-      {/* Состояние выбранного места одной строкой: что это, почём и сколько
-          осталось. Это же место - предмет ставки, когда она появится. */}
+      {/* Состояние выбранного места одной строкой: что это и почём. Срока
+          здесь больше нет - он общий на всю вещь и висит часами наверху, а
+          повторять его у каждого места значило бы обещать, будто у них сроки
+          разные. */}
       {!started ? (
         <p className="lot-state">
           <strong>Bidding opens in {until(startsAt as number, now)}</strong>
@@ -483,8 +511,6 @@ export function Auction() {
               {top ? `top ${formatUsd(top.amount_cents)}` : `reserve ${formatUsd(lot.reserve_cents)}`}
               {" · next "}
               {formatUsd(need)}
-              {" · "}
-              {left(lot.closes_at)}
             </>
           ) : (
             " · bidding has closed"
@@ -793,13 +819,28 @@ function until(at: number, now: number): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
-/** Сколько осталось до закрытия, крупными делениями: дни, часы, минуты. */
-function left(closesAt: string): string {
-  const ms = Date.parse(closesAt) - Date.now();
-  if (ms <= 0) return "closed";
-  const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}m left`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 48) return `${hours}h left`;
-  return `${Math.floor(hours / 24)}d left`;
+/**
+ * Часы до конца торга, по секундам.
+ *
+ * Секунды видны всегда, а не только в последнюю минуту: ставка под конец
+ * двигает конец всей вещи, и человеку, который решает - ставить сейчас или
+ * подождать, - нужно точное время, а не «5m left».
+ *
+ * Дни отдельным числом впереди: «49:12:07» прочитать нельзя, а «2d 01:12:07»
+ * читается сразу.
+ */
+function countdown(closesAt: number, now: number): string {
+  const ms = closesAt - now;
+  if (ms <= 0) return "Bidding closed";
+
+  const total = Math.floor(ms / 1000);
+  const days = Math.floor(total / 86_400);
+  const hours = Math.floor((total % 86_400) / 3_600);
+  const minutes = Math.floor((total % 3_600) / 60);
+  const seconds = total % 60;
+
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const clock = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  return days > 0 ? `${days}d ${clock} left` : `${clock} left`;
 }
+
