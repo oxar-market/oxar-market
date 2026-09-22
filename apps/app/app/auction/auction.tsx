@@ -568,6 +568,13 @@ export function Auction() {
           футболке стояло. Свежая справа, как в переписке. Лента появляется со
           второй ставкой: у одной истории нет. */}
       {bids.length > 1 && (
+        <div className="track-wrap">
+          {/* Без подписи лента читалась набором цифр: непонятно, что это
+              история и что деления нажимаются. Заголовок называет её, подпись
+              зовёт перемотать. */}
+          <p className="list-head">
+            Bid history <span>tap a bid to see it on the shirt</span>
+          </p>
         <ol className="track" aria-label="Bid history">
           {[...bids].reverse().map((bid, index) => (
             <li key={bid.id}>
@@ -599,6 +606,7 @@ export function Auction() {
             </button>
           </li>
         </ol>
+        </div>
       )}
       {rewound && (
         <p className="muted">
@@ -674,6 +682,11 @@ export function Auction() {
       {/* На телефоне дуг нет, и ставки выбранного места живут здесь. */}
       {bids.length > 0 && (
         <div className="lot-bids">
+          {/* Подпись, чей это список: без неё суммы с именами читались как
+              обрывок непонятно чего. Верхняя строка - лидер. */}
+          <p className="list-head">
+            Bids <span>{bids.length === 1 ? "1 bid" : `${bids.length} bids`}</span>
+          </p>
           {bids.slice(0, 4).map((bid, index) => (
             <Row key={bid.id} bid={bid} lead={index === 0} />
           ))}
