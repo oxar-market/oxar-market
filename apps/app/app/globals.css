@@ -117,21 +117,113 @@ h1 {
   background: #fdf0ee;
 }
 
-/* Что известно про человека: подпись и значение парами. */
-.facts {
+/* Страница человека.
+
+   Кружок с буквой тот же, что у участников в ленте ставок: цвет выводится из
+   строки, и один человек везде выглядит одинаково. Иначе его перестают
+   узнавать в лицо. */
+.you-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  border: 1px solid #e3e3df;
+  border-radius: 20px;
+  padding: 0.875rem;
+  background: #fff;
+}
+
+.you-face {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.5rem 1rem;
-  margin: 0.25rem 0 0;
-  font-size: 0.9375rem;
+  place-items: center;
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
 }
 
-.facts dt {
-  color: #6b6b73;
+.you-id {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
 }
 
-.facts dd {
+.you-mail {
   margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Адрес кошелька подписью под почтой. Сорок четыре знака base58 никто не
+   читает целиком, но свой человек узнаёт по краям, поэтому режем не мы - он
+   переносится целиком и остаётся выделяемым. */
+.you-wallet {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: #8a8a93;
+  overflow-wrap: anywhere;
+}
+
+/* Роли двумя карточками, а не двумя строчками списка. Из списка «Seller: not
+   yet» читается как отказ, из карточки с кнопкой - как следующий шаг. */
+.roles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.role {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border: 1px solid #e3e3df;
+  border-radius: 20px;
+  padding: 0.875rem;
+  background: #fff;
+}
+
+.role-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.role-name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Метка состояния. Различаем не цветом, а весом: зелёный «активно» рядом с
+   серым «пока нет» читался бы как светофор, а тут не запрет, а две ступени. */
+.role-state {
+  border: 1px solid #e3e3df;
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a8a93;
+}
+
+.role-state.on {
+  border-color: transparent;
+  background: #16181d;
+  color: #fff;
+}
+
+.role-note {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #6b6b73;
 }
 
 input {
