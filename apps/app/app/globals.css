@@ -1316,3 +1316,405 @@ input:focus {
 .stage.dark .stage-hint {
   color: rgba(255, 255, 255, 0.45);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Flappy Josip: кнопка на маркете, само поле и таблица результатов.
+
+   Стили пришли с лендинга вместе с игрой. Переменных палитры в приложении
+   нет - цвета здесь литералами, теми же, что стояли за переменными там.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Поле внутри составного блока подсвечивает весь блок, а не себя: рамка внутри
+   рамки читается как ошибка вёрстки. */
+.prefixed:focus-within {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+/* Поле с постоянным префиксом: хэндл вводится без @ */
+
+.prefixed {
+  display: flex;
+  align-items: center;
+  background: #fbfbf9;
+  border: 1px solid #e3e3df;
+  border-radius: 9px;
+  padding-left: 0.6875rem;
+}
+
+.prefixed:focus-within {
+  border-color: #1d4ed8;
+}
+
+.prefix {
+  color: #9a9a94;
+  font-size: 0.9375rem;
+}
+
+.prefixed input {
+  border: none;
+  background: transparent;
+  padding-left: 0.125rem;
+}
+
+.prefixed input:focus {
+  outline: none;
+}
+
+/* Сообщения формы в стиле системных уведомлений: плашка, иконка, спокойный цвет */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 13px;
+  font-size: 0.8438rem;
+  line-height: 1.5;
+  animation: notice-in 0.2s cubic-bezier(0.2, 0.9, 0.2, 1.02);
+}
+
+.notice-ico {
+  flex: none;
+  display: flex;
+  margin-top: 0.0625rem;
+}
+
+.notice-ico svg {
+  width: 17px;
+  height: 17px;
+}
+
+.notice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.notice-text strong {
+  font-weight: 600;
+}
+
+.notice.error {
+  background: rgba(255, 59, 48, 0.08);
+  color: #b3261e;
+}
+
+.notice.error .notice-ico {
+  color: #ff3b30;
+}
+
+.notice.success {
+  background: rgba(52, 199, 89, 0.1);
+  color: #1d6b35;
+}
+
+.notice.success .notice-ico {
+  color: #34c759;
+}
+
+.notice.success .notice-text strong,
+.notice.error .notice-text strong {
+  color: inherit;
+}
+
+/* Пасхалка про Йосипа */
+
+.josip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.josip-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.josip-head strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.josip-face {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+
+.josip-handle {
+  font-size: 0.8438rem;
+  color: #6b6b73;
+  text-decoration: none;
+}
+
+.josip-handle:hover {
+  text-decoration: underline;
+}
+
+/* Его слова - отдельным блоком, чтобы не путались с нашими, и с наклоном: так
+   цитата отличается от текста страницы с первого взгляда. Курсивного начертания
+   у Menbere нет, поэтому наклон рисует браузер - на прямых геометричных буквах
+   этого шрифта он держится лучше, чем на шрифте с засечками. */
+.josip-quote {
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  border-left: 2px solid #6b46e5;
+  background: #f7f6fd;
+  border-radius: 0 11px 11px 0;
+  font-size: 0.9688rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.josip-link {
+  font-size: 0.875rem;
+  color: #1d4ed8;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.josip-link:hover {
+  text-decoration: underline;
+}
+
+/* Кнопка запуска игры */
+
+.play {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6875rem 0.875rem;
+  border: none;
+  border-radius: 14px;
+  /* Фиолетовый Superteam: по нему эту отсылку и узнают */
+  background: linear-gradient(135deg, #6b46e5 0%, #8b5cf6 100%);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(107, 70, 229, 0.28);
+  transition: transform 0.14s cubic-bezier(0.2, 0.9, 0.2, 1.02), box-shadow 0.16s;
+}
+
+.play:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(107, 70, 229, 0.34);
+}
+
+.play:active {
+  transform: scale(0.99);
+}
+
+.play-face {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: #fff;
+}
+
+.play-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.play-text strong {
+  font-size: 0.9375rem;
+}
+
+.play-text span {
+  font-size: 0.7812rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.play-go {
+  flex: none;
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+/* Игра: во весь экран, поверх всего. В рамке внутри окна она выглядела
+   вставкой, а на телефоне от поля оставалась полоска посреди пустоты. */
+
+.flap {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #f7f7f5;
+  /* Палец по полю - это управление, а не прокрутка */
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+.flap-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.flap-score {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 2.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #16161a;
+  pointer-events: none;
+}
+
+/* Выход из игры. Тёмный круг, а не светлый: небо в игре почти белое, и белая
+   кнопка на нём пропадала - её не находили даже когда искали. Крест рисуем
+   своей иконкой: глифа ✕ в шрифте продукта нет, и браузер подставлял Arial. */
+.flap-close {
+  position: absolute;
+  /* Выше подложки экрана результата: она накрывает весь экран и размывала
+     кнопку вместе с игрой. */
+  z-index: 2;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(22, 22, 26, 0.58);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.14s;
+}
+
+.flap-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.flap-close:hover {
+  background: rgba(22, 22, 26, 0.74);
+}
+
+.flap-over {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(247, 247, 245, 0.78);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  text-align: center;
+  padding: 0 1.5rem;
+}
+
+.flap-over strong {
+  font-size: 1.625rem;
+  letter-spacing: -0.01em;
+}
+
+/* .primary прижата влево по умолчанию - в игре она по центру, как и всё */
+.flap-over .primary {
+  align-self: center;
+  margin-top: 0.5rem;
+}
+
+/* Таблица игроков */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid #e3e3df;
+}
+
+.board-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.board-head strong {
+  font-size: 0.9375rem;
+}
+
+.board-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.board-form .prefixed {
+  flex: 1;
+}
+
+.board-form .primary {
+  flex: none;
+  white-space: nowrap;
+}
+
+.board-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.board-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.4375rem 0;
+  border-bottom: 1px solid #f0f0ec;
+  font-size: 0.875rem;
+}
+
+.board-list li:last-child {
+  border-bottom: none;
+}
+
+.board-rank {
+  width: 20px;
+  color: #6b6b73;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-handle {
+  flex: 1;
+  color: #16181d;
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-handle:hover {
+  text-decoration: underline;
+}
+
+.board-score {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Во всю ширину идёт то, что не пара к соседнему полю: переключатели, выбор
+   места, ошибки и кнопка. */
