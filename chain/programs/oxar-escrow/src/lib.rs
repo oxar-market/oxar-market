@@ -43,10 +43,15 @@ pub mod oxar_escrow {
 
     /// Задать условия площадки: комиссию и кошелёк, куда она идёт.
     ///
-    /// Первый вызов заводит настройки и делает админом подписавшего, дальше
-    /// менять их может только он. Посылается сразу за выкатом программы.
-    pub fn admin_sets_terms(ctx: Context<AdminSetsTerms>, fee_bps: u16) -> Result<()> {
-        admin_sets_terms::set_terms(ctx, fee_bps)
+    /// Первый вызов заводит настройки, дальше менять их может только админ.
+    /// Посылается сразу за выкатом программы. `new_admin` передаёт админство:
+    /// пусто - остаётся как есть.
+    pub fn admin_sets_terms(
+        ctx: Context<AdminSetsTerms>,
+        fee_bps: u16,
+        new_admin: Option<Pubkey>,
+    ) -> Result<()> {
+        admin_sets_terms::set_terms(ctx, fee_bps, new_admin)
     }
 
     /// Продавец открывает торг вещи: срок и продление - на всю вещь.

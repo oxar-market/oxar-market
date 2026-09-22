@@ -13,8 +13,14 @@ use crate::{error::EscrowError, state::Config};
 /// раньше, и её достаточно проверить одной строкой.
 ///
 /// Первый вызов делается один раз после выката программы и назначает админом
-/// того, кто подписал. Все следующие требуют подписи именно его: чужая
-/// транзакция сюда не проходит, и комиссию себе никто не перепишет.
+/// того, кто подписал, - либо того, кого подписавший назвал: владелец может
+/// завести настройки рабочим ключом и сразу отдать их своему основному. Все
+/// следующие требуют подписи записанного админа: чужая транзакция сюда не
+/// проходит, и комиссию себе никто не перепишет.
+///
+/// Тем же полем админство передаётся дальше. Опечатка в адресе - потеря
+/// админства навсегда: у настроек нет пути назад, кроме подписи того, кто в
+/// них записан. Скрипт печатает, кому передал, - сверять глазами.
 ///
 /// **Первым может быть только владелец программы.** Адрес программы известен
 /// заранее - он вшит в неё, - поэтому между выкатом и первым вызовом есть щель,
@@ -93,7 +99,11 @@ fn upgrade_authority(program_data: &UncheckedAccount) -> Option<Pubkey> {
     Pubkey::try_from(&data[13..45]).ok()
 }
 
-pub fn set_terms(ctx: Context<AdminSetsTerms>, fee_bps: u16) -> Result<()> {
+pub fn set_terms(
+    ctx: Context<AdminSetsTerms>,
+    fee_bps: u16,
+    new_admin: Option<Pubkey>,
+) -> Result<()> {
     require!(fee_bps <= 10_000, EscrowError::FeeTooHigh);
 
     let config = &mut ctx.accounts.config;
@@ -120,7 +130,6 @@ pub fn set_terms(ctx: Context<AdminSetsTerms>, fee_bps: u16) -> Result<()> {
             require_keys_eq!(owner, ctx.accounts.admin.key(), EscrowError::NotTheAdmin);
         }
 
-        config.admin = ctx.accounts.admin.key();
         config.bump = ctx.bumps.config;
     } else {
         require_keys_eq!(
@@ -128,6 +137,14 @@ pub fn set_terms(ctx: Context<AdminSetsTerms>, fee_bps: u16) -> Result<()> {
             ctx.accounts.admin.key(),
             EscrowError::NotTheAdmin
         );
+    }
+
+    // Подпись уже проверена - и для первого раза, и для смены. Названный
+    // адрес становится админом; не назван - админом остаётся подписавший (в
+    // первый раз) или записанный (во все следующие).
+    config.admin = new_admin.unwrap_or(config.admin);
+    if config.admin == Pubkey::default() {
+        config.admin = ctx.accounts.admin.key();
     }
 
     config.platform = ctx.accounts.platform.key();

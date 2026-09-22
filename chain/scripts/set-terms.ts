@@ -12,7 +12,8 @@
  *
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
- *     scripts/set-terms.ts --fee=1000 --platform=<адрес> --mint=<адрес USDC>
+ *     scripts/set-terms.ts --fee=1000 --platform=<адрес> --mint=<адрес USDC> \
+ *       [--admin=<адрес>]
  *
  * Без --platform берётся NEXT_PUBLIC_OXAR_FEE_WALLET из .env.local.
  * Комиссия в сотых долях процента: 1000 - это 10%.
@@ -20,6 +21,9 @@
  * Монета обязательна и по умолчанию не подставляется: у девнетного USDC и
  * боевого разные адреса, и перепутать их значит открыть торги за ненастоящие
  * деньги. Места в любой другой монете программа откажется открывать.
+ *
+ * --admin передаёт админство: следующие вызовы сможет подписать только он.
+ * Опечатка в адресе - потеря админства навсегда, сверяй напечатанное.
  *
  * Мейннет: SOLANA_RPC=https://api.mainnet-beta.solana.com перед командой.
  */
@@ -72,6 +76,9 @@ async function main() {
   if (!coin) throw new Error("нужен --mint=<адрес монеты торгов>");
   const mint = new PublicKey(coin);
 
+  const handover = arg("admin");
+  const newAdmin = handover ? new PublicKey(handover) : null;
+
   const admin = Keypair.fromSecretKey(
     new Uint8Array(JSON.parse(readFileSync(`${homedir()}/.config/solana/id.json`, "utf8"))),
   );
@@ -102,7 +109,7 @@ async function main() {
   const before = await fetchConfig(program, configPda);
 
   const signature = await program.methods
-    .adminSetsTerms(feeBps)
+    .adminSetsTerms(feeBps, newAdmin)
     .accounts({
       admin: admin.publicKey,
       platform,
@@ -121,6 +128,9 @@ async function main() {
   }
   console.log(`  стало     ${feeBps / 100}% → ${platform.toBase58()}`);
   console.log(`  монета    ${mint.toBase58()}`);
+  if (newAdmin) {
+    console.log(`  админство → ${newAdmin.toBase58()} - дальше подписывает только он`);
+  }
   console.log(`  подпись   ${signature}\n`);
   console.log("  идущие торги сохраняют свои условия: они вморожены при открытии\n");
 }
