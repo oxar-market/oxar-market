@@ -22,6 +22,7 @@ import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
+import { fetchConfig } from "./lot";
 
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 const THING_SLUG = "superteam-ua-tee";
@@ -85,7 +86,10 @@ async function main() {
     [Buffer.from("config")],
     program.programId,
   );
-  const config = await program.account.config.fetch(configPda);
+  const config = await fetchConfig(program, configPda);
+  if (!config) {
+    throw new Error("настроек площадки нет в цепочке - сперва scripts/set-terms.ts");
+  }
 
   const [thing] = await rest(`things?slug=eq.${thingSlug}&select=id,title`);
   if (!thing) throw new Error(`вещи ${thingSlug} нет в каталоге`);

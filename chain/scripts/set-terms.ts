@@ -24,6 +24,7 @@ import * as anchor from "@anchor-lang/core";
 import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { fetchConfig } from "./lot";
 
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 
@@ -83,7 +84,7 @@ async function main() {
 
   // Что было до вызова - чтобы в выводе было видно, завели мы настройки или
   // поменяли, и на что именно.
-  const before = await program.account.config.fetchNullable(configPda);
+  const before = await fetchConfig(program, configPda);
 
   const signature = await program.methods
     .adminSetsTerms(feeBps)
