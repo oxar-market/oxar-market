@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     error::EscrowError,
-    state::{Config, Sale, MAX_EXTEND_SECONDS},
+    state::{Config, Sale, MAX_EXTEND_SECONDS, MAX_SALE_SECONDS},
 };
 
 /// Продавец открывает торг вещи.
@@ -61,6 +61,13 @@ pub fn open_sale(
     // рождался бы сразу несостоявшимся.
     let now = Clock::get()?.unix_timestamp;
     require!(closes_at > now, EscrowError::ClosesInThePast);
+    // И слишком длинный тоже нельзя: отменить торг нечем, а ставка участника
+    // заперта, пока его не перебьют. Лишний ноль в часах стоил бы ему денег на
+    // годы вперёд.
+    require!(
+        closes_at <= now.saturating_add(MAX_SALE_SECONDS),
+        EscrowError::SaleTooLong
+    );
 
     let sale = &mut ctx.accounts.sale;
     sale.sale = sale_id;

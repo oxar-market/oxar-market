@@ -40,4 +40,10 @@ pub enum EscrowError {
 
     #[msg("The extension window is too long")]
     ExtensionTooLong,
+
+    #[msg("A sale cannot run longer than a month")]
+    SaleTooLong,
+
+    #[msg("Only the seller can pull a lot before the sale ends")]
+    NotTheSeller,
 }
