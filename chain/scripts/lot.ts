@@ -44,6 +44,8 @@ export type ChainConfig = {
   admin: PublicKey;
   platform: PublicKey;
   feeBps: number;
+  /** Монета торгов. Нулевая - значит её ещё не называли. */
+  mint: PublicKey;
 };
 
 /**

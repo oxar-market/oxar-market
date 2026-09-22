@@ -1,8 +1,11 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token_interface::Mint;
 
 use crate::{error::EscrowError, state::Config};
 
 /// Завести настройки площадки или поменять их.
+///
+/// Настроек три: комиссия, кошелёк под неё и монета, в которой идут торги.
 ///
 /// Одна инструкция на оба случая, а не две почти одинаковых: `init_if_needed`
 /// заводит аккаунт при первом вызове и открывает уже заведённый при следующих.
@@ -38,6 +41,11 @@ pub struct AdminSetsTerms<'info> {
     /// требуется - это адрес получателя, а не сторона сделки.
     pub platform: UncheckedAccount<'info>,
 
+    /// Монета торгов - USDC. Берём аккаунтом, а не голым адресом, чтобы
+    /// опечатка в адресе отбилась здесь, а не на открытии первого места:
+    /// настоящей монетой сюда встанет только настоящая монета.
+    pub mint: InterfaceAccount<'info, Mint>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -52,7 +60,6 @@ pub fn set_terms(ctx: Context<AdminSetsTerms>, fee_bps: u16) -> Result<()> {
     if config.admin == Pubkey::default() {
         config.admin = ctx.accounts.admin.key();
         config.bump = ctx.bumps.config;
-        config.reserved = [0u8; 32];
     } else {
         require_keys_eq!(
             config.admin,
@@ -63,6 +70,7 @@ pub fn set_terms(ctx: Context<AdminSetsTerms>, fee_bps: u16) -> Result<()> {
 
     config.platform = ctx.accounts.platform.key();
     config.fee_bps = fee_bps;
+    config.mint = ctx.accounts.mint.key();
 
     Ok(())
 }

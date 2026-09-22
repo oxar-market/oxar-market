@@ -12,14 +12,14 @@
  *
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
- *     scripts/open-lot.ts --sale=<uuid> --spot=slot_01 --reserve=50 --mint=<mint>
+ *     scripts/open-lot.ts --sale=<uuid> --spot=slot_01 --reserve=50
  *
  * Срока у места нет: он берётся из торга вещи (--sale), общий на все её места.
  * Торг открывается раньше, скриптом open-sale.ts.
  *
- * Монета передаётся руками и не имеет значения по умолчанию: девнетный USDC и
- * боевой - разные адреса, и перепутать их значит открыть торг за ненастоящие
- * деньги. Кошелёк продавца - тот, что в `solana config get`.
+ * Монета берётся из настроек площадки, а не из ключа: её называет админ один
+ * раз, и места в любой другой программа открывать откажется. Кошелёк продавца -
+ * тот, что в `solana config get`.
  */
 import * as anchor from "@anchor-lang/core";
 import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
@@ -27,6 +27,7 @@ import { getMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
+import { fetchConfig } from "./lot";
 
 /**
  * Сеть, в которой открываем торг. По умолчанию девнет: боевые деньги
@@ -82,15 +83,14 @@ async function rest(path: string, init: RequestInit = {}) {
 async function main() {
   const spotCode = arg("spot");
   const reserve = arg("reserve");
-  const mintArg = arg("mint");
   const saleId = arg("sale");
   // Вещь по умолчанию одна, но прогон всей цепочки нельзя делать на витрине:
   // её места заняты идущими торгами, и подменять их ради проверки значит
   // ломать то, что люди в эту минуту смотрят.
   const thingSlug = arg("thing") ?? THING_SLUG;
 
-  if (!spotCode || !reserve || !mintArg || !saleId) {
-    throw new Error("нужны --sale, --spot, --reserve и --mint");
+  if (!spotCode || !reserve || !saleId) {
+    throw new Error("нужны --sale, --spot и --reserve");
   }
 
   // Резерв приходит долларами, а живёт в двух видах: центы для показа и
@@ -131,7 +131,18 @@ async function main() {
   );
   const extendSeconds = Number(saleAccount.data.readBigInt64LE(8 + 16 + 32 + 32 + 8));
 
-  const mint = new PublicKey(mintArg);
+  // Монета одна на всю площадку и живёт в её настройках. Своего ключа здесь
+  // нет намеренно: руками сюда попал бы однажды девнетный USDC вместо боевого.
+  const [configPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("config")],
+    program.programId,
+  );
+  const config = await fetchConfig(program, configPda);
+  if (!config) {
+    throw new Error("настроек площадки нет в цепочке - сперва scripts/set-terms.ts");
+  }
+  const mint = config.mint;
+
   const { decimals } = await getMint(connection, mint);
   if (decimals < 2) throw new Error(`у монеты ${decimals} знаков, центы в неё не лягут`);
   const units = (cents: number) => cents * Math.pow(10, decimals - 2);
@@ -193,7 +204,7 @@ async function main() {
   console.log(`\n  ${thing.title} - ${spot.label}`);
   console.log(`  лот      ${id}`);
   console.log(`  в цепи   ${lotPda.toBase58()}`);
-  console.log(`  монета   ${mint.toBase58()} (${decimals} знаков)`);
+  console.log(`  монета   ${mint.toBase58()} (${decimals} знаков, из настроек)`);
   console.log(`  резерв   $${(reserveCents / 100).toFixed(2)}, шаг $${MIN_STEP_CENTS / 100}`);
   console.log(`  до       ${closesAt.toISOString()} (срок торга вещи, продление ${extendSeconds} с)`);
   console.log(`  подпись  ${signature}\n`);
