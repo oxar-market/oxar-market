@@ -17,6 +17,14 @@ use crate::{
 ///
 /// Зовёт кто угодно: продавцу в любом случае возвращается аренда, участнику -
 /// его ставка, и ждать чьей-то доброй воли тут нечего.
+///
+/// До срока место снять тоже можно, но только пустое и только рукой продавца.
+/// Это единственная кнопка «стоп» во всей программе: ошибся сроком, передумал
+/// продавать спину - снял, пока никто не поставил. Как только ставка сделана,
+/// кнопка пропадает: снимать место из-под участника нельзя, даже если его
+/// ставка ниже резерва, - он держит её до конца и вправе рассчитывать, что
+/// торг дойдёт до конца. Посторонний не снимет и пустое: иначе любой прохожий
+/// раздевал бы витрину.
 #[derive(Accounts)]
 pub struct SellerClosesLot<'info> {
     pub crank: Signer<'info>,
@@ -76,8 +84,15 @@ pub fn close_lot(ctx: Context<SellerClosesLot>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let lot = &ctx.accounts.lot;
 
-    // Срок общий на вещь: место нельзя закрыть, пока идёт торг футболки.
-    require!(!ctx.accounts.sale.is_open(now), EscrowError::LotStillOpen);
+    // Пока торг идёт, место снимает только продавец и только пустое.
+    if ctx.accounts.sale.is_open(now) {
+        require!(lot.top_bidder.is_none(), EscrowError::LotStillOpen);
+        require_keys_eq!(
+            ctx.accounts.crank.key(),
+            ctx.accounts.sale.seller,
+            EscrowError::NotTheSeller
+        );
+    }
     // Состоявшееся место закрывается только выплатой. Иначе этой инструкцией
     // можно было бы отобрать у победителя уже выигранное место.
     require!(!lot.has_winner(), EscrowError::LotHasWinner);

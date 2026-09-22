@@ -1157,6 +1157,16 @@
       "code": 6012,
       "name": "ExtensionTooLong",
       "msg": "The extension window is too long"
+    },
+    {
+      "code": 6013,
+      "name": "SaleTooLong",
+      "msg": "A sale cannot run longer than a month"
+    },
+    {
+      "code": 6014,
+      "name": "NotTheSeller",
+      "msg": "Only the seller can pull a lot before the sale ends"
     }
   ],
   "types": [

@@ -292,6 +292,76 @@ describe("oxar-escrow: торг", () => {
     );
   });
 
+  it("торг длиннее месяца не открыть", async () => {
+    // Отменить торг нечем, а ставка участника заперта, пока его не перебьют.
+    // Лишний ноль в часах стоил бы ему денег на годы вперёд.
+    const saleId = auctionId();
+    const month = 30 * 24 * 60 * 60;
+
+    try {
+      await program.methods
+        .sellerOpensSale(saleId, new anchor.BN((await now()) + month + 60), new anchor.BN(1))
+        .accounts({ seller: seller.publicKey })
+        .signers([seller])
+        .rpc();
+      assert.fail("торг на годы вперёд открылся");
+    } catch (error) {
+      assert.include(String(error), "SaleTooLong");
+    }
+
+    // Месяц без минуты - ещё можно.
+    await program.methods
+      .sellerOpensSale(auctionId(), new anchor.BN((await now()) + month - 60), new anchor.BN(1))
+      .accounts({ seller: seller.publicKey })
+      .signers([seller])
+      .rpc();
+  });
+
+  it("пустое место продавец снимает до срока, а чужое и занятое - нет", async () => {
+    // Единственная кнопка «стоп» во всей программе: ошибся сроком, передумал
+    // продавать спину - снял, пока никто не поставил.
+    const { sale } = await openSale(120);
+    const empty = await addLot(sale);
+    const taken = await addLot(sale);
+    await bid(taken.lot, alice, RESERVE, undefined, sale);
+
+    const pull = (lot: PublicKey, who: Keypair, lastBidder = seller.publicKey) =>
+      program.methods
+        .sellerClosesLot()
+        .accountsPartial({
+          crank: who.publicKey,
+          sale,
+          lot,
+          seller: seller.publicKey,
+          lastBidder,
+          mint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([who])
+        .rpc();
+
+    // Посторонний не снимет и пустое: иначе любой прохожий раздевал бы витрину.
+    try {
+      await pull(empty.lot, bob);
+      assert.fail("чужой снял место с идущего торга");
+    } catch (error) {
+      assert.include(String(error), "NotTheSeller");
+    }
+
+    // Место со ставкой не снимет и продавец: участник держит её до конца.
+    try {
+      await pull(taken.lot, seller, alice.publicKey);
+      assert.fail("место сняли из-под участника");
+    } catch (error) {
+      assert.include(String(error), "LotStillOpen");
+    }
+
+    // А своё пустое - снимает.
+    await pull(empty.lot, seller);
+    assert.isNull(await connection.getAccountInfo(empty.lot), "место не снялось");
+    assert.isNull(await connection.getAccountInfo(empty.vault), "хранилище не закрылось");
+  });
+
   it("ставка ниже резерва не принимается", async () => {
     const { lot } = await openLot(60);
     try {
