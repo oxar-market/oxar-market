@@ -146,7 +146,13 @@ async function main() {
   if (!spot) throw new Error(`у вещи нет места ${spotCode}`);
 
   const id = randomUUID();
-  const closesAt = new Date(Date.now() + days * 86_400_000);
+  // Абсолютный момент закрытия важнее срока в днях, когда открываешь несколько
+  // мест одной вещи разом: --days считает от «сейчас» каждого запуска, и места
+  // разъезжаются на секунды. --closes=<unix> задаёт один конец на всех.
+  const closesArg = arg("closes");
+  const closesAt = closesArg
+    ? new Date(Number(closesArg) * 1000)
+    : new Date(Date.now() + days * 86_400_000);
 
   await rest("lots", {
     method: "POST",

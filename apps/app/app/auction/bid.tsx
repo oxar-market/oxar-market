@@ -282,5 +282,8 @@ function reason(cause: unknown): string {
   const said = cause instanceof Error ? cause.message : String(cause);
   if (/reject|denied|cancel/i.test(said)) return "You turned the bid down.";
   if (/insufficient|0x1$/i.test(said)) return "Not enough USDC in the wallet.";
-  return "The bid did not go through. Nothing was charged.";
+  // На время охоты за багами запуска показываем настоящую причину, а не
+  // «did not go through»: без неё на телефоне не понять, что сломалось.
+  // Вернуть общий текст, когда торги пойдут.
+  return `The bid did not go through: ${said || "unknown error"}`;
 }
