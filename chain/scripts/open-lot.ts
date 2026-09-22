@@ -12,7 +12,10 @@
  *
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
- *     scripts/open-lot.ts --spot=tshirt_chest --reserve=50 --days=7 --mint=<mint>
+ *     scripts/open-lot.ts --sale=<uuid> --spot=slot_01 --reserve=50 --mint=<mint>
+ *
+ * Срока у места нет: он берётся из торга вещи (--sale), общий на все её места.
+ * Торг открывается раньше, скриптом open-sale.ts.
  *
  * Монета передаётся руками и не имеет значения по умолчанию: девнетный USDC и
  * боевой - разные адреса, и перепутать их значит открыть торг за ненастоящие
@@ -53,15 +56,6 @@ function env(name: string): string {
   throw new Error(`в .env.local нет ${name}`);
 }
 
-/** То же, но пусто и отсутствие - не ошибка, а «не задано». */
-function optionalEnv(name: string): string {
-  try {
-    return env(name);
-  } catch {
-    return "";
-  }
-}
-
 const url = env("NEXT_PUBLIC_SUPABASE_URL");
 const key = env("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -90,16 +84,15 @@ async function rest(path: string, init: RequestInit = {}) {
 async function main() {
   const spotCode = arg("spot");
   const reserve = arg("reserve");
-  const days = Number(arg("days") ?? "7");
   const mintArg = arg("mint");
-  const feeBps = Number(arg("fee") ?? "0");
+  const saleId = arg("sale");
   // Вещь по умолчанию одна, но прогон всей цепочки нельзя делать на витрине:
   // её места заняты идущими торгами, и подменять их ради проверки значит
   // ломать то, что люди в эту минуту смотрят.
   const thingSlug = arg("thing") ?? THING_SLUG;
 
-  if (!spotCode || !reserve || !mintArg) {
-    throw new Error("нужны --spot, --reserve и --mint");
+  if (!spotCode || !reserve || !mintArg || !saleId) {
+    throw new Error("нужны --sale, --spot, --reserve и --mint");
   }
 
   // Резерв приходит долларами, а живёт в двух видах: центы для показа и
@@ -109,7 +102,6 @@ async function main() {
   if (!Number.isFinite(reserveCents) || reserveCents <= 0) {
     throw new Error(`резерв «${reserve}» не похож на сумму`);
   }
-  if (!Number.isFinite(days) || days <= 0) throw new Error("--days должен быть больше нуля");
 
   const seller = Keypair.fromSecretKey(
     new Uint8Array(JSON.parse(readFileSync(`${homedir()}/.config/solana/id.json`, "utf8"))),
@@ -123,15 +115,20 @@ async function main() {
   const idl = JSON.parse(readFileSync("idl/oxar_escrow.json", "utf8"));
   const program = new anchor.Program(idl, provider);
 
-  // Куда пойдёт комиссия. Адрес вмерзает в лот при открытии и больше не
-  // меняется: выплату зовёт кто угодно, и называй получателя он - комиссию
-  // уводили бы себе. Нет адреса - нет и комиссии, тогда в лот идёт сам
-  // продавец, и делить будет нечего.
-  const feeWallet = arg("platform") ?? optionalEnv("NEXT_PUBLIC_OXAR_FEE_WALLET");
-  if (feeBps > 0 && !feeWallet) {
-    throw new Error("комиссия задана, а получатель (--platform) не указан");
-  }
-  const platform = feeWallet ? new PublicKey(feeWallet) : seller.publicKey;
+  // Комиссия, её получатель и срок живут в торге вещи, а не здесь: они общие
+  // на все места футболки. Отсюда берётся только адрес самого торга.
+  const saleBytes = Array.from(Buffer.from(saleId.replace(/-/g, ""), "hex"));
+  const [salePda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("sale"), Buffer.from(saleBytes)],
+    program.programId,
+  );
+  const saleAccount = await connection.getAccountInfo(salePda);
+  if (!saleAccount) throw new Error(`торга ${saleId} нет в цепочке - сперва open-sale.ts`);
+  // Срок торга читаем из него же: в базе он повторяется для показа, а решает
+  // программа. Смещение - дискриминатор, uuid, продавец, площадка.
+  const closesAt = new Date(
+    Number(saleAccount.data.readBigInt64LE(8 + 16 + 32 + 32)) * 1000,
+  );
 
   const mint = new PublicKey(mintArg);
   const { decimals } = await getMint(connection, mint);
@@ -146,13 +143,6 @@ async function main() {
   if (!spot) throw new Error(`у вещи нет места ${spotCode}`);
 
   const id = randomUUID();
-  // Абсолютный момент закрытия важнее срока в днях, когда открываешь несколько
-  // мест одной вещи разом: --days считает от «сейчас» каждого запуска, и места
-  // разъезжаются на секунды. --closes=<unix> задаёт один конец на всех.
-  const closesArg = arg("closes");
-  const closesAt = closesArg
-    ? new Date(Number(closesArg) * 1000)
-    : new Date(Date.now() + days * 86_400_000);
 
   await rest("lots", {
     method: "POST",
@@ -180,13 +170,10 @@ async function main() {
       auction,
       new anchor.BN(units(reserveCents).toString()),
       new anchor.BN(units(MIN_STEP_CENTS).toString()),
-      new anchor.BN(Math.floor(closesAt.getTime() / 1000)),
-      new anchor.BN(EXTEND_SECONDS),
-      feeBps,
     )
     .accounts({
       seller: seller.publicKey,
-      platform,
+      sale: salePda,
       mint,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
@@ -207,7 +194,7 @@ async function main() {
   console.log(`  в цепи   ${lotPda.toBase58()}`);
   console.log(`  монета   ${mint.toBase58()} (${decimals} знаков)`);
   console.log(`  резерв   $${(reserveCents / 100).toFixed(2)}, шаг $${MIN_STEP_CENTS / 100}`);
-  console.log(`  до       ${closesAt.toISOString()}`);
+  console.log(`  до       ${closesAt.toISOString()} (срок торга вещи)`);
   console.log(`  подпись  ${signature}\n`);
 }
 

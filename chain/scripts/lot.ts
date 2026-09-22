@@ -10,14 +10,22 @@
 import type * as anchor from "@anchor-lang/core";
 import type { PublicKey } from "@solana/web3.js";
 
-/** Лот, как его отдаёт цепочка. Суммы приходят как BN, отсюда `toString`. */
+/** Место, как его отдаёт цепочка. Суммы приходят как BN, отсюда `toString`. */
 export type ChainLot = {
-  seller: PublicKey;
-  platform: PublicKey;
+  /** Торг вещи: из него срок, комиссия, продавец и получатель комиссии. */
+  sale: PublicKey;
   mint: PublicKey;
   topBidder: PublicKey | null;
   topBid: { toString(): string };
   reserve: { toString(): string };
+};
+
+/** Торг вещи целиком: срок и комиссия общие на все её места. */
+export type ChainSale = {
+  seller: PublicKey;
+  platform: PublicKey;
+  closesAt: { toString(): string };
+  extendSeconds: { toString(): string };
   feeBps: number;
 };
 
@@ -29,4 +37,15 @@ export async function fetchLot(
     lot: { fetch(address: PublicKey): Promise<ChainLot> };
   };
   return accounts.lot.fetch(address);
+}
+
+/** Прочитать торг вещи: срок и комиссию, общие на все места. */
+export async function fetchSale(
+  program: InstanceType<typeof anchor.Program>,
+  address: PublicKey,
+): Promise<ChainSale> {
+  const accounts = program.account as unknown as {
+    sale: { fetch(address: PublicKey): Promise<ChainSale> };
+  };
+  return accounts.sale.fetch(address);
 }
