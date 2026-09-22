@@ -1,6 +1,7 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
+import { BUILD } from "@/lib/build";
 
 /**
  * Страница человека. Пока показывает только то, что знает наверняка: кто вошёл
@@ -46,6 +47,10 @@ export function You() {
       <button type="button" className="quiet" onClick={logout}>
         Sign out
       </button>
+
+      {/* Версия сборки: тихая подпись внизу, для нас, а не для человека. По ней
+          на глаз видно, та ли версия открыта. */}
+      <p className="build">build {BUILD}</p>
     </section>
   );
 }

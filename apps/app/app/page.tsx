@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import { db, exchange } from "@/lib/session";
+import { BUILD } from "@/lib/build";
 import { Auction } from "./auction/auction";
 import { Market } from "./market";
 import { Tabs, useTab } from "./tabs";
@@ -70,6 +71,7 @@ function Guest({ onSignIn }: { onSignIn: () => void }) {
       <button type="button" className="primary" onClick={onSignIn}>
         Sign in
       </button>
+      <p className="build">build {BUILD}</p>
     </section>
   );
 }
