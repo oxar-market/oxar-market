@@ -7,9 +7,13 @@
  * закрываются в одну и ту же секунду, сколько бы времени ни прошло между их
  * открытием, а ставка под конец продлевает торг всем местам разом.
  *
+ * Комиссии среди ключей нет намеренно: её и получателя торг берёт из настроек
+ * площадки, которые задаёт админ через set-terms.ts. Открывающий торг на них
+ * не влияет - иначе он назначил бы комиссию себе.
+ *
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
- *     scripts/open-sale.ts --thing=superteam-ua-tee --hours=24 --fee=1000
+ *     scripts/open-sale.ts --thing=superteam-ua-tee --hours=24
  *
  * Возвращает uuid торга - его передают в open-lot.ts как --sale.
  */
@@ -39,14 +43,6 @@ function env(name: string): string {
   throw new Error(`в .env.local нет ${name}`);
 }
 
-function optionalEnv(name: string): string {
-  try {
-    return env(name);
-  } catch {
-    return "";
-  }
-}
-
 const url = env("NEXT_PUBLIC_SUPABASE_URL");
 const key = env("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -69,7 +65,6 @@ async function rest(path: string, init: RequestInit = {}) {
 async function main() {
   const thingSlug = arg("thing") ?? THING_SLUG;
   const hours = Number(arg("hours") ?? "24");
-  const feeBps = Number(arg("fee") ?? "0");
   if (!Number.isFinite(hours) || hours <= 0) throw new Error("--hours должен быть больше нуля");
 
   const seller = Keypair.fromSecretKey(
@@ -87,11 +82,12 @@ async function main() {
   // Получатель комиссии вмерзает в торг при открытии и больше не меняется:
   // выплату зовёт кто угодно, и называй получателя он - комиссию уводили бы
   // себе. Нет адреса - нет и комиссии, тогда в торг идёт сам продавец.
-  const feeWallet = arg("platform") ?? optionalEnv("NEXT_PUBLIC_OXAR_FEE_WALLET");
-  if (feeBps > 0 && !feeWallet) {
-    throw new Error("комиссия задана, а получатель (--platform) не указан");
-  }
-  const platform = feeWallet ? new PublicKey(feeWallet) : seller.publicKey;
+  // Настройки площадки: сиды постоянные, аккаунт один на всю программу.
+  const [configPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("config")],
+    program.programId,
+  );
+  const config = await program.account.config.fetch(configPda);
 
   const [thing] = await rest(`things?slug=eq.${thingSlug}&select=id,title`);
   if (!thing) throw new Error(`вещи ${thingSlug} нет в каталоге`);
@@ -109,11 +105,9 @@ async function main() {
       saleBytes,
       new anchor.BN(Math.floor(closesAt.getTime() / 1000)),
       new anchor.BN(EXTEND_SECONDS),
-      feeBps,
     )
     .accounts({
       seller: seller.publicKey,
-      platform,
       systemProgram: SystemProgram.programId,
     })
     .rpc();
@@ -123,7 +117,9 @@ async function main() {
   console.log(`  в цепи    ${salePda.toBase58()}`);
   console.log(`  до        ${closesAt.toISOString()}`);
   console.log(`  продление ${EXTEND_SECONDS} секунд, на всю вещь`);
-  console.log(`  комиссия  ${feeBps / 100}% → ${platform.toBase58()}`);
+  console.log(
+    `  комиссия  ${config.feeBps / 100}% → ${config.platform.toBase58()} (из настроек)`,
+  );
   console.log(`  подпись   ${signature}\n`);
   console.log(`  дальше:   scripts/open-lot.ts --sale=${id} --spot=slot_01 --reserve=1 --mint=<mint>\n`);
 }

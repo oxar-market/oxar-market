@@ -11,6 +11,9 @@ pub enum EscrowError {
     #[msg("The fee cannot be more than the whole lot")]
     FeeTooHigh,
 
+    #[msg("Only the admin can change the terms")]
+    NotTheAdmin,
+
     #[msg("This lot is not taking bids")]
     LotClosed,
 
