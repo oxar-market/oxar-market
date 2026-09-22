@@ -47,6 +47,15 @@ pub struct SellerClosesLot<'info> {
     #[account(mut)]
     pub seller: UncheckedAccount<'info>,
 
+    /// Счёт продавца: на него уходит лишнее из хранилища, если оно там есть.
+    #[account(
+        mut,
+        associated_token::mint = mint,
+        associated_token::authority = seller,
+        associated_token::token_program = token_program,
+    )]
+    pub seller_tokens: InterfaceAccount<'info, TokenAccount>,
+
     /// CHECK: последний участник, если он был. Сверяется с `lot.top_bidder`.
     pub last_bidder: UncheckedAccount<'info>,
 
@@ -96,6 +105,30 @@ pub fn close_lot(ctx: Context<SellerClosesLot>) -> Result<()> {
                 &[seeds],
             ),
             lot.top_bid,
+            ctx.accounts.mint.decimals,
+        )?;
+    }
+
+    // Сверх ставки в хранилище может лежать чужой подарок: адрес выводится из
+    // адреса лота и виден всем, а закрыть токен-счёт с ненулевым остатком SPL
+    // не даёт. Не выгреби мы это - одной базовой единицы от постороннего
+    // хватило бы, чтобы место не закрылось никогда, а ставка участника осталась
+    // запертой. Лишнее идёт продавцу, как и в выплате.
+    let refunded = if lot.top_bidder.is_some() { lot.top_bid } else { 0 };
+    let extra = ctx.accounts.vault.amount.saturating_sub(refunded);
+    if extra > 0 {
+        transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                TransferChecked {
+                    from: ctx.accounts.vault.to_account_info(),
+                    mint: ctx.accounts.mint.to_account_info(),
+                    to: ctx.accounts.seller_tokens.to_account_info(),
+                    authority: ctx.accounts.lot.to_account_info(),
+                },
+                &[seeds],
+            ),
+            extra,
             ctx.accounts.mint.decimals,
         )?;
     }

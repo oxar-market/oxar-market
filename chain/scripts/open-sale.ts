@@ -79,10 +79,8 @@ async function main() {
   const idl = JSON.parse(readFileSync("idl/oxar_escrow.json", "utf8"));
   const program = new anchor.Program(idl, provider);
 
-  // Получатель комиссии вмерзает в торг при открытии и больше не меняется:
-  // выплату зовёт кто угодно, и называй получателя он - комиссию уводили бы
-  // себе. Нет адреса - нет и комиссии, тогда в торг идёт сам продавец.
   // Настройки площадки: сиды постоянные, аккаунт один на всю программу.
+  // Комиссия и её получатель приезжают отсюда и вмерзают в торг при открытии.
   const [configPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("config")],
     program.programId,

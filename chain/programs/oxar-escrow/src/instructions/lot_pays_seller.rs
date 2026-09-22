@@ -99,6 +99,18 @@ pub fn pay_seller(ctx: Context<LotPaysSeller>) -> Result<()> {
     // прислал на счёт хранилища подарком, не должно менять расчёт.
     let (fee, to_seller) = lot.split(lot.top_bid, ctx.accounts.sale.fee_bps)?;
 
+    // Расчёт лишнее не меняет, а вот выгрести его обязано. Адрес хранилища
+    // выводится из адреса лота и виден всем, прислать туда монеты может кто
+    // угодно, а закрыть токен-счёт с ненулевым остатком SPL не даёт. Без этого
+    // одной базовой единицы от постороннего хватило бы, чтобы выплата перестала
+    // проходить, а ставка победителя осталась в хранилище навсегда. Лишнее
+    // отдаём продавцу: комиссия считается со ставки, и доля площадки от подарка
+    // не растёт.
+    let extra = ctx.accounts.vault.amount.saturating_sub(lot.top_bid);
+    let to_seller = to_seller
+        .checked_add(extra)
+        .ok_or(EscrowError::MathOverflow)?;
+
     let auction = lot.auction;
     let bump = [lot.bump];
     let seeds: &[&[u8]] = &[b"lot", auction.as_ref(), &bump];

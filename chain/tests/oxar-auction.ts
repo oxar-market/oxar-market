@@ -7,6 +7,7 @@ import {
   getAccount,
   getAssociatedTokenAddressSync,
   mintTo,
+  transfer,
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -368,9 +369,11 @@ describe("oxar-escrow: торг", () => {
   });
 
   it("выигранная ставка делится между продавцом и площадкой", async () => {
-    const { lot, vault } = await openLot(2);
+    // Срок с запасом: открыть торг, повесить место и поставить - это три
+    // транзакции, и в две секунды они на холодном валидаторе не всегда влезают.
+    const { lot, vault } = await openLot(5);
     await bid(lot, alice, RESERVE);
-    await sleep(3500);
+    await sleep(6500);
 
     const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
     const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
@@ -413,10 +416,89 @@ describe("oxar-escrow: торг", () => {
     assert.isNull(await connection.getAccountInfo(lot), "лот не закрылся");
   });
 
-  it("выплату зовёт кто угодно, но комиссия идёт только тому, кто записан в лоте", async () => {
-    const { lot } = await openLot(2);
+  it("монета, присланная в хранилище мимо торга, не запирает выплату", async () => {
+    // Адрес хранилища выводится из адреса лота, а лот виден всем. Значит кто
+    // угодно может прислать туда одну базовую единицу монеты - это стоит доли
+    // цента. Закрыть токен-счёт с ненулевым остатком SPL не даёт, поэтому
+    // выплата обязана выгребать хранилище дочиста, иначе ставка победителя и
+    // выручка продавца заперты в нём навсегда.
+    const { lot, vault } = await openLot(5);
     await bid(lot, alice, RESERVE);
-    await sleep(3500);
+    await transfer(connection, bob, bobTokens, vault, bob, 1);
+    await sleep(6500);
+
+    const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
+    const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
+    const sellerBefore = await balance(sellerTokens);
+    const platformBefore = await balance(platformTokens);
+
+    await program.methods
+      .lotPaysSeller()
+      .accountsPartial({
+        crank: seller.publicKey,
+        sale: (await program.account.lot.fetch(lot)).sale,
+        lot,
+        seller: seller.publicKey,
+        platform: platform.publicKey,
+        mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([seller])
+      .rpc();
+
+    const fee = BigInt(RESERVE) / 10n;
+    assert.equal(
+      (await balance(platformTokens)) - platformBefore,
+      fee,
+      "подарок не должен менять комиссию: делится ставка, а не остаток счёта",
+    );
+    assert.equal(
+      (await balance(sellerTokens)) - sellerBefore,
+      BigInt(RESERVE) - fee + 1n,
+      "лишнее обязано уйти продавцу вместе с выручкой",
+    );
+    assert.isNull(await connection.getAccountInfo(vault), "хранилище не закрылось");
+  });
+
+  it("монета, присланная в хранилище мимо торга, не запирает закрытие", async () => {
+    // Та же дешёвая помеха с другой стороны: места без ставок тоже надо
+    // закрывать, и подарок не должен оставлять аккаунты висеть навсегда.
+    const { lot, vault } = await openLot(3);
+    await transfer(connection, bob, bobTokens, vault, bob, 1);
+    await sleep(4500);
+
+    const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
+    const sellerBefore = await balance(sellerTokens);
+
+    await program.methods
+      .sellerClosesLot()
+      .accountsPartial({
+        crank: seller.publicKey,
+        sale: (await program.account.lot.fetch(lot)).sale,
+        lot,
+        seller: seller.publicKey,
+        lastBidder: seller.publicKey,
+        mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([seller])
+      .rpc();
+
+    assert.equal(
+      (await balance(sellerTokens)) - sellerBefore,
+      1n,
+      "лишнее обязано уйти продавцу",
+    );
+    assert.isNull(await connection.getAccountInfo(vault), "хранилище не закрылось");
+    assert.isNull(await connection.getAccountInfo(lot), "лот не закрылся");
+  });
+
+  it("выплату зовёт кто угодно, но комиссия идёт только тому, кто записан в лоте", async () => {
+    // Срок с запасом по той же причине, что и выше: три транзакции до ставки в
+    // две секунды не всегда укладываются, и тест падал не по делу.
+    const { lot } = await openLot(5);
+    await bid(lot, alice, RESERVE);
+    await sleep(6500);
 
     // Боб не продавец и не площадка. Позвать выплату он вправе - иначе она
     // зависела бы от того, откроет ли кто-то вкладку. А вот подставить себя
