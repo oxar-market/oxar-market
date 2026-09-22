@@ -4,9 +4,12 @@ use anchor_spl::token_interface::{
     TransferChecked,
 };
 
-use crate::{error::EscrowError, state::Lot};
+use crate::{
+    error::EscrowError,
+    state::{Lot, Sale},
+};
 
-/// Торг кончился с победителем: деньги выходят из хранилища.
+/// Место ушло с торгов с победителем: деньги выходят из хранилища.
 ///
 /// Победителю платить нечего - он заплатил, когда поставил, и его сумма всё это
 /// время лежала в хранилище. Здесь она только делится: комиссия площадке,
@@ -15,21 +18,30 @@ use crate::{error::EscrowError, state::Lot};
 ///
 /// Зовёт кто угодно, и подписи ни от кого не требуется. Это не щедрость, а
 /// единственный способ не поставить выплату в зависимость от того, откроет ли
-/// победитель вкладку. Безопасно это ровно потому, что адреса получателей взяты
-/// из самого лота: тот, кто зовёт, не может увести деньги ни себе, ни кому-то
-/// третьему, а вызвать дважды нельзя - лот закрывается в этой же транзакции.
+/// победитель вкладку. Безопасно это ровно потому, что адреса получателей и
+/// размер комиссии взяты из торга: тот, кто зовёт, не может увести деньги ни
+/// себе, ни кому-то третьему, а вызвать дважды нельзя - лот закрывается в этой
+/// же транзакции.
 #[derive(Accounts)]
 pub struct LotPaysSeller<'info> {
     /// Кто двигает торг дальше. Платит только за транзакцию.
     pub crank: Signer<'info>,
+
+    /// Торг вещи: из него срок, комиссия, продавец и получатель комиссии.
+    #[account(
+        seeds = [b"sale", sale.sale.as_ref()],
+        bump = sale.bump,
+        has_one = seller,
+        has_one = platform,
+    )]
+    pub sale: Account<'info, Sale>,
 
     #[account(
         mut,
         seeds = [b"lot", lot.auction.as_ref()],
         bump = lot.bump,
         has_one = mint,
-        has_one = seller,
-        has_one = platform,
+        has_one = sale,
         close = seller,
     )]
     pub lot: Account<'info, Lot>,
@@ -42,7 +54,7 @@ pub struct LotPaysSeller<'info> {
     pub vault: InterfaceAccount<'info, TokenAccount>,
 
     /// CHECK: получает выручку и аренду за аккаунты торга. Сверяется с
-    /// `lot.seller` через `has_one`.
+    /// `sale.seller` через `has_one`.
     #[account(mut)]
     pub seller: UncheckedAccount<'info>,
 
@@ -54,7 +66,7 @@ pub struct LotPaysSeller<'info> {
     )]
     pub seller_tokens: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: получатель комиссии. Сверяется с `lot.platform` через `has_one`,
+    /// CHECK: получатель комиссии. Сверяется с `sale.platform` через `has_one`,
     /// а тот записан при открытии торга и с тех пор не менялся.
     pub platform: UncheckedAccount<'info>,
 
@@ -76,14 +88,15 @@ pub fn pay_seller(ctx: Context<LotPaysSeller>) -> Result<()> {
     let lot = &ctx.accounts.lot;
 
     // Пока принимают ставки, в хранилище лежит чужое: текущий лидер может быть
-    // перебит, и его деньги должны вернуться ему, а не уйти продавцу.
-    require!(!lot.is_open(now), EscrowError::LotStillOpen);
+    // перебит, и его деньги должны вернуться ему, а не уйти продавцу. Срок
+    // общий на вещь - значит и это правило одно на все её места.
+    require!(!ctx.accounts.sale.is_open(now), EscrowError::LotStillOpen);
     require!(lot.has_winner(), EscrowError::NoWinner);
 
     // Делим ровно высшую ставку, а не то, что лежит в хранилище. Числа обязаны
     // совпадать, но истина здесь - запись торга: лишнее, если его кто-то
     // прислал на счёт хранилища подарком, не должно менять расчёт.
-    let (fee, to_seller) = lot.split(lot.top_bid)?;
+    let (fee, to_seller) = lot.split(lot.top_bid, ctx.accounts.sale.fee_bps)?;
 
     let auction = lot.auction;
     let bump = [lot.bump];

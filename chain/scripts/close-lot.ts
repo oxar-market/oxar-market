@@ -21,7 +21,7 @@ import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, getMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { fetchLot } from "./lot";
+import { fetchLot, fetchSale } from "./lot";
 
 /** Та же сеть, что у открытия лота: девнет, пока не сказано иное. */
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
@@ -83,6 +83,8 @@ async function main() {
   );
 
   const lot = await fetchLot(program, lotPda);
+  // Продавец и срок - в торге вещи, общие на все места.
+  const sale = await fetchSale(program, lot.sale);
   const topBid = BigInt(lot.topBid.toString());
   const reserve = BigInt(lot.reserve.toString());
 
@@ -96,14 +98,15 @@ async function main() {
   // Участника может не быть вовсе, а аккаунт в инструкции обязателен. Тогда
   // ставим продавца: его счёт заведомо существует, а возврата программа не
   // делает - возвращать нечего.
-  const lastBidder = (lot.topBidder as PublicKey | null) ?? lot.seller;
+  const lastBidder = (lot.topBidder as PublicKey | null) ?? sale.seller;
 
   const signature = await program.methods
     .sellerClosesLot()
     .accounts({
       crank: crank.publicKey,
+      sale: lot.sale,
       lot: lotPda,
-      seller: lot.seller,
+      seller: sale.seller,
       lastBidder,
       mint: lot.mint,
       tokenProgram: TOKEN_PROGRAM_ID,
@@ -125,7 +128,7 @@ async function main() {
   } else {
     console.log(`  ставок    не было, возвращать нечего`);
   }
-  console.log(`  аренда    → ${lot.seller.toBase58()}`);
+  console.log(`  аренда    → ${sale.seller.toBase58()}`);
   console.log(`  подпись   ${signature}\n`);
 }
 

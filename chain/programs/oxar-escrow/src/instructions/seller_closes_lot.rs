@@ -4,9 +4,12 @@ use anchor_spl::token_interface::{
     TransferChecked,
 };
 
-use crate::{error::EscrowError, state::Lot};
+use crate::{
+    error::EscrowError,
+    state::{Lot, Sale},
+};
 
-/// Торг кончился ничем: ставок не было или все они ниже резерва.
+/// Место кончилось ничем: ставок не было или все они ниже резерва.
 ///
 /// Единственная ставка ниже резерва всё равно обеспечена и лежит в хранилище,
 /// поэтому её надо вернуть, а не просто закрыть аккаунты. Иначе деньги
@@ -18,12 +21,20 @@ use crate::{error::EscrowError, state::Lot};
 pub struct SellerClosesLot<'info> {
     pub crank: Signer<'info>,
 
+    /// Торг вещи: из него срок и продавец.
+    #[account(
+        seeds = [b"sale", sale.sale.as_ref()],
+        bump = sale.bump,
+        has_one = seller,
+    )]
+    pub sale: Account<'info, Sale>,
+
     #[account(
         mut,
         seeds = [b"lot", lot.auction.as_ref()],
         bump = lot.bump,
         has_one = mint,
-        has_one = seller,
+        has_one = sale,
         close = seller,
     )]
     pub lot: Account<'info, Lot>,
@@ -35,7 +46,8 @@ pub struct SellerClosesLot<'info> {
     )]
     pub vault: InterfaceAccount<'info, TokenAccount>,
 
-    /// CHECK: получает обратно аренду за аккаунты торга.
+    /// CHECK: получает обратно аренду за аккаунты торга. Сверяется с
+    /// `sale.seller` через `has_one`.
     #[account(mut)]
     pub seller: UncheckedAccount<'info>,
 
@@ -59,9 +71,10 @@ pub fn close_lot(ctx: Context<SellerClosesLot>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let lot = &ctx.accounts.lot;
 
-    require!(!lot.is_open(now), EscrowError::LotStillOpen);
-    // Состоявшийся торг закрывается только превращением в сделку. Иначе этой
-    // инструкцией можно было бы отобрать у победителя уже выигранное место.
+    // Срок общий на вещь: место нельзя закрыть, пока идёт торг футболки.
+    require!(!ctx.accounts.sale.is_open(now), EscrowError::LotStillOpen);
+    // Состоявшееся место закрывается только выплатой. Иначе этой инструкцией
+    // можно было бы отобрать у победителя уже выигранное место.
     require!(!lot.has_winner(), EscrowError::LotHasWinner);
 
     let auction = lot.auction;

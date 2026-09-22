@@ -22,7 +22,7 @@ import {
 } from "@solana/spl-token";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { fetchLot } from "./lot";
+import { fetchLot, fetchSale } from "./lot";
 
 /** Та же сеть, что у открытия лота: девнет, пока не сказано иное. */
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
@@ -86,16 +86,20 @@ async function main() {
   // Кому и сколько - спрашиваем у цепочки, а не у базы. База может отстать или
   // разойтись, а платим мы по тому, что записано в лоте.
   const lot = await fetchLot(program, lotPda);
-  const fee = (BigInt(lot.topBid.toString()) * BigInt(lot.feeBps)) / 10_000n;
+  // Комиссия, продавец и получатель комиссии - в торге вещи: они общие на все
+  // её места, и выплата берёт их оттуда, а не из лота.
+  const sale = await fetchSale(program, lot.sale);
+  const fee = (BigInt(lot.topBid.toString()) * BigInt(sale.feeBps)) / 10_000n;
   const toSeller = BigInt(lot.topBid.toString()) - fee;
 
   const signature = await program.methods
     .lotPaysSeller()
     .accounts({
       crank: crank.publicKey,
+      sale: lot.sale,
       lot: lotPda,
-      seller: lot.seller,
-      platform: lot.platform,
+      seller: sale.seller,
+      platform: sale.platform,
       mint: lot.mint,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
@@ -113,9 +117,9 @@ async function main() {
     (Number(units) / Math.pow(10, decimals)).toFixed(2);
   console.log(`\n  лот       ${id}`);
   console.log(`  в цепи    ${lotPda.toBase58()}`);
-  console.log(`  продавцу  $${money(toSeller)} → ${lot.seller.toBase58()}`);
-  console.log(`  комиссия  $${money(fee)} → ${lot.platform.toBase58()}`);
-  console.log(`  счёт      ${getAssociatedTokenAddressSync(lot.mint, lot.seller).toBase58()}`);
+  console.log(`  продавцу  $${money(toSeller)} → ${sale.seller.toBase58()}`);
+  console.log(`  комиссия  $${money(fee)} → ${sale.platform.toBase58()}`);
+  console.log(`  счёт      ${getAssociatedTokenAddressSync(lot.mint, sale.seller).toBase58()}`);
   console.log(`  подпись   ${signature}\n`);
 }
 

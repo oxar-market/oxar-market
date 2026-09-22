@@ -65,6 +65,9 @@ async function main() {
     .bidderPlacesBid(new anchor.BN(amount.toString()))
     .accounts({
       bidder: bidder.publicKey,
+      // Торг вещи двигается этой же транзакцией: ставка под конец продлевает
+      // срок всем местам футболки разом.
+      sale: lot.sale,
       lot: lotPda,
       previousBidder: previous,
       mint: lot.mint,

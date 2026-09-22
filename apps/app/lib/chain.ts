@@ -84,14 +84,24 @@ export const SOLANA_WS_URL =
 export const connection = new Connection(SOLANA_RPC_URL, "confirmed");
 
 export type ChainLot = {
+  /** Торг вещи, которому место принадлежит. Срок живёт там, а не здесь. */
+  sale: PublicKey;
   mint: PublicKey;
   /** Кто сейчас ведёт. Его счёт обязан стоять в следующей ставке. */
   topBidder: PublicKey | null;
   topBid: bigint;
   reserve: bigint;
   minStep: bigint;
-  /** Момент закрытия, секунды epoch. */
+};
+
+/** Торг вещи целиком: срок один на все её места. */
+export type ChainSale = {
+  seller: PublicKey;
+  platform: PublicKey;
+  /** Момент закрытия всей вещи, секунды epoch. */
   closesAt: number;
+  extendSeconds: number;
+  feeBps: number;
 };
 
 /** uuid лота в шестнадцать байт: ровно то, что программа кладёт в сиды. */
@@ -110,18 +120,32 @@ export function lotAddress(lotId: string): PublicKey {
   )[0];
 }
 
+/** Адрес торга вещи по его uuid из базы. */
+export function saleAddress(saleId: string): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [new TextEncoder().encode("sale"), auctionBytes(saleId)],
+    PROGRAM_ID,
+  )[0];
+}
+
 /**
- * Прочитать лот из аккаунта.
+ * Прочитать место из аккаунта.
  *
  * Разбор идёт подряд, а не по готовым сдвигам, и это не лень: `top_bidder` -
  * это `Option<Pubkey>`, и borsh пишет его байтом-признаком плюс тридцатью
  * двумя байтами только когда лидер есть. Значит всё, что лежит дальше,
  * съезжает на эти тридцать два байта, стоит появиться первой ставке.
+ *
+ * Срока здесь нет: он общий на вещь и лежит в торге. Его читает `decodeSale`.
  */
 export function decodeLot(data: Uint8Array): ChainLot {
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  // Восемь байт дискриминатора аккаунта и тридцать два - продавец.
-  let at = 8 + 32;
+  // Восемь байт дискриминатора аккаунта, дальше сразу торг: продавец переехал
+  // в него, у места его больше нет.
+  let at = 8;
+
+  const sale = new PublicKey(data.slice(at, at + 32));
+  at += 32;
 
   const mint = new PublicKey(data.slice(at, at + 32));
   at += 32;
@@ -134,9 +158,26 @@ export function decodeLot(data: Uint8Array): ChainLot {
   const topBid = view.getBigUint64(at, true);
   const reserve = view.getBigUint64(at + 8, true);
   const minStep = view.getBigUint64(at + 16, true);
-  const closesAt = Number(view.getBigInt64(at + 24, true));
 
-  return { mint, topBidder, topBid, reserve, minStep, closesAt };
+  return { sale, mint, topBidder, topBid, reserve, minStep };
+}
+
+/** Прочитать торг вещи: срок, продление и комиссия - общие на все места. */
+export function decodeSale(data: Uint8Array): ChainSale {
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  // Дискриминатор и шестнадцать байт uuid торга.
+  let at = 8 + 16;
+
+  const seller = new PublicKey(data.slice(at, at + 32));
+  at += 32;
+  const platform = new PublicKey(data.slice(at, at + 32));
+  at += 32;
+
+  const closesAt = Number(view.getBigInt64(at, true));
+  const extendSeconds = Number(view.getBigInt64(at + 8, true));
+  const feeBps = view.getUint16(at + 16, true);
+
+  return { seller, platform, closesAt, extendSeconds, feeBps };
 }
 
 export async function readLot(lotId: string): Promise<ChainLot | null> {
@@ -144,6 +185,18 @@ export async function readLot(lotId: string): Promise<ChainLot | null> {
   // Лота в цепочке может не быть: строка заводится раньше него. Такой торг
   // ещё не принимает ставок, и это не сбой.
   return account ? decodeLot(account.data) : null;
+}
+
+/**
+ * Прочитать торг вещи по адресу из места.
+ *
+ * Срок торга спрашиваем у цепочки, а не у базы: там он общий на все места и
+ * двигается ставкой под конец. База его повторяет для показа, но решает
+ * программа.
+ */
+export async function readSale(sale: PublicKey): Promise<ChainSale | null> {
+  const account = await connection.getAccountInfo(sale);
+  return account ? decodeSale(account.data) : null;
 }
 
 /**
@@ -227,6 +280,9 @@ export async function bidTransaction(
     data: Buffer.from(data),
     keys: [
       { pubkey: bidder, isSigner: true, isWritable: true },
+      // Торг вещи меняется этой же транзакцией: ставка под конец двигает его
+      // срок, и двигает сразу всем местам футболки.
+      { pubkey: lot.sale, isSigner: false, isWritable: true },
       { pubkey: lotKey, isSigner: false, isWritable: true },
       { pubkey: vault, isSigner: false, isWritable: true },
       { pubkey: ata(lot.mint, bidder), isSigner: false, isWritable: true },

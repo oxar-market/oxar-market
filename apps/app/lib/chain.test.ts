@@ -3,29 +3,39 @@ import assert from "node:assert/strict";
 import {
   auctionBytes,
   decodeLot,
+  decodeSale,
   lotAddress,
   minNextCents,
   minNextUnits,
+  saleAddress,
 } from "./chain.ts";
 
 /**
- * Разбор лота проверяется на настоящих байтах из сети, а не на выдуманных.
+ * Разбор места и торга проверяется на байтах, собранных самим Anchor, а не на
+ * выдуманных.
  *
  * Смысл в том, что сериализует их Anchor, а читаем мы руками, и разойтись эти
  * двое могут молча: сдвиг на байт даст не ошибку, а другое число - ставку
- * примут не ту. Поэтому образцы сняты с девнета (`getAccountInfo`), и если
- * поля в программе переставят, тест на этих байтах упадёт.
+ * примут не ту. Поэтому образцы сняты его же кодировщиком по нынешнему IDL, и
+ * если поля в программе переставят, тест на этих байтах упадёт.
  */
 
-/** Лот 30ae7a23-…, монета GJ59d2…, резерв $50, шаг $1, ставок ещё нет. */
-const FRESH =
-  "AsZdmc0fZfzb6DqBso455tvIe0dwo6yVSHjxbnks5jXzVYZI6CiabuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AAAAAAAAAAAAgPD6AgAAAABAQg8AAAAAAJ4NuWoAAAAALAEAAAAAAAAwrnojztRKOYwilAUZPZP7AAD/+wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+/** Торг вещи 7c9e6679-…: закрытие, продление пять минут, комиссия 10%. */
+const SALE =
+  "ykDoq7KsIrd8nmZ5dCVA3pRL4H/B+Qrn2+g6gbKOOebbyHtHcKOslUh48W55LOY181WGSOgomm7sQgylrMNfGxQfmBaZ1ExdzDExfyAxMu9joVoejd6MVZ4NuWoAAAAALAEAAAAAAADoA/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
 
-/** Тот же лот после двух ставок: ведёт GuFdc1…, в хранилище $60. */
+/** Место 30ae7a23-… этого торга: монета GJ59d2…, резерв $50, шаг $1, ставок нет. */
+const FRESH =
+  "AsZdmc0fZfzQwEebu9RACX85mcvFRylQ4+5HqQOBL+z97BMu1JdXAuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AAAAAAAAAAAAgPD6AgAAAABAQg8AAAAAADCueiPO1Eo5jCKUBRk9k/v+/QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+/** То же место после ставок: ведёт GuFdc1…, в хранилище $60. */
 const LED =
-  "AsZdmc0fZfzb6DqBso455tvIe0dwo6yVSHjxbnks5jXzVYZI6CiabuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AexCDKWsw18bFB+YFpnUTF3MMTF/IDEy72OhWh6N3oxVAIeTAwAAAACA8PoCAAAAAEBCDwAAAAAAng25agAAAAAsAQAAAAAAADCueiPO1Eo5jCKUBRk9k/sAAP/7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+  "AsZdmc0fZfzQwEebu9RACX85mcvFRylQ4+5HqQOBL+z97BMu1JdXAuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AexCDKWsw18bFB+YFpnUTF3MMTF/IDEy72OhWh6N3oxVAIeTAwAAAACA8PoCAAAAAEBCDwAAAAAAMK56I87USjmMIpQFGT2T+/79AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 const LOT_ID = "30ae7a23-ced4-4a39-8c22-9405193d93fb";
+const SALE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+/** Адрес торга, из которого собраны образцы. */
+const SALE_PDA = "F3srYqux4nFpNjpztKe1u3a7ZjPomVcbU77GkcceygwT";
 
 const bytes = (base64: string) => Uint8Array.from(Buffer.from(base64, "base64"));
 
@@ -45,23 +55,46 @@ test("адрес лота выводится из его uuid", () => {
   );
 });
 
-test("лот без ставок читается целиком", () => {
+test("адрес торга выводится из его uuid", () => {
+  assert.equal(saleAddress(SALE_ID).toBase58(), SALE_PDA);
+});
+
+test("торг вещи читается целиком: срок, продление, комиссия", () => {
+  const sale = decodeSale(bytes(SALE));
+
+  assert.equal(
+    sale.seller.toBase58(),
+    "FoRfraJasYqFp2gRniUQyUfJUUenGhYH211n9nk3jwv5",
+  );
+  assert.equal(
+    sale.platform.toBase58(),
+    "GuFdc1tbdad5GS1X4csNz9kY4ua4AWUqeHTS4WUFArM2",
+  );
+  assert.equal(sale.closesAt, 1_790_512_542);
+  assert.equal(sale.extendSeconds, 300);
+  assert.equal(sale.feeBps, 1000);
+});
+
+test("место без ставок читается целиком", () => {
   const lot = decodeLot(bytes(FRESH));
 
+  // Срок у места не спрашиваем: он общий на вещь и лежит в торге, на который
+  // место ссылается.
+  assert.equal(lot.sale.toBase58(), SALE_PDA);
   assert.equal(lot.mint.toBase58(), "GJ59d2FbyuQoQpTg9Z6xevtTmVzzZpFNC1SqS8CgFf5y");
   assert.equal(lot.topBidder, null);
   assert.equal(lot.topBid, 0n);
   assert.equal(lot.reserve, 50_000_000n);
   assert.equal(lot.minStep, 1_000_000n);
-  assert.equal(lot.closesAt, 1_790_512_542);
 });
 
-test("лот со ставкой читается со сдвигом на лидера", () => {
+test("место со ставкой читается со сдвигом на лидера", () => {
   // Ровно тот случай, ради которого разбор идёт подряд: появился Some, и всё,
   // что за ним, уехало на тридцать два байта. Резерв и шаг обязаны остаться
   // прежними - их никто не менял.
   const lot = decodeLot(bytes(LED));
 
+  assert.equal(lot.sale.toBase58(), SALE_PDA);
   assert.equal(
     lot.topBidder?.toBase58(),
     "GuFdc1tbdad5GS1X4csNz9kY4ua4AWUqeHTS4WUFArM2",
@@ -69,7 +102,6 @@ test("лот со ставкой читается со сдвигом на ли�
   assert.equal(lot.topBid, 60_000_000n);
   assert.equal(lot.reserve, 50_000_000n);
   assert.equal(lot.minStep, 1_000_000n);
-  assert.equal(lot.closesAt, 1_790_512_542);
 });
 
 test("первая ставка равна резерву", () => {

@@ -4,7 +4,10 @@ use anchor_spl::{
     token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 
-use crate::{error::EscrowError, state::Lot};
+use crate::{
+    error::EscrowError,
+    state::{Lot, Sale},
+};
 
 /// Участник ставит, и деньги уходят из его кошелька сразу.
 ///
@@ -15,16 +18,30 @@ use crate::{error::EscrowError, state::Lot};
 /// Той же транзакцией прежнему лидеру возвращается его сумма. Не «придёт и
 /// заберёт», а прямо сейчас: схема «забери потом» оставляет забытые деньги
 /// навсегда и заставляет проигравшего возвращаться.
+///
+/// Ставка двигает конец всей вещи, а не одного места. Торг идёт за футболку
+/// целиком: перебил кто-то грудь в последнюю секунду - время добавляется всем
+/// местам, иначе на остальных можно было бы выиграть по таймеру, пока внимание
+/// приковано к одному.
 #[derive(Accounts)]
 pub struct BidderPlacesBid<'info> {
     #[account(mut)]
     pub bidder: Signer<'info>,
+
+    /// Торг вещи. Меняется: ставка под конец двигает его срок.
+    #[account(
+        mut,
+        seeds = [b"sale", sale.sale.as_ref()],
+        bump = sale.bump,
+    )]
+    pub sale: Account<'info, Sale>,
 
     #[account(
         mut,
         seeds = [b"lot", lot.auction.as_ref()],
         bump = lot.bump,
         has_one = mint,
+        has_one = sale,
     )]
     pub lot: Account<'info, Lot>,
 
@@ -75,7 +92,8 @@ pub fn place_bid(ctx: Context<BidderPlacesBid>, amount: u64) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let lot = &ctx.accounts.lot;
 
-    require!(lot.is_open(now), EscrowError::LotClosed);
+    // Срок общий: место закрывается вместе со всей вещью, своего у него нет.
+    require!(ctx.accounts.sale.is_open(now), EscrowError::LotClosed);
     require!(amount >= lot.min_next_bid()?, EscrowError::BidTooLow);
 
     // Сначала забираем новую ставку, потом возвращаем прежнюю. Порядок важен:
@@ -122,8 +140,11 @@ pub fn place_bid(ctx: Context<BidderPlacesBid>, amount: u64) -> Result<()> {
         )?;
     }
 
+    // Срок двигаем у торга, а не у места: продлевается вся футболка разом.
+    let sale = &mut ctx.accounts.sale;
+    sale.closes_at = sale.extended(now);
+
     let lot = &mut ctx.accounts.lot;
-    lot.closes_at = lot.extended(now);
     lot.top_bidder = Some(ctx.accounts.bidder.key());
     lot.top_bid = amount;
 
