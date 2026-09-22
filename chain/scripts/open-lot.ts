@@ -38,8 +38,6 @@ const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 const THING_SLUG = "superteam-ua-tee";
 /** Наименьшая прибавка к ставке. Те же центы лежат в базе у лота. */
 const MIN_STEP_CENTS = 100;
-/** На сколько ставка под конец двигает закрытие. */
-const EXTEND_SECONDS = 300;
 
 function arg(name: string): string | undefined {
   const found = process.argv.find((one) => one.startsWith(`--${name}=`));
@@ -124,11 +122,14 @@ async function main() {
   );
   const saleAccount = await connection.getAccountInfo(salePda);
   if (!saleAccount) throw new Error(`торга ${saleId} нет в цепочке - сперва open-sale.ts`);
-  // Срок торга читаем из него же: в базе он повторяется для показа, а решает
-  // программа. Смещение - дискриминатор, uuid, продавец, площадка.
+  // Срок и продление читаем из него же: в базе они повторяются для показа, а
+  // решает программа. Своих чисел здесь нет намеренно - разойдись они с торгом,
+  // база считала бы торг закрытым, пока цепочка ещё принимает ставки.
+  // Смещение - дискриминатор, uuid, продавец, площадка.
   const closesAt = new Date(
     Number(saleAccount.data.readBigInt64LE(8 + 16 + 32 + 32)) * 1000,
   );
+  const extendSeconds = Number(saleAccount.data.readBigInt64LE(8 + 16 + 32 + 32 + 8));
 
   const mint = new PublicKey(mintArg);
   const { decimals } = await getMint(connection, mint);
@@ -154,7 +155,7 @@ async function main() {
       reserve_cents: reserveCents,
       min_step_cents: MIN_STEP_CENTS,
       closes_at: closesAt.toISOString(),
-      extend_seconds: EXTEND_SECONDS,
+      extend_seconds: extendSeconds,
     }),
   });
 
@@ -194,7 +195,7 @@ async function main() {
   console.log(`  в цепи   ${lotPda.toBase58()}`);
   console.log(`  монета   ${mint.toBase58()} (${decimals} знаков)`);
   console.log(`  резерв   $${(reserveCents / 100).toFixed(2)}, шаг $${MIN_STEP_CENTS / 100}`);
-  console.log(`  до       ${closesAt.toISOString()} (срок торга вещи)`);
+  console.log(`  до       ${closesAt.toISOString()} (срок торга вещи, продление ${extendSeconds} с)`);
   console.log(`  подпись  ${signature}\n`);
 }
 
