@@ -54,6 +54,10 @@ describe("oxar-escrow: торг", () => {
       program.programId,
     )[0];
 
+  /** Настройки площадки. Сиды постоянные - аккаунт один на всю программу. */
+  const configPda = () =>
+    PublicKey.findProgramAddressSync([Buffer.from("config")], program.programId)[0];
+
   const salePda = (id: number[]) =>
     PublicKey.findProgramAddressSync(
       [Buffer.from("sale"), Buffer.from(id)],
@@ -91,16 +95,8 @@ describe("oxar-escrow: торг", () => {
     const closesAt = (await now()) + closesInSeconds;
 
     await program.methods
-      .sellerOpensSale(
-        saleId,
-        new anchor.BN(closesAt),
-        new anchor.BN(extendSeconds),
-        FEE_BPS,
-      )
-      .accounts({
-        seller: seller.publicKey,
-        platform: platform.publicKey,
-      })
+      .sellerOpensSale(saleId, new anchor.BN(closesAt), new anchor.BN(extendSeconds))
+      .accounts({ seller: seller.publicKey })
       .signers([seller])
       .rpc();
 
@@ -177,6 +173,49 @@ describe("oxar-escrow: торг", () => {
 
     await mintTo(connection, alice, mint, aliceTokens, alice, 1_000_000_000_000);
     await mintTo(connection, alice, mint, bobTokens, alice, 1_000_000_000_000);
+
+    // Условия площадки заводятся один раз за выкатом программы. Админом
+    // становится подписавший первый вызов - здесь это кошелёк провайдера.
+    await program.methods
+      .adminSetsTerms(FEE_BPS)
+      .accounts({ platform: platform.publicKey })
+      .rpc();
+  });
+
+  it("чужой не перепишет комиссию на себя", async () => {
+    // Ровно то, ради чего настройки и заведены: Боб не админ, и его попытка
+    // назначить получателем себя обязана отбиться. Иначе продавец, открывая
+    // аукцион, ставил бы себе ноль процентов.
+    try {
+      await program.methods
+        .adminSetsTerms(0)
+        .accounts({ admin: bob.publicKey, platform: bob.publicKey })
+        .signers([bob])
+        .rpc();
+      assert.fail("чужой переписал условия площадки");
+    } catch (error) {
+      assert.include(String(error), "NotTheAdmin");
+    }
+
+    const config = await program.account.config.fetch(configPda());
+    assert.equal(config.feeBps, FEE_BPS, "комиссия уехала");
+    assert.equal(
+      config.platform.toBase58(),
+      platform.publicKey.toBase58(),
+      "получатель комиссии уехал",
+    );
+  });
+
+  it("торг берёт комиссию из настроек, а не от того, кто его открыл", async () => {
+    const { sale } = await openSale(60);
+    const state = await program.account.sale.fetch(sale);
+
+    assert.equal(state.feeBps, FEE_BPS, "торг взял чужую комиссию");
+    assert.equal(
+      state.platform.toBase58(),
+      platform.publicKey.toBase58(),
+      "торг взял чужого получателя",
+    );
   });
 
   it("ставка ниже резерва не принимается", async () => {
