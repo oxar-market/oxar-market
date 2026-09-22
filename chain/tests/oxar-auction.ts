@@ -59,6 +59,13 @@ describe("oxar-escrow: торг", () => {
   const configPda = () =>
     PublicKey.findProgramAddressSync([Buffer.from("config")], program.programId)[0];
 
+  /** Служебный аккаунт программы: в нём лежит право на её обновление. */
+  const programData = () =>
+    PublicKey.findProgramAddressSync(
+      [program.programId.toBuffer()],
+      new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111"),
+    )[0];
+
   const salePda = (id: number[]) =>
     PublicKey.findProgramAddressSync(
       [Buffer.from("sale"), Buffer.from(id)],
@@ -176,10 +183,12 @@ describe("oxar-escrow: торг", () => {
     await mintTo(connection, alice, mint, bobTokens, alice, 1_000_000_000_000);
 
     // Условия площадки заводятся один раз за выкатом программы. Админом
-    // становится подписавший первый вызов - здесь это кошелёк провайдера.
+    // становится владелец программы - тот, у кого право на её обновление.
+    // Здесь права нет ни у кого: валидатор поднимает программу сразу
+    // замороженной, и эту ветку прогон не покрывает.
     await program.methods
       .adminSetsTerms(FEE_BPS)
-      .accounts({ platform: platform.publicKey, mint })
+      .accounts({ platform: platform.publicKey, mint, programData: programData() })
       .rpc();
   });
 
@@ -190,7 +199,12 @@ describe("oxar-escrow: торг", () => {
     try {
       await program.methods
         .adminSetsTerms(0)
-        .accounts({ admin: bob.publicKey, platform: bob.publicKey, mint })
+        .accounts({
+          admin: bob.publicKey,
+          platform: bob.publicKey,
+          mint,
+          programData: programData(),
+        })
         .signers([bob])
         .rpc();
       assert.fail("чужой переписал условия площадки");
