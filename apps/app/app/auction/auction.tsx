@@ -118,11 +118,22 @@ export function Auction() {
   // До открытия вещь показывается голограммой, и выбора тут нет: смотреть
   // нечего, торг ещё не начался. В назначенную минуту голограмма сама
   // сменяется сценой - дождавшийся не должен ещё и искать, куда нажать.
+  //
+  // Дальше человек волен вернуться на голограмму сам, и уводить его оттуда
+  // мы больше не будем: места на ней теперь есть, и торговаться из неё можно
+  // так же, как с ткани. Поэтому переключение срабатывает один раз - на самом
+  // переходе от «ещё не начался» к «идёт».
+  const wasStarted = useRef(started);
   useEffect(() => {
     // Пока лоты не доехали, про торг ничего не известно - остаёмся на
     // голограмме.
     if (lots.length === 0) return;
-    setLook((was) => (started ? (was === "ghost" ? "live" : was) : "ghost"));
+    if (!started) {
+      setLook("ghost");
+    } else if (!wasStarted.current) {
+      setLook((was) => (was === "ghost" ? "live" : was));
+    }
+    wasStarted.current = started;
   }, [started, lots.length]);
 
   // Лоты доехали, человек ещё ничего не выбирал - встаём на первое место с
@@ -226,7 +237,11 @@ export function Auction() {
   // поэтому переключение мгновенное и вещь не перезагружается.
   useEffect(() => {
     stage.current?.look(look === "ghost" ? "ghost" : "cloth");
-  }, [look, sceneReady]);
+    // Места показываются по тому, начался ли торг, а не по тому, чем показана
+    // вещь: на голограмме идущего торга выбирать место надо так же, как на
+    // ткани. До открытия их нет ни в одном режиме.
+    stage.current?.spots(started);
+  }, [look, sceneReady, started]);
 
   // Смена места закрывает историю: она про то место, с которого ушли.
   useEffect(() => setRewound(null), [picked]);
@@ -376,8 +391,8 @@ export function Auction() {
         {/* Слева от вещи - ставки выбранного места, верхняя первой: она и есть
             текущая цена. На телефоне дуг нет, там их заменяет список ниже. */}
         <div
-          className={look === "ghost" ? "arc left away" : "arc left"}
-          aria-hidden={look === "ghost" || bids.length === 0}
+          className={started ? "arc left" : "arc left away"}
+          aria-hidden={!started || bids.length === 0}
         >
           {bids.slice(0, 4).map((bid, index) => (
             <Row key={bid.id} bid={bid} lead={index === 0} />
@@ -388,7 +403,7 @@ export function Auction() {
             нечего, и список, который ни на что не показывает, только врёт. Выбранное подсвечено, в кружке - первая
             буква имени того, чьё лого сейчас держит место. */}
         <div
-          className={look === "ghost" ? "arc right away" : "arc right"}
+          className={started ? "arc right" : "arc right away"}
           role="group"
           aria-label="Ad spots"
         >
@@ -528,7 +543,7 @@ export function Auction() {
 
           На голограмме шага нет: примерять некуда, пока мест не показывают.
           Пока это только превью - видит его один человек, тот, кто примеряет. */}
-      <div className={look === "ghost" ? "tryon away" : "tryon"}>
+      <div className={started ? "tryon" : "tryon away"}>
         <label className={art[picked] ? "art-step done" : "art-step"}>
           <input
             type="file"
@@ -595,7 +610,7 @@ export function Auction() {
       {/* Ставка - про выбранное место, и только пока его торг идёт. У места без
           торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
           На голограмме её тоже нет: торг там ещё не начался. */}
-      {lot && running && look !== "ghost" && (
+      {lot && running && (
         <BidForm lot={lot} need={need} art={art[picked]} onPlaced={refresh} />
       )}
 
