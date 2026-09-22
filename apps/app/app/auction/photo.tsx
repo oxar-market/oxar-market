@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { fitInside } from "./fit.ts";
 import { quadTransform, type Corners } from "./quad.ts";
 import { SPOTS } from "./spots.ts";
 
@@ -53,6 +54,29 @@ export function PhotoView({
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState({ side: 0, left: 0, top: 0 });
+  // Пропорции каждой картинки: ширина к высоте. Нужны, чтобы вписать логотип в
+  // место с полями, а не растянуть его на всю площадь - как это делает сцена.
+  const [ratio, setRatio] = useState<Record<string, number>>({});
+
+  // Пропорции узнаём загрузкой: у место известны его размеры, а у картинки -
+  // только когда браузер её прочитал. Пока не прочитана, логотип впишется по
+  // запасному аспекту и поправится, как только придут настоящие размеры.
+  useEffect(() => {
+    let live = true;
+    for (const [code, src] of Object.entries(art)) {
+      if (!src || ratio[code]) continue;
+      const image = new Image();
+      image.onload = () => {
+        if (live && image.naturalHeight > 0) {
+          setRatio((was) => ({ ...was, [code]: image.naturalWidth / image.naturalHeight }));
+        }
+      };
+      image.src = src;
+    }
+    return () => {
+      live = false;
+    };
+  }, [art, ratio]);
 
   /**
    * Куда именно легла картинка внутри рамки.
@@ -104,6 +128,23 @@ export function PhotoView({
           if (!matrix) return null;
 
           const image = art[spot.code];
+          // Куда лёг логотип внутри места: единичный квадрат накладки
+          // натягивается матрицей на трапецию места, поэтому по долям места он
+          // и есть [0..1]. Вписываем картинку в эти доли так же, как сцена
+          // вписывает её в декаль - с полями, сохраняя пропорции. Без аспекта
+          // (ещё не загрузился) занимаем место целиком.
+          const aspect = ratio[spot.code];
+          let place: React.CSSProperties = { width: "100%", height: "100%" };
+          if (image && aspect) {
+            const [wide, tall] = spot.size;
+            const laid = fitInside({ width: aspect, height: 1 }, { width: wide, height: tall });
+            place = {
+              left: `${(laid.x / wide) * 100}%`,
+              top: `${(laid.y / tall) * 100}%`,
+              width: `${(laid.width / wide) * 100}%`,
+              height: `${(laid.height / tall) * 100}%`,
+            };
+          }
           return (
             <button
               key={spot.code}
@@ -125,7 +166,7 @@ export function PhotoView({
               }}
             >
               {image ? (
-                <img src={image} alt="" draggable={false} />
+                <img src={image} alt="" draggable={false} style={place} />
               ) : (
                 drawFrames && <span>{spot.label}</span>
               )}
