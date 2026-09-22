@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     error::EscrowError,
-    state::{Config, Sale, MAX_EXTEND_SECONDS, MAX_SALE_SECONDS},
+    state::{Config, Sale, MAX_EXTEND_SECONDS, MAX_SALE_SECONDS, TOTAL_EXTEND_SECONDS},
 };
 
 /// Продавец открывает торг вещи.
@@ -75,9 +75,12 @@ pub fn open_sale(
     sale.platform = ctx.accounts.config.platform;
     sale.closes_at = closes_at;
     sale.extend_seconds = extend_seconds;
+    // Дальше этого ставки торг не утянут: заявленный конец плюс час на
+    // финальную перестрелку. Записывается при открытии и не меняется.
+    sale.hard_closes_at = closes_at.saturating_add(TOTAL_EXTEND_SECONDS);
     sale.fee_bps = ctx.accounts.config.fee_bps;
     sale.bump = ctx.bumps.sale;
-    sale.reserved = [0u8; 32];
+    sale.reserved = [0u8; 24];
 
     Ok(())
 }
