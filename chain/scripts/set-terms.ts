@@ -13,10 +13,14 @@
  *
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
- *     scripts/set-terms.ts --fee=1000 --platform=<адрес>
+ *     scripts/set-terms.ts --fee=1000 --platform=<адрес> --mint=<адрес USDC>
  *
  * Без --platform берётся NEXT_PUBLIC_OXAR_FEE_WALLET из .env.local.
  * Комиссия в сотых долях процента: 1000 - это 10%.
+ *
+ * Монета обязательна и по умолчанию не подставляется: у девнетного USDC и
+ * боевого разные адреса, и перепутать их значит открыть торги за ненастоящие
+ * деньги. Места в любой другой монете программа откажется открывать.
  *
  * Мейннет: SOLANA_RPC=https://api.mainnet-beta.solana.com перед командой.
  */
@@ -65,6 +69,10 @@ async function main() {
   if (!wallet) throw new Error("нужен --platform=<адрес> или ключ в .env.local");
   const platform = new PublicKey(wallet);
 
+  const coin = arg("mint");
+  if (!coin) throw new Error("нужен --mint=<адрес монеты торгов>");
+  const mint = new PublicKey(coin);
+
   const admin = Keypair.fromSecretKey(
     new Uint8Array(JSON.parse(readFileSync(`${homedir()}/.config/solana/id.json`, "utf8"))),
   );
@@ -91,6 +99,7 @@ async function main() {
     .accounts({
       admin: admin.publicKey,
       platform,
+      mint,
       systemProgram: SystemProgram.programId,
     })
     .rpc();
@@ -100,8 +109,10 @@ async function main() {
   console.log(`  админ     ${(before?.admin ?? admin.publicKey).toBase58()}`);
   if (before) {
     console.log(`  было      ${before.feeBps / 100}% → ${before.platform.toBase58()}`);
+    console.log(`  монета    ${before.mint.toBase58()}`);
   }
   console.log(`  стало     ${feeBps / 100}% → ${platform.toBase58()}`);
+  console.log(`  монета    ${mint.toBase58()}`);
   console.log(`  подпись   ${signature}\n`);
   console.log("  идущие торги сохраняют свои условия: они вморожены при открытии\n");
 }

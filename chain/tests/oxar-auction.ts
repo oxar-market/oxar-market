@@ -105,7 +105,7 @@ describe("oxar-escrow: торг", () => {
   }
 
   /** Повесить место на уже открытый торг. */
-  async function addLot(sale: PublicKey, reserve = RESERVE) {
+  async function addLot(sale: PublicKey, reserve = RESERVE, coin = mint) {
     const id = auctionId();
     const lot = lotPda(id);
 
@@ -114,7 +114,7 @@ describe("oxar-escrow: торг", () => {
       .accountsPartial({
         seller: seller.publicKey,
         sale,
-        mint,
+        mint: coin,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
@@ -179,7 +179,7 @@ describe("oxar-escrow: торг", () => {
     // становится подписавший первый вызов - здесь это кошелёк провайдера.
     await program.methods
       .adminSetsTerms(FEE_BPS)
-      .accounts({ platform: platform.publicKey })
+      .accounts({ platform: platform.publicKey, mint })
       .rpc();
   });
 
@@ -190,7 +190,7 @@ describe("oxar-escrow: торг", () => {
     try {
       await program.methods
         .adminSetsTerms(0)
-        .accounts({ admin: bob.publicKey, platform: bob.publicKey })
+        .accounts({ admin: bob.publicKey, platform: bob.publicKey, mint })
         .signers([bob])
         .rpc();
       assert.fail("чужой переписал условия площадки");
@@ -205,6 +205,65 @@ describe("oxar-escrow: торг", () => {
       platform.publicKey.toBase58(),
       "получатель комиссии уехал",
     );
+  });
+
+  it("место в чужой монете не открыть", async () => {
+    // Монету выбирает площадка, а не продавец. Иначе место ушло бы за токен,
+    // заведённый продавцом тем же утром: победитель заплатил бы фантиком, и
+    // комиссия пришла бы в нём же.
+    const ownCoin = await createMint(connection, seller, seller.publicKey, null, DECIMALS);
+    const { sale } = await openSale(60);
+
+    try {
+      await addLot(sale, RESERVE, ownCoin);
+      assert.fail("место открылось в чужой монете");
+    } catch (error) {
+      assert.include(String(error), "WrongMint");
+    }
+
+    // А в монете площадки то же самое место открывается.
+    const ok = await addLot(sale);
+    assert.equal(
+      (await program.account.lot.fetch(ok.lot)).mint.toBase58(),
+      mint.toBase58(),
+    );
+  });
+
+  it("подменить настройки площадки своим аккаунтом нельзя", async () => {
+    // Сиды у настроек постоянные, поэтому адрес на всю программу один, и
+    // завести второй такой аккаунт нельзя в принципе. Остаётся подставить в
+    // транзакцию посторонний - Anchor выводит адрес сам и чужой не берёт.
+    const { sale } = await openSale(60);
+
+    // Свой PDA по своим сидам: такого аккаунта просто нет.
+    const [mine] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config"), bob.publicKey.toBuffer()],
+      program.programId,
+    );
+    // И настоящий аккаунт этой же программы - торг вместо настроек.
+    for (const fake of [mine, sale]) {
+      try {
+        await program.methods
+          .sellerOpensLot(auctionId(), new anchor.BN(RESERVE), new anchor.BN(MIN_STEP))
+          .accountsPartial({
+            seller: seller.publicKey,
+            sale,
+            config: fake,
+            mint,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .signers([seller])
+          .rpc();
+        assert.fail(`чужой аккаунт настроек прошёл: ${fake.toBase58()}`);
+      } catch (error) {
+        assert.include(
+          String(error),
+          "caused by account: config",
+          "отбилось не на настройках",
+        );
+      }
+    }
   });
 
   it("торг берёт комиссию из настроек, а не от того, кто его открыл", async () => {

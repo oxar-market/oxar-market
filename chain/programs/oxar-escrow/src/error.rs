@@ -14,6 +14,9 @@ pub enum EscrowError {
     #[msg("Only the admin can change the terms")]
     NotTheAdmin,
 
+    #[msg("Lots are only opened in the coin the platform accepts")]
+    WrongMint,
+
     #[msg("This lot is not taking bids")]
     LotClosed,
 
