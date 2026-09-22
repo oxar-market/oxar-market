@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { db } from "@/lib/session";
+import { Game } from "./game/game";
 
 /**
  * Маркетплейс. Его ещё нет, и страница об этом говорит прямо, а не делает вид,
@@ -47,6 +48,7 @@ export function Market() {
       <section className="screen">
         <h1>Market</h1>
         <p className="lead">You are on the list. We will write when it opens.</p>
+        <Game />
       </section>
     );
   }
@@ -80,6 +82,8 @@ export function Market() {
       {state === "failed" && (
         <p className="bad">That did not go through. Check the address and try again.</p>
       )}
+
+      <Game />
     </section>
   );
 }
