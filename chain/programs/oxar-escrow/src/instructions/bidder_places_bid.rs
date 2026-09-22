@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
+    token::{transfer_checked, Mint, Token, TokenAccount, TransferChecked},
 };
 
 use crate::{
@@ -46,7 +46,7 @@ pub struct BidderPlacesBid<'info> {
         seeds = [b"lot_vault", lot.key().as_ref()],
         bump = lot.vault_bump,
     )]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
+    pub vault: Account<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -54,7 +54,7 @@ pub struct BidderPlacesBid<'info> {
         associated_token::authority = bidder,
         associated_token::token_program = token_program,
     )]
-    pub bidder_tokens: InterfaceAccount<'info, TokenAccount>,
+    pub bidder_tokens: Account<'info, TokenAccount>,
 
     /// CHECK: прежний лидер торга. Сверяется в обработчике с `lot.top_bidder`.
     /// Когда ставок ещё не было, сюда передаётся сам участник - возврата не
@@ -75,11 +75,11 @@ pub struct BidderPlacesBid<'info> {
         associated_token::authority = previous_bidder,
         associated_token::token_program = token_program,
     )]
-    pub previous_bidder_tokens: InterfaceAccount<'info, TokenAccount>,
+    pub previous_bidder_tokens: Account<'info, TokenAccount>,
 
-    pub mint: InterfaceAccount<'info, Mint>,
+    pub mint: Account<'info, Mint>,
 
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }

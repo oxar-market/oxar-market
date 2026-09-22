@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{
-    close_account, transfer_checked, CloseAccount, Mint, TokenAccount, TokenInterface,
+use anchor_spl::token::{
+    close_account, transfer_checked, CloseAccount, Mint, TokenAccount, Token,
     TransferChecked,
 };
 
@@ -52,7 +52,7 @@ pub struct LotPaysSeller<'info> {
         seeds = [b"lot_vault", lot.key().as_ref()],
         bump = lot.vault_bump,
     )]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
+    pub vault: Account<'info, TokenAccount>,
 
     /// CHECK: получает выручку и аренду за аккаунты торга. Сверяется с
     /// `sale.seller` через `has_one`.
@@ -65,7 +65,7 @@ pub struct LotPaysSeller<'info> {
         associated_token::authority = seller,
         associated_token::token_program = token_program,
     )]
-    pub seller_tokens: InterfaceAccount<'info, TokenAccount>,
+    pub seller_tokens: Account<'info, TokenAccount>,
 
     /// CHECK: получатель комиссии. Сверяется с `sale.platform` через `has_one`,
     /// а тот записан при открытии торга и с тех пор не менялся.
@@ -77,11 +77,11 @@ pub struct LotPaysSeller<'info> {
         associated_token::authority = platform,
         associated_token::token_program = token_program,
     )]
-    pub platform_tokens: InterfaceAccount<'info, TokenAccount>,
+    pub platform_tokens: Account<'info, TokenAccount>,
 
-    pub mint: InterfaceAccount<'info, Mint>,
+    pub mint: Account<'info, Mint>,
 
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn pay_seller(ctx: Context<LotPaysSeller>) -> Result<()> {
