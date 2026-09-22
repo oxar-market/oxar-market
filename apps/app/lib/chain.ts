@@ -62,6 +62,17 @@ export const SOLANA_RPC_URL =
   process.env.NEXT_PUBLIC_SOLANA_RPC || clusterApiUrl(CLUSTER);
 
 /**
+ * Тот же адрес, но для подписки на события по WebSocket. Его требует Privy для
+ * своего кошелька: он не только шлёт транзакцию, но и ждёт её подтверждения по
+ * сокету. Выводим из RPC-адреса заменой схемы - у публичной ноды Solana и у
+ * большинства провайдеров ws живёт по тому же хосту. Отдельный ws-адрес, если
+ * он у ноды другой, зададим переменной, когда до неё дойдёт.
+ */
+export const SOLANA_WS_URL =
+  process.env.NEXT_PUBLIC_SOLANA_WS ||
+  SOLANA_RPC_URL.replace(/^http/, "ws");
+
+/**
  * Своя нода, если она есть.
  *
  * `clusterApiUrl` отдаёт публичную ноду Solana Labs. Для девнета этого хватает,
