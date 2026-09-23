@@ -567,8 +567,10 @@ export function ThingStage({
             // Выбранное место всегда несёт рамку - и пустое, и занятое.
             // Это единственный сигнал, одинаковый в обоих случаях: на занятом
             // цвет менять нельзя, а рамка ложится поверх логотипа, не трогая
-            // его.
-            decal.frame.visible = decal.code === chosen;
+            // его. Кроме голограммы: на ней мест не видно вовсе, и рамка
+            // выбранного - тоже место. Автовыбор при загрузке звал restyle
+            // после входа в голограмму и проносил рамку сквозь неё.
+            decal.frame.visible = !showingGhost && decal.code === chosen;
             // Место с примеренной картинкой подсветка цвета не трогает: цвет
             // там принадлежит логотипу, а не рамке.
             if (mine.has(decal.code)) continue;
@@ -907,7 +909,9 @@ export function ThingStage({
       )}
       {state === "ready" && (
         <span className="stage-hint">
-          {hovered
+          {/* На голограмме подписи мест нет: мест на ней не видно, и
+              подпись выдавала бы то, что спрятано. */}
+          {hovered && !ghosting
             ? (SPOTS.find((spot) => spot.code === hovered)?.label ?? "Spot")
             : "Drag to turn the shirt. Tap a spot."}
         </span>
