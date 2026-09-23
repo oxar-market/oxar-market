@@ -32,7 +32,7 @@ import { USDC_DECIMALS, toUsdcBaseUnits } from "@oxar/core";
  */
 
 /** Адрес программы. Он вшит в неё саму (`declare_id!`) и одинаков во всех сетях. */
-const PROGRAM_ID = new PublicKey("Hzh8CjF8ZmmtqVro2dVR54uFVcyjWfp3Aenvh782QYr5");
+const PROGRAM_ID = new PublicKey("4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe");
 
 /** `bidder_places_bid` из IDL. */
 const PLACE_BID = new Uint8Array([172, 147, 26, 172, 0, 179, 171, 148]);

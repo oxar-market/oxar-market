@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-oxar_escrow = "Hzh8CjF8ZmmtqVro2dVR54uFVcyjWfp3Aenvh782QYr5"
+oxar_escrow = "4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe"
 
 [registry]
 url = "https://api.apr.dev"
