@@ -9,7 +9,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("Hzh8CjF8ZmmtqVro2dVR54uFVcyjWfp3Aenvh782QYr5");
+declare_id!("4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe");
 
 /// Эскроу OXAR: торги, в которых ставка обеспечена деньгами.
 ///
