@@ -35,7 +35,7 @@ const LED =
 const LOT_ID = "30ae7a23-ced4-4a39-8c22-9405193d93fb";
 const SALE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 /** Адрес торга, из которого собраны образцы. */
-const SALE_PDA = "F3srYqux4nFpNjpztKe1u3a7ZjPomVcbU77GkcceygwT";
+const SALE_PDA = "DA7sbTkGJ3dLpdRSdR8srzMKVLQ89Hj65G8tkgq4d7rD";
 
 const bytes = (base64: string) => Uint8Array.from(Buffer.from(base64, "base64"));
 
@@ -51,7 +51,7 @@ test("uuid лота ложится в шестнадцать байт", () => {
 test("адрес лота выводится из его uuid", () => {
   assert.equal(
     lotAddress(LOT_ID).toBase58(),
-    "Bao79bGvT5mAYUVUUQJ86FUCdsgMb2tEAgtH9a7UMkfv",
+    "EMyC2jcm5yBfcf3n1V5H4G6szDXPT7xBdFKFxtG4eoAt",
   );
 });
 
