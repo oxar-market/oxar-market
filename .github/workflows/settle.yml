@@ -1,0 +1,58 @@
+# Будильник торгов.
+#
+# В цепи таймеров нет: когда срок вышел, выплату и закрытие должен позвать
+# кто-то снаружи. Этот кто-то - расписание. Раз в десять минут скрипт смотрит
+# в базу, есть ли закончившиеся неразобранные торги, и разбирает каждый:
+# состоявшиеся - выплатой, несостоявшиеся - закрытием.
+#
+# Расписание GitHub не обещает точности - запуск может опоздать на минуты.
+# Для выплат это не страшно: деньги в хранилище никуда не денутся, а получить
+# их на десять минут позже - не то же самое, что не получить.
+#
+# Ключ в секрете SETTLE_KEYPAIR - операционный кошелёк площадки. Увести
+# деньги торгов им нельзя: получатели вморожены при открытии. Худшее при
+# утечке - потратятся операционные SOL.
+name: Settle
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: settle
+  cancel-in-progress: false
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: chain/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: chain/pnpm-lock.yaml
+
+      - name: Зависимости
+        working-directory: chain
+        run: pnpm install --frozen-lockfile
+
+      - name: Разбор просроченных торгов
+        working-directory: chain
+        env:
+          SOLANA_RPC: ${{ secrets.SETTLE_RPC }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SETTLE_KEYPAIR: ${{ secrets.SETTLE_KEYPAIR }}
+          KEYPAIR_PATH: /tmp/settle-keypair.json
+        run: |
+          printf '%s' "$SETTLE_KEYPAIR" > /tmp/settle-keypair.json
+          pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' scripts/settle-due.ts
+          rm -f /tmp/settle-keypair.json
