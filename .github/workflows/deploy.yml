@@ -98,6 +98,7 @@ jobs:
           # Своя нода. Пусто - публичная, её хватает девнету и не хватит
           # боевой сети.
           NEXT_PUBLIC_SOLANA_RPC: ${{ secrets.NEXT_PUBLIC_SOLANA_RPC }}
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
           # Отпечаток сборки: короткий хэш коммита, из которого она собрана.
           # По нему на странице You видно, докатился ли конкретный PR - меняется
           # сам с каждым мержем, руками бампать нечего.
@@ -177,13 +178,15 @@ jobs:
         run: >-
           supabase secrets set
           PRIVY_APP_ID=${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }}
           --project-ref islmypspqjxuhplcibam
 
       - name: Функции -> Supabase
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: >-
-          supabase functions deploy privy-session
+          supabase functions deploy privy-session outbid-push
           --project-ref islmypspqjxuhplcibam
 
       # Проверка после выкатки, а не «должно работать»: функция обязана
