@@ -42,7 +42,10 @@ jobs:
 
       - name: Зависимости
         working-directory: chain
-        run: pnpm install --frozen-lockfile
+        # --ignore-workspace обязателен, как в chain.yml: без него pnpm видит
+        # корневой воркспейс, ставит его и не ставит сам chain - «ts-node not
+        # found» на следующем шаге.
+        run: pnpm install --ignore-workspace --frozen-lockfile
 
       - name: Разбор просроченных торгов
         working-directory: chain
