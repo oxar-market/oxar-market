@@ -23,6 +23,7 @@ import { PhotoView } from "./photo.tsx";
 // надо удалить, - в шапке temp-photo.ts.
 import { TEMP_ANGLES, TEMP_FRONT_QUADS, TEMP_SHOTS } from "./temp-photo.ts";
 import { SPOTS } from "./spots.ts";
+import { disablePush, enablePush, pushState, type PushState } from "@/lib/push.ts";
 import { ThingStage, type Stage, type Views } from "./stage.tsx";
 
 /**
@@ -64,6 +65,11 @@ export function Auction() {
   // Часы экрана. Отдельным состоянием, потому что до открытия торга страница
   // обязана ожить сама, без обновления руками.
   const [now, setNow] = useState(() => Date.now());
+  // Пуши о перебитой ставке: состояние колокольчика этого устройства.
+  const [push, setPush] = useState<PushState>("unsupported");
+  useEffect(() => {
+    void pushState().then(setPush);
+  }, []);
 
   // Что человек примерил в каждое место. Живёт только здесь: на сервер эти
   // картинки не уезжают, чужим они станут видны вместе со ставкой. Файл лежит
@@ -669,6 +675,31 @@ export function Auction() {
           </button>
         ))}
       </nav>
+
+      {/* Колокольчик - докричаться до закрытой вкладки: ставку перебивают в
+          отсутствие человека, и без пуша он узнаёт о проигрыше, когда вернуть
+          место уже поздно. Разрешение спрашивается только по нажатию. */}
+      {started && push !== "unsupported" && (
+        <p className="push-row">
+          {push === "denied" ? (
+            <span className="muted small">
+              Notifications are blocked for this site in the browser settings.
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                void (push === "on" ? disablePush() : enablePush()).then(setPush);
+              }}
+            >
+              {push === "on"
+                ? "Outbid alerts are on for this device"
+                : "Notify me when I am outbid"}
+            </button>
+          )}
+        </p>
+      )}
 
       {tab === "about" && (
         <>
