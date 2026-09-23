@@ -671,11 +671,28 @@ export function Auction() {
       </nav>
 
       {tab === "about" && (
-        <p className="muted">
-          One of the Superteam Ukraine leads wears this shirt. Every marked area
-          on it is a spot you can rent: the highest bid when the clock runs out
-          is what gets printed, and the shirt is worn as printed.
-        </p>
+        <>
+          <p className="muted">
+            One of the Superteam Ukraine leads wears this shirt. Every marked
+            area on it is a spot you can rent: the highest bid when the clock
+            runs out is what gets printed, and the shirt is worn as printed.
+          </p>
+          {/* Расписание торга, в часах читателя: у каждого своё «в полдень».
+              Числа берутся из самого торга, не из текста - следующий торг
+              принесёт свои даты, и абзац не соврёт. Подавление предупреждения
+              гидрации - штатный приём для локального времени: прирендер собран
+              в UTC сборщика, а перерисовка у зрителя честнее прирендера. */}
+          {startsAt !== null && closesAt !== null && (
+            <p className="muted" suppressHydrationWarning>
+              {started ? "The auction opened on " : "The auction opens on "}
+              {calendar(startsAt)} and runs for {spanOf(closesAt - startsAt)},
+              closing on {calendar(closesAt)}. Both times are shown in your own
+              time zone. Everything happens right here on this page: the shirt
+              stays on display from the first minute to the last, and what you
+              see on it at the close is what goes to print.
+            </p>
+          )}
+        </>
       )}
 
       {tab === "spots" && (
@@ -850,3 +867,23 @@ function countdown(closesAt: number, now: number): string {
   return days > 0 ? `${days}d ${clock} left` : `${clock} left`;
 }
 
+/** Дата и время в часах читателя: «в полдень» у каждого своё. */
+function calendar(at: number): string {
+  return new Date(at).toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Длительность словами: ровные сутки - днями, остальное - с часами. */
+function spanOf(ms: number): string {
+  const hours = Math.round(ms / 3_600_000);
+  const days = Math.floor(hours / 24);
+  const rest = hours % 24;
+  if (days === 0) return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  const daysPart = `${days} ${days === 1 ? "day" : "days"}`;
+  return rest === 0 ? daysPart : `${daysPart} ${rest} ${rest === 1 ? "hour" : "hours"}`;
+}
