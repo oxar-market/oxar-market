@@ -606,6 +606,17 @@ export function ThingStage({
         };
 
         const onMove = (event: PointerEvent) => {
+          // На голограмме мест нет - значит нет ни наведения, ни курсора-руки:
+          // рейкаст три-джиэс бьёт и по невидимым мешам, и без этой заслонки
+          // прозрачная футболка отзывалась бы на движение как живая.
+          if (showingGhost) {
+            if (over !== null) {
+              over = null;
+              setHovered(null);
+              renderer.domElement.style.cursor = "grab";
+            }
+            return;
+          }
           const found = under(event);
           const code = found?.code ?? null;
           if (code === over) return;
@@ -624,6 +635,9 @@ export function ThingStage({
           const start = down;
           down = null;
           if (!start) return;
+          // Тап по голограмме не выбирает место - выбирать нечего, а выбор
+          // тянет за собой подлёт камеры к месту, которого не видно.
+          if (showingGhost) return;
           if (Math.abs(event.clientX - start.x) > 5) return;
           if (Math.abs(event.clientY - start.y) > 5) return;
           const found = under(event);
@@ -689,6 +703,9 @@ export function ThingStage({
             setGhosting(ghosting);
             if (ghosting && !showingGhost) ghostFrom = performance.now();
             showingGhost = ghosting;
+            // Голограмму только вращают: зум - инструмент разглядывания мест,
+            // а их на ней нет. Колёсико и щипок отключаются вместе с ними.
+            controls.enableZoom = !ghosting;
             for (const mesh of meshes) {
               mesh.material = ghosting ? ghost : cloth.get(mesh)!;
             }
