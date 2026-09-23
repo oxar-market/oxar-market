@@ -74,8 +74,8 @@ export function You() {
             <span className="role-state">Not yet</span>
           </div>
           <p className="role-note">
-            Selling a spot starts with a call. We print what wins, so we go
-            through the thing and the dates with you first.
+            Selling spots on your own thing is not open yet. The first
+            auctions are run by us; if you want yours to be next, book a call.
           </p>
           <a className="ghost" href={CALL_URL} target="_blank" rel="noreferrer">
             Book a call
