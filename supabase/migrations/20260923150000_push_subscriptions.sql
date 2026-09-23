@@ -37,15 +37,33 @@ create policy "свои подписки видны"
 -- exist» - что он на локальном стенде и сделал.
 create extension if not exists pg_net;
 
--- Каждая новая ставка будит функцию уведомлений. В запросе - только id
--- ставки: функция перечитает всё сама серверным ключом, поэтому подделка
--- вызова бесполезна, а секретов в этом файле нет - анонимный ключ публичен
--- по своей природе, он уезжает в браузер каждому.
-create trigger lot_bids_push after insert on lot_bids
-  for each row execute function supabase_functions.http_request (
-    'https://islmypspqjxuhplcibam.supabase.co/functions/v1/outbid-push',
-    'POST',
-    '{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbG15cHNwcWp4dWhwbGNpYmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxNDYwMDQsImV4cCI6MjEwNDcyMjAwNH0.kSrGHN_9J_nVdH66vBfy5Ni7It2kp3BEL0wcFE8OKbo"}',
-    '{}',
-    '5000'
+-- Каждая новая ставка будит функцию уведомлений. Звонок - свой, на голом
+-- pg_net: готовая обёртка supabase_functions живёт в схеме, которая на боевом
+-- проекте появляется только вместе с их вебхуками из дашборда - деплой упал
+-- ровно на её отсутствии. Своя функция зависит только от расширения строкой
+-- выше.
+--
+-- В запросе - только id ставки: функция перечитает всё сама серверным
+-- ключом, поэтому подделка вызова бесполезна, а секретов здесь нет -
+-- анонимный ключ публичен по своей природе, он уезжает в браузер каждому.
+create function push_outbid()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform net.http_post(
+    url := 'https://islmypspqjxuhplcibam.supabase.co/functions/v1/outbid-push',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbG15cHNwcWp4dWhwbGNpYmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxNDYwMDQsImV4cCI6MjEwNDcyMjAwNH0.kSrGHN_9J_nVdH66vBfy5Ni7It2kp3BEL0wcFE8OKbo'
+    ),
+    body := jsonb_build_object('record', jsonb_build_object('id', new.id))
   );
+  return new;
+end;
+$$;
+
+create trigger lot_bids_push after insert on lot_bids
+  for each row execute function push_outbid();
