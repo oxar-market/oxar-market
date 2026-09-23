@@ -13,9 +13,16 @@
  *
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
- *     scripts/open-sale.ts --thing=superteam-ua-tee --hours=24
+ *     scripts/open-sale.ts --thing=superteam-ua-tee --hours=24 \
+ *       [--start=2026-09-24T09:00:00Z]
  *
- * Возвращает uuid торга - его передают в open-lot.ts как --sale.
+ * --start назначает открытие в будущем: часы считаются от него, а не от
+ * запуска. До этого момента витрина держит голограмму, а ставки не принимает
+ * база - программа про срок открытия не знает, и для торгов, которые открываем
+ * мы сами, этого достаточно.
+ *
+ * Возвращает uuid торга - его передают в open-lot.ts как --sale (и --opens
+ * туда же, если открытие назначено).
  */
 import * as anchor from "@anchor-lang/core";
 import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
@@ -94,8 +101,17 @@ async function main() {
   const [thing] = await rest(`things?slug=eq.${thingSlug}&select=id,title`);
   if (!thing) throw new Error(`вещи ${thingSlug} нет в каталоге`);
 
+  const start = arg("start");
+  const opensAt = start ? new Date(start) : null;
+  if (opensAt && Number.isNaN(opensAt.getTime())) {
+    throw new Error(`--start «${start}» не похож на время`);
+  }
+  if (opensAt && opensAt.getTime() <= Date.now()) {
+    throw new Error("--start уже в прошлом - открывай без него");
+  }
+
   const id = randomUUID();
-  const closesAt = new Date(Date.now() + hours * 3_600_000);
+  const closesAt = new Date((opensAt?.getTime() ?? Date.now()) + hours * 3_600_000);
   const saleBytes = Array.from(Buffer.from(id.replace(/-/g, ""), "hex"));
   const [salePda] = PublicKey.findProgramAddressSync(
     [Buffer.from("sale"), Buffer.from(saleBytes)],
@@ -117,6 +133,7 @@ async function main() {
   console.log(`\n  ${thing.title}`);
   console.log(`  торг      ${id}`);
   console.log(`  в цепи    ${salePda.toBase58()}`);
+  if (opensAt) console.log(`  открытие  ${opensAt.toISOString()} - до него голограмма`);
   console.log(`  до        ${closesAt.toISOString()}`);
   console.log(`  продление ${EXTEND_SECONDS} секунд, на всю вещь`);
   console.log(

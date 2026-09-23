@@ -12,7 +12,8 @@
  *
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
- *     scripts/open-lot.ts --sale=<uuid> --spot=slot_01 --reserve=50
+ *     scripts/open-lot.ts --sale=<uuid> --spot=slot_01 --reserve=50 \
+ *       [--step=5] [--opens=2026-09-24T09:00:00Z]
  *
  * Срока у места нет: он берётся из торга вещи (--sale), общий на все её места.
  * Торг открывается раньше, скриптом open-sale.ts.
@@ -37,7 +38,8 @@ import { fetchConfig } from "./lot";
  */
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 const THING_SLUG = "superteam-ua-tee";
-/** Наименьшая прибавка к ставке. Те же центы лежат в базе у лота. */
+/** Наименьшая прибавка к ставке по умолчанию. Задаётся ключом --step:
+ * долларовый шаг на дорогих местах выглядит копеечным. */
 const MIN_STEP_CENTS = 100;
 
 function arg(name: string): string | undefined {
@@ -91,6 +93,17 @@ async function main() {
 
   if (!spotCode || !reserve || !saleId) {
     throw new Error("нужны --sale, --spot и --reserve");
+  }
+
+  const stepCents = Math.round(Number(arg("step") ?? MIN_STEP_CENTS / 100) * 100);
+  if (!Number.isFinite(stepCents) || stepCents <= 0) {
+    throw new Error(`шаг «${arg("step")}» не похож на сумму`);
+  }
+
+  const opens = arg("opens");
+  const opensAt = opens ? new Date(opens) : null;
+  if (opensAt && Number.isNaN(opensAt.getTime())) {
+    throw new Error(`--opens «${opens}» не похож на время`);
   }
 
   // Резерв приходит долларами, а живёт в двух видах: центы для показа и
@@ -164,8 +177,9 @@ async function main() {
       spot_id: spot.id,
       status: "draft",
       reserve_cents: reserveCents,
-      min_step_cents: MIN_STEP_CENTS,
+      min_step_cents: stepCents,
       closes_at: closesAt.toISOString(),
+      opens_at: opensAt ? opensAt.toISOString() : null,
       extend_seconds: extendSeconds,
     }),
   });
@@ -181,7 +195,7 @@ async function main() {
     .sellerOpensLot(
       auction,
       new anchor.BN(units(reserveCents).toString()),
-      new anchor.BN(units(MIN_STEP_CENTS).toString()),
+      new anchor.BN(units(stepCents).toString()),
     )
     .accounts({
       seller: seller.publicKey,
@@ -205,7 +219,8 @@ async function main() {
   console.log(`  лот      ${id}`);
   console.log(`  в цепи   ${lotPda.toBase58()}`);
   console.log(`  монета   ${mint.toBase58()} (${decimals} знаков, из настроек)`);
-  console.log(`  резерв   $${(reserveCents / 100).toFixed(2)}, шаг $${MIN_STEP_CENTS / 100}`);
+  console.log(`  резерв   $${(reserveCents / 100).toFixed(2)}, шаг $${stepCents / 100}`);
+  if (opensAt) console.log(`  открытие ${opensAt.toISOString()} - до него голограмма`);
   console.log(`  до       ${closesAt.toISOString()} (срок торга вещи, продление ${extendSeconds} с)`);
   console.log(`  подпись  ${signature}\n`);
 }

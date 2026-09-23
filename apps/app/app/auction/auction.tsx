@@ -437,9 +437,11 @@ export function Auction() {
       {started && (
       <>
       <div className="looks" role="group" aria-label="How to view">
+        {/* Голограммы среди видов нет: это не ракурс, а состояние «торг ещё
+            не начался», и в него не переключаются - в нём ждут. До старта
+            экран сам стоит в ней, после старта её выбирать незачем. */}
         {([
           ["live", "Shirt"],
-          ["ghost", "Hologram"],
           ["shot", "Photo"],
         ] as const).map(([which, name]) => (
           <button
