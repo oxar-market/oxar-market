@@ -26,15 +26,17 @@ const SALE =
 
 /** Место 30ae7a23-… этого торга: монета GJ59d2…, резерв $50, шаг $1, ставок нет. */
 const FRESH =
-  "AsZdmc0fZfzQwEebu9RACX85mcvFRylQ4+5HqQOBL+z97BMu1JdXAuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AAAAAAAAAAAAgPD6AgAAAABAQg8AAAAAADCueiPO1Eo5jCKUBRk9k/v+/QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+  "AsZdmc0fZfy0oj2utMftfVs6KmoSte+fOyuz/GlqblSI65B5H+FJDuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AAAAAAAAAAAAgPD6AgAAAABAQg8AAAAAADCueiPO1Eo5jCKUBRk9k/v+/QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 /** То же место после ставок: ведёт GuFdc1…, в хранилище $60. */
 const LED =
-  "AsZdmc0fZfzQwEebu9RACX85mcvFRylQ4+5HqQOBL+z97BMu1JdXAuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AexCDKWsw18bFB+YFpnUTF3MMTF/IDEy72OhWh6N3oxVAIeTAwAAAACA8PoCAAAAAEBCDwAAAAAAMK56I87USjmMIpQFGT2T+/79AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  "AsZdmc0fZfy0oj2utMftfVs6KmoSte+fOyuz/GlqblSI65B5H+FJDuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AexCDKWsw18bFB+YFpnUTF3MMTF/IDEy72OhWh6N3oxVAIeTAwAAAACA8PoCAAAAAEBCDwAAAAAAMK56I87USjmMIpQFGT2T+/79AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 const LOT_ID = "30ae7a23-ced4-4a39-8c22-9405193d93fb";
 const SALE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
-/** Адрес торга, из которого собраны образцы. */
+/** Адрес торга, из которого собраны образцы. После смены адреса программы
+ * (#251) в байтах образцов подменено ровно поле `sale` - PDA выводится из
+ * адреса программы и сменился вместе с ним. Остальные байты нетронуты. */
 const SALE_PDA = "DA7sbTkGJ3dLpdRSdR8srzMKVLQ89Hj65G8tkgq4d7rD";
 
 const bytes = (base64: string) => Uint8Array.from(Buffer.from(base64, "base64"));
