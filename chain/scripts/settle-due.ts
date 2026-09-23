@@ -21,11 +21,17 @@
  * ключ, по умолчанию - обычный ключ соланы в домашней папке.
  */
 import * as anchor from "@anchor-lang/core";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import {
+  createTransferCheckedInstruction,
+  getAccount,
+  getAssociatedTokenAddressSync,
+  getMint,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { fetchLot, fetchSale } from "./lot";
+import { fetchConfig, fetchLot, fetchSale } from "./lot";
 
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 
@@ -80,11 +86,50 @@ async function main() {
 
   // Просроченные по часам базы. Решают часы цепи, ниже: ставка могла продлить
   // торг, и тогда цепь ещё открыта, что бы ни думала база.
+  // Выручка продавца не задерживается на рабочем ключе: всё, что лежит на
+  // его счёте в монете площадки, уезжает в кассу. Продавец первых торгов -
+  // рабочий ключ, и без этого шага его выручка ждала бы ручного перегона;
+  // комиссия и так приходит в кассу самими выплатами. Смётся и при пустом
+  // разборе - хвосты не должны зависеть от того, был ли сегодня торг.
+  async function sweepProceeds() {
+    const [configPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      program.programId,
+    );
+    const config = await fetchConfig(program, configPda);
+    if (!config) return;
+
+    const from = getAssociatedTokenAddressSync(config.mint, crank.publicKey);
+    const holding = await connection.getAccountInfo(from);
+    if (!holding) return;
+    const amount = (await getAccount(connection, from)).amount;
+    if (amount === 0n) return;
+
+    const to = getAssociatedTokenAddressSync(config.mint, config.platform);
+    const { decimals } = await getMint(connection, config.mint);
+    const signature = await provider.sendAndConfirm(
+      new Transaction().add(
+        createTransferCheckedInstruction(
+          from,
+          config.mint,
+          to,
+          crank.publicKey,
+          amount,
+          decimals,
+        ),
+      ),
+    );
+    console.log(
+      `выручка: $${(Number(amount) / 10 ** decimals).toFixed(2)} → касса, ${signature}`,
+    );
+  }
+
   const due = await rest(
     `lots?status=eq.open&closes_at=lt.${new Date().toISOString()}&select=id`,
   );
   if (!due.length) {
     console.log("разбирать нечего");
+    await sweepProceeds();
     return;
   }
 
@@ -161,6 +206,8 @@ async function main() {
       process.exitCode = 1;
     }
   }
+
+  await sweepProceeds();
 }
 
 main().catch((error) => {
