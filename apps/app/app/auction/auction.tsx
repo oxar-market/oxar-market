@@ -779,6 +779,10 @@ export function Auction() {
             Your artwork goes in with your bid. If you win, that is exactly what
             gets printed.
           </li>
+          <li>
+            The wallet and the money in it are yours, and blockchain transfers
+            are final. The rest is in the <a href="/terms">terms</a>.
+          </li>
         </ul>
       )}
 
