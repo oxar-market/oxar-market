@@ -49,7 +49,12 @@
   # запрос не доходит, CSP глушит его раньше. Публичные ноды Solana оставлены
   # запасным адресом. Звёздочка покрывает devnet/mainnet/beta - поддомен у них
   # разный, ключ один.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://explorer-api.walletconnect.com https://islmypspqjxuhplcibam.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' blob: https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co https://explorer-api.walletconnect.com https://api.web3modal.org wss://relay.walletconnect.com wss://relay.walletconnect.org https://*.helius-rpc.com wss://*.helius-rpc.com https://api.devnet.solana.com https://api.mainnet-beta.solana.com
+  #
+  # worker-src 'self' - пуш-воркер. Без своей директивы браузер проверяет
+  # воркеры по child-src, а там одни окна Privy без 'self', и регистрация
+  # /push-worker.js падала с нарушением CSP: колокольчик молчал на нажатие.
+  # Проверено на проде.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://explorer-api.walletconnect.com https://islmypspqjxuhplcibam.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; worker-src 'self'; child-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com; connect-src 'self' blob: https://auth.privy.io https://*.rpc.privy.systems https://islmypspqjxuhplcibam.supabase.co wss://islmypspqjxuhplcibam.supabase.co https://explorer-api.walletconnect.com https://api.web3modal.org wss://relay.walletconnect.com wss://relay.walletconnect.org https://*.helius-rpc.com wss://*.helius-rpc.com https://api.devnet.solana.com https://api.mainnet-beta.solana.com
 
   # Никто не смеет положить нас в свой iframe. Защита от кликджекинга: иначе
   # наш экран накрывают приманкой, человек жмёт «забрать приз», а жмёт «Bid».

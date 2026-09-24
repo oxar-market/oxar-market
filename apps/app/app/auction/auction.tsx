@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import {
   avatarTone,
   escrowedCents,
@@ -67,6 +68,9 @@ export function Auction() {
   const [now, setNow] = useState(() => Date.now());
   // Пуши о перебитой ставке: состояние колокольчика этого устройства.
   const [push, setPush] = useState<PushState>("unsupported");
+  // Колокольчик - только вошедшему: подписка привязана к человеку, и перебить
+  // можно лишь того, кто может ставить. Гостю нажатие ничего не давало.
+  const { authenticated } = usePrivy();
   useEffect(() => {
     void pushState().then(setPush);
   }, []);
@@ -679,7 +683,7 @@ export function Auction() {
       {/* Колокольчик - докричаться до закрытой вкладки: ставку перебивают в
           отсутствие человека, и без пуша он узнаёт о проигрыше, когда вернуть
           место уже поздно. Разрешение спрашивается только по нажатию. */}
-      {started && push !== "unsupported" && (
+      {started && authenticated && push !== "unsupported" && (
         <p className="push-row">
           {push === "denied" ? (
             <span className="muted small">
