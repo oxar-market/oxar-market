@@ -179,6 +179,27 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+/* Ссылки внутри текста говорят голосом самого текста: цвет наследуется,
+   подчёркивание тонкое и серое. Синяя системная ссылка кричала из тихой
+   карточки, как чужая. */
+.role-note a,
+.rules a,
+.muted a,
+.build a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: #c9c9c4;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 0.12s;
+}
+
+.role-note a:hover,
+.rules a:hover,
+.muted a:hover,
+.build a:hover {
+  text-decoration-color: #16181d;
+}
+
 /* Роли двумя карточками, а не двумя строчками списка. Из списка «Seller: not
    yet» читается как отказ, из карточки с кнопкой - как следующий шаг. */
 .roles {
