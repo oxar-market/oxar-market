@@ -123,6 +123,13 @@ export function You() {
             <button type="button" className="ghost" onClick={copyAddress}>
               {copied ? "Copied" : "Copy address"}
             </button>
+            {/* Необратимость сказана там, где переводят, а не в подвале:
+                после перевода читать её поздно. */}
+            <p className="role-note">
+              Transfers are irreversible: coins sent on a wrong network or in a
+              wrong token cannot be recovered by us. This wallet is yours, not
+              ours - see the <a href="/terms">terms</a>.
+            </p>
           </div>
         )}
 
@@ -157,8 +164,11 @@ export function You() {
       </button>
 
       {/* Версия сборки: тихая подпись внизу, для нас, а не для человека. По ней
-          на глаз видно, та ли версия открыта. */}
-      <p className="build">build {BUILD}</p>
+          на глаз видно, та ли версия открыта. Рядом - условия, той же
+          громкости: они справка, а не предупреждение. */}
+      <p className="build">
+        build {BUILD} · <a href="/terms">terms</a>
+      </p>
     </section>
   );
 }
