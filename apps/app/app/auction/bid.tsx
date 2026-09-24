@@ -230,8 +230,10 @@ export function BidForm({
                   : "bid-balance"
               }
             >
+              {/* Когда не хватает - сразу и куда идти: человек с нулём на
+                  этом месте вчера решил, что деньги пропали. */}
               {cents !== null && cents > balance
-                ? `Balance ${formatUsd(balance)} - not enough`
+                ? `Balance ${formatUsd(balance)} - not enough. Top up on the You tab.`
                 : `Balance ${formatUsd(balance)}`}
             </span>
           )}
