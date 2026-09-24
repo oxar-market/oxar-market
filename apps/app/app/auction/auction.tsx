@@ -764,6 +764,10 @@ export function Auction() {
             by the step shown on the spot.
           </li>
           <li>
+            If someone outbids you, your money comes back to your wallet right
+            away. Only the leading bid stays locked.
+          </li>
+          <li>
             A bid in the last minutes pushes the close forward, so a late bid
             cannot win by timing alone.
           </li>
