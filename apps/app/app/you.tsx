@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { PublicKey } from "@solana/web3.js";
 import { avatarLetter, avatarTone } from "@oxar/core";
 import { BUILD } from "@/lib/build";
+import { connection, walletUnits } from "@/lib/chain";
+import { db } from "@/lib/session";
 
 /**
  * Страница человека. Показывает только то, что знает наверняка: кто вошёл и чем
@@ -25,6 +29,46 @@ export function You() {
   const { user, logout } = usePrivy();
   const wallet = user?.wallet?.address;
   const email = user?.email?.address;
+
+  // Балансы кошелька из цепочки: USDC - чем ставят, SOL - чем платят комиссию
+  // сети. null - ещё не прочитали; строку не показываем, а не врём нулём.
+  // Монета торга берётся из открытого лота, как в форме ставки: своя константа
+  // однажды разошлась бы с программой.
+  const [usdc, setUsdc] = useState<number | null>(null);
+  const [sol, setSol] = useState<number | null>(null);
+  useEffect(() => {
+    if (!wallet || !db) return;
+    let live = true;
+    (async () => {
+      const owner = new PublicKey(wallet);
+      const lamports = await connection.getBalance(owner);
+      if (live) setSol(lamports / 1e9);
+      const { data } = await db!
+        .from("lots")
+        .select("mint")
+        .eq("status", "open")
+        .not("mint", "is", null)
+        .limit(1);
+      const mint = data?.[0]?.mint;
+      if (!mint) return;
+      const units = await walletUnits(new PublicKey(mint), owner);
+      if (live) setUsdc(Number(units / 10_000n) / 100);
+    })().catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [wallet]);
+
+  // «Скопировано» живёт две секунды: постоянная надпись врала бы, а без неё
+  // непонятно, сработала ли кнопка.
+  const [copied, setCopied] = useState(false);
+  function copyAddress() {
+    if (!wallet) return;
+    void navigator.clipboard.writeText(wallet).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   // Кружок тот же, что у участников торга в ленте ставок: цвет выводится из
   // строки и всегда один и тот же. Войти можно и письмом, и кошельком, поэтому
@@ -57,6 +101,31 @@ export function You() {
       </div>
 
       <div className="roles">
+        {/* Кошелёк и пополнение. Живой случай первого дня: человек отправил
+            USDT вместо USDC и увидел «баланс ноль» - поэтому монета и сеть
+            названы прямо, а не подразумеваются. */}
+        {wallet && (
+          <div className="role">
+            <div className="role-top">
+              <span className="role-name">Wallet</span>
+              {usdc !== null && sol !== null && (
+                <span className="role-state">
+                  ${usdc.toFixed(2)} USDC · {sol.toFixed(3)} SOL
+                </span>
+              )}
+            </div>
+            <p className="role-note">
+              To bid, this wallet needs USDC and a little SOL for network fees.
+              Send both on the Solana network to the address below. USDC only -
+              USDT or other coins will not work here.
+            </p>
+            <p className="you-addr mono">{wallet}</p>
+            <button type="button" className="ghost" onClick={copyAddress}>
+              {copied ? "Copied" : "Copy address"}
+            </button>
+          </div>
+        )}
+
         <div className="role">
           <div className="role-top">
             <span className="role-name">Buyer</span>

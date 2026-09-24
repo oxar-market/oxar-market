@@ -760,6 +760,10 @@ export function Auction() {
         <ul className="rules">
           <li>The highest bid when the clock runs out wins the spot.</li>
           <li>
+            Bids are in USDC on Solana. Your wallet also needs a little SOL for
+            network fees. The address to top up is on the You tab.
+          </li>
+          <li>
             A bid cannot be taken back. Each new bid has to beat the current one
             by the step shown on the spot.
           </li>
