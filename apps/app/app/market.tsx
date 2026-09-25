@@ -70,10 +70,87 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
     }
   }
 
+  // Карусель героев: идущие торги, за ними анонсы. Какой слайд на экране,
+  // знают и точки под ней, и строки списка - строка текущего подсвечена.
+  const rail = useRef<HTMLDivElement | null>(null);
+  const [slide, setSlide] = useState(0);
+  const slides = things.length + upcoming.length;
+  function go(to: number) {
+    const el = rail.current;
+    if (!el) return;
+    el.scrollTo({ left: to * el.clientWidth, behavior: "smooth" });
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Программа по дням. Идущий торг стоит в дне закрытия, назначенный - в
+  // дне открытия, вещь без даты - отдельной группой в конце. Полоса из семи
+  // дней от сегодня метит точкой дни, где торг открывается или закрывается.
+  const [dayOn, setDayOn] = useState<string | null>(null);
+  const marks = new Map<string, Set<"open" | "close">>();
+  const mark = (at: number, kind: "open" | "close") => {
+    const key = dayKey(at);
+    marks.set(key, (marks.get(key) ?? new Set()).add(kind));
+  };
+  const byDay = new Map<string, Group>();
+  things.forEach((one, at) => {
+    const closes = Date.parse(one.closesAt);
+    const opens = one.opensAt === null ? null : Date.parse(one.opensAt);
+    mark(closes, "close");
+    if (opens !== null) mark(opens, "open");
+    const later = opens !== null && opens > now;
+    const anchor = later ? (opens as number) : closes;
+    const key = dayKey(anchor);
+    const group = byDay.get(key) ?? { at: anchor, title: dayTitle(anchor, now), rows: [] };
+    group.rows.push({
+      id: one.id,
+      slide: at,
+      name: one.title,
+      price: one.topCents > 0 ? formatUsd(one.topCents) : "-",
+      time: later
+        ? `opens in ${left(one.opensAt as string, now)}`
+        : `closes in ${left(one.closesAt, now)}`,
+    });
+    byDay.set(key, group);
+  });
+  const groups = [...byDay.entries()].sort((a, b) => a[1].at - b[1].at);
+  if (upcoming.length > 0) {
+    groups.push([
+      "tba",
+      {
+        at: Infinity,
+        title: "Date to be announced",
+        rows: upcoming.map((one, at) => ({
+          id: one.id,
+          slide: things.length + at,
+          name: one.title,
+          price: "-",
+          time: "Coming soon",
+        })),
+      },
+    ]);
+  }
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const week = Array.from({ length: 7 }, (_, at) => {
+    const one = new Date(start);
+    one.setDate(start.getDate() + at);
+    return one;
+  });
+
   return (
     <section className="screen">
-      <h1>Market</h1>
+      <h1 className="mk-title">
+        OXAR <span>Market</span>
+      </h1>
 
+      <div
+        className="hero-rail"
+        ref={rail}
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          setSlide(Math.round(el.scrollLeft / el.clientWidth));
+        }}
+      >
       {things.map((one) => {
         const opensLater =
           one.opensAt !== null && Date.parse(one.opensAt) > now;
@@ -144,18 +221,85 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
         );
       })}
 
-      {upcoming.length > 0 && (
-        <>
-          <h2 className="mk-head">Up next</h2>
-          {upcoming.map((one) => (
-            <Upcoming key={one.id} thing={one} />
+      {upcoming.map((one) => (
+        <Upcoming key={one.id} thing={one} />
+      ))}
+      </div>
+
+      {slides > 1 && (
+        <div className="hero-pager">
+          {Array.from({ length: slides }, (_, at) => (
+            <button
+              key={at}
+              type="button"
+              className={at === slide ? "on" : ""}
+              aria-label={`Show thing ${at + 1}`}
+              onClick={() => go(at)}
+            />
           ))}
-        </>
+        </div>
       )}
 
+      {groups.length > 0 && (
+        <div className="mk-strip">
+          {week.map((one) => {
+            const key = dayKey(one.getTime());
+            const kinds = marks.get(key);
+            const dot = kinds?.has("close") ? " close" : kinds?.has("open") ? " open" : "";
+            return (
+              <button
+                key={key}
+                type="button"
+                className={key === (dayOn ?? dayKey(now)) ? "mk-day on" : "mk-day"}
+                disabled={!byDay.has(key)}
+                onClick={() => {
+                  setDayOn(key);
+                  document
+                    .getElementById(`mk-day-${key}`)
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                <span className="mk-day-dow">
+                  {one.toLocaleDateString("en-US", { weekday: "short" })}
+                </span>
+                <span className="mk-day-date">{one.getDate()}</span>
+                <span className={`mk-day-dot${dot}`} />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {groups.map(([key, group]) => (
+        <div key={key} className="mk-group">
+          <h2 className="mk-head" id={`mk-day-${key}`}>
+            {group.title}
+          </h2>
+          {group.rows.map((row) => (
+            <button
+              key={row.id}
+              type="button"
+              className={row.slide === slide ? "mk-row on" : "mk-row"}
+              onClick={() => go(row.slide)}
+            >
+              <span className="mk-row-name">{row.name}</span>
+              <span className="mk-row-price">{row.price}</span>
+              <span className="mk-row-time" suppressHydrationWarning>
+                {row.time}
+              </span>
+            </button>
+          ))}
+        </div>
+      ))}
+
+      <h2 className="mk-head">Held earlier</h2>
+      {held.length === 0 && things[0] && (
+        <p className="held-empty">
+          Nothing yet. {things[0].title} is the first thing.
+        </p>
+      )}
       {held.length > 0 && (
         <>
-          <h2 className="mk-head">Held earlier</h2>
           <div className="held-list">
             {held.map((one) => (
               <div className="held-row" key={one.closesAt + one.title}>
@@ -241,6 +385,32 @@ function Upcoming({ thing }: { thing: UpcomingThing }) {
       </div>
     </div>
   );
+}
+
+type Group = {
+  at: number;
+  title: string;
+  rows: { id: string; slide: number; name: string; price: string; time: string }[];
+};
+
+/** Календарный день в часах читателя: ключ полосы и групп. */
+function dayKey(at: number): string {
+  const one = new Date(at);
+  return `${one.getFullYear()}-${one.getMonth() + 1}-${one.getDate()}`;
+}
+
+/** Заголовок группы: сегодня и завтра словами, дальше день недели и дата. */
+function dayTitle(at: number, now: number): string {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const ahead = Math.floor((at - start.getTime()) / 86_400_000);
+  if (ahead === 0) return "Today";
+  if (ahead === 1) return "Tomorrow";
+  return new Date(at).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 /** День для строк истории: коротко, в часах читателя. */
