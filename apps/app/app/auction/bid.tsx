@@ -250,19 +250,6 @@ export function BidForm({
             />
             <span className="bid-unit">USDC</span>
           </label>
-          {balance !== null && (
-            <span className="bal-row">
-              <span>Wallet balance</span>
-              <b>{formatUsd(balance)} USDC</b>
-            </span>
-          )}
-          {balance !== null && cents !== null && cents > balance && (
-            // Когда не хватает - сразу и куда идти: человек с нулём на этом
-            // месте однажды решил, что деньги пропали.
-            <span className="bid-balance short">
-              Not enough for this bid. Top up on the You tab.
-            </span>
-          )}
         </div>
 
         <div className="bumps">
@@ -290,6 +277,20 @@ export function BidForm({
         </span>
 
         {children}
+
+        {balance !== null && (
+          <span className="bal-row">
+            <span>Wallet balance</span>
+            <b>{formatUsd(balance)} USDC</b>
+          </span>
+        )}
+        {balance !== null && cents !== null && cents > balance && (
+          // Когда не хватает - сразу и куда идти: человек с нулём на этом
+          // месте однажды решил, что деньги пропали.
+          <span className="bid-balance short">
+            Not enough for this bid. Top up on the You tab.
+          </span>
+        )}
 
         {/* Кнопка приглушена, но нажимается. Недоступная кнопка не отвечает
             на «почему», и человек остаётся гадать; эта называет недостающий

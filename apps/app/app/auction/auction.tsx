@@ -593,65 +593,44 @@ export function Auction() {
 
           На голограмме шага нет: примерять некуда, пока мест не показывают.
           Пока это только превью - видит его один человек, тот, кто примеряет. */}
-      <div className="tryon">
-        <label className={art[picked] ? "art-step done" : "art-step"}>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
-            onChange={(event) => {
-              void tryOn(event.target.files?.[0]);
-              // Сбрасываем поле: иначе тот же файл второй раз не выберется.
-              event.target.value = "";
-            }}
-          />
-          {art[picked] ? (
-            <img className="art-thumb" src={art[picked].url} alt="" />
-          ) : (
-            <span className="art-thumb empty" aria-hidden>
-              +
-            </span>
-          )}
-          <span className="art-text">
-            <strong>
-              {art[picked] ? "Your artwork is on the shirt" : "Add your artwork"}
-            </strong>
-            {/* Про чёрно-белое сказано здесь, а не плашкой ниже: это условие
-                к файлу, и читать его надо там, где файл выбирают. Цветной
-                логотип выясняется на ткани, когда печатать уже поздно. */}
-            <em>
-              {art[picked]
-                ? "Tap to swap it - black and white prints best"
-                : "Required. Black and white prints best - PNG, JPG, SVG or WebP"}
-            </em>
-          </span>
-        </label>
-        {/* Корзина, а не слово: рядом с полем стоит действие над тем, что в
-            поле лежит, и словом оно занимало места больше, чем значит. */}
-        {art[picked] && (
-          <button
-            type="button"
-            className="art-clear"
-            onClick={takeOff}
-            aria-label="Remove artwork"
-          >
-            <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden>
-              <path
-                d="M4.5 6.75h15M9.75 6.75V4.5h4.5v2.25M6.75 6.75l.9 12.75h8.7l.9-12.75M10.25 10v6M13.75 10v6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+      <label className="art-row">
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          hidden
+          onChange={(event) => {
+            void tryOn(event.target.files?.[0]);
+            // Сбрасываем поле: иначе тот же файл второй раз не выберется.
+            event.target.value = "";
+          }}
+        />
+        {art[picked] ? (
+          <>
+            <img src={art[picked].url} alt="" />
+            <span className="art-row-name">{art[picked].file.name}</span>
+            <button
+              type="button"
+              className="art-row-drop"
+              onClick={(event) => {
+                event.preventDefault();
+                takeOff();
+              }}
+            >
+              Remove
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="art-row-name">Upload artwork</span>
+            <span className="art-row-hint">PNG, JPG, SVG or WebP</span>
+          </>
         )}
-      </div>
+      </label>
       {artError ? (
         <p className="bad">{artError}</p>
       ) : (
         art[picked] && (
-          <p className="muted">
+          <p className="muted small">
             Only you can see this. It goes public when you bid with it.
           </p>
         )
@@ -659,6 +638,44 @@ export function Auction() {
         </BidForm>
       )}
 
+
+      {bids.length > 0 && (
+        <div className="lot-bids">
+          {/* Каждая строка - и запись, и перемотка: нажми, и вещь покажет,
+              как выглядела при той ставке. Верхняя - лидер. */}
+          <p className="list-head">
+            Bids on spot {SPOTS.find((spot) => spot.code === picked)?.label}
+            <span>
+              {bids.length === 1 ? "1 bid" : `${bids.length} bids`} · tap to
+              see it on the shirt
+            </span>
+          </p>
+          {bids.map((bid, index) => (
+            <button
+              key={bid.id}
+              type="button"
+              className={bid.id === rewound ? "bid-row on" : "bid-row"}
+              aria-pressed={bid.id === rewound}
+              onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
+            >
+              <img className="bid-row-art" src={bid.media_url} alt="" />
+              <span className="bid-row-who">
+                <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
+                <em>{ago(bid.created_at, now)}</em>
+              </span>
+              <span className={index === 0 ? "tagchip red" : "tagchip"}>
+                {index === 0 ? "LEADING" : "REFUNDED"}
+              </span>
+              <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
+            </button>
+          ))}
+          {rewound && (
+            <p className="muted small">
+              Rewound. This is what the shirt looked like at that bid, not now.
+            </p>
+          )}
+        </div>
+      )}
 
       <nav className="lot-tabs">
         {(["about", "spots", "rules"] as const).map((name) => (
@@ -738,42 +755,6 @@ export function Auction() {
       )}
 
       {/* На телефоне дуг нет, и ставки выбранного места живут здесь. */}
-      {bids.length > 0 && (
-        <div className="lot-bids">
-          {/* Каждая строка - и запись, и перемотка: нажми, и вещь покажет,
-              как выглядела при той ставке. Верхняя - лидер. */}
-          <p className="list-head">
-            Bids on spot {SPOTS.find((spot) => spot.code === picked)?.label}
-            <span>
-              {bids.length === 1 ? "1 bid" : `${bids.length} bids`} · tap to
-              see it on the shirt
-            </span>
-          </p>
-          {bids.map((bid, index) => (
-            <button
-              key={bid.id}
-              type="button"
-              className={bid.id === rewound ? "bid-row on" : "bid-row"}
-              aria-pressed={bid.id === rewound}
-              onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
-            >
-              <span className="bid-row-who">
-                <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
-                <em>{ago(bid.created_at, now)}</em>
-              </span>
-              <span className={index === 0 ? "tagchip red" : "tagchip"}>
-                {index === 0 ? "LEADING" : "REFUNDED"}
-              </span>
-              <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
-            </button>
-          ))}
-          {rewound && (
-            <p className="muted small">
-              Rewound. This is what the shirt looked like at that bid, not now.
-            </p>
-          )}
-        </div>
-      )}
     </section>
   );
 }

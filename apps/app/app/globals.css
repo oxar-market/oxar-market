@@ -1096,8 +1096,9 @@ input:focus {
 }
 
 .bid-card {
-  display: grid;
-  gap: 0.625rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
   border: 1px solid var(--line);
   border-radius: 20px;
   padding: 0.75rem;
@@ -1410,31 +1411,7 @@ input:focus {
      Имени нужна своя строка в раскладке: без неё поле встало бы под прибавки,
      в первую свободную клетку, а читается карточка сверху вниз. */
   .bid-card {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      "brand brand"
-      "field go"
-      "bumps bumps";
-    align-items: center;
-    padding: 0.875rem;
-  }
-
-  .bid-brand {
-    grid-area: brand;
-  }
-
-  .bid-amount {
-    grid-area: field;
-  }
-
-  .bid-go {
-    grid-area: go;
-    padding: 1rem 2.5rem;
-  }
-
-  .bumps {
-    grid-area: bumps;
-    padding-left: 0.5rem;
+    padding: 1.125rem;
   }
 
   .bid-field input {
@@ -2864,4 +2841,57 @@ input:focus {
 
 .tagchip.red {
   color: #e0381c;
+}
+
+
+/* Строка загрузки картинки - компактная, как в макете: слово слева,
+   формат справа, превью появляется на месте плюса. */
+.art-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border: 1px dashed var(--line3);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.14s;
+}
+
+.art-row:hover {
+  border-color: var(--ink);
+}
+
+.art-row img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: var(--soft);
+}
+
+.art-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.art-row-hint {
+  font-size: 0.8125rem;
+  color: var(--mut);
+  white-space: nowrap;
+}
+
+.art-row-drop {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0;
 }
