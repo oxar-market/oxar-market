@@ -57,7 +57,7 @@ export default function Home() {
         </p>
       )}
 
-      {tab === "market" && <Market />}
+      {tab === "market" && <Market onOpenAuction={() => setTab("auction")} />}
       {tab === "auction" && <Auction />}
       {tab === "you" &&
         // Пока Privy не готов, не показываем ни Guest, ни You: иначе вошедшему

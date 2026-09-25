@@ -84,6 +84,22 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
     });
   }
 
+  // Тема: свой выбор или системная. Применяется атрибутом на html - тем же,
+  // что ставит скрипт в layout до первой отрисовки.
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  useEffect(() => {
+    const saved = window.localStorage.getItem("oxar.theme");
+    if (saved === "light" || saved === "dark") setTheme(saved);
+  }, []);
+  function pickTheme(next: "light" | "dark" | "system") {
+    setTheme(next);
+    if (next === "system") window.localStorage.removeItem("oxar.theme");
+    else window.localStorage.setItem("oxar.theme", next);
+    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme =
+      next === "system" ? (dark ? "dark" : "light") : next;
+  }
+
   // Роли одним переключателем: Seller - не второй режим, а дверь к разговору,
   // и до своего кабинета он живёт одной карточкой с Buyer.
   const [role, setRole] = useState<"buyer" | "seller">("buyer");
@@ -287,6 +303,22 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
             </a>
           </>
         )}
+      </div>
+
+      <div className="theme-row">
+        <span className="muted">Theme</span>
+        <div className="role-toggle slim">
+          {(["light", "dark", "system"] as const).map((one) => (
+            <button
+              key={one}
+              type="button"
+              className={theme === one ? "role-tab on" : "role-tab"}
+              onClick={() => pickTheme(one)}
+            >
+              {one === "light" ? "Light" : one === "dark" ? "Dark" : "System"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <button type="button" className="signout" onClick={logout}>

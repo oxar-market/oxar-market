@@ -214,6 +214,97 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
   }).filter((one) => one.open || Date.parse(one.closesAt) >= PUBLIC_OPENING);
 }
 
+/** Вещь на витрине маркета: её торг одним взглядом. */
+export type MarketThing = {
+  id: string;
+  title: string;
+  tagline: string | null;
+  spots: number;
+  taken: number;
+  /** Самая высокая лидирующая ставка вещи. */
+  topCents: number;
+  /** Сумма лидирующих ставок: по ней вещи сортируются - у кого хайп. */
+  raisedCents: number;
+  closesAt: string;
+  opensAt: string | null;
+};
+
+/** Строка «Held earlier»: чем кончился прошедший торг. */
+export type HeldRow = {
+  closesAt: string;
+  title: string;
+  raisedCents: number;
+};
+
+/**
+ * Витрина маркета: идущие торги по вещам и прошедшие - строками.
+ * Репетиции до публичного открытия не показываются, как и в истории людей.
+ */
+export async function loadMarket(): Promise<{
+  things: MarketThing[];
+  held: HeldRow[];
+}> {
+  if (!db) return { things: [], held: [] };
+
+  const { data } = await db
+    .from("lots")
+    .select(
+      "id, status, opens_at, closes_at, thing_id, things:thing_id(title, tagline)",
+    )
+    .in("status", ["open", "won", "unsold"])
+    .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
+    .limit(400);
+  if (!data || data.length === 0) return { things: [], held: [] };
+
+  const tops = await loadTopBids(data.map((one) => one.id));
+  const now = Date.now();
+
+  const things = new Map<string, MarketThing>();
+  const heldBy = new Map<string, HeldRow>();
+  for (const lot of data) {
+    const info = lot.things as unknown as { title?: string; tagline?: string | null } | null;
+    const top = tops[lot.id];
+    const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
+    if (open) {
+      const known =
+        things.get(lot.thing_id) ??
+        ({
+          id: lot.thing_id,
+          title: info?.title ?? "",
+          tagline: info?.tagline ?? null,
+          spots: 0,
+          taken: 0,
+          topCents: 0,
+          raisedCents: 0,
+          closesAt: lot.closes_at,
+          opensAt: lot.opens_at,
+        } satisfies MarketThing);
+      known.spots += 1;
+      if (top) {
+        known.taken += 1;
+        known.raisedCents += top.amount_cents;
+        if (top.amount_cents > known.topCents) known.topCents = top.amount_cents;
+      }
+      things.set(lot.thing_id, known);
+    } else {
+      // Прошедший торг сворачивается в одну строку на вещь и день закрытия.
+      const key = `${lot.thing_id}:${lot.closes_at.slice(0, 10)}`;
+      const row =
+        heldBy.get(key) ??
+        ({ closesAt: lot.closes_at, title: info?.title ?? "", raisedCents: 0 } satisfies HeldRow);
+      if (lot.status === "won" && top) row.raisedCents += top.amount_cents;
+      heldBy.set(key, row);
+    }
+  }
+
+  return {
+    things: [...things.values()].sort((a, b) => b.raisedCents - a.raisedCents),
+    held: [...heldBy.values()].sort(
+      (a, b) => Date.parse(b.closesAt) - Date.parse(a.closesAt),
+    ),
+  };
+}
+
 /**
  * Положить креатив в хранилище.
  *
