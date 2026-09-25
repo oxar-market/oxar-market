@@ -40,12 +40,18 @@ type Art = { url: string; file: File };
 export function BidForm({
   lot,
   need,
+  spotLabel,
+  topCents,
   art,
   onPlaced,
 }: {
   lot: Lot;
   /** Минимум по нашей витрине. Цепочку спросим ещё раз перед отправкой. */
   need: number;
+  /** Подпись места - форма называет, за что торг. */
+  spotLabel: string;
+  /** Верхняя ставка места; null - ставок ещё нет. */
+  topCents: number | null;
   art: Art | undefined;
   onPlaced: () => void;
 }) {
@@ -203,6 +209,15 @@ export function BidForm({
   return (
     <div className="bidding">
       <div className="bid-card">
+        {/* Форма называет место и цену, которую бьём: человек пришёл сюда
+            кнопкой или сеткой, и заголовок подтверждает, куда он попал. */}
+        <div className="bid-head">
+          <span className="bid-head-title">Bid on spot {spotLabel}</span>
+          <span className="muted small">
+            {topCents === null ? `reserve ${formatUsd(need)}` : `leading ${formatUsd(topCents)}`}
+          </span>
+        </div>
+
         {/* Чьё лого - вопрос той же важности, что сумма: картинка без имени
             остаётся картинкой без хозяина, по кошельку его не узнать.
             Поэтому имя стоит в той же рамке, а не отдельным шагом. */}
@@ -230,6 +245,7 @@ export function BidForm({
               onChange={(event) => setAmount(event.target.value)}
               aria-label="Your bid in USDC"
             />
+            <span className="bid-unit">USDC</span>
           </label>
           {balance !== null && (
             <span

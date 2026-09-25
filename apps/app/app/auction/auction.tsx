@@ -11,6 +11,7 @@ import {
   minBidCents,
 } from "@oxar/core";
 import {
+  loadBidCounts,
   loadBids,
   loadThing,
   loadTopBids,
@@ -47,6 +48,7 @@ export function Auction() {
   const [picked, setPicked] = useState(SPOTS[0].code);
   const [bids, setBids] = useState<Bid[]>([]);
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [angle, setAngle] = useState(0);
   const [tab, setTab] = useState<"about" | "spots" | "rules">("about");
   const [sceneReady, setSceneReady] = useState(false);
@@ -169,6 +171,7 @@ export function Auction() {
     if (lots.length === 0) return;
     let live = true;
     loadTopBids(lots.map((one) => one.id)).then((rows) => live && setTops(rows));
+    loadBidCounts(lots.map((one) => one.id)).then((rows) => live && setCounts(rows));
     return () => {
       live = false;
     };
@@ -334,6 +337,7 @@ export function Auction() {
   return (
     <section className="lot">
       <header className="lot-top">
+        <div className="lot-title">
         <p className="over">{thing?.tagline ?? "Superteam Ukraine"}</p>
         <h1>{thing?.title ?? "Local Event Tee"}</h1>
 
@@ -361,10 +365,17 @@ export function Auction() {
             По секундам, потому что последние минуты и есть весь смысл:
             ставка под конец двигает конец всем местам, и видеть, сколько
             осталось, нужно точно. */}
+        </div>
+
+        {/* Счётчик - самая крупная цифра экрана, напротив имени: торг и есть
+            время. Подпись отдельно, чтобы цифры остались чистыми. */}
         {started && closesAt !== null && (
-          <p className={endingSoon ? "lot-clock soon" : "lot-clock"}>
-            {countdown(closesAt, now)}
-          </p>
+          <div className={endingSoon ? "lot-cd soon" : "lot-cd"}>
+            <span className="lot-cd-cap">closes in</span>
+            <span className="lot-cd-num" suppressHydrationWarning>
+              {clockOf(closesAt, now)}
+            </span>
+          </div>
         )}
       </header>
 
@@ -396,6 +407,33 @@ export function Auction() {
             onPick={(code) => choose(code, true)}
             art={shownArt}
           />
+        )}
+
+        {/* Чем смотреть вещь - пилюля прямо на сцене, как на борде. */}
+        {started && (
+          <div className="looks over-scene" role="group" aria-label="How to view">
+            {([
+              ["live", "Shirt"],
+              ["shot", "Photo"],
+            ] as const).map(([which, name]) => (
+              <button
+                key={which}
+                type="button"
+                className={look === which ? "look-tab on" : "look-tab"}
+                aria-pressed={look === which}
+                disabled={which === "shot" && views.shots.length === 0}
+                onClick={() => {
+                  setLook(which);
+                  if (which === "shot" && !TEMP_ANGLES.includes(angle)) {
+                    setAngle(0);
+                    stage.current?.face(0);
+                  }
+                }}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
         )}
 
         {/* Слева от вещи - ставки выбранного места, верхняя первой: она и есть
@@ -457,35 +495,6 @@ export function Auction() {
           обводить то, что уже продаётся, значило бы показывать торг дважды. */}
       {started && (
       <>
-      <div className="looks" role="group" aria-label="How to view">
-        {/* Голограммы среди видов нет: это не ракурс, а состояние «торг ещё
-            не начался», и в него не переключаются - в нём ждут. До старта
-            экран сам стоит в ней, после старта её выбирать незачем. */}
-        {([
-          ["live", "Shirt"],
-          ["shot", "Photo"],
-        ] as const).map(([which, name]) => (
-          <button
-            key={which}
-            type="button"
-            className={look === which ? "look-tab on" : "look-tab"}
-            aria-pressed={look === which}
-            disabled={which === "shot" && views.shots.length === 0}
-            onClick={() => {
-              setLook(which);
-              // TEMP_FRONT: в фото-режиме боков нет. Пришли с бокового
-              // ракурса - разворачиваем на перёд, иначе экран пуст.
-              if (which === "shot" && !TEMP_ANGLES.includes(angle)) {
-                setAngle(0);
-                stage.current?.face(0);
-              }
-            }}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
-
       {/* TEMP_FRONT: в фото-режиме ракурсов два, по числу снимков. */}
       <div className="angles" role="group" aria-label="View">
         {(look === "shot" ? TEMP_ANGLES : ANGLES.map((_, at) => at)).map((index) => {
@@ -517,6 +526,46 @@ export function Auction() {
       </>
       )}
 
+      {/* Выбор места сеткой - как на самой вещи, но с ценами: на телефоне
+          дуг нет, и это главный пульт. На широком экране его работу делают
+          дуги, сетка прячется. */}
+      {started && look !== "ghost" && lots.length > 0 && (
+        <>
+          <div className="pick-head">
+            <span className="pick-title">Pick a spot</span>
+            <span className="muted small">3 x 3 on the chest</span>
+          </div>
+          <div className="pick-grid" role="group" aria-label="Spots with prices">
+            {SPOTS.map((spot) => {
+              const each = lotOf(spot.code);
+              const holder = each ? tops[each.id] : undefined;
+              const n = each ? counts[each.id] ?? 0 : 0;
+              return (
+                <button
+                  key={spot.code}
+                  type="button"
+                  className={spot.code === picked ? "pick-cell on" : "pick-cell"}
+                  aria-pressed={spot.code === picked}
+                  onClick={() => choose(spot.code, true)}
+                >
+                  <span className="pick-n">{spot.label}</span>
+                  <span className="pick-price">
+                    {each
+                      ? holder
+                        ? formatUsd(holder.amount_cents)
+                        : `from ${formatUsd(each.reserve_cents)}`
+                      : "-"}
+                  </span>
+                  <span className="pick-count">
+                    {each ? (n === 1 ? "1 bid" : `${n} bids`) : "not for sale"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       {/* Состояние выбранного места одной строкой: что это и почём. Срока
           здесь больше нет - он общий на всю вещь и висит часами наверху, а
           повторять его у каждого места значило бы обещать, будто у них сроки
@@ -528,25 +577,7 @@ export function Auction() {
           {lots.length > 0 &&
             ` · from ${formatUsd(Math.min(...lots.map((one) => one.reserve_cents)))}`}
         </p>
-      ) : (
-      <p className="lot-state">
-        <strong>{SPOTS.find((spot) => spot.code === picked)?.label}</strong>
-        {lot ? (
-          running ? (
-            <>
-              {" · "}
-              {top ? `top ${formatUsd(top.amount_cents)}` : `reserve ${formatUsd(lot.reserve_cents)}`}
-              {" · next "}
-              {formatUsd(need)}
-            </>
-          ) : (
-            " · bidding has closed"
-          )
-        ) : (
-          " · not up for auction yet"
-        )}
-      </p>
-      )}
+      ) : null}
 
       {/* Картинка - первый шаг ставки, а не украшение рядом с ней: без неё
           ставка не уйдёт, печатать было бы нечего. Поэтому она стоит выше
@@ -623,7 +654,15 @@ export function Auction() {
           торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
           На голограмме её тоже нет: торг там ещё не начался. */}
       {lot && running && look !== "ghost" && (
-        <BidForm key={lot.id} lot={lot} need={need} art={art[picked]} onPlaced={refresh} />
+        <BidForm
+          key={lot.id}
+          lot={lot}
+          need={need}
+          spotLabel={SPOTS.find((spot) => spot.code === picked)?.label ?? ""}
+          topCents={top?.amount_cents ?? null}
+          art={art[picked]}
+          onPlaced={refresh}
+        />
       )}
 
       {/* История места: каждое деление - ставка, и в нём стоит сам логотип,
@@ -742,29 +781,11 @@ export function Auction() {
       )}
 
       {tab === "spots" && (
-        <div className="rows">
-          {SPOTS.map((spot) => {
-            const each = lotOf(spot.code);
-            const holder = each ? tops[each.id] : undefined;
-            return (
-              <button
-                key={spot.code}
-                type="button"
-                className="row"
-                onClick={() => choose(spot.code, true)}
-              >
-                <span>{spot.label}</span>
-                <span className={each ? "row-price" : "row-price off"}>
-                  {each
-                    ? holder
-                      ? `top bid ${formatUsd(holder.amount_cents)}`
-                      : `bidding from ${formatUsd(each.reserve_cents)}`
-                    : "not for sale yet"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <p className="muted">
+          A 3 x 3 grid on the chest, printed in flat ink. Pick a spot right on
+          the shirt or in the grid above - the number on the shirt and in the
+          list is the same spot.
+        </p>
       )}
 
       {tab === "rules" && (
@@ -910,6 +931,15 @@ function until(at: number, now: number): string {
  * Дни отдельным числом впереди: «49:12:07» прочитать нельзя, а «2d 01:12:07»
  * читается сразу.
  */
+/** Часы шапки: только цифры, подпись «closes in» стоит отдельной строкой. */
+function clockOf(closesAt: number, now: number): string {
+  const total = Math.max(0, Math.floor((closesAt - now) / 1000));
+  const days = Math.floor(total / 86_400);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const clock = `${pad(Math.floor((total % 86_400) / 3_600))}:${pad(Math.floor((total % 3_600) / 60))}:${pad(total % 60)}`;
+  return days > 0 ? `${days}d ${clock}` : clock;
+}
+
 function countdown(closesAt: number, now: number): string {
   const ms = closesAt - now;
   if (ms <= 0) return "Bidding closed";

@@ -214,6 +214,21 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
   }).filter((one) => one.open || Date.parse(one.closesAt) >= PUBLIC_OPENING);
 }
 
+/** Сколько ставок у каждого лота: для сетки мест. */
+export async function loadBidCounts(
+  lotIds: string[],
+): Promise<Record<string, number>> {
+  if (!db || lotIds.length === 0) return {};
+  const { data } = await db
+    .from("lot_bids")
+    .select("lot_id")
+    .in("lot_id", lotIds)
+    .limit(2000);
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) counts[row.lot_id] = (counts[row.lot_id] ?? 0) + 1;
+  return counts;
+}
+
 /** Вещь на витрине маркета: её торг одним взглядом. */
 export type MarketThing = {
   id: string;

@@ -1258,24 +1258,30 @@ input:focus {
 
 .lot-tabs {
   display: flex;
-  gap: 1.25rem;
-  border-bottom: 1px solid var(--line2);
+  gap: 4px;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--soft);
 }
 
 .lot-tab {
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  padding: 0 0 0.5rem;
-  font: inherit;
-  font-size: 0.875rem;
-  color: var(--mut);
+  flex: 1;
   cursor: pointer;
+  border: 0;
+  padding: 0.5625rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9375rem;
+  background: transparent;
+  color: var(--mut);
 }
 
 .lot-tab.on {
-  border-bottom-color: var(--ink);
+  background: var(--card);
   color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 /* Список мест: имя слева, состояние справа. */
@@ -2398,4 +2404,166 @@ input:focus {
    тёмном он даёт грязный ореол. Отпечаток на тёмной стене, как на лендинге. */
 :root[data-theme="dark"] .hero-photo {
   background-color: #e9e8e2;
+}
+
+
+/* ── Торг по дизайн-борду: счётчик-герой, пилюля вида на сцене, сетка мест. ── */
+
+.lot-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.lot-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.lot-cd {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+/* На широком экране счётчик встаёт колонкой напротив имени. */
+@media (min-width: 64rem) {
+  .lot-cd {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.375rem;
+  }
+}
+
+.lot-cd-cap {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.lot-cd-num {
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lot-cd.soon .lot-cd-num {
+  color: #e0381c;
+}
+
+/* Пилюля вида поверх сцены: стекло, как у нижнего меню. */
+.looks.over-scene {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--tabline);
+}
+
+.pick-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.pick-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.pick-cell {
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  transition: transform 0.1s ease-out;
+}
+
+.pick-cell:active {
+  transform: scale(0.97);
+}
+
+.pick-cell.on {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
+}
+
+.pick-cell.on .pick-n,
+.pick-cell.on .pick-count {
+  color: inherit;
+  opacity: 0.65;
+}
+
+.pick-n {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.pick-price {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pick-count {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+/* На широком экране места выбирают дугами у вещи - сетка прячется. */
+@media (min-width: 64rem) {
+  .pick-head,
+  .pick-grid {
+    display: none;
+  }
+}
+
+/* Шапка формы ставки: место и цена, которую бьём. */
+.bid-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.bid-head-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.bid-unit {
+  font-size: 0.8125rem;
+  color: var(--mut);
 }
