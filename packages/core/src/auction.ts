@@ -31,13 +31,23 @@ export type Bid = {
 /**
  * Сколько нужно поставить сейчас. Первая ставка равна резервной цене - ниже
  * неё лот всё равно не продан, так что нет смысла принимать такие ставки.
+ *
+ * Шаг принадлежит лоту, а не константе: программа в цепочке считает
+ * `верх + max(шаг лота, 5%)`, и экран обязан считать так же. Зашитый доллар
+ * здесь однажды разошёлся с программой на живом торге: экран обещал «next
+ * $11», а программа с шагом $5 требовала $15.
  */
-export function minBidCents(reserveCents: number, topCents: number | null): number {
+export function minBidCents(
+  reserveCents: number,
+  topCents: number | null,
+  stepCents: number = MIN_STEP_CENTS,
+): number {
   assertCents(reserveCents, "reserveCents");
+  assertCents(stepCents, "stepCents");
   if (topCents === null) return reserveCents;
   assertCents(topCents, "topCents");
 
-  const step = Math.max(MIN_STEP_CENTS, Math.round(topCents * BID_STEP_RATE));
+  const step = Math.max(stepCents, Math.round(topCents * BID_STEP_RATE));
   return topCents + step;
 }
 
