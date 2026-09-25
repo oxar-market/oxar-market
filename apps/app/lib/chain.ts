@@ -37,6 +37,11 @@ const PROGRAM_ID = new PublicKey("4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe")
 /** `bidder_places_bid` из IDL. */
 const PLACE_BID = new Uint8Array([172, 147, 26, 172, 0, 179, 171, 148]);
 
+/** Программа Memo: подписывает транзакцию текстом, который видно в кошельке. */
+const MEMO_PROGRAM_ID = new PublicKey(
+  "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+);
+
 // `||`, а не `??`: на проде переменная приходит пустой строкой, а не
 // отсутствует, и `??` пропускал бы её как заданное значение. Пустая строка -
 // это «не задано», и тогда девнет. Иначе `""` !== `"devnet"` уводило кошелёк
@@ -295,12 +300,25 @@ export async function bidTransaction(
     ],
   });
 
+  const instructions = [instruction];
+  // Возврат прежнему лидеру уходит этой же транзакцией, и в его кошельке он
+  // выглядит безымянным приходом USDC. Мемо подписывает, что это и откуда.
+  if (lot.topBidder && !lot.topBidder.equals(bidder)) {
+    instructions.push(
+      new TransactionInstruction({
+        programId: MEMO_PROGRAM_ID,
+        keys: [],
+        data: Buffer.from("You've been outbid on OXAR - app.oxar.app", "utf8"),
+      }),
+    );
+  }
+
   const { blockhash } = await connection.getLatestBlockhash();
   return new VersionedTransaction(
     new TransactionMessage({
       payerKey: bidder,
       recentBlockhash: blockhash,
-      instructions: [instruction],
+      instructions,
     }).compileToV0Message(),
   );
 }
