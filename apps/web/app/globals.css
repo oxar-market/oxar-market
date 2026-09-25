@@ -205,8 +205,9 @@ h1 {
 
 .now-pill {
   position: absolute;
-  left: 28px;
-  top: 28px;
+  /* Внутрь от кадрирующих уголков: контролы живут в кадре, не на рамке. */
+  left: 44px;
+  top: 20px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -369,8 +370,9 @@ h1 {
 /* Переключатель вида - мини-версия того, что на торге. */
 .look-flip {
   position: absolute;
-  right: 16px;
-  top: 16px;
+  /* Внутрь от кадрирующего уголка, чтобы не наезжать на его графику. */
+  right: 44px;
+  top: 20px;
   display: flex;
   gap: 2px;
   padding: 3px;
