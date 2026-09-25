@@ -121,7 +121,6 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
                   : "Connected from your own wallet app."}
               </span>
             </div>
-            <span className="wallet-net">Solana</span>
           </div>
 
           <div className="balance">
