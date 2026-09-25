@@ -1,5 +1,6 @@
-/* Один экран, четыре вещи на нём. Оформления ровно столько, чтобы страница
-   выглядела законченной, а не недоделанной. */
+/* Лендинг по дизайн-борду: один экран, слева манифест, справа живая афиша
+   идущего торга. Прежние гравюрные поля ушли вместе со старой раскладкой -
+   их работу «показать, что такое место» теперь делает сама афиша с разметкой. */
 
 * {
   box-sizing: border-box;
@@ -14,117 +15,279 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Поля по бокам: Нью-Йорк конца XIX века, на котором размечены места.
-
-   Это не украшение и не текстура ради текстуры. Обведено ровно то, что и в
-   жизни носит рекламу: глухая стена дома, фриз платформы, борт вагона, борт
-   конки, ферма виадука. Рамки те же самые, что на футболке в приложении, и
-   говорят они то же, что строка посередине: если на это смотрят, это
-   рекламное место. Город на гравюре старше нас на полтора века, а места на
-   нём уже были.
-
-   Отсюда и сила: чуть заметнее, чем просто фактура. Выцвети её до шёпота -
-   пропадут рамки, а вместе с ними и весь смысл; останутся обои.
-
-   Чарльз Магнус, «Chatham Square Elevated Railroad Crossing», Нью-Йорк,
-   1850-1900. Met Open Access, общественное достояние. Цвет снят, штрих
-   осветлён, рамки дорисованы нами. */
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  width: min(30vw, 26rem);
-  background-size: cover;
-  background-position: center;
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-body::before {
-  left: 0;
-  background-image: url("/side-left.webp");
-  -webkit-mask-image: linear-gradient(to right, #000 35%, transparent);
-  mask-image: linear-gradient(to right, #000 35%, transparent);
-}
-
-body::after {
-  right: 0;
-  background-image: url("/side-right.webp");
-  -webkit-mask-image: linear-gradient(to left, #000 35%, transparent);
-  mask-image: linear-gradient(to left, #000 35%, transparent);
-}
-
-/* На телефоне боков нет - там весь экран и есть середина. */
-@media (max-width: 48rem) {
-  body::before,
-  body::after {
-    display: none;
-  }
-}
-
-/* По центру экрана, а не по центру страницы: на странице из четырёх вещей
-   текст, сидящий вверху, читается как незагрузившийся. */
-main {
+.land {
   min-height: 100svh;
+  max-width: 90rem;
+  margin: 0 auto;
+  padding: 2.5rem 4.5rem 3.5rem;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 2.5rem;
+}
+
+.land-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wordmark,
+h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  font-size: 0.8125rem;
+  color: #6b6b73;
+}
+
+.land-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 35rem;
+  gap: 6rem;
+  align-items: center;
+  min-height: 0;
+}
+
+.manifesto {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 1.5rem;
-  text-align: center;
-}
-
-/* Метка стоит отдельно от имени, а не вместо него: она узнаётся не всеми и
-   пока ничего не значит, а имя читается сразу. */
-.mark {
-  display: block;
-  margin-bottom: 0.5rem;
+  gap: 1.75rem;
 }
 
 h1 {
   margin: 0;
-  font-size: 2.5rem;
-  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
-/* Строка крупнее обычного текста: она здесь единственная, и мельче имени её
-   читали бы как подпись под ним. */
-.lead {
+/* Поддержка тем же кеглем, что заголовок, но серым: это продолжение мысли,
+   а не подпись под ней. */
+.sub {
   margin: 0;
-  max-width: 24rem;
-  font-size: 1.25rem;
-  line-height: 1.4;
-  letter-spacing: -0.01em;
+  font-size: 1.75rem;
+  line-height: 1.5;
+  color: #6b6b73;
+  max-width: 34rem;
+  text-wrap: pretty;
 }
 
-/* Кнопка-пилюля: единственное действие на странице, и оно должно читаться
-   как действие, а не как ссылка в тексте. */
-.launch {
-  margin-top: 0.75rem;
+.find {
   display: inline-flex;
-  align-items: center;
+  padding: 1.25rem 2.125rem;
   border-radius: 999px;
   background: #16181d;
-  padding: 0.8125rem 1.5rem;
+  color: #fff;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: #fff;
   text-decoration: none;
   transition: transform 0.12s ease-out, opacity 0.12s;
 }
 
-.launch:hover {
+.find:hover {
   opacity: 0.88;
 }
 
-.launch:active {
+.find:active {
   transform: scale(0.98);
 }
 
-.launch:focus-visible {
+.find:focus-visible {
   outline: 2px solid #16181d;
   outline-offset: 3px;
+}
+
+/* Афиша торга: вся карточка - одна дверь в приложение. */
+.live-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 45rem;
+  border: 1px solid #e3e3df;
+  border-radius: 20px;
+  background: #fff;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+}
+
+.live-photo {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #f1f1ed url("/TEMP-photo-front.webp") center/cover no-repeat;
+}
+
+/* Разметка мест поверх фото: занятое - залитый номер, свободное - контур.
+   Те же красные уголки, что на самой вещи в приложении. */
+.live-grid {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  gap: 12px;
+}
+
+.cell {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.cell i {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 0 solid #e0381c;
+}
+
+.cell i:nth-child(1) { left: 0; top: 0; border-left-width: 1px; border-top-width: 1px; }
+.cell i:nth-child(2) { right: 0; top: 0; border-right-width: 1px; border-top-width: 1px; }
+.cell i:nth-child(3) { left: 0; bottom: 0; border-left-width: 1px; border-bottom-width: 1px; }
+.cell i:nth-child(4) { right: 0; bottom: 0; border-right-width: 1px; border-bottom-width: 1px; }
+
+.cell b {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: #e0381c;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.cell.free b {
+  background: transparent;
+  color: #e0381c;
+}
+
+/* Кадрирующие уголки по краям фото - печатная проба целиком. */
+.crop {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 0 solid #e0381c;
+}
+
+.crop.tl { left: 16px; top: 16px; border-left-width: 1.5px; border-top-width: 1.5px; }
+.crop.tr { right: 16px; top: 16px; border-right-width: 1.5px; border-top-width: 1.5px; }
+.crop.bl { left: 16px; bottom: 16px; border-left-width: 1.5px; border-bottom-width: 1.5px; }
+.crop.br { right: 16px; bottom: 16px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+
+.now-pill {
+  position: absolute;
+  left: 28px;
+  top: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.now-pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e0381c;
+}
+
+.live-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 1rem;
+  align-items: baseline;
+  padding: 1.125rem 1.25rem;
+  border-top: 1px solid #e3e3df;
+}
+
+.live-name {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.live-cd {
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-sub {
+  font-size: 0.9375rem;
+  color: #6b6b73;
+}
+
+/* Телефон: колонка, афиша занимает остаток экрана, разметка мельче. */
+@media (max-width: 56rem) {
+  .land {
+    padding: 1.375rem 1.25rem;
+    gap: 0;
+    grid-template-rows: auto auto;
+  }
+
+  .tagline {
+    display: none;
+  }
+
+  .land-grid {
+    grid-template-columns: 1fr;
+    gap: 1.375rem;
+    align-items: stretch;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: calc(100svh - 6rem);
+  }
+
+  .manifesto {
+    gap: 0.875rem;
+    margin-top: 1.75rem;
+  }
+
+  .sub {
+    font-size: 0.9375rem;
+  }
+
+  .find {
+    padding: 0.875rem 1.5rem;
+  }
+
+  .live-card {
+    max-height: none;
+  }
+
+  .live-grid {
+    grid-template-columns: repeat(3, 30px);
+    gap: 6px;
+  }
+
+  .cell {
+    width: 30px;
+    height: 30px;
+  }
+
+  .cell i {
+    width: 6px;
+    height: 6px;
+  }
+
+  .cell b {
+    font-size: 0.6875rem;
+    padding: 2px 4px;
+  }
+
+  .live-name {
+    font-size: 1.25rem;
+  }
 }
