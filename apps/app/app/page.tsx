@@ -7,7 +7,7 @@ import { BUILD } from "@/lib/build";
 import { Auction } from "./auction/auction";
 import { Market } from "./market";
 import { Tabs, useTab } from "./tabs";
-import { You } from "./you";
+import { ThemeRow, You } from "./you";
 
 /**
  * Приложение.
@@ -57,7 +57,7 @@ export default function Home() {
         </p>
       )}
 
-      {tab === "market" && <Market />}
+      {tab === "market" && <Market onOpenAuction={() => setTab("auction")} />}
       {tab === "auction" && <Auction />}
       {tab === "you" &&
         // Пока Privy не готов, не показываем ни Guest, ни You: иначе вошедшему
@@ -83,6 +83,7 @@ function Guest({ onSignIn }: { onSignIn: () => void }) {
       <button type="button" className="primary" onClick={onSignIn}>
         Sign in
       </button>
+      <ThemeRow />
       <p className="build">build {BUILD}</p>
     </section>
   );

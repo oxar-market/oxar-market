@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useLogin, usePrivy } from "@privy-io/react-auth";
 import {
-  avatarTone,
   escrowedCents,
   formatUsd,
   hasOpened,
@@ -11,6 +10,7 @@ import {
   minBidCents,
 } from "@oxar/core";
 import {
+  loadBidCounts,
   loadBids,
   loadThing,
   loadTopBids,
@@ -41,12 +41,21 @@ import { disablePush, enablePush, pushState, type PushState } from "@/lib/push.t
 /** Ракурсы предметной съёмки. Отсчёт - от главной грани вещи. */
 const ANGLES = ["Front", "Right", "Back", "Left"];
 
+
+/** Куда линии приходят: клетки сетки на груди при виде спереди. */
+const CELLS: [number, number][] = [
+  [46.5, 40], [50, 40], [53.5, 40],
+  [46.5, 45], [50, 45], [53.5, 45],
+  [46.5, 50], [50, 50], [53.5, 50],
+];
+
 export function Auction() {
   const [thing, setThing] = useState<Thing | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
   const [picked, setPicked] = useState(SPOTS[0].code);
   const [bids, setBids] = useState<Bid[]>([]);
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [angle, setAngle] = useState(0);
   const [tab, setTab] = useState<"about" | "spots" | "rules">("about");
   const [sceneReady, setSceneReady] = useState(false);
@@ -70,6 +79,7 @@ export function Auction() {
   // Колокольчик - только вошедшему: подписка привязана к человеку, и перебить
   // можно лишь того, кто может ставить. Гостю нажатие ничего не давало.
   const { authenticated } = usePrivy();
+  const { login } = useLogin();
   useEffect(() => {
     void pushState().then(setPush);
   }, []);
@@ -169,6 +179,7 @@ export function Auction() {
     if (lots.length === 0) return;
     let live = true;
     loadTopBids(lots.map((one) => one.id)).then((rows) => live && setTops(rows));
+    loadBidCounts(lots.map((one) => one.id)).then((rows) => live && setCounts(rows));
     return () => {
       live = false;
     };
@@ -333,7 +344,34 @@ export function Auction() {
 
   return (
     <section className="lot">
+      {/* Шапка экрана, как в направлении дизайна: имя площадки и чип
+          алертов. Гостю чип открывает вход - кнопка была на проде, и
+          прятать её значило прятать саму возможность. */}
+      <div className="lot-brandbar">
+        <span className="wordmark">OXAR</span>
+        {started && push !== "unsupported" && push !== "denied" && (
+          <button
+            type="button"
+            className={push === "on" ? "bell-chip on" : "bell-chip"}
+            onClick={() => {
+              if (!authenticated) return login();
+              void (push === "on" ? disablePush() : enablePush()).then(setPush);
+            }}
+          >
+            <i aria-hidden />
+            {push === "on" ? "Outbid alerts on" : "Outbid alerts"}
+          </button>
+        )}
+      </div>
+
       <header className="lot-top">
+        <div className="lot-title">
+        {started && closesAt !== null && closesAt > now && (
+          <span className={endingSoon ? "live-badge soon" : "live-badge"}>
+            <i aria-hidden />
+            {endingSoon ? "ENDING SOON" : "LIVE"}
+          </span>
+        )}
         <p className="over">{thing?.tagline ?? "Superteam Ukraine"}</p>
         <h1>{thing?.title ?? "Local Event Tee"}</h1>
 
@@ -361,11 +399,19 @@ export function Auction() {
             По секундам, потому что последние минуты и есть весь смысл:
             ставка под конец двигает конец всем местам, и видеть, сколько
             осталось, нужно точно. */}
-        {started && closesAt !== null && (
-          <p className={endingSoon ? "lot-clock soon" : "lot-clock"}>
-            {countdown(closesAt, now)}
-          </p>
-        )}
+        </div>
+
+        <div className="lot-side">
+          {/* Счётчик - самая крупная цифра экрана, напротив имени. */}
+          {started && closesAt !== null && (
+            <div className={endingSoon ? "lot-cd soon" : "lot-cd"}>
+              <span className="lot-cd-cap">Ends in</span>
+              <span className="lot-cd-num" suppressHydrationWarning>
+                {clockOf(closesAt, now)}
+              </span>
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="lot-scene">
@@ -398,48 +444,33 @@ export function Auction() {
           />
         )}
 
-        {/* Слева от вещи - ставки выбранного места, верхняя первой: она и есть
-            текущая цена. На телефоне дуг нет, там их заменяет список ниже. */}
-        <div
-          className={look === "ghost" ? "arc left away" : "arc left"}
-          aria-hidden={look === "ghost" || bids.length === 0}
-        >
-          {bids.slice(0, 4).map((bid, index) => (
-            <Row key={bid.id} bid={bid} lead={index === 0} />
-          ))}
-        </div>
-
-        {/* Справа - все места вещи. На голограмме списка нет: выбирать пока
-            нечего, и список, который ни на что не показывает, только врёт. Выбранное подсвечено, в кружке - первая
-            буква имени того, чьё лого сейчас держит место. */}
-        <div
-          className={look === "ghost" ? "arc right away" : "arc right"}
-          role="group"
-          aria-label="Ad spots"
-        >
-          {SPOTS.map((spot) => {
-            const each = lotOf(spot.code);
-            const holder = each ? tops[each.id] : undefined;
-            return (
+        {/* Чем смотреть вещь - пилюля прямо на сцене, как на борде. */}
+        {started && (
+          <div className="looks over-scene" role="group" aria-label="How to view">
+            {([
+              ["live", "Shirt"],
+              ["shot", "Photo"],
+            ] as const).map(([which, name]) => (
               <button
-                key={spot.code}
+                key={which}
                 type="button"
-                className={spot.code === picked ? "spot on" : "spot"}
-                aria-pressed={spot.code === picked}
-                onClick={() => choose(spot.code, true)}
+                className={look === which ? "look-tab on" : "look-tab"}
+                aria-pressed={look === which}
+                disabled={which === "shot" && views.shots.length === 0}
+                onClick={() => {
+                  setLook(which);
+                  if (which === "shot" && !TEMP_ANGLES.includes(angle)) {
+                    setAngle(0);
+                    stage.current?.face(0);
+                  }
+                }}
               >
-                <span
-                  className={holder ? "spot-dot taken" : each ? "spot-dot live" : "spot-dot"}
-                  style={holder ? { background: avatarTone(holder.bidder_wallet) } : undefined}
-                  aria-hidden
-                >
-                  {holder ? holder.brand[0]?.toUpperCase() : each ? "$" : ""}
-                </span>
-                <span className="spot-text">{spot.label}</span>
+                {name}
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
+
       </div>
 
       {/* Ракурсы - самой вещью, а не словами: снимок отвечает на «с какой
@@ -457,35 +488,6 @@ export function Auction() {
           обводить то, что уже продаётся, значило бы показывать торг дважды. */}
       {started && (
       <>
-      <div className="looks" role="group" aria-label="How to view">
-        {/* Голограммы среди видов нет: это не ракурс, а состояние «торг ещё
-            не начался», и в него не переключаются - в нём ждут. До старта
-            экран сам стоит в ней, после старта её выбирать незачем. */}
-        {([
-          ["live", "Shirt"],
-          ["shot", "Photo"],
-        ] as const).map(([which, name]) => (
-          <button
-            key={which}
-            type="button"
-            className={look === which ? "look-tab on" : "look-tab"}
-            aria-pressed={look === which}
-            disabled={which === "shot" && views.shots.length === 0}
-            onClick={() => {
-              setLook(which);
-              // TEMP_FRONT: в фото-режиме боков нет. Пришли с бокового
-              // ракурса - разворачиваем на перёд, иначе экран пуст.
-              if (which === "shot" && !TEMP_ANGLES.includes(angle)) {
-                setAngle(0);
-                stage.current?.face(0);
-              }
-            }}
-          >
-            {name}
-          </button>
-        ))}
-      </div>
-
       {/* TEMP_FRONT: в фото-режиме ракурсов два, по числу снимков. */}
       <div className="angles" role="group" aria-label="View">
         {(look === "shot" ? TEMP_ANGLES : ANGLES.map((_, at) => at)).map((index) => {
@@ -517,6 +519,46 @@ export function Auction() {
       </>
       )}
 
+      {/* Выбор места сеткой - как на самой вещи, но с ценами: на телефоне
+          дуг нет, и это главный пульт. На широком экране его работу делают
+          дуги, сетка прячется. */}
+      {started && look !== "ghost" && lots.length > 0 && (
+        <>
+          <div className="pick-head">
+            <span className="pick-title">Pick a spot</span>
+            <span className="muted small">3 x 3 on the chest</span>
+          </div>
+          <div className="pick-grid" role="group" aria-label="Spots with prices">
+            {SPOTS.map((spot) => {
+              const each = lotOf(spot.code);
+              const holder = each ? tops[each.id] : undefined;
+              const n = each ? counts[each.id] ?? 0 : 0;
+              return (
+                <button
+                  key={spot.code}
+                  type="button"
+                  className={spot.code === picked ? "pick-cell on" : "pick-cell"}
+                  aria-pressed={spot.code === picked}
+                  onClick={() => choose(spot.code, true)}
+                >
+                  <span className="pick-n">{spot.label}</span>
+                  <span className="pick-price">
+                    {each
+                      ? holder
+                        ? formatUsd(holder.amount_cents)
+                        : `from ${formatUsd(each.reserve_cents)}`
+                      : "-"}
+                  </span>
+                  <span className="pick-count">
+                    {each ? (n === 1 ? "1 bid" : `${n} bids`) : "not for sale"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       {/* Состояние выбранного места одной строкой: что это и почём. Срока
           здесь больше нет - он общий на всю вещь и висит часами наверху, а
           повторять его у каждого места значило бы обещать, будто у них сроки
@@ -528,26 +570,22 @@ export function Auction() {
           {lots.length > 0 &&
             ` · from ${formatUsd(Math.min(...lots.map((one) => one.reserve_cents)))}`}
         </p>
-      ) : (
-      <p className="lot-state">
-        <strong>{SPOTS.find((spot) => spot.code === picked)?.label}</strong>
-        {lot ? (
-          running ? (
-            <>
-              {" · "}
-              {top ? `top ${formatUsd(top.amount_cents)}` : `reserve ${formatUsd(lot.reserve_cents)}`}
-              {" · next "}
-              {formatUsd(need)}
-            </>
-          ) : (
-            " · bidding has closed"
-          )
-        ) : (
-          " · not up for auction yet"
-        )}
-      </p>
-      )}
+      ) : null}
 
+
+      {/* Ставка - про выбранное место, и только пока его торг идёт. У места без
+          торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
+          На голограмме её тоже нет: торг там ещё не начался. */}
+      {lot && running && look !== "ghost" && (
+        <BidForm
+          key={lot.id}
+          lot={lot}
+          need={need}
+          spotLabel={SPOTS.find((spot) => spot.code === picked)?.label ?? ""}
+          topCents={top?.amount_cents ?? null}
+          art={art[picked]}
+          onPlaced={refresh}
+        >
       {/* Картинка - первый шаг ставки, а не украшение рядом с ней: без неё
           ставка не уйдёт, печатать было бы нечего. Поэтому она стоит выше
           суммы и до примерки выглядит незакрытым шагом - пунктиром и словом
@@ -555,127 +593,88 @@ export function Auction() {
 
           На голограмме шага нет: примерять некуда, пока мест не показывают.
           Пока это только превью - видит его один человек, тот, кто примеряет. */}
-      <div className={look === "ghost" ? "tryon away" : "tryon"}>
-        <label className={art[picked] ? "art-step done" : "art-step"}>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
-            onChange={(event) => {
-              void tryOn(event.target.files?.[0]);
-              // Сбрасываем поле: иначе тот же файл второй раз не выберется.
-              event.target.value = "";
-            }}
-          />
-          {art[picked] ? (
-            <img className="art-thumb" src={art[picked].url} alt="" />
-          ) : (
-            <span className="art-thumb empty" aria-hidden>
-              +
-            </span>
-          )}
-          <span className="art-text">
-            <strong>
-              {art[picked] ? "Your artwork is on the shirt" : "Add your artwork"}
-            </strong>
-            {/* Про чёрно-белое сказано здесь, а не плашкой ниже: это условие
-                к файлу, и читать его надо там, где файл выбирают. Цветной
-                логотип выясняется на ткани, когда печатать уже поздно. */}
-            <em>
-              {art[picked]
-                ? "Tap to swap it - black and white prints best"
-                : "Required, black and white - fabric takes flat ink"}
-            </em>
-          </span>
-        </label>
-        {/* Корзина, а не слово: рядом с полем стоит действие над тем, что в
-            поле лежит, и словом оно занимало места больше, чем значит. */}
-        {art[picked] && (
-          <button
-            type="button"
-            className="art-clear"
-            onClick={takeOff}
-            aria-label="Remove artwork"
-          >
-            <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden>
-              <path
-                d="M4.5 6.75h15M9.75 6.75V4.5h4.5v2.25M6.75 6.75l.9 12.75h8.7l.9-12.75M10.25 10v6M13.75 10v6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+      <label className="art-row">
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          hidden
+          onChange={(event) => {
+            void tryOn(event.target.files?.[0]);
+            // Сбрасываем поле: иначе тот же файл второй раз не выберется.
+            event.target.value = "";
+          }}
+        />
+        {art[picked] ? (
+          <>
+            <img src={art[picked].url} alt="" />
+            <span className="art-row-name">{art[picked].file.name}</span>
+            <button
+              type="button"
+              className="art-row-drop"
+              onClick={(event) => {
+                event.preventDefault();
+                takeOff();
+              }}
+            >
+              Remove
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="art-row-name">Upload artwork</span>
+            <span className="art-row-hint">PNG, JPG, SVG or WebP</span>
+          </>
         )}
-      </div>
+      </label>
       {artError ? (
         <p className="bad">{artError}</p>
       ) : (
         art[picked] && (
-          <p className="muted">
+          <p className="muted small">
             Only you can see this. It goes public when you bid with it.
           </p>
         )
       )}
-
-      {/* Ставка - про выбранное место, и только пока его торг идёт. У места без
-          торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
-          На голограмме её тоже нет: торг там ещё не начался. */}
-      {lot && running && look !== "ghost" && (
-        <BidForm key={lot.id} lot={lot} need={need} art={art[picked]} onPlaced={refresh} />
+        </BidForm>
       )}
 
-      {/* История места: каждое деление - ставка, и в нём стоит сам логотип,
-          который в тот момент был на вещи. Без картинки лента отвечала бы
-          только «сколько и когда», а главный вопрос к истории торга - что на
-          футболке стояло. Свежая справа, как в переписке. Лента появляется со
-          второй ставкой: у одной истории нет. */}
-      {bids.length > 1 && (
-        <div className="track-wrap">
-          {/* Без подписи лента читалась набором цифр: непонятно, что это
-              история и что деления нажимаются. Заголовок называет её, подпись
-              зовёт перемотать. */}
+
+      {bids.length > 0 && (
+        <div className="lot-bids">
+          {/* Каждая строка - и запись, и перемотка: нажми, и вещь покажет,
+              как выглядела при той ставке. Верхняя - лидер. */}
           <p className="list-head">
-            Bid history <span>tap a bid to see it on the shirt</span>
+            Bids on spot {SPOTS.find((spot) => spot.code === picked)?.label}
+            <span>
+              {bids.length === 1 ? "1 bid" : `${bids.length} bids`} · tap to
+              see it on the shirt
+            </span>
           </p>
-        <ol className="track" aria-label="Bid history">
-          {[...bids].reverse().map((bid, index) => (
-            <li key={bid.id}>
-              <button
-                type="button"
-                className={bid.id === rewound ? "tick on" : "tick"}
-                aria-pressed={bid.id === rewound}
-                onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
-              >
-                <img className="tick-art" src={bid.media_url} alt="" />
-                <span className="tick-sum">{formatUsd(bid.amount_cents)}</span>
-                <span className="tick-when">
-                  {index === 0 ? "opened" : when(bid.created_at)}
-                </span>
-              </button>
-            </li>
-          ))}
-          <li>
+          {bids.map((bid, index) => (
             <button
+              key={bid.id}
               type="button"
-              className={rewound ? "tick" : "tick on"}
-              aria-pressed={!rewound}
-              onClick={() => setRewound(null)}
+              className={bid.id === rewound ? "bid-row on" : "bid-row"}
+              aria-pressed={bid.id === rewound}
+              onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
             >
-              {/* Верхняя ставка и есть то, что стоит на вещи сейчас. */}
-              <img className="tick-art" src={bids[0].media_url} alt="" />
-              <span className="tick-sum">Now</span>
-              <span className="tick-when">on the shirt</span>
+              <img className="bid-row-art" src={bid.media_url} alt="" />
+              <span className="bid-row-who">
+                <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
+                <em>{ago(bid.created_at, now)}</em>
+              </span>
+              <span className={index === 0 ? "tagchip red" : "tagchip"}>
+                {index === 0 ? "LEADING" : "REFUNDED"}
+              </span>
+              <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
             </button>
-          </li>
-        </ol>
+          ))}
+          {rewound && (
+            <p className="muted small">
+              Rewound. This is what the shirt looked like at that bid, not now.
+            </p>
+          )}
         </div>
-      )}
-      {rewound && (
-        <p className="muted">
-          Rewound. This is what the shirt looked like at that bid, not now.
-        </p>
       )}
 
       <nav className="lot-tabs">
@@ -691,30 +690,6 @@ export function Auction() {
         ))}
       </nav>
 
-      {/* Колокольчик - докричаться до закрытой вкладки: ставку перебивают в
-          отсутствие человека, и без пуша он узнаёт о проигрыше, когда вернуть
-          место уже поздно. Разрешение спрашивается только по нажатию. */}
-      {started && authenticated && push !== "unsupported" && (
-        <p className="push-row">
-          {push === "denied" ? (
-            <span className="muted small">
-              Notifications are blocked for this site in the browser settings.
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => {
-                void (push === "on" ? disablePush() : enablePush()).then(setPush);
-              }}
-            >
-              {push === "on"
-                ? "Outbid alerts are on for this device"
-                : "Notify me when I am outbid"}
-            </button>
-          )}
-        </p>
-      )}
 
       {tab === "about" && (
         <>
@@ -742,29 +717,11 @@ export function Auction() {
       )}
 
       {tab === "spots" && (
-        <div className="rows">
-          {SPOTS.map((spot) => {
-            const each = lotOf(spot.code);
-            const holder = each ? tops[each.id] : undefined;
-            return (
-              <button
-                key={spot.code}
-                type="button"
-                className="row"
-                onClick={() => choose(spot.code, true)}
-              >
-                <span>{spot.label}</span>
-                <span className={each ? "row-price" : "row-price off"}>
-                  {each
-                    ? holder
-                      ? `top bid ${formatUsd(holder.amount_cents)}`
-                      : `bidding from ${formatUsd(each.reserve_cents)}`
-                    : "not for sale yet"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <p className="muted">
+          A 3 x 3 grid on the chest, printed in flat ink. Pick a spot right on
+          the shirt or in the grid above - the number on the shirt and in the
+          list is the same spot.
+        </p>
       )}
 
       {tab === "rules" && (
@@ -798,41 +755,10 @@ export function Auction() {
       )}
 
       {/* На телефоне дуг нет, и ставки выбранного места живут здесь. */}
-      {bids.length > 0 && (
-        <div className="lot-bids">
-          {/* Подпись, чей это список: без неё суммы с именами читались как
-              обрывок непонятно чего. Верхняя строка - лидер. */}
-          <p className="list-head">
-            Bids <span>{bids.length === 1 ? "1 bid" : `${bids.length} bids`}</span>
-          </p>
-          {bids.slice(0, 4).map((bid, index) => (
-            <Row key={bid.id} bid={bid} lead={index === 0} />
-          ))}
-        </div>
-      )}
     </section>
   );
 }
 
-function Row({ bid, lead }: { bid: Bid; lead: boolean }) {
-  return (
-    <div className={lead ? "bid lead" : "bid"}>
-      <span
-        className="bid-ava"
-        style={lead ? undefined : { background: avatarTone(bid.bidder_wallet) }}
-        aria-hidden
-      >
-        {bid.bidder_wallet[0]?.toUpperCase()}
-      </span>
-      <span className="bid-text">
-        {formatUsd(bid.amount_cents)}
-        {/* Под суммой - имя, а не кошелёк: вопрос к чужой ставке «чьё это
-            лого», и «7xKq…f3» на него не отвечает. */}
-        <em>{bid.brand}</em>
-      </span>
-    </div>
-  );
-}
 
 /**
  * Загрузить чужую картинку так, чтобы её можно было положить в текстуру.
@@ -874,16 +800,6 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
   return loading;
 }
 
-/** Когда была ставка: день и час, без года - торг короче года. */
-function when(at: string): string {
-  return new Date(at).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
 
 /**
  * Сколько осталось до начала. В последний час - с секундами: человек, пришедший
@@ -910,6 +826,29 @@ function until(at: number, now: number): string {
  * Дни отдельным числом впереди: «49:12:07» прочитать нельзя, а «2d 01:12:07»
  * читается сразу.
  */
+/** Кошелёк по краям: свой узнают, чужой не притворяется именем. */
+function shortWallet(at: string): string {
+  return `${at.slice(0, 4)}..${at.slice(-4)}`;
+}
+
+/** «4m ago»: свежесть ставки важнее календаря. */
+function ago(at: string, now: number): string {
+  const s = Math.max(0, Math.floor((now - Date.parse(at)) / 1000));
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86_400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86_400)}d ago`;
+}
+
+/** Часы шапки: только цифры, подпись «closes in» стоит отдельной строкой. */
+function clockOf(closesAt: number, now: number): string {
+  const total = Math.max(0, Math.floor((closesAt - now) / 1000));
+  const days = Math.floor(total / 86_400);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const clock = `${pad(Math.floor((total % 86_400) / 3_600))}:${pad(Math.floor((total % 3_600) / 60))}:${pad(total % 60)}`;
+  return days > 0 ? `${days}d ${clock}` : clock;
+}
+
 function countdown(closesAt: number, now: number): string {
   const ms = closesAt - now;
   if (ms <= 0) return "Bidding closed";

@@ -1,89 +1,209 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { formatUsd } from "@oxar/core";
+import { ThingStage, type Stage } from "@oxar/stage";
 import { db } from "@/lib/session";
+import { loadMarket, type HeldRow, type MarketThing } from "@/lib/auction";
 import { Game } from "./game/game";
 
 /**
- * Маркетплейс. Его ещё нет, и страница об этом говорит прямо, а не делает вид,
- * что что-то грузится.
+ * Маркет по дизайн-борду: «сцена и программа», как афиша театра с одним
+ * залом. Наверху герой - самая горячая вещь во весь экран, под ним программа
+ * списком (включается, когда вещей станет больше одной), прошедшие торги
+ * строками, почта на новую вещь и игра тихой ссылкой.
  *
- * Почта собирается здесь же: человек, дошедший до пустой вкладки, - это
- * человек, которому маркетплейс нужен, и второго такого повода спросить не
- * будет.
+ * Вещей мало, и экран это не скрывает: каталог с фильтрами не наступит ещё
+ * долго, а событие во времени - формат, который держит и одну вещь, и сто.
  */
 
-type State = "idle" | "sending" | "done" | "failed";
+type Mail = "idle" | "sending" | "done" | "failed";
 
-export function Market() {
+export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
+  const [things, setThings] = useState<MarketThing[]>([]);
+  const [held, setHeld] = useState<HeldRow[]>([]);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    void loadMarket().then((loaded) => {
+      setThings(loaded.things);
+      setHeld(loaded.held);
+    });
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
+
   const [email, setEmail] = useState("");
-  const [state, setState] = useState<State>("idle");
-
-  async function submit(event: React.FormEvent) {
+  const [mail, setMail] = useState<Mail>("idle");
+  async function join(event: React.FormEvent) {
     event.preventDefault();
-    if (state === "sending") return;
-
-    // Проверка нарочно грубая: тонкая отбивает живые адреса, а настоящую
-    // проверку всё равно делает письмо, которого мы пока не шлём.
-    if (!email.includes("@") || email.length < 5) {
-      setState("failed");
-      return;
-    }
-
-    setState("sending");
-    if (!db) return setState("failed");
-
+    if (mail === "sending") return;
+    if (!email.includes("@") || email.length < 5) return setMail("failed");
+    setMail("sending");
+    if (!db) return setMail("failed");
     const { error } = await db
       .from("waitlist")
       .insert({ contact: email.trim(), side: "buyer" });
-
-    // 23505 - этот адрес уже в списке. Для человека это не ошибка, а тот же
-    // успех: он записан. Показывать отказ значило бы гнать его записываться
-    // второй раз.
-    setState(!error || error.code === "23505" ? "done" : "failed");
+    setMail(!error || error.code === "23505" ? "done" : "failed");
   }
 
-  if (state === "done") {
-    return (
-      <section className="screen">
-        <h1>Market</h1>
-        <p className="lead">You are on the list. We will write when it opens.</p>
-        <Game />
-      </section>
-    );
+  // Игра спрятана за тихой ссылкой: она пасхалка, а не витрина.
+  const [gameOn, setGameOn] = useState(false);
+
+  // Герой по умолчанию живой: та же модель, что на торге, с реальными
+  // логотипами лидеров. Фото остаётся вторым видом.
+  const [heroLook, setHeroLook] = useState<"live" | "photo">("live");
+  const heroStage = useRef<Stage | null>(null);
+  function dressHero() {
+    const art: Record<string, string> = things[0]?.art ?? {};
+    for (const [code, url] of Object.entries(art)) {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => heroStage.current?.show(code, image);
+      image.src = url;
+    }
   }
 
   return (
     <section className="screen">
       <h1>Market</h1>
-      <p className="lead">Coming soon.</p>
-      <p className="muted">
-        One thing at a time. Right now there is a single auction, and it is the
-        whole product.
-      </p>
 
-      <form className="join" onSubmit={submit}>
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value);
-            if (state === "failed") setState("idle");
-          }}
-          placeholder="you@example.com"
-          aria-label="Your email"
-          autoComplete="email"
-        />
-        <button type="submit" className="primary" disabled={state === "sending"}>
-          {state === "sending" ? "Joining…" : "Join the waitlist"}
-        </button>
-      </form>
+      {things.map((one) => {
+        const opensLater =
+          one.opensAt !== null && Date.parse(one.opensAt) > now;
+        const soon = Date.parse(one.closesAt) - now < 86_400_000;
+        return (
+          <div className="hero" key={one.id}>
+            <div className={heroLook === "live" ? "hero-photo in3d" : "hero-photo"}>
+              {heroLook === "live" ? (
+                <div className="hero-stage">
+                  <ThingStage
+                    picked={null}
+                    onPick={() => {}}
+                    stage={heroStage}
+                    onReady={dressHero}
+                  />
+                </div>
+              ) : (
+                <>
+                  <img className="hero-shot" src="/TEMP-photo-front.webp" alt="" />
+                  <i className="crop tl" /><i className="crop tr" />
+                  <i className="crop bl" /><i className="crop br" />
+                </>
+              )}
+              <span className="look-flip">
+                {(["live", "photo"] as const).map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    className={heroLook === view ? "look-pick on" : "look-pick"}
+                    onClick={() => setHeroLook(view)}
+                  >
+                    {view === "live" ? "3D" : "Photo"}
+                  </button>
+                ))}
+              </span>
+              <span className="now-pill">
+                <span className="dot" />
+                {opensLater ? "OPENS SOON" : soon ? "CLOSING SOON" : "LIVE NOW"}
+              </span>
+              {!opensLater && (
+                <span className="hero-time" suppressHydrationWarning>
+                  <span className="hero-time-cap">closes in</span>
+                  {left(one.closesAt, now)}
+                </span>
+              )}
+            </div>
+            <div className="hero-card">
+              <div>
+                <h2 className="hero-name">{one.title}</h2>
+                {one.tagline && <p className="hero-who">{one.tagline}</p>}
+              </div>
+              <div className="hero-stat">
+                <span className="muted">
+                  {one.taken} of {one.spots} spots taken
+                </span>
+                {one.topCents > 0 && (
+                  <span className="hero-top">
+                    {formatUsd(one.topCents)}{" "}
+                    <span className="hero-top-cap">top bid</span>
+                  </span>
+                )}
+              </div>
+              <button type="button" className="primary wide" onClick={onOpenAuction}>
+                Open
+              </button>
+            </div>
+          </div>
+        );
+      })}
 
-      {state === "failed" && (
-        <p className="bad">That did not go through. Check the address and try again.</p>
+      {held.length > 0 && (
+        <>
+          <h2 className="mk-head">Held earlier</h2>
+          <div className="held-list">
+            {held.map((one) => (
+              <div className="held-row" key={one.closesAt + one.title}>
+                <span className="held-date">{day(one.closesAt)}</span>
+                <span className="held-name">{one.title}</span>
+                <span className="held-sum">{formatUsd(one.raisedCents)}</span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
-      <Game />
+      <div className="mail-card">
+        <span className="mail-head">Get an email when a new thing opens</span>
+        {mail === "done" ? (
+          <p className="lead">You are on the list. We will write when a new thing opens.</p>
+        ) : (
+          <>
+            <form className="join" onSubmit={join}>
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (mail === "failed") setMail("idle");
+                }}
+                placeholder="you@example.com"
+                aria-label="Your email"
+                autoComplete="email"
+              />
+              <button type="submit" className="primary" disabled={mail === "sending"}>
+                {mail === "sending" ? "Joining…" : "Notify me"}
+              </button>
+            </form>
+            <span className="muted small">One email per new thing. No newsletter.</span>
+            {mail === "failed" && (
+              <p className="bad">That did not go through. Check the address and try again.</p>
+            )}
+          </>
+        )}
+      </div>
+
+      <button
+        type="button"
+        className="game-link"
+        onClick={() => setGameOn((was) => !was)}
+      >
+        {gameOn ? "Hide the game" : "Play Flappy Josip"}
+      </button>
+      {gameOn && <Game />}
     </section>
   );
+}
+
+/** День для строк истории: коротко, в часах читателя. */
+function day(at: string): string {
+  return new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** Сколько осталось торгу: крупно дни, дальше часы-минуты-секунды. */
+function left(closesAt: string, now: number): string {
+  const s = Math.max(0, Math.floor((Date.parse(closesAt) - now) / 1000));
+  const d = Math.floor(s / 86_400);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const clock = `${pad(Math.floor((s % 86_400) / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+  return d > 0 ? `${d}d ${clock}` : clock;
 }

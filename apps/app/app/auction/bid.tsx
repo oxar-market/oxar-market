@@ -40,14 +40,23 @@ type Art = { url: string; file: File };
 export function BidForm({
   lot,
   need,
+  spotLabel,
+  topCents,
   art,
   onPlaced,
+  children,
 }: {
   lot: Lot;
   /** Минимум по нашей витрине. Цепочку спросим ещё раз перед отправкой. */
   need: number;
+  /** Подпись места - форма называет, за что торг. */
+  spotLabel: string;
+  /** Верхняя ставка места; null - ставок ещё нет. */
+  topCents: number | null;
   art: Art | undefined;
   onPlaced: () => void;
+  /** Шаг с картинкой: живёт в форме, как в направлении дизайна. */
+  children?: React.ReactNode;
 }) {
   const { authenticated } = usePrivy();
   const { login } = useLogin();
@@ -203,6 +212,15 @@ export function BidForm({
   return (
     <div className="bidding">
       <div className="bid-card">
+        {/* Форма называет место и цену, которую бьём: человек пришёл сюда
+            кнопкой или сеткой, и заголовок подтверждает, куда он попал. */}
+        <div className="bid-head">
+          <span className="bid-head-title">Bid on spot {spotLabel}</span>
+          <span className="muted small">
+            {topCents === null ? `reserve ${formatUsd(need)}` : `leading ${formatUsd(topCents)}`}
+          </span>
+        </div>
+
         {/* Чьё лого - вопрос той же важности, что сумма: картинка без имени
             остаётся картинкой без хозяина, по кошельку его не узнать.
             Поэтому имя стоит в той же рамке, а не отдельным шагом. */}
@@ -230,25 +248,20 @@ export function BidForm({
               onChange={(event) => setAmount(event.target.value)}
               aria-label="Your bid in USDC"
             />
+            <span className="bid-unit">USDC</span>
           </label>
-          {balance !== null && (
-            <span
-              className={
-                cents !== null && cents > balance
-                  ? "bid-balance short"
-                  : "bid-balance"
-              }
-            >
-              {/* Когда не хватает - сразу и куда идти: человек с нулём на
-                  этом месте вчера решил, что деньги пропали. */}
-              {cents !== null && cents > balance
-                ? `Balance ${formatUsd(balance)} - not enough. Top up on the You tab.`
-                : `Balance ${formatUsd(balance)}`}
-            </span>
-          )}
         </div>
 
         <div className="bumps">
+          {/* Первый чип - минимум: одно нажатие возвращает поле к цене,
+              которую примет программа. */}
+          <button
+            type="button"
+            className="bump"
+            onClick={() => setAmount((need / 100).toFixed(2))}
+          >
+            Min {formatUsd(need)}
+          </button>
           {BUMPS.map((by) => (
             <button key={by} type="button" className="bump" onClick={() => bump(by)}>
               +{formatUsd(by)}
@@ -256,9 +269,32 @@ export function BidForm({
           ))}
         </div>
 
+        {/* Минимум и судьба денег - одной строкой, как в направлении
+            дизайна: куда уходят деньги, сказано до нажатия. */}
+        <span className="muted small">
+          Minimum {formatUsd(need)}. Locked in escrow until the auction ends
+          or you are outbid.
+        </span>
+
+        {children}
+
+        {balance !== null && (
+          <span className="bal-row">
+            <span>Wallet balance</span>
+            <b>{formatUsd(balance)} USDC</b>
+          </span>
+        )}
+        {balance !== null && cents !== null && cents > balance && (
+          // Когда не хватает - сразу и куда идти: человек с нулём на этом
+          // месте однажды решил, что деньги пропали.
+          <span className="bid-balance short">
+            Not enough for this bid. Top up on the You tab.
+          </span>
+        )}
+
         {/* Кнопка приглушена, но нажимается. Недоступная кнопка не отвечает
-            на «почему», и человек остаётся гадать; эта на нажатие называет
-            недостающий шаг - проверки для этого уже написаны в `place`. */}
+            на «почему», и человек остаётся гадать; эта называет недостающий
+            шаг прямо на себе - проверки для этого уже написаны в `place`. */}
         <button
           type="button"
           className={ready ? "primary bid-go" : "primary bid-go waiting"}
@@ -267,7 +303,15 @@ export function BidForm({
           disabled={busy}
           onClick={() => void place()}
         >
-          {busy ? "Bidding…" : "Bid"}
+          {busy
+            ? "Bidding…"
+            : cents !== null && cents < need
+              ? `Enter at least ${formatUsd(need)}`
+              : needsArt
+                ? "Add artwork to bid"
+                : needsName
+                  ? "Name the startup to bid"
+                  : "Bid"}
         </button>
       </div>
 

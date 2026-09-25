@@ -138,7 +138,10 @@ h1 {
   position: relative;
   flex: 1;
   min-height: 0;
-  background: var(--photo) url("/TEMP-photo-front.webp") center/cover no-repeat;
+  background: var(--photo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Разметка мест поверх фото: занятое - залитый номер, свободное - контур.
@@ -344,11 +347,10 @@ h1 {
   object-fit: contain;
 }
 
-/* В тёмной теме подложка фото остаётся светлой: у снимка прозрачный фон,
-   и на тёмном он давал грязный ореол. Светлая панель в тёмной карточке
-   читается как отпечаток на стене - и футболку видно. */
+/* Тёмная тема темнит и панель за вещью: студийный радиал вместо светлой
+   стены, белая футболка рисуется собственным светом. */
 :root[data-theme="dark"] .live-photo {
-  background-color: #e9e8e2;
+  background: radial-gradient(70% 70% at 50% 40%, #242b34 0%, #10151b 100%);
 }
 
 /* Сцена в карточке: заполняет фотозону, свой габарит ей задаёт карточка.
@@ -401,4 +403,21 @@ h1 {
 /* В 3D фото-фон гаснет: под сценой просвечивала вторая футболка. */
 .live-photo.in3d {
   background-image: none;
+}
+
+
+/* Фото - самостоятельной карточкой: у снимка шумные полупрозрачные края,
+   и на тёмном фоне голым он давал грязный ореол. */
+.live-shot {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+:root[data-theme="dark"] .live-shot {
+  max-width: 86%;
+  max-height: 86%;
+  background: #e9e8e2;
+  border-radius: 14px;
+  padding: 10px 22px;
 }
