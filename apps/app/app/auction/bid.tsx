@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import {
   useConnectedStandardWallets,
@@ -62,10 +62,19 @@ export function BidForm({
   // не вышло: тогда строку баланса просто не показываем, а не врём нулём.
   const [balance, setBalance] = useState<number | null>(null);
 
-  // Поле само встаёт на минимум: набирать сумму с нуля, когда она известна, -
-  // лишняя работа. Своё, уже набранное, не трогаем.
+  // Поле само встаёт на минимум и следует за ним, пока цифру не тронул
+  // человек. Помним, что вписал автомат: верхние ставки доезжают позже
+  // формы, и первый минимум бывает резервом - без этой памяти поле застревало
+  // на $5, когда перебить уже стоило $15. Своё, набранное руками, не трогаем.
+  const auto = useRef("");
   useEffect(() => {
-    if (!busy) setAmount((was) => was || (need / 100).toFixed(2));
+    if (busy) return;
+    const next = (need / 100).toFixed(2);
+    setAmount((was) => {
+      if (was !== "" && was !== auto.current) return was;
+      auto.current = next;
+      return next;
+    });
   }, [need, busy]);
 
   const wallet = wallets[0];
