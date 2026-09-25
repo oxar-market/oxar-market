@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useLogin, usePrivy } from "@privy-io/react-auth";
 import {
   escrowedCents,
   formatUsd,
@@ -41,22 +41,6 @@ import { disablePush, enablePush, pushState, type PushState } from "@/lib/push.t
 /** Ракурсы предметной съёмки. Отсчёт - от главной грани вещи. */
 const ANGLES = ["Front", "Right", "Back", "Left"];
 
-/**
- * Выноски цен вокруг вещи, как в PDF направления дизайна: где стоит пилюля
- * (at) и откуда идёт её линия (line) - в процентах панели сцены. Порядок -
- * порядок SPOTS: три ряда по три места.
- */
-const CALLOUTS: { at: [number, number]; line: [number, number] }[] = [
-  { at: [12, 28], line: [19, 32] },
-  { at: [50, 7], line: [50, 12] },
-  { at: [88, 28], line: [81, 32] },
-  { at: [10, 48], line: [17, 50] },
-  { at: [50, 93], line: [50, 88] },
-  { at: [90, 48], line: [83, 50] },
-  { at: [12, 68], line: [19, 66] },
-  { at: [88, 84], line: [81, 80] },
-  { at: [88, 68], line: [81, 66] },
-];
 
 /** Куда линии приходят: клетки сетки на груди при виде спереди. */
 const CELLS: [number, number][] = [
@@ -95,6 +79,7 @@ export function Auction() {
   // Колокольчик - только вошедшему: подписка привязана к человеку, и перебить
   // можно лишь того, кто может ставить. Гостю нажатие ничего не давало.
   const { authenticated } = usePrivy();
+  const { login } = useLogin();
   useEffect(() => {
     void pushState().then(setPush);
   }, []);
@@ -359,6 +344,26 @@ export function Auction() {
 
   return (
     <section className="lot">
+      {/* Шапка экрана, как в направлении дизайна: имя площадки и чип
+          алертов. Гостю чип открывает вход - кнопка была на проде, и
+          прятать её значило прятать саму возможность. */}
+      <div className="lot-brandbar">
+        <span className="wordmark">OXAR</span>
+        {started && push !== "unsupported" && push !== "denied" && (
+          <button
+            type="button"
+            className={push === "on" ? "bell-chip on" : "bell-chip"}
+            onClick={() => {
+              if (!authenticated) return login();
+              void (push === "on" ? disablePush() : enablePush()).then(setPush);
+            }}
+          >
+            <i aria-hidden />
+            {push === "on" ? "Outbid alerts on" : "Outbid alerts"}
+          </button>
+        )}
+      </div>
+
       <header className="lot-top">
         <div className="lot-title">
         {started && closesAt !== null && closesAt > now && (
@@ -397,22 +402,6 @@ export function Auction() {
         </div>
 
         <div className="lot-side">
-          {/* Колокольчик чипом в шапке, как в PDF: он свойство торга, а не
-              строка в подвале. Только вошедшему - гостю нажатие ничего не
-              даст, и заблокированным браузером не показываем мёртвую кнопку. */}
-          {started && authenticated && (push === "off" || push === "on") && (
-            <button
-              type="button"
-              className={push === "on" ? "bell-chip on" : "bell-chip"}
-              onClick={() => {
-                void (push === "on" ? disablePush() : enablePush()).then(setPush);
-              }}
-            >
-              <i aria-hidden />
-              {push === "on" ? "Outbid alerts on" : "Outbid alerts"}
-            </button>
-          )}
-
           {/* Счётчик - самая крупная цифра экрана, напротив имени. */}
           {started && closesAt !== null && (
             <div className={endingSoon ? "lot-cd soon" : "lot-cd"}>
@@ -482,55 +471,6 @@ export function Auction() {
           </div>
         )}
 
-        {/* Выноски с ценами вокруг вещи - широкий экран, вид спереди: пилюля
-            каждого места соединена линией со своей клеткой на груди. При
-            повороте вещи выноски гаснут - линии в чужой ракурс врали бы. */}
-        {started && look === "live" && angle === 0 && (
-          <div className="callouts" aria-label="Spots with prices">
-            <svg className="callout-lines" aria-hidden>
-              {SPOTS.map((spot, at) => {
-                const pin = CALLOUTS[at];
-                const cell = CELLS[at];
-                if (!pin || !cell) return null;
-                return (
-                  <line
-                    key={spot.code}
-                    x1={`${pin.line[0]}%`}
-                    y1={`${pin.line[1]}%`}
-                    x2={`${cell[0]}%`}
-                    y2={`${cell[1]}%`}
-                    className={spot.code === picked ? "on" : undefined}
-                  />
-                );
-              })}
-            </svg>
-            {SPOTS.map((spot, at) => {
-              const pin = CALLOUTS[at];
-              if (!pin) return null;
-              const each = lotOf(spot.code);
-              const holder = each ? tops[each.id] : undefined;
-              return (
-                <button
-                  key={spot.code}
-                  type="button"
-                  className={spot.code === picked ? "callout on" : "callout"}
-                  style={{ left: `${pin.at[0]}%`, top: `${pin.at[1]}%` }}
-                  aria-pressed={spot.code === picked}
-                  onClick={() => choose(spot.code, true)}
-                >
-                  <span className="callout-n">{spot.label}</span>
-                  <span className="callout-price">
-                    {holder
-                      ? formatUsd(holder.amount_cents)
-                      : each
-                        ? "No bids"
-                        : "-"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Ракурсы - самой вещью, а не словами: снимок отвечает на «с какой
@@ -632,6 +572,20 @@ export function Auction() {
         </p>
       ) : null}
 
+
+      {/* Ставка - про выбранное место, и только пока его торг идёт. У места без
+          торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
+          На голограмме её тоже нет: торг там ещё не начался. */}
+      {lot && running && look !== "ghost" && (
+        <BidForm
+          key={lot.id}
+          lot={lot}
+          need={need}
+          spotLabel={SPOTS.find((spot) => spot.code === picked)?.label ?? ""}
+          topCents={top?.amount_cents ?? null}
+          art={art[picked]}
+          onPlaced={refresh}
+        >
       {/* Картинка - первый шаг ставки, а не украшение рядом с ней: без неё
           ставка не уйдёт, печатать было бы нечего. Поэтому она стоит выше
           суммы и до примерки выглядит незакрытым шагом - пунктиром и словом
@@ -639,7 +593,7 @@ export function Auction() {
 
           На голограмме шага нет: примерять некуда, пока мест не показывают.
           Пока это только превью - видит его один человек, тот, кто примеряет. */}
-      <div className={look === "ghost" ? "tryon away" : "tryon"}>
+      <div className="tryon">
         <label className={art[picked] ? "art-step done" : "art-step"}>
           <input
             type="file"
@@ -702,20 +656,7 @@ export function Auction() {
           </p>
         )
       )}
-
-      {/* Ставка - про выбранное место, и только пока его торг идёт. У места без
-          торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
-          На голограмме её тоже нет: торг там ещё не начался. */}
-      {lot && running && look !== "ghost" && (
-        <BidForm
-          key={lot.id}
-          lot={lot}
-          need={need}
-          spotLabel={SPOTS.find((spot) => spot.code === picked)?.label ?? ""}
-          topCents={top?.amount_cents ?? null}
-          art={art[picked]}
-          onPlaced={refresh}
-        />
+        </BidForm>
       )}
 
 
@@ -816,12 +757,13 @@ export function Auction() {
               aria-pressed={bid.id === rewound}
               onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
             >
-              <img className="bid-row-art" src={bid.media_url} alt="" />
               <span className="bid-row-who">
-                {bid.brand}
-                <em>{index === bids.length - 1 ? "opened" : when(bid.created_at)}</em>
+                <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
+                <em>{ago(bid.created_at, now)}</em>
               </span>
-              {index === 0 && <span className="tagchip">LEADING</span>}
+              <span className={index === 0 ? "tagchip red" : "tagchip"}>
+                {index === 0 ? "LEADING" : "REFUNDED"}
+              </span>
               <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
             </button>
           ))}
@@ -877,16 +819,6 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
   return loading;
 }
 
-/** Когда была ставка: день и час, без года - торг короче года. */
-function when(at: string): string {
-  return new Date(at).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
 
 /**
  * Сколько осталось до начала. В последний час - с секундами: человек, пришедший
@@ -913,6 +845,20 @@ function until(at: number, now: number): string {
  * Дни отдельным числом впереди: «49:12:07» прочитать нельзя, а «2d 01:12:07»
  * читается сразу.
  */
+/** Кошелёк по краям: свой узнают, чужой не притворяется именем. */
+function shortWallet(at: string): string {
+  return `${at.slice(0, 4)}..${at.slice(-4)}`;
+}
+
+/** «4m ago»: свежесть ставки важнее календаря. */
+function ago(at: string, now: number): string {
+  const s = Math.max(0, Math.floor((now - Date.parse(at)) / 1000));
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86_400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86_400)}d ago`;
+}
+
 /** Часы шапки: только цифры, подпись «closes in» стоит отдельной строкой. */
 function clockOf(closesAt: number, now: number): string {
   const total = Math.max(0, Math.floor((closesAt - now) / 1000));

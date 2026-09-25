@@ -2217,7 +2217,7 @@ input:focus {
 .hero-photo {
   position: relative;
   height: 27.5rem;
-  background: var(--st1) url("/TEMP-photo-front.webp") center/cover no-repeat;
+  background: var(--st1) url("/TEMP-photo-front.webp") center / contain no-repeat;
 }
 
 .hero .crop {
@@ -2537,13 +2537,6 @@ input:focus {
   color: var(--mut);
 }
 
-/* На широком экране места выбирают дугами у вещи - сетка прячется. */
-@media (min-width: 64rem) {
-  .pick-head,
-  .pick-grid {
-    display: none;
-  }
-}
 
 /* Шапка формы ставки: место и цена, которую бьём. */
 .bid-head {
@@ -2858,4 +2851,17 @@ input:focus {
 .look-pick.on {
   background: var(--ink);
   color: var(--card);
+}
+
+
+/* Шапка экрана торга: имя площадки и чип алертов. */
+.lot-brandbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.tagchip.red {
+  color: #e0381c;
 }

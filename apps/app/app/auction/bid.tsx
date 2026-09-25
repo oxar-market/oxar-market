@@ -44,6 +44,7 @@ export function BidForm({
   topCents,
   art,
   onPlaced,
+  children,
 }: {
   lot: Lot;
   /** Минимум по нашей витрине. Цепочку спросим ещё раз перед отправкой. */
@@ -54,6 +55,8 @@ export function BidForm({
   topCents: number | null;
   art: Art | undefined;
   onPlaced: () => void;
+  /** Шаг с картинкой: живёт в форме, как в направлении дизайна. */
+  children?: React.ReactNode;
 }) {
   const { authenticated } = usePrivy();
   const { login } = useLogin();
@@ -279,9 +282,18 @@ export function BidForm({
           ))}
         </div>
 
+        {/* Минимум и судьба денег - одной строкой, как в направлении
+            дизайна: куда уходят деньги, сказано до нажатия. */}
+        <span className="muted small">
+          Minimum {formatUsd(need)}. Locked in escrow until the auction ends
+          or you are outbid.
+        </span>
+
+        {children}
+
         {/* Кнопка приглушена, но нажимается. Недоступная кнопка не отвечает
-            на «почему», и человек остаётся гадать; эта на нажатие называет
-            недостающий шаг - проверки для этого уже написаны в `place`. */}
+            на «почему», и человек остаётся гадать; эта называет недостающий
+            шаг прямо на себе - проверки для этого уже написаны в `place`. */}
         <button
           type="button"
           className={ready ? "primary bid-go" : "primary bid-go waiting"}
@@ -290,7 +302,15 @@ export function BidForm({
           disabled={busy}
           onClick={() => void place()}
         >
-          {busy ? "Bidding…" : "Bid"}
+          {busy
+            ? "Bidding…"
+            : cents !== null && cents < need
+              ? `Enter at least ${formatUsd(need)}`
+              : needsArt
+                ? "Add artwork to bid"
+                : needsName
+                  ? "Name the startup to bid"
+                  : "Bid"}
         </button>
       </div>
 
