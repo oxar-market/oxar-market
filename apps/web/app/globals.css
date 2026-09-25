@@ -6,13 +6,34 @@
   box-sizing: border-box;
 }
 
+/* Палитра переменными: лендинг - первое место с настоящей темой. Тёмные
+   значения из дизайн-борда. */
+:root {
+  --bg: #fbfbf9;
+  --card: #ffffff;
+  --ink: #16181d;
+  --mut: #6b6b73;
+  --line: #e3e3df;
+  --photo: #f1f1ed;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1216;
+  --card: #181c22;
+  --ink: #ecebe6;
+  --mut: #9a9ca3;
+  --line: #272c34;
+  --photo: #13171c;
+}
+
 body {
   margin: 0;
   /* Системный стек остаётся запасным: пока шрифт едет, страница уже читается. */
   font-family: var(--font-oxar), ui-sans-serif, system-ui, sans-serif;
-  color: #16181d;
-  background: #fbfbf9;
+  color: var(--ink);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  transition: background 0.2s, color 0.2s;
 }
 
 .land {
@@ -41,7 +62,7 @@ h1 {
 
 .tagline {
   font-size: 0.8125rem;
-  color: #6b6b73;
+  color: var(--mut);
 }
 
 .land-grid {
@@ -69,7 +90,7 @@ h1 {
   margin: 0;
   font-size: 1.75rem;
   line-height: 1.5;
-  color: #6b6b73;
+  color: var(--mut);
   max-width: 34rem;
   text-wrap: pretty;
 }
@@ -78,8 +99,8 @@ h1 {
   display: inline-flex;
   padding: 1.25rem 2.125rem;
   border-radius: 999px;
-  background: #16181d;
-  color: #fff;
+  background: var(--ink);
+  color: var(--bg);
   font-size: 0.9375rem;
   font-weight: 600;
   text-decoration: none;
@@ -95,7 +116,7 @@ h1 {
 }
 
 .find:focus-visible {
-  outline: 2px solid #16181d;
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
 
@@ -105,9 +126,9 @@ h1 {
   flex-direction: column;
   height: 100%;
   max-height: 45rem;
-  border: 1px solid #e3e3df;
+  border: 1px solid var(--line);
   border-radius: 20px;
-  background: #fff;
+  background: var(--card);
   overflow: hidden;
   text-decoration: none;
   color: inherit;
@@ -117,7 +138,7 @@ h1 {
   position: relative;
   flex: 1;
   min-height: 0;
-  background: #f1f1ed url("/TEMP-photo-front.webp") center/cover no-repeat;
+  background: var(--photo) url("/TEMP-photo-front.webp") center/cover no-repeat;
 }
 
 /* Разметка мест поверх фото: занятое - залитый номер, свободное - контур.
@@ -191,7 +212,7 @@ h1 {
   gap: 6px;
   padding: 6px 9px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--card);
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -210,7 +231,7 @@ h1 {
   gap: 6px 1rem;
   align-items: baseline;
   padding: 1.125rem 1.25rem;
-  border-top: 1px solid #e3e3df;
+  border-top: 1px solid var(--line);
 }
 
 .live-name {
@@ -227,7 +248,7 @@ h1 {
 
 .live-sub {
   font-size: 0.9375rem;
-  color: #6b6b73;
+  color: var(--mut);
 }
 
 /* Телефон: колонка, афиша занимает остаток экрана, разметка мельче. */
@@ -290,4 +311,37 @@ h1 {
   .live-name {
     font-size: 1.25rem;
   }
+}
+
+.land-side {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.theme-flip {
+  cursor: pointer;
+  padding: 0.4375rem 0.875rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+/* Логотип лидера в занятой клетке: то, что напечатают. Поля до уголков -
+   печатают ровно обведённое, и превью честно это повторяет. */
+.cell img {
+  position: absolute;
+  inset: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  object-fit: contain;
+}
+
+/* В тёмной теме фото уходит: у снимка прозрачный фон, и на тёмном он даёт
+   грязный ореол. Остаётся панель с разметкой и логотипами - чертёж вещи. */
+:root[data-theme="dark"] .live-photo {
+  background-image: none;
 }

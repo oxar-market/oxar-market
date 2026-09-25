@@ -4,16 +4,18 @@ import { useEffect, useState } from "react";
 
 /**
  * Лендинг на oxar.app по дизайн-борду: один экран, слева манифест и одна
- * дверь «Find a spot», справа живая афиша идущего торга - фото вещи с
- * разметкой мест, где занятые залиты, а свободные стоят контуром.
+ * дверь «Find a spot», справа живая афиша самого горячего торга - фото вещи,
+ * в занятых местах настоящие логотипы лидеров, свободные стоят контуром.
  *
- * Позиционирование намеренно шире аукциона: продаём места на вещах, аукцион -
- * лишь то, как место уходит сегодня. Поэтому заголовок и текст - про вещи,
- * а торг живёт маленькой карточкой-доказательством, что рынок дышит.
+ * Какую вещь показывать, решают деньги: берётся вещь с наибольшей суммой
+ * лидирующих ставок - у неё и есть хайп. Ставить с лендинга нельзя намеренно:
+ * афиша зовёт внутрь, торг живёт в приложении.
  *
- * Живые числа приезжают клиентом прямо из базы обычным fetch: тянуть сюда
- * SDK ради двух запросов незачем. Без ключей или без сети карточка честно
- * остаётся статичной - фото и разметка без цифр.
+ * Тема двухцветная и переключается здесь же: лендинг - первое место, где
+ * палитра живёт переменными, тёмные значения взяты из дизайн-борда.
+ *
+ * Живые данные приезжают клиентом обычным fetch: SDK ради двух запросов не
+ * нужен. Без ключей или без сети карточка честно статична.
  */
 
 /** Само приложение живёт на своём домене и деплоится отдельным проектом. */
@@ -28,8 +30,8 @@ const SPOTS = ["slot_01", "slot_02", "slot_03", "slot_04", "slot_05", "slot_06",
 type Live = {
   title: string;
   closesAt: number;
-  /** Коды мест, на которых уже стоит чья-то ставка. */
-  taken: Set<string>;
+  /** Код места - логотип лидера. Занято то, у чего есть запись. */
+  art: Record<string, string>;
   spots: number;
 };
 
@@ -48,36 +50,71 @@ async function rest(path: string): Promise<unknown[] | null> {
 
 async function loadLive(): Promise<Live | null> {
   const lots = (await rest(
-    "lots?status=eq.open&select=id,closes_at,thing_spots(code),things:thing_id(title)",
+    "lots?status=eq.open&select=id,closes_at,thing_id,thing_spots(code),things:thing_id(title)",
   )) as
     | {
         id: string;
         closes_at: string;
+        thing_id: string;
         thing_spots: { code: string } | null;
         things: { title: string } | null;
       }[]
     | null;
   if (!lots || lots.length === 0) return null;
 
-  const bids = (await rest("lot_bids?select=lot_id")) as { lot_id: string }[] | null;
-  const withBids = new Set((bids ?? []).map((one) => one.lot_id));
+  // Верхняя ставка каждого лота: строки уже от высокой к низкой.
+  const bids = (await rest(
+    "lot_bids?select=lot_id,amount_cents,media_url&order=amount_cents.desc",
+  )) as { lot_id: string; amount_cents: number; media_url: string }[] | null;
+  const top = new Map<string, { amount: number; art: string }>();
+  for (const bid of bids ?? []) {
+    if (!top.has(bid.lot_id)) top.set(bid.lot_id, { amount: bid.amount_cents, art: bid.media_url });
+  }
 
-  const taken = new Set<string>();
+  // Вещь выбирают деньги: наибольшая сумма лидирующих ставок - самый хайп.
+  const score = new Map<string, number>();
   for (const lot of lots) {
-    if (withBids.has(lot.id) && lot.thing_spots?.code) taken.add(lot.thing_spots.code);
+    score.set(lot.thing_id, (score.get(lot.thing_id) ?? 0) + (top.get(lot.id)?.amount ?? 0));
+  }
+  const hottest = [...score.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const featured = lots.filter((one) => one.thing_id === hottest);
+
+  const art: Record<string, string> = {};
+  for (const lot of featured) {
+    const lead = top.get(lot.id);
+    if (lead && lot.thing_spots?.code) art[lot.thing_spots.code] = lead.art;
   }
 
   return {
-    title: lots[0].things?.title ?? "Shirt No. 1",
-    closesAt: Math.min(...lots.map((one) => Date.parse(one.closes_at))),
-    taken,
-    spots: lots.length,
+    title: featured[0].things?.title ?? "Shirt No. 1",
+    closesAt: Math.min(...featured.map((one) => Date.parse(one.closes_at))),
+    art,
+    spots: featured.length,
   };
 }
+
+type Theme = "light" | "dark";
 
 export default function Home() {
   const [live, setLive] = useState<Live | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  // Тема: запомненная, иначе системная. Ставится атрибутом на html, чтобы
+  // фон страницы переключался целиком, а не только внутри main.
+  const [theme, setTheme] = useState<Theme>("light");
+  useEffect(() => {
+    const saved = window.localStorage.getItem("oxar.theme");
+    const system = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    setTheme(saved === "dark" || saved === "light" ? saved : system);
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  function flipTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    window.localStorage.setItem("oxar.theme", next);
+  }
 
   useEffect(() => {
     void loadLive().then(setLive);
@@ -86,12 +123,23 @@ export default function Home() {
   }, []);
 
   const running = live !== null && live.closesAt > now;
+  const taken = live ? Object.keys(live.art).length : 0;
 
   return (
     <main className="land">
       <header className="land-top">
         <span className="wordmark">OXAR</span>
-        <span className="tagline">Ad space on physical things</span>
+        <span className="land-side">
+          <span className="tagline">Ad space on physical things</span>
+          <button
+            type="button"
+            className="theme-flip"
+            onClick={flipTheme}
+            aria-label="Switch theme"
+          >
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
+        </span>
       </header>
 
       <div className="land-grid">
@@ -112,15 +160,21 @@ export default function Home() {
         <a className="live-card" href={APP_URL}>
           <div className="live-photo">
             <div className="live-grid" aria-hidden>
-              {SPOTS.map((code, at) => (
-                <span
-                  key={code}
-                  className={live?.taken.has(code) ? "cell" : "cell free"}
-                >
-                  <i /><i /><i /><i />
-                  <b>{at + 1}</b>
-                </span>
-              ))}
+              {SPOTS.map((code, at) => {
+                const art = live?.art[code];
+                return (
+                  <span key={code} className={art ? "cell" : "cell free"}>
+                    <i /><i /><i /><i />
+                    {art ? (
+                      // Настоящий логотип лидера: то, что напечатают, если
+                      // никто не перебьёт. Ставить - внутри приложения.
+                      <img src={art} alt="" loading="lazy" />
+                    ) : (
+                      <b>{at + 1}</b>
+                    )}
+                  </span>
+                );
+              })}
             </div>
             <i className="crop tl" /><i className="crop tr" />
             <i className="crop bl" /><i className="crop br" />
@@ -137,7 +191,7 @@ export default function Home() {
               {running ? countdown(live.closesAt - now) : ""}
             </span>
             <span className="live-sub">
-              {live ? `${live.taken.size} of ${live.spots} spots taken` : ""}
+              {live ? `${taken} of ${live.spots} spots taken - bid inside` : ""}
             </span>
             <span className="live-sub">{running ? "left in this auction" : ""}</span>
           </div>
