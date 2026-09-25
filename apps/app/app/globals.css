@@ -26,6 +26,7 @@
   --red: #b42318;
   --st1: #e9e8e2;
   --st2: #f1f0eb;
+  --hl: rgba(22, 24, 29, 0.04);
 }
 
 :root[data-theme="dark"] {
@@ -43,6 +44,7 @@
   --tabline: rgba(255, 255, 255, 0.08);
   --redtint: #2b1612;
   --redink: #f2a898;
+  --hl: rgba(255, 255, 255, 0.05);
   --red: #f0836f;
   --st1: #1b2027;
   --st2: #161a20;
@@ -2328,6 +2330,188 @@ input:focus {
 
 .held-list {
   width: 100%;
+}
+
+.held-empty {
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--line2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+/* Шапка маркета: марка и имя экрана одной строкой, имя приглушено. */
+.mk-title {
+  font-weight: 600;
+}
+
+.mk-title span {
+  color: var(--mut);
+}
+
+/* Карусель героев во всю ширину экрана: слайд - одна вещь. Поля экрана
+   снимает она, а не каждый герой. */
+.hero-rail {
+  display: flex;
+  margin: 0 -1.25rem;
+  width: calc(100% + 2.5rem);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.hero-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.hero-rail > .hero {
+  flex: 0 0 100%;
+  margin: 0;
+  width: 100%;
+  scroll-snap-align: start;
+}
+
+.hero-pager {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding-top: 1rem;
+}
+
+.hero-pager button {
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line3);
+  transition: width 0.2s;
+}
+
+.hero-pager button.on {
+  width: 18px;
+  background: var(--ink);
+}
+
+/* Полоса недели: семь дней от сегодня, точка - торг в этот день
+   закрывается (красная) или открывается (тёмная). Липнет к верху, пока
+   листаешь программу; день без торгов не нажимается. */
+.mk-strip {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin: 1.75rem -1.25rem 0;
+  width: calc(100% + 2.5rem);
+  padding: 10px 20px 8px;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.mk-day {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0 7px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+}
+
+.mk-day:disabled {
+  cursor: default;
+  color: var(--mut);
+}
+
+.mk-day.on {
+  border-bottom-color: var(--ink);
+}
+
+.mk-day-dow {
+  font-size: 0.8125rem;
+  line-height: 1;
+  color: var(--mut);
+}
+
+.mk-day-date {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+.mk-day-dot.close {
+  background: #e0381c;
+}
+
+.mk-day-dot.open {
+  background: var(--ink);
+}
+
+.mk-group {
+  width: 100%;
+}
+
+/* Прыжок с полосы не должен прятать заголовок дня под самой полосой. */
+.mk-group .mk-head {
+  scroll-margin-top: 84px;
+}
+
+/* Строка программы: имя, цена, время. Нажатие листает карусель к вещи,
+   строка той, что сейчас на экране, подсвечена. */
+.mk-row {
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  align-items: baseline;
+  width: calc(100% + 20px);
+  margin: 0 -10px;
+  padding: 16px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line2);
+  border-radius: 12px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.mk-row.on {
+  background: var(--hl);
+}
+
+.mk-row-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mk-row-price {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.mk-row-time {
+  grid-column: 1 / 3;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
 }
 
 .held-row {

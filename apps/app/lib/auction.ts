@@ -246,6 +246,13 @@ export type MarketThing = {
   art: Record<string, string>;
 };
 
+/** Анонс: вещь уже в каталоге, но торга на неё ещё не заводили. */
+export type UpcomingThing = {
+  id: string;
+  title: string;
+  tagline: string | null;
+};
+
 /** Строка «Held earlier»: чем кончился прошедший торг. */
 export type HeldRow = {
   closesAt: string;
@@ -259,9 +266,20 @@ export type HeldRow = {
  */
 export async function loadMarket(): Promise<{
   things: MarketThing[];
+  upcoming: UpcomingThing[];
   held: HeldRow[];
 }> {
-  if (!db) return { things: [], held: [] };
+  if (!db) return { things: [], upcoming: [], held: [] };
+
+  // Анонс - вещь без единого лота. Вещь, у которой торг уже был, сюда не
+  // попадает и после его закрытия: она уходит в «Held earlier».
+  const { data: catalog } = await db
+    .from("things")
+    .select("id, title, tagline, lots(id)")
+    .order("created_at");
+  const upcoming: UpcomingThing[] = (catalog ?? [])
+    .filter((one) => (one.lots as unknown[]).length === 0)
+    .map((one) => ({ id: one.id, title: one.title, tagline: one.tagline }));
 
   const { data } = await db
     .from("lots")
@@ -271,7 +289,7 @@ export async function loadMarket(): Promise<{
     .in("status", ["open", "won", "unsold"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
     .limit(400);
-  if (!data || data.length === 0) return { things: [], held: [] };
+  if (!data || data.length === 0) return { things: [], upcoming, held: [] };
 
   const tops = await loadTopBids(data.map((one) => one.id));
   const now = Date.now();
@@ -319,6 +337,7 @@ export async function loadMarket(): Promise<{
 
   return {
     things: [...things.values()].sort((a, b) => b.raisedCents - a.raisedCents),
+    upcoming,
     held: [...heldBy.values()].sort(
       (a, b) => Date.parse(b.closesAt) - Date.parse(a.closesAt),
     ),
