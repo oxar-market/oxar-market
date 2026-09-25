@@ -298,7 +298,9 @@ export function Auction() {
   }
 
   const top = bids[0] ?? null;
-  const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null) : 0;
+  const need = lot
+    ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents)
+    : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
 
   // Сколько денег торг держит прямо сейчас - по всей вещи, а не по выбранному
