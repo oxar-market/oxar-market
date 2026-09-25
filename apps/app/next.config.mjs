@@ -10,7 +10,7 @@ const nextConfig = {
   // первые торги пройдут и охота за багами кончится.
   productionBrowserSourceMaps: true,
   // Пакет воркспейса лежит в исходниках на TypeScript, его собирает Next.
-  transpilePackages: ["@oxar/core"],
+  transpilePackages: ["@oxar/core", "@oxar/stage"],
 };
 
 export default nextConfig;

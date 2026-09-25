@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ThingStage, type Stage } from "@oxar/stage";
 
 /**
  * Лендинг на oxar.app по дизайн-борду: один экран, слева манифест и одна
@@ -125,6 +126,23 @@ export default function Home() {
   const running = live !== null && live.closesAt > now;
   const taken = live ? Object.keys(live.art).length : 0;
 
+  // Чем показывать вещь: фото или той же сценой, что на торге. 3D включается
+  // рукой: мегабайт модели не должен грузиться раньше, чем его попросили.
+  const [look, setLook] = useState<"photo" | "live">("photo");
+  const stage = useRef<Stage | null>(null);
+
+  // Логотипы лидеров встают на модель теми же местами, что и в приложении.
+  // Картинки из чужого домена просят crossOrigin, иначе канвас их не примет.
+  function dress() {
+    if (!live) return;
+    for (const [code, art] of Object.entries(live.art)) {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => stage.current?.show(code, image);
+      image.src = art;
+    }
+  }
+
   return (
     <main className="land">
       <header className="land-top">
@@ -157,35 +175,63 @@ export default function Home() {
           </div>
         </div>
 
-        <a className="live-card" href={APP_URL}>
-          <div className="live-photo">
-            <div className="live-grid" aria-hidden>
-              {SPOTS.map((code, at) => {
-                const art = live?.art[code];
-                return (
-                  <span key={code} className={art ? "cell" : "cell free"}>
-                    <i /><i /><i /><i />
-                    {art ? (
-                      // Настоящий логотип лидера: то, что напечатают, если
-                      // никто не перебьёт. Ставить - внутри приложения.
-                      <img src={art} alt="" loading="lazy" />
-                    ) : (
-                      <b>{at + 1}</b>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
-            <i className="crop tl" /><i className="crop tr" />
-            <i className="crop bl" /><i className="crop br" />
+        {/* Карточка перестала быть одной ссылкой: в 3D вещь крутят, и жест
+            вращения не должен уводить на другой сайт. Дверь - нижняя полоса
+            и кнопка Find a spot. */}
+        <div className="live-card">
+          <div className={look === "live" ? "live-photo in3d" : "live-photo"}>
+            {look === "live" ? (
+              <div className="live-stage">
+                <ThingStage
+                  picked={null}
+                  onPick={() => {}}
+                  stage={stage}
+                  onReady={dress}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="live-grid" aria-hidden>
+                  {SPOTS.map((code, at) => {
+                    const art = live?.art[code];
+                    return (
+                      <span key={code} className={art ? "cell" : "cell free"}>
+                        <i /><i /><i /><i />
+                        {art ? (
+                          // Настоящий логотип лидера: то, что напечатают,
+                          // если никто не перебьёт. Ставить - внутри.
+                          <img src={art} alt="" loading="lazy" />
+                        ) : (
+                          <b>{at + 1}</b>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+                <i className="crop tl" /><i className="crop tr" />
+                <i className="crop bl" /><i className="crop br" />
+              </>
+            )}
             {running && (
               <span className="now-pill">
                 <span className="dot" />
                 NOW SHOWING
               </span>
             )}
+            <span className="look-flip">
+              {(["photo", "live"] as const).map((one) => (
+                <button
+                  key={one}
+                  type="button"
+                  className={look === one ? "look-pick on" : "look-pick"}
+                  onClick={() => setLook(one)}
+                >
+                  {one === "photo" ? "Photo" : "3D"}
+                </button>
+              ))}
+            </span>
           </div>
-          <div className="live-info">
+          <a className="live-info" href={APP_URL}>
             <span className="live-name">{live?.title ?? "Shirt No. 1"}</span>
             <span className="live-cd" suppressHydrationWarning>
               {running ? countdown(live.closesAt - now) : ""}
@@ -194,8 +240,8 @@ export default function Home() {
               {live ? `${taken} of ${live.spots} spots taken - bid inside` : ""}
             </span>
             <span className="live-sub">{running ? "left in this auction" : ""}</span>
-          </div>
-        </a>
+          </a>
+        </div>
       </div>
     </main>
   );

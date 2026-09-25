@@ -226,6 +226,9 @@ h1 {
 }
 
 .live-info {
+  /* Полоса - ссылка, но говорит голосом карточки, а не синим браузера. */
+  text-decoration: none;
+  color: inherit;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px 1rem;
@@ -345,4 +348,55 @@ h1 {
    читается как отпечаток на стене - и футболку видно. */
 :root[data-theme="dark"] .live-photo {
   background-color: #e9e8e2;
+}
+
+/* Сцена в карточке: заполняет фотозону, свой габарит ей задаёт карточка.
+   Подложка прозрачная - панель карточки уже светлая в обеих темах. */
+.live-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.live-stage .stage {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  max-height: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Переключатель вида - мини-версия того, что на торге. */
+.look-flip {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.look-pick {
+  cursor: pointer;
+  border: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.look-pick.on {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* В 3D фото-фон гаснет: под сценой просвечивала вторая футболка. */
+.live-photo.in3d {
+  background-image: none;
 }

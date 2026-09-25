@@ -28,7 +28,7 @@
  *
  * Заведено 21 сентября 2026.
  */
-import type { Corners } from "./quad.ts";
+import type { Corners } from "@oxar/stage";
 
 /**
  * Снимки вместо наших кадров, по номеру ракурса.

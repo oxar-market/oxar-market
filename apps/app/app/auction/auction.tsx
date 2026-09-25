@@ -23,9 +23,8 @@ import { PhotoView } from "./photo.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
 import { TEMP_ANGLES, TEMP_FRONT_QUADS, TEMP_SHOTS } from "./temp-photo.ts";
-import { SPOTS } from "./spots.ts";
+import { SPOTS, ThingStage, type Stage, type Views } from "@oxar/stage";
 import { disablePush, enablePush, pushState, type PushState } from "@/lib/push.ts";
-import { ThingStage, type Stage, type Views } from "./stage.tsx";
 
 /**
  * Экран торга: одна вещь, её места, ставки.
