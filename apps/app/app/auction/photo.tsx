@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fitInside } from "./fit.ts";
-import { quadTransform, type Corners } from "./quad.ts";
-import { SPOTS } from "./spots.ts";
+import { fitInside, quadTransform, SPOTS, type Corners } from "@oxar/stage";
 
 /**
  * Вещь кадром, а не сценой.

@@ -14,7 +14,7 @@ import { SPOTS } from "./spots.ts";
 
 const sql = readFileSync(
   new URL(
-    "../../../../supabase/migrations/20260920170000_tee_grid.sql",
+    "../../../supabase/migrations/20260920170000_tee_grid.sql",
     import.meta.url,
   ),
   "utf8",

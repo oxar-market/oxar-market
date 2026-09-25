@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque } from "next/font/google";
+import "@oxar/stage/stage.css";
 import "./globals.css";
 
 /**
