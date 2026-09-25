@@ -693,6 +693,12 @@ h1 {
   color: var(--mut);
 }
 
+/* Кнопки наследуют цвет текста страницы: браузерный чёрный по умолчанию
+   тонет в тёмной теме - так «Sign out» и стал невидимым. */
+button {
+  color: inherit;
+}
+
 input {
   border: 1px solid var(--line);
   border-radius: 999px;
