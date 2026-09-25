@@ -3,37 +3,35 @@
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { PublicKey } from "@solana/web3.js";
-import { avatarLetter, avatarTone } from "@oxar/core";
+import { avatarLetter, formatUsd } from "@oxar/core";
 import { BUILD } from "@/lib/build";
 import { connection, walletUnits } from "@/lib/chain";
+import { loadMyStands, type MyStand } from "@/lib/auction";
 import { db } from "@/lib/session";
 
 /**
- * Страница человека. Показывает только то, что знает наверняка: кто вошёл и чем
- * он может быть на площадке.
+ * Страница человека, собранная по дизайн-борду «OXAR Auction design
+ * directions»: кошелёк сразу под личностью, баланс - герой экрана, ставки
+ * с красной карточкой «перебили», роли одним переключателем.
  *
- * Ролей две, и они независимы: один и тот же человек бывает и покупателем, и
- * продавцом. Покупателем становится каждый вошедший - ставить может кто угодно.
- * Продавцом только после разговора, и выдаём роль мы: в базе до этой колонки из
- * браузера не дотянуться вовсе.
- *
- * Роли нарисованы карточками, а не строчками списка, и это не украшение. Из
- * списка «Seller: not yet» читается как отказ, а из карточки с открытой дверью
- * - как следующий шаг. Разница в том, напишет человек нам или закроет вкладку.
+ * Кошелёк нарочно не называется «кошельком OXAR»: он принадлежит человеку -
+ * либо создан Privy при входе почтой, либо это его собственный Phantom.
+ * Путаница здесь стоила бы доверия, поэтому подпись говорит это прямо.
  */
 
 /** Куда зовёт разговор. Тот же адрес, что был в прошлой версии продукта. */
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
-export function You() {
+export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
   const { user, logout } = usePrivy();
   const wallet = user?.wallet?.address;
   const email = user?.email?.address;
+  // Privy помечает свой встроенный кошелёк; всё прочее - внешний, и его
+  // хозяину не нужны наши объяснения про пополнение.
+  const embedded = user?.wallet?.walletClientType === "privy";
 
-  // Балансы кошелька из цепочки: USDC - чем ставят, SOL - чем платят комиссию
-  // сети. null - ещё не прочитали; строку не показываем, а не врём нулём.
-  // Монета торга берётся из открытого лота, как в форме ставки: своя константа
-  // однажды разошлась бы с программой.
+  // Балансы из цепочки: USDC - чем ставят, SOL - чем платят комиссию сети.
+  // null - ещё не прочитали; показываем прочерк, а не врём нулём.
   const [usdc, setUsdc] = useState<number | null>(null);
   const [sol, setSol] = useState<number | null>(null);
   useEffect(() => {
@@ -59,8 +57,24 @@ export function You() {
     };
   }, [wallet]);
 
-  // «Скопировано» живёт две секунды: постоянная надпись врала бы, а без неё
-  // непонятно, сработала ли кнопка.
+  // Мои ставки: живые наверху экрана, закрытые - историей внизу.
+  const [stands, setStands] = useState<MyStand[]>([]);
+  useEffect(() => {
+    if (!wallet) return;
+    let live = true;
+    void loadMyStands(wallet).then((rows) => live && setStands(rows));
+    return () => {
+      live = false;
+    };
+  }, [wallet]);
+
+  // Часы для «closes in»: перебитая ставка - вопрос времени, и оно тикает.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
+
   const [copied, setCopied] = useState(false);
   function copyAddress() {
     if (!wallet) return;
@@ -70,105 +84,235 @@ export function You() {
     });
   }
 
-  // Кружок тот же, что у участников торга в ленте ставок: цвет выводится из
-  // строки и всегда один и тот же. Войти можно и письмом, и кошельком, поэтому
-  // берём то, что есть, - но в одном порядке, иначе человек, у которого есть
-  // и то и другое, менял бы цвет от способа входа.
-  const who = email ?? wallet ?? "";
+  // Роли одним переключателем: Seller - не второй режим, а дверь к разговору,
+  // и до своего кабинета он живёт одной карточкой с Buyer.
+  const [role, setRole] = useState<"buyer" | "seller">("buyer");
+
+  const outbid = stands.filter((one) => one.open && !one.leading);
+  const leading = stands.filter((one) => one.open && one.leading);
+  const history = stands.filter((one) => !one.open);
+  const activeCount = outbid.length + leading.length;
 
   return (
     <section className="screen">
       <h1>You</h1>
 
       <div className="you-card">
-        <span
-          className="you-face"
-          style={{ background: avatarTone(who) }}
-          aria-hidden
-        >
-          {avatarLetter(who)}
+        <span className="you-face" aria-hidden>
+          {avatarLetter(email ?? wallet ?? "?")}
         </span>
-
         <div className="you-id">
-          {/* Почта крупнее адреса: её человек узнаёт, а сорок четыре знака
-              base58 - нет. Если входили кошельком, почты не будет вовсе, и
-              тогда адрес занимает её место. */}
           {email ? <p className="you-mail">{email}</p> : null}
-          {wallet ? (
-            <p className={email ? "you-wallet" : "you-mail mono"}>{wallet}</p>
-          ) : null}
+          {wallet && !email ? <p className="you-mail mono">{shorten(wallet)}</p> : null}
+          <p className="you-sub">
+            {email ? "Signed in with email" : "Signed in with a wallet"}
+          </p>
         </div>
       </div>
 
-      <div className="roles">
-        {/* Кошелёк и пополнение. Живой случай первого дня: человек отправил
-            USDT вместо USDC и увидел «баланс ноль» - поэтому монета и сеть
-            названы прямо, а не подразумеваются. */}
-        {wallet && (
-          <div className="role">
-            <div className="role-top">
-              <span className="role-name">Wallet</span>
-              {usdc !== null && sol !== null && (
-                <span className="role-state">
-                  ${usdc.toFixed(2)} USDC · {sol.toFixed(3)} SOL
-                </span>
-              )}
+      {wallet && (
+        <div className="wallet-card">
+          <div className="wallet-head">
+            <div className="wallet-name">
+              <span className="wallet-title">Your wallet</span>
+              <span className="wallet-cap">
+                {embedded
+                  ? "Created by Privy when you signed in. Yours, not ours."
+                  : "Connected from your own wallet app."}
+              </span>
             </div>
-            <p className="role-note">
-              To bid, this wallet needs USDC and a little SOL for network fees.
-              Send both on the Solana network to the address below. USDC only -
-              USDT or other coins will not work here.
-            </p>
-            <p className="you-addr mono">{wallet}</p>
-            <button type="button" className="ghost" onClick={copyAddress}>
-              {copied ? "Copied" : "Copy address"}
-            </button>
-            {/* Необратимость сказана там, где переводят, а не в подвале:
-                после перевода читать её поздно. */}
-            <p className="role-note">
-              Transfers are irreversible: coins sent on a wrong network or in a
-              wrong token cannot be recovered by us. This wallet is yours, not
-              ours - see the <a href="/terms">terms</a>.
-            </p>
+            <span className="wallet-net">Solana</span>
           </div>
-        )}
 
-        <div className="role">
-          <div className="role-top">
-            <span className="role-name">Buyer</span>
-            <span className="role-state on">Active</span>
+          <div className="balance">
+            <span className="balance-usdc">
+              {usdc === null
+                ? "-"
+                : `$${usdc.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`}
+            </span>
+            <span className="balance-unit">USDC</span>
+            <span className="balance-sol">
+              {sol === null ? "" : `${sol.toFixed(3)} `}
+              <span className="balance-unit">SOL</span>
+            </span>
           </div>
+
+          <div className="addr-box">
+            <span>{wallet}</span>
+            <button type="button" className="ghost small" onClick={copyAddress}>
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+
+          {embedded && (
+            <div className="funds">
+              <span className="funds-head">Add funds</span>
+              <p className="role-note">
+                Send USDC, plus a little SOL for fees, on the Solana network to
+                the address above. Anything sent on another network is lost.
+              </p>
+            </div>
+          )}
+
+          <p className="wallet-cap">
+            Transfers are irreversible. <a href="/terms">See terms</a>.
+          </p>
+        </div>
+      )}
+
+      {activeCount > 0 && (
+        <div className="bids-head">
+          <span className="bids-title">Your bids</span>
+          <span className="muted">
+            {activeCount} active
+          </span>
+        </div>
+      )}
+
+      {outbid.map((one) => (
+        <div className="outbid-card" key={one.lotId}>
+          <div className="outbid-top">
+            <span className="outbid-badge">OUTBID</span>
+            <span className="outbid-when">closes in {left(one.closesAt, now)}</span>
+          </div>
+          <span className="outbid-title">
+            Spot {one.spot} · {one.thing}
+          </span>
+          <div className="outbid-grid">
+            <div>
+              <span className="outbid-cap">
+                {one.leaderBrand ? `Leader - ${one.leaderBrand}` : "Leader"}
+              </span>
+              <span className="outbid-num lead">{formatUsd(one.topCents)}</span>
+            </div>
+            <div>
+              <span className="outbid-cap">Your bid</span>
+              <span className="outbid-num mine">{formatUsd(one.mineCents)}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="raise"
+            onClick={() => {
+              // Торг откроется сразу на этом месте: код едет через
+              // sessionStorage, вкладки - состояние экрана, а не адреса.
+              window.sessionStorage.setItem("oxar.jump", one.code);
+              onOpenAuction();
+            }}
+          >
+            Raise your bid
+          </button>
+          <span className="outbid-note">
+            Your {formatUsd(one.mineCents)} is already back in your wallet.
+          </span>
+        </div>
+      ))}
+
+      {leading.length > 0 && (
+        <div className="leading-card">
+          {leading.map((one) => (
+            <div className="leading-row" key={one.lotId}>
+              <div className="leading-what">
+                <span>Spot {one.spot}</span>
+                <span className="muted small">{one.thing}</span>
+              </div>
+              <span className="tagchip">LEADING</span>
+              <span className="leading-amt">{formatUsd(one.mineCents)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <>
+          <div className="bids-head">
+            <span className="hist-title">History</span>
+          </div>
+          <div className="hist-list">
+            {history.map((one) => (
+              <div className="hist-row" key={one.lotId}>
+                <span className="hist-date">{day(one.closesAt)}</span>
+                <span className="hist-what">
+                  Spot {one.spot} · {one.thing}
+                </span>
+                <span
+                  className="tagchip"
+                  style={{ color: one.won ? "#16181d" : undefined }}
+                >
+                  {one.won ? "WON" : "LOST"}
+                </span>
+                <span className="hist-amt">{formatUsd(one.mineCents)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="role-card">
+        <div className="role-toggle">
+          {(["buyer", "seller"] as const).map((one) => (
+            <button
+              key={one}
+              type="button"
+              className={role === one ? "role-tab on" : "role-tab"}
+              onClick={() => setRole(one)}
+            >
+              {one === "buyer" ? "Buyer" : "Seller"}
+            </button>
+          ))}
+        </div>
+        {role === "buyer" ? (
           <p className="role-note">
             Anyone signed in can bid. The money leaves your wallet with the bid
             and comes back if someone outbids you.
           </p>
-        </div>
-
-        <div className="role">
-          <div className="role-top">
-            <span className="role-name">Seller</span>
-            <span className="role-state">Not yet</span>
-          </div>
-          <p className="role-note">
-            Selling spots on your own thing is not open yet. The first
-            auctions are run by us; if you want yours to be next, book a call.
-          </p>
-          <a className="ghost" href={CALL_URL} target="_blank" rel="noreferrer">
-            Book a call
-          </a>
-        </div>
+        ) : (
+          <>
+            <p className="role-note">
+              Want your thing here? The first auctions are run by us - book a
+              call.
+            </p>
+            <a className="primary center" href={CALL_URL} target="_blank" rel="noreferrer">
+              Book a call
+            </a>
+          </>
+        )}
       </div>
 
-      <button type="button" className="quiet" onClick={logout}>
+      <button type="button" className="signout" onClick={logout}>
         Sign out
       </button>
 
-      {/* Версия сборки: тихая подпись внизу, для нас, а не для человека. По ней
-          на глаз видно, та ли версия открыта. Рядом - условия, той же
-          громкости: они справка, а не предупреждение. */}
-      <p className="build">
-        build {BUILD} · <a href="/terms">terms</a>
+      <p className="you-foot">
+        <span className="build">build {BUILD}</span>
+        <a href="/terms">terms</a>
       </p>
     </section>
   );
+}
+
+/** Адрес в шапке: края, по которым свой кошелёк узнают. */
+function shorten(at: string): string {
+  return `${at.slice(0, 4)}…${at.slice(-4)}`;
+}
+
+/** День для истории: коротко, в часах читателя. */
+function day(at: string): string {
+  return new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** Сколько осталось торгу: часы тикают на глазах у перебитого. */
+function left(closesAt: string, now: number): string {
+  const ms = Math.max(0, Date.parse(closesAt) - now);
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86_400);
+  const h = Math.floor((s % 86_400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
 }

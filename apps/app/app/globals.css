@@ -170,13 +170,378 @@ h1 {
   overflow-wrap: anywhere;
 }
 
-/* Адрес в карточке кошелька: тот же приём, что под почтой, но на полтона
-   темнее - его сюда пришли копировать, а не узнавать по краям. */
-.you-addr {
+/* ── Экран You по дизайн-борду: кошелёк под личностью, баланс - герой. ── */
+
+.you-face {
+  background: #16181d;
+}
+
+.you-sub {
   margin: 0;
   font-size: 0.8125rem;
-  color: #4c4c53;
-  overflow-wrap: anywhere;
+  color: #6b6b73;
+}
+
+.wallet-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  border: 1px solid #e3e3df;
+  border-radius: 20px;
+  background: #fff;
+  padding: 1.25rem;
+}
+
+.wallet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.wallet-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+}
+
+.wallet-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.wallet-cap {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #6b6b73;
+}
+
+.wallet-net {
+  font-size: 0.8125rem;
+  color: #6b6b73;
+  padding-top: 3px;
+}
+
+/* Баланс - самая крупная цифра экрана: за ним сюда и приходят. */
+.balance {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.balance-usdc {
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-unit {
+  font-size: 0.9375rem;
+  color: #6b6b73;
+}
+
+.balance-sol {
+  margin-left: auto;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.addr-box {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+  border-radius: 14px;
+  background: #f2f2ee;
+}
+
+.addr-box > span {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  word-break: break-all;
+}
+
+.ghost.small {
+  padding: 0.5rem 0.8125rem;
+  font-weight: 400;
+  font-size: 0.8125rem;
+}
+
+.funds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid #eeeeea;
+}
+
+.funds-head {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.bids-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  padding: 0.375rem 2px 0;
+}
+
+.bids-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Перебитая ставка - самое громкое на экране: красная карточка с кнопкой. */
+.outbid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  border: 1.5px solid #e0381c;
+  border-radius: 20px;
+  background: #fdece7;
+  padding: 1rem;
+}
+
+.outbid-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.outbid-badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #c42d14;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.outbid-when {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.outbid-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.outbid-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.outbid-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.outbid-cap {
+  font-size: 0.8125rem;
+  color: #7a2413;
+}
+
+.outbid-num {
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.outbid-num.lead {
+  font-weight: 600;
+}
+
+.outbid-num.mine {
+  text-decoration: line-through;
+  text-decoration-color: #e0381c;
+}
+
+.raise {
+  cursor: pointer;
+  border: 0;
+  padding: 0.9375rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  background: #c42d14;
+  color: #fff;
+  transition: transform 0.12s ease-out;
+}
+
+.raise:active {
+  transform: scale(0.98);
+}
+
+.outbid-note {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: #7a2413;
+}
+
+.leading-card {
+  width: 100%;
+  border: 1px solid #e3e3df;
+  border-radius: 20px;
+  background: #fff;
+  padding: 4px 1rem;
+}
+
+.leading-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.8125rem 0;
+  border-bottom: 1px solid #eeeeea;
+}
+
+.leading-row:last-child {
+  border-bottom: 0;
+}
+
+.leading-what {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.tagchip {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #6b6b73;
+}
+
+.leading-amt {
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 76px;
+  text-align: right;
+}
+
+.hist-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #6b6b73;
+}
+
+.hist-list {
+  width: 100%;
+  padding: 0 2px;
+}
+
+.hist-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto 72px;
+  gap: 0.625rem;
+  align-items: baseline;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid #eeeeea;
+  font-size: 0.9375rem;
+}
+
+.hist-date {
+  font-size: 0.8125rem;
+  color: #6b6b73;
+}
+
+.hist-what {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hist-amt {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #6b6b73;
+}
+
+/* Роли одной карточкой: Seller до своего кабинета - дверь, а не режим. */
+.role-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  width: 100%;
+  border: 1px solid #e3e3df;
+  border-radius: 20px;
+  background: #fff;
+  padding: 1rem;
+  margin-top: 0.375rem;
+}
+
+.role-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f2f2ee;
+}
+
+.role-tab {
+  flex: 1;
+  cursor: pointer;
+  border: 0;
+  padding: 0.5625rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  background: transparent;
+  color: #6b6b73;
+}
+
+.role-tab.on {
+  background: #fff;
+  color: #16181d;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.primary.center {
+  text-align: center;
+  text-decoration: none;
+}
+
+.signout {
+  width: 100%;
+  cursor: pointer;
+  padding: 0.875rem;
+  border-radius: 999px;
+  border: 1px solid #e3e3df;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9375rem;
+}
+
+.you-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  margin: 0;
+  padding: 0.375rem 4px 0;
+  font-size: 0.8125rem;
+  color: #6b6b73;
 }
 
 /* Ссылки внутри текста говорят голосом самого текста: цвет наследуется,
@@ -185,7 +550,9 @@ h1 {
 .role-note a,
 .rules a,
 .muted a,
-.build a {
+.build a,
+.wallet-cap a,
+.you-foot a {
   color: inherit;
   text-decoration: underline;
   text-decoration-color: #c9c9c4;
@@ -196,7 +563,9 @@ h1 {
 .role-note a:hover,
 .rules a:hover,
 .muted a:hover,
-.build a:hover {
+.build a:hover,
+.wallet-cap a:hover,
+.you-foot a:hover {
   text-decoration-color: #16181d;
 }
 

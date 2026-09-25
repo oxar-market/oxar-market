@@ -136,8 +136,18 @@ export function Auction() {
 
   // Лоты доехали, человек ещё ничего не выбирал - встаём на первое место с
   // торгом: пустое место в роли выбранного делает экран немым.
+  //
+  // Если экран You прислал место кнопкой «перебить», встаём на него: человек
+  // пришёл поднимать конкретную ставку, а не выбирать заново.
   useEffect(() => {
-    if (touched.current || lots.length === 0) return;
+    if (lots.length === 0) return;
+    const jump = window.sessionStorage.getItem("oxar.jump");
+    if (jump && lotOf(jump)) {
+      window.sessionStorage.removeItem("oxar.jump");
+      choose(jump, true);
+      return;
+    }
+    if (touched.current) return;
     const spot = SPOTS.find((candidate) => lotOf(candidate.code));
     if (spot) choose(spot.code);
     // eslint-disable-next-line react-hooks/exhaustive-deps

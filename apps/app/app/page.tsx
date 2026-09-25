@@ -65,7 +65,7 @@ export default function Home() {
         (!ready ? (
           <section className="screen" />
         ) : authenticated ? (
-          <You />
+          <You onOpenAuction={() => setTab("auction")} />
         ) : (
           <Guest onSignIn={login} />
         ))}

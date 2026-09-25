@@ -138,6 +138,75 @@ export async function loadTopBids(
   return top;
 }
 
+/** Где я стою на лоте: живая ставка или строка истории. */
+export type MyStand = {
+  lotId: string;
+  /** Подпись места: «04». */
+  spot: string;
+  /** Код места: по нему кнопка «перебить» открывает торг сразу на нём. */
+  code: string;
+  thing: string;
+  closesAt: string;
+  /** Торг ещё идёт. */
+  open: boolean;
+  mineCents: number;
+  topCents: number;
+  /** Кто лидирует: имя бренда из верхней ставки. */
+  leaderBrand: string;
+  leading: boolean;
+  won: boolean;
+};
+
+/**
+ * Все лоты, где человек ставил: по одной строке на лот, моя верхняя ставка
+ * против верхней ставки лота. Открытые - это «мои ставки», закрытые - история.
+ */
+export async function loadMyStands(wallet: string): Promise<MyStand[]> {
+  if (!db) return [];
+
+  const { data } = await db
+    .from("lot_bids")
+    .select(
+      "amount_cents, lot_id, lots!inner(status, closes_at, thing_spots(code, label), things:thing_id(title))",
+    )
+    .eq("bidder_wallet", wallet)
+    .order("amount_cents", { ascending: false })
+    .limit(300);
+  if (!data) return [];
+
+  // Моя верхняя по каждому лоту: строки уже от высокой к низкой.
+  const mine = new Map<string, (typeof data)[number]>();
+  for (const row of data) if (!mine.has(row.lot_id)) mine.set(row.lot_id, row);
+
+  const tops = await loadTopBids([...mine.keys()]);
+  const now = Date.now();
+
+  return [...mine.values()].map((row) => {
+    const lot = row.lots as unknown as {
+      status: string;
+      closes_at: string;
+      thing_spots: { code?: string; label?: string } | null;
+      things: { title?: string } | null;
+    };
+    const top = tops[row.lot_id];
+    const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
+    const leading = top?.bidder_wallet === wallet;
+    return {
+      lotId: row.lot_id,
+      spot: lot.thing_spots?.label ?? "?",
+      code: lot.thing_spots?.code ?? "",
+      thing: lot.things?.title ?? "",
+      closesAt: lot.closes_at,
+      open,
+      mineCents: row.amount_cents,
+      topCents: top?.amount_cents ?? row.amount_cents,
+      leaderBrand: top?.brand ?? "",
+      leading,
+      won: !open && lot.status === "won" && leading,
+    };
+  });
+}
+
 /**
  * Положить креатив в хранилище.
  *
@@ -195,4 +264,67 @@ export async function recordBid(bid: {
   });
 
   return !error;
+}
+
+
+/**
+ * Один торг в хронике: группа мест, закрывшихся - или закрывающихся - в одну
+ * секунду. Отдельной таблицы торгов в базе нет намеренно: торг и есть общий
+ * срок, по нему группа и собирается.
+ */
+export type PastOrPlanned = {
+  title: string;
+  opensAt: string | null;
+  closesAt: string;
+  spots: number;
+  rented: number;
+  state: "upcoming" | "live" | "ended";
+};
+
+/**
+ * Хроника торгов вещи: будущие, идущий, прошедшие.
+ *
+ * Черновики и отменённые не показываются: первые ещё не торги, вторые -
+ * уже не торги. Хроника отвечает на два вопроса, ради которых её открывают:
+ * «что здесь было» и «когда следующий».
+ */
+export async function loadTimeline(): Promise<PastOrPlanned[]> {
+  if (!db) return [];
+
+  const { data } = await db
+    .from("lots")
+    .select("status, opens_at, closes_at, things:thing_id(title)")
+    .neq("status", "draft")
+    .neq("status", "cancelled")
+    .order("closes_at", { ascending: false })
+    .limit(200);
+  if (!data) return [];
+
+  const groups = new Map<string, PastOrPlanned>();
+  const now = Date.now();
+  for (const lot of data) {
+    // Секундной точности достаточно: места одного торга открываются пачкой,
+    // а разные торги не заканчиваются в одну секунду.
+    const key = lot.closes_at.slice(0, 19);
+    const known =
+      groups.get(key) ??
+      ({
+        title: (lot.things as unknown as { title?: string } | null)?.title ?? "",
+        opensAt: lot.opens_at,
+        closesAt: lot.closes_at,
+        spots: 0,
+        rented: 0,
+        state:
+          Date.parse(lot.closes_at) <= now
+            ? "ended"
+            : lot.opens_at && Date.parse(lot.opens_at) > now
+              ? "upcoming"
+              : "live",
+      } satisfies PastOrPlanned);
+    known.spots += 1;
+    if (lot.status === "won") known.rented += 1;
+    groups.set(key, known);
+  }
+
+  return [...groups.values()];
 }
