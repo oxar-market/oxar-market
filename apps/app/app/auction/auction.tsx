@@ -549,8 +549,13 @@ export function Auction() {
                         : `from ${formatUsd(each.reserve_cents)}`
                       : "-"}
                   </span>
+                  {/* Кто держит место, важнее, чем сколько раз за него бились:
+                      счёт ставок и так стоит над их списком. */}
                   <span className="pick-count">
-                    {each ? (n === 1 ? "1 bid" : `${n} bids`) : "not for sale"}
+                    {each
+                      ? holder?.brand ||
+                        (n === 1 ? "1 bid" : `${n} bids`)
+                      : "not for sale"}
                   </span>
                 </button>
               );
@@ -583,6 +588,7 @@ export function Auction() {
           need={need}
           spotLabel={SPOTS.find((spot) => spot.code === picked)?.label ?? ""}
           topCents={top?.amount_cents ?? null}
+          topBrand={top?.brand ?? ""}
           art={art[picked]}
           onPlaced={refresh}
         >
@@ -660,8 +666,12 @@ export function Auction() {
             >
               <img className="bid-row-art" src={bid.media_url} alt="" />
               <span className="bid-row-who">
-                <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
-                <em>{ago(bid.created_at, now)}</em>
+                <span>{bid.brand}</span>
+                <em>
+                  <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
+                  {" · "}
+                  {ago(bid.created_at, now)}
+                </em>
               </span>
               <span className={index === 0 ? "tagchip red" : "tagchip"}>
                 {index === 0 ? "LEADING" : "REFUNDED"}

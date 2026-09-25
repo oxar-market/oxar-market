@@ -42,6 +42,7 @@ export function BidForm({
   need,
   spotLabel,
   topCents,
+  topBrand,
   art,
   onPlaced,
   children,
@@ -53,6 +54,8 @@ export function BidForm({
   spotLabel: string;
   /** Верхняя ставка места; null - ставок ещё нет. */
   topCents: number | null;
+  /** Чьё имя сейчас на месте: перебиваешь не сумму, а кого-то. */
+  topBrand: string;
   art: Art | undefined;
   onPlaced: () => void;
   /** Шаг с картинкой: живёт в форме, как в направлении дизайна. */
@@ -217,7 +220,11 @@ export function BidForm({
         <div className="bid-head">
           <span className="bid-head-title">Bid on spot {spotLabel}</span>
           <span className="muted small">
-            {topCents === null ? `reserve ${formatUsd(need)}` : `leading ${formatUsd(topCents)}`}
+            {topCents === null
+              ? `reserve ${formatUsd(need)}`
+              : topBrand
+                ? `${topBrand} leads at ${formatUsd(topCents)}`
+                : `leading ${formatUsd(topCents)}`}
           </span>
         </div>
 
