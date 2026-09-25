@@ -11,6 +11,9 @@ import {
   type UpcomingThing,
 } from "@/lib/auction";
 import { Game } from "./game/game";
+import { PhotoView } from "./auction/photo.tsx";
+// TEMP_FRONT: тот же временный снимок и замер, что на торге.
+import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
 /**
  * Маркет по дизайн-борду: «сцена и программа», как афиша театра с одним
@@ -143,6 +146,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
         OXAR <span>Market</span>
       </h1>
 
+      <div className="hero-wrap">
       <div
         className="hero-rail"
         ref={rail}
@@ -168,10 +172,22 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
                   />
                 </div>
               ) : (
+                // Места на снимке несут логотипы лидеров, как на торге. Тап
+                // по месту ведёт на торг прямо к нему.
                 <>
-                  <img className="hero-shot" src="/TEMP-photo-front.webp" alt="" />
-                  <i className="crop tl" /><i className="crop tr" />
-                  <i className="crop bl" /><i className="crop br" />
+                <PhotoView
+                  shot={TEMP_SHOTS[0] as string}
+                  quads={TEMP_FRONT_QUADS}
+                  drawFrames
+                  picked=""
+                  onPick={(code) => {
+                    window.sessionStorage.setItem("oxar.jump", code);
+                    onOpenAuction();
+                  }}
+                  art={one.art}
+                />
+                <i className="crop tl" /><i className="crop tr" />
+                <i className="crop bl" /><i className="crop br" />
                 </>
               )}
               <span className="look-flip">
@@ -225,6 +241,28 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
         <Upcoming key={one.id} thing={one} />
       ))}
       </div>
+      {/* Стрелки по бокам вещи: точки под каруселью легко не заметить. */}
+      {slide > 0 && (
+        <button
+          type="button"
+          className="hero-arrow prev"
+          aria-label="Previous thing"
+          onClick={() => go(slide - 1)}
+        >
+          &larr;
+        </button>
+      )}
+      {slide < slides - 1 && (
+        <button
+          type="button"
+          className="hero-arrow next"
+          aria-label="Next thing"
+          onClick={() => go(slide + 1)}
+        >
+          &rarr;
+        </button>
+      )}
+      </div>
 
       {slides > 1 && (
         <div className="hero-pager">
@@ -251,12 +289,14 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
                 key={key}
                 type="button"
                 className={key === (dayOn ?? dayKey(now)) ? "mk-day on" : "mk-day"}
-                disabled={!byDay.has(key)}
+                disabled={!byDay.has(key) && key !== dayKey(now)}
                 onClick={() => {
                   setDayOn(key);
-                  document
-                    .getElementById(`mk-day-${key}`)
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  // Сегодня без событий - точка возврата: к карусели наверху.
+                  const target = byDay.has(key)
+                    ? document.getElementById(`mk-day-${key}`)
+                    : rail.current;
+                  target?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
               >
                 <span className="mk-day-dow">
@@ -279,7 +319,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
             <button
               key={row.id}
               type="button"
-              className={row.slide === slide ? "mk-row on" : "mk-row"}
+              className="mk-row"
               onClick={() => go(row.slide)}
             >
               <span className="mk-row-name">{row.name}</span>
@@ -292,10 +332,17 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
         </div>
       ))}
 
-      <h2 className="mk-head">Held earlier</h2>
+      <h2 className="mk-head">Past auctions</h2>
       {held.length === 0 && things[0] && (
         <p className="held-empty">
-          Nothing yet. {things[0].title} is the first thing.
+          No auction has closed yet. {things[0].title} will be the first here
+          after it closes on{" "}
+          {new Date(things[0].closesAt).toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+          })}
+          .
         </p>
       )}
       {held.length > 0 && (

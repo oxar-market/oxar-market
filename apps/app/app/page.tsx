@@ -78,7 +78,9 @@ export default function Home() {
 function Guest({ onSignIn }: { onSignIn: () => void }) {
   return (
     <section className="screen">
-      <h1>You</h1>
+      <h1 className="mk-title">
+        OXAR <span>You</span>
+      </h1>
       <p className="lead">Sign in to bid and to see what you have won.</p>
       <button type="button" className="primary" onClick={onSignIn}>
         Sign in

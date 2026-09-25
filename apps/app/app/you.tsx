@@ -96,7 +96,9 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
 
   return (
     <section className="screen">
-      <h1>You</h1>
+      <h1 className="mk-title">
+        OXAR <span>You</span>
+      </h1>
 
       <div className="you-card">
         <span className="you-face" aria-hidden>

@@ -348,7 +348,9 @@ export function Auction() {
           алертов. Гостю чип открывает вход - кнопка была на проде, и
           прятать её значило прятать саму возможность. */}
       <div className="lot-brandbar">
-        <span className="wordmark">OXAR</span>
+        <span className="mk-title">
+          OXAR <span>Auction</span>
+        </span>
         {started && push !== "unsupported" && push !== "denied" && (
           <button
             type="button"
