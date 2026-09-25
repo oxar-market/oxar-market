@@ -26,7 +26,6 @@
   --red: #b42318;
   --st1: #e9e8e2;
   --st2: #f1f0eb;
-  --hl: rgba(22, 24, 29, 0.04);
 }
 
 :root[data-theme="dark"] {
@@ -44,7 +43,6 @@
   --tabline: rgba(255, 255, 255, 0.08);
   --redtint: #2b1612;
   --redink: #f2a898;
-  --hl: rgba(255, 255, 255, 0.05);
   --red: #f0836f;
   --st1: #1b2027;
   --st2: #161a20;
@@ -2342,9 +2340,13 @@ input:focus {
   color: var(--mut);
 }
 
-/* Шапка маркета: марка и имя экрана одной строкой, имя приглушено. */
+/* Шапка экрана: марка и имя экрана одной строкой, имя приглушено. */
 .mk-title {
+  margin: 0;
+  font-size: 1.75rem;
   font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .mk-title span {
@@ -2353,10 +2355,15 @@ input:focus {
 
 /* Карусель героев во всю ширину экрана: слайд - одна вещь. Поля экрана
    снимает она, а не каждый герой. */
-.hero-rail {
-  display: flex;
+.hero-wrap {
+  position: relative;
   margin: 0 -1.25rem;
   width: calc(100% + 2.5rem);
+}
+
+.hero-rail {
+  display: flex;
+  width: 100%;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
@@ -2371,6 +2378,41 @@ input:focus {
   margin: 0;
   width: 100%;
   scroll-snap-align: start;
+}
+
+/* Стрелки встают на середину снимка, по краям слайда. */
+.hero-arrow {
+  position: absolute;
+  top: 13.75rem;
+  z-index: 3;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hero-arrow.prev {
+  left: 16px;
+}
+
+.hero-arrow.next {
+  right: 16px;
+}
+
+/* Фото на маркете - тот же просмотрщик, что на торге, вписанный в героя. */
+.hero-photo .photo {
+  width: auto;
+  height: 86%;
+  aspect-ratio: 1;
+  max-height: none;
+  border-radius: 0;
 }
 
 .hero-pager {
@@ -2491,10 +2533,6 @@ input:focus {
   font-size: 0.9375rem;
   line-height: 1.5;
   text-align: left;
-}
-
-.mk-row.on {
-  background: var(--hl);
 }
 
 .mk-row-name {
@@ -3115,10 +3153,4 @@ input:focus {
   padding: 0;
 }
 
-
-.hero-shot {
-  max-width: 86%;
-  max-height: 86%;
-  object-fit: contain;
-}
 
