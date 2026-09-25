@@ -1360,11 +1360,6 @@ input:focus {
     gap: 0.125rem;
   }
 
-  /* На широком экране ставки уже висят слева от вещи, второй список внизу
-     был бы тем же самым дважды. */
-  .lot-bids {
-    display: none;
-  }
 
   .spot {
     display: flex;
@@ -2261,8 +2256,9 @@ input:focus {
 
 .hero-time {
   position: absolute;
-  right: 28px;
-  top: 28px;
+  right: 16px;
+  /* Ступенькой под переключателем вида, чтобы не толкаться в углу. */
+  top: 64px;
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
@@ -2685,4 +2681,181 @@ input:focus {
 .bid-row-amt {
   font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
+}
+
+
+/* ── Десктоп по PDF: выноски цен вокруг вещи, колокольчик чипом. ── */
+
+.lot-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.625rem;
+}
+
+.bell-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.bell-chip i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid #e0381c;
+  background: transparent;
+}
+
+.bell-chip.on i {
+  background: #e0381c;
+  border-color: #e0381c;
+}
+
+/* Выноски живут только на широком экране: на телефоне их работу делает
+   сетка Pick a spot. */
+.callouts {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .callouts {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .callout-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .callout-lines line {
+    stroke: #e0381c;
+    stroke-width: 1;
+    opacity: 0.55;
+  }
+
+  .callout-lines line.on {
+    stroke-width: 2;
+    opacity: 1;
+  }
+
+  .callout {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    box-shadow: 0 2px 8px rgba(22, 24, 29, 0.06);
+    font: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .callout-n {
+    font-size: 0.8125rem;
+    color: var(--mut);
+  }
+
+  .callout-price {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .callout.on {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--card);
+  }
+
+  .callout.on .callout-n {
+    color: inherit;
+    opacity: 0.65;
+  }
+
+  /* Пилюля вида на широкой сцене - в правом углу, как в PDF. */
+  .looks.over-scene {
+    left: auto;
+    right: 12px;
+    transform: none;
+  }
+}
+
+
+/* Герой маркета в 3D: сцена заполняет фотозону, панель остаётся светлой. */
+.hero-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-stage .stage {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  max-height: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.hero-photo {
+  position: relative;
+}
+
+.hero-photo.in3d {
+  background-image: none;
+  background-color: var(--st1);
+}
+
+:root[data-theme="dark"] .hero-photo,
+:root[data-theme="dark"] .hero-photo.in3d {
+  background-color: #e9e8e2;
+}
+
+.hero .look-flip {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 3;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.look-pick {
+  cursor: pointer;
+  border: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.look-pick.on {
+  background: var(--ink);
+  color: var(--card);
 }

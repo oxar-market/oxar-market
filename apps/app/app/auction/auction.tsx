@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import {
-  avatarTone,
   escrowedCents,
   formatUsd,
   hasOpened,
@@ -41,6 +40,30 @@ import { disablePush, enablePush, pushState, type PushState } from "@/lib/push.t
 
 /** Ракурсы предметной съёмки. Отсчёт - от главной грани вещи. */
 const ANGLES = ["Front", "Right", "Back", "Left"];
+
+/**
+ * Выноски цен вокруг вещи, как в PDF направления дизайна: где стоит пилюля
+ * (at) и откуда идёт её линия (line) - в процентах панели сцены. Порядок -
+ * порядок SPOTS: три ряда по три места.
+ */
+const CALLOUTS: { at: [number, number]; line: [number, number] }[] = [
+  { at: [12, 28], line: [19, 32] },
+  { at: [50, 7], line: [50, 12] },
+  { at: [88, 28], line: [81, 32] },
+  { at: [10, 48], line: [17, 50] },
+  { at: [50, 93], line: [50, 88] },
+  { at: [90, 48], line: [83, 50] },
+  { at: [12, 68], line: [19, 66] },
+  { at: [88, 84], line: [81, 80] },
+  { at: [88, 68], line: [81, 66] },
+];
+
+/** Куда линии приходят: клетки сетки на груди при виде спереди. */
+const CELLS: [number, number][] = [
+  [46.5, 40], [50, 40], [53.5, 40],
+  [46.5, 45], [50, 45], [53.5, 45],
+  [46.5, 50], [50, 50], [53.5, 50],
+];
 
 export function Auction() {
   const [thing, setThing] = useState<Thing | null>(null);
@@ -373,16 +396,33 @@ export function Auction() {
             осталось, нужно точно. */}
         </div>
 
-        {/* Счётчик - самая крупная цифра экрана, напротив имени: торг и есть
-            время. Подпись отдельно, чтобы цифры остались чистыми. */}
-        {started && closesAt !== null && (
-          <div className={endingSoon ? "lot-cd soon" : "lot-cd"}>
-            <span className="lot-cd-cap">closes in</span>
-            <span className="lot-cd-num" suppressHydrationWarning>
-              {clockOf(closesAt, now)}
-            </span>
-          </div>
-        )}
+        <div className="lot-side">
+          {/* Колокольчик чипом в шапке, как в PDF: он свойство торга, а не
+              строка в подвале. Только вошедшему - гостю нажатие ничего не
+              даст, и заблокированным браузером не показываем мёртвую кнопку. */}
+          {started && authenticated && (push === "off" || push === "on") && (
+            <button
+              type="button"
+              className={push === "on" ? "bell-chip on" : "bell-chip"}
+              onClick={() => {
+                void (push === "on" ? disablePush() : enablePush()).then(setPush);
+              }}
+            >
+              <i aria-hidden />
+              {push === "on" ? "Outbid alerts on" : "Outbid alerts"}
+            </button>
+          )}
+
+          {/* Счётчик - самая крупная цифра экрана, напротив имени. */}
+          {started && closesAt !== null && (
+            <div className={endingSoon ? "lot-cd soon" : "lot-cd"}>
+              <span className="lot-cd-cap">Ends in</span>
+              <span className="lot-cd-num" suppressHydrationWarning>
+                {clockOf(closesAt, now)}
+              </span>
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="lot-scene">
@@ -442,48 +482,55 @@ export function Auction() {
           </div>
         )}
 
-        {/* Слева от вещи - ставки выбранного места, верхняя первой: она и есть
-            текущая цена. На телефоне дуг нет, там их заменяет список ниже. */}
-        <div
-          className={look === "ghost" ? "arc left away" : "arc left"}
-          aria-hidden={look === "ghost" || bids.length === 0}
-        >
-          {bids.slice(0, 4).map((bid, index) => (
-            <Row key={bid.id} bid={bid} lead={index === 0} />
-          ))}
-        </div>
-
-        {/* Справа - все места вещи. На голограмме списка нет: выбирать пока
-            нечего, и список, который ни на что не показывает, только врёт. Выбранное подсвечено, в кружке - первая
-            буква имени того, чьё лого сейчас держит место. */}
-        <div
-          className={look === "ghost" ? "arc right away" : "arc right"}
-          role="group"
-          aria-label="Ad spots"
-        >
-          {SPOTS.map((spot) => {
-            const each = lotOf(spot.code);
-            const holder = each ? tops[each.id] : undefined;
-            return (
-              <button
-                key={spot.code}
-                type="button"
-                className={spot.code === picked ? "spot on" : "spot"}
-                aria-pressed={spot.code === picked}
-                onClick={() => choose(spot.code, true)}
-              >
-                <span
-                  className={holder ? "spot-dot taken" : each ? "spot-dot live" : "spot-dot"}
-                  style={holder ? { background: avatarTone(holder.bidder_wallet) } : undefined}
-                  aria-hidden
+        {/* Выноски с ценами вокруг вещи - широкий экран, вид спереди: пилюля
+            каждого места соединена линией со своей клеткой на груди. При
+            повороте вещи выноски гаснут - линии в чужой ракурс врали бы. */}
+        {started && look === "live" && angle === 0 && (
+          <div className="callouts" aria-label="Spots with prices">
+            <svg className="callout-lines" aria-hidden>
+              {SPOTS.map((spot, at) => {
+                const pin = CALLOUTS[at];
+                const cell = CELLS[at];
+                if (!pin || !cell) return null;
+                return (
+                  <line
+                    key={spot.code}
+                    x1={`${pin.line[0]}%`}
+                    y1={`${pin.line[1]}%`}
+                    x2={`${cell[0]}%`}
+                    y2={`${cell[1]}%`}
+                    className={spot.code === picked ? "on" : undefined}
+                  />
+                );
+              })}
+            </svg>
+            {SPOTS.map((spot, at) => {
+              const pin = CALLOUTS[at];
+              if (!pin) return null;
+              const each = lotOf(spot.code);
+              const holder = each ? tops[each.id] : undefined;
+              return (
+                <button
+                  key={spot.code}
+                  type="button"
+                  className={spot.code === picked ? "callout on" : "callout"}
+                  style={{ left: `${pin.at[0]}%`, top: `${pin.at[1]}%` }}
+                  aria-pressed={spot.code === picked}
+                  onClick={() => choose(spot.code, true)}
                 >
-                  {holder ? holder.brand[0]?.toUpperCase() : each ? "$" : ""}
-                </span>
-                <span className="spot-text">{spot.label}</span>
-              </button>
-            );
-          })}
-        </div>
+                  <span className="callout-n">{spot.label}</span>
+                  <span className="callout-price">
+                    {holder
+                      ? formatUsd(holder.amount_cents)
+                      : each
+                        ? "No bids"
+                        : "-"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Ракурсы - самой вещью, а не словами: снимок отвечает на «с какой
@@ -685,30 +732,6 @@ export function Auction() {
         ))}
       </nav>
 
-      {/* Колокольчик - докричаться до закрытой вкладки: ставку перебивают в
-          отсутствие человека, и без пуша он узнаёт о проигрыше, когда вернуть
-          место уже поздно. Разрешение спрашивается только по нажатию. */}
-      {started && authenticated && push !== "unsupported" && (
-        <p className="push-row">
-          {push === "denied" ? (
-            <span className="muted small">
-              Notifications are blocked for this site in the browser settings.
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="ghost"
-              onClick={() => {
-                void (push === "on" ? disablePush() : enablePush()).then(setPush);
-              }}
-            >
-              {push === "on"
-                ? "Outbid alerts are on for this device"
-                : "Notify me when I am outbid"}
-            </button>
-          )}
-        </p>
-      )}
 
       {tab === "about" && (
         <>
@@ -813,25 +836,6 @@ export function Auction() {
   );
 }
 
-function Row({ bid, lead }: { bid: Bid; lead: boolean }) {
-  return (
-    <div className={lead ? "bid lead" : "bid"}>
-      <span
-        className="bid-ava"
-        style={lead ? undefined : { background: avatarTone(bid.bidder_wallet) }}
-        aria-hidden
-      >
-        {bid.bidder_wallet[0]?.toUpperCase()}
-      </span>
-      <span className="bid-text">
-        {formatUsd(bid.amount_cents)}
-        {/* Под суммой - имя, а не кошелёк: вопрос к чужой ставке «чьё это
-            лого», и «7xKq…f3» на него не отвечает. */}
-        <em>{bid.brand}</em>
-      </span>
-    </div>
-  );
-}
 
 /**
  * Загрузить чужую картинку так, чтобы её можно было положить в текстуру.

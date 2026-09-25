@@ -242,6 +242,8 @@ export type MarketThing = {
   raisedCents: number;
   closesAt: string;
   opensAt: string | null;
+  /** Код места - логотип лидера: одеть модель тем, что реально стоит. */
+  art: Record<string, string>;
 };
 
 /** Строка «Held earlier»: чем кончился прошедший торг. */
@@ -264,7 +266,7 @@ export async function loadMarket(): Promise<{
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, things:thing_id(title, tagline)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline)",
     )
     .in("status", ["open", "won", "unsold"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -281,7 +283,7 @@ export async function loadMarket(): Promise<{
     const top = tops[lot.id];
     const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
     if (open) {
-      const known =
+      const known: MarketThing =
         things.get(lot.thing_id) ??
         ({
           id: lot.thing_id,
@@ -293,10 +295,13 @@ export async function loadMarket(): Promise<{
           raisedCents: 0,
           closesAt: lot.closes_at,
           opensAt: lot.opens_at,
-        } satisfies MarketThing);
+          art: {},
+        });
       known.spots += 1;
       if (top) {
         known.taken += 1;
+        const code = (lot.thing_spots as unknown as { code?: string } | null)?.code;
+        if (code) known.art[code] = top.media_url;
         known.raisedCents += top.amount_cents;
         if (top.amount_cents > known.topCents) known.topCents = top.amount_cents;
       }

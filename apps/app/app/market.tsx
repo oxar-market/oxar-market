@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatUsd } from "@oxar/core";
+import { ThingStage, type Stage } from "@oxar/stage";
 import { db } from "@/lib/session";
 import { loadMarket, type HeldRow, type MarketThing } from "@/lib/auction";
 import { Game } from "./game/game";
@@ -48,6 +49,20 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
   // Игра спрятана за тихой ссылкой: она пасхалка, а не витрина.
   const [gameOn, setGameOn] = useState(false);
 
+  // Герой по умолчанию живой: та же модель, что на торге, с реальными
+  // логотипами лидеров. Фото остаётся вторым видом.
+  const [heroLook, setHeroLook] = useState<"live" | "photo">("live");
+  const heroStage = useRef<Stage | null>(null);
+  function dressHero() {
+    const art: Record<string, string> = things[0]?.art ?? {};
+    for (const [code, url] of Object.entries(art)) {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => heroStage.current?.show(code, image);
+      image.src = url;
+    }
+  }
+
   return (
     <section className="screen">
       <h1>Market</h1>
@@ -58,9 +73,34 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
         const soon = Date.parse(one.closesAt) - now < 86_400_000;
         return (
           <div className="hero" key={one.id}>
-            <div className="hero-photo">
-              <i className="crop tl" /><i className="crop tr" />
-              <i className="crop bl" /><i className="crop br" />
+            <div className={heroLook === "live" ? "hero-photo in3d" : "hero-photo"}>
+              {heroLook === "live" ? (
+                <div className="hero-stage">
+                  <ThingStage
+                    picked={null}
+                    onPick={() => {}}
+                    stage={heroStage}
+                    onReady={dressHero}
+                  />
+                </div>
+              ) : (
+                <>
+                  <i className="crop tl" /><i className="crop tr" />
+                  <i className="crop bl" /><i className="crop br" />
+                </>
+              )}
+              <span className="look-flip">
+                {(["live", "photo"] as const).map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    className={heroLook === view ? "look-pick on" : "look-pick"}
+                    onClick={() => setHeroLook(view)}
+                  >
+                    {view === "live" ? "3D" : "Photo"}
+                  </button>
+                ))}
+              </span>
               <span className="now-pill">
                 <span className="dot" />
                 {opensLater ? "OPENS SOON" : soon ? "CLOSING SOON" : "LIVE NOW"}

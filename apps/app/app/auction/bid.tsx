@@ -263,6 +263,15 @@ export function BidForm({
         </div>
 
         <div className="bumps">
+          {/* Первый чип - минимум: одно нажатие возвращает поле к цене,
+              которую примет программа. */}
+          <button
+            type="button"
+            className="bump"
+            onClick={() => setAmount((need / 100).toFixed(2))}
+          >
+            Min {formatUsd(need)}
+          </button>
           {BUMPS.map((by) => (
             <button key={by} type="button" className="bump" onClick={() => bump(by)}>
               +{formatUsd(by)}
