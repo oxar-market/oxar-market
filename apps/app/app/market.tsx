@@ -85,6 +85,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
                 </div>
               ) : (
                 <>
+                  <img className="hero-shot" src="/TEMP-photo-front.webp" alt="" />
                   <i className="crop tl" /><i className="crop tr" />
                   <i className="crop bl" /><i className="crop br" />
                 </>

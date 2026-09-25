@@ -191,6 +191,7 @@ export default function Home() {
               </div>
             ) : (
               <>
+                <img className="live-shot" src="/TEMP-photo-front.webp" alt="" />
                 <div className="live-grid" aria-hidden>
                   {SPOTS.map((code, at) => {
                     const art = live?.art[code];

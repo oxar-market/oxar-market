@@ -1241,6 +1241,9 @@ input:focus {
   display: block;
   width: 2.75rem;
   height: 2.75rem;
+  /* Вещь снята почти вплотную, и без полей кнопка читается белым квадратом:
+     небольшой отступ даёт подложке дышать по краям. */
+  padding: 4px;
   object-fit: contain;
 }
 
@@ -2194,7 +2197,7 @@ input:focus {
 .hero-photo {
   position: relative;
   height: 27.5rem;
-  background: var(--st1) url("/TEMP-photo-front.webp") center / contain no-repeat;
+  background: var(--st1);
 }
 
 .hero .crop {
@@ -2373,10 +2376,26 @@ input:focus {
   text-underline-offset: 3px;
 }
 
-/* В тёмной теме подложка фото героя светлая: у снимка прозрачный фон, и на
-   тёмном он даёт грязный ореол. Отпечаток на тёмной стене, как на лендинге. */
-:root[data-theme="dark"] .hero-photo {
-  background-color: #e9e8e2;
+/* Тёмная тема темнит и окружение вещи: панель сцены, фото-режим,
+   миниатюры ракурсов. Белая вещь на тёмном рисуется студийным светом. */
+:root[data-theme="dark"] .stage,
+:root[data-theme="dark"] .photo,
+:root[data-theme="dark"] .angle,
+:root[data-theme="dark"] .art-thumb {
+  background: radial-gradient(70% 70% at 50% 40%, #242b34 0%, #10151b 100%);
+}
+
+:root[data-theme="dark"] .stage-hint {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Светлая грань и тень меню - под тёмный материал. */
+:root[data-theme="dark"] .tabs::before {
+  border-top-color: rgba(255, 255, 255, 0.09);
+}
+
+:root[data-theme="dark"] .tabs {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
 
@@ -2788,6 +2807,9 @@ input:focus {
 
 .hero-photo {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hero-photo.in3d {
@@ -2797,7 +2819,7 @@ input:focus {
 
 :root[data-theme="dark"] .hero-photo,
 :root[data-theme="dark"] .hero-photo.in3d {
-  background-color: #e9e8e2;
+  background-color: #10151b;
 }
 
 .hero .look-flip {
@@ -2894,4 +2916,20 @@ input:focus {
   text-decoration: underline;
   text-underline-offset: 3px;
   padding: 0;
+}
+
+
+/* Фото вещи - самостоятельной карточкой на панели: у снимка шумные
+   полупрозрачные края, и на тёмном фоне голым он давал грязный ореол.
+   Отпечаток на карточке одинаково честен в обеих темах. */
+.hero-shot {
+  max-width: 86%;
+  max-height: 86%;
+  object-fit: contain;
+}
+
+:root[data-theme="dark"] .hero-shot {
+  background: #e9e8e2;
+  border-radius: 14px;
+  padding: 10px 22px;
 }
