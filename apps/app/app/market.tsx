@@ -78,11 +78,15 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
   const rail = useRef<HTMLDivElement | null>(null);
   const [slide, setSlide] = useState(0);
   const slides = things.length + upcoming.length;
-  function go(to: number) {
+  // Листание по кругу: с последнего слайда вперёд - на первый. Страница
+  // едет к карусели только с тапа по строке внизу; стрелки и точки стоят
+  // рядом с ней, и лишний сдвиг читался бы прыжком.
+  function go(to: number, reveal = false) {
     const el = rail.current;
-    if (!el) return;
-    el.scrollTo({ left: to * el.clientWidth, behavior: "smooth" });
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!el || slides === 0) return;
+    const at = (to + slides) % slides;
+    el.scrollTo({ left: at * el.clientWidth, behavior: "smooth" });
+    if (reveal) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   // Программа по дням. Идущий торг стоит в дне закрытия, назначенный - в
@@ -174,7 +178,6 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
               ) : (
                 // Места на снимке несут логотипы лидеров, как на торге. Тап
                 // по месту ведёт на торг прямо к нему.
-                <>
                 <PhotoView
                   shot={TEMP_SHOTS[0] as string}
                   quads={TEMP_FRONT_QUADS}
@@ -186,9 +189,6 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
                   }}
                   art={one.art}
                 />
-                <i className="crop tl" /><i className="crop tr" />
-                <i className="crop bl" /><i className="crop br" />
-                </>
               )}
               <span className="look-flip">
                 {(["live", "photo"] as const).map((view) => (
@@ -242,25 +242,25 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
       ))}
       </div>
       {/* Стрелки по бокам вещи: точки под каруселью легко не заметить. */}
-      {slide > 0 && (
-        <button
-          type="button"
-          className="hero-arrow prev"
-          aria-label="Previous thing"
-          onClick={() => go(slide - 1)}
-        >
-          &larr;
-        </button>
-      )}
-      {slide < slides - 1 && (
-        <button
-          type="button"
-          className="hero-arrow next"
-          aria-label="Next thing"
-          onClick={() => go(slide + 1)}
-        >
-          &rarr;
-        </button>
+      {slides > 1 && (
+        <>
+          <button
+            type="button"
+            className="hero-arrow prev"
+            aria-label="Previous thing"
+            onClick={() => go(slide - 1)}
+          >
+            &larr;
+          </button>
+          <button
+            type="button"
+            className="hero-arrow next"
+            aria-label="Next thing"
+            onClick={() => go(slide + 1)}
+          >
+            &rarr;
+          </button>
+        </>
       )}
       </div>
 
@@ -320,7 +320,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
               key={row.id}
               type="button"
               className="mk-row"
-              onClick={() => go(row.slide)}
+              onClick={() => go(row.slide, true)}
             >
               <span className="mk-row-name">{row.name}</span>
               <span className="mk-row-price">{row.price}</span>
