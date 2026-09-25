@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import { db } from "@/lib/session";
-import { loadMarket, type HeldRow, type MarketThing } from "@/lib/auction";
+import {
+  loadMarket,
+  type HeldRow,
+  type MarketThing,
+  type UpcomingThing,
+} from "@/lib/auction";
 import { Game } from "./game/game";
 
 /**
@@ -21,11 +26,13 @@ type Mail = "idle" | "sending" | "done" | "failed";
 
 export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
   const [things, setThings] = useState<MarketThing[]>([]);
+  const [upcoming, setUpcoming] = useState<UpcomingThing[]>([]);
   const [held, setHeld] = useState<HeldRow[]>([]);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     void loadMarket().then((loaded) => {
       setThings(loaded.things);
+      setUpcoming(loaded.upcoming);
       setHeld(loaded.held);
     });
     const tick = setInterval(() => setNow(Date.now()), 1000);
@@ -137,6 +144,15 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
         );
       })}
 
+      {upcoming.length > 0 && (
+        <>
+          <h2 className="mk-head">Up next</h2>
+          {upcoming.map((one) => (
+            <Upcoming key={one.id} thing={one} />
+          ))}
+        </>
+      )}
+
       {held.length > 0 && (
         <>
           <h2 className="mk-head">Held earlier</h2>
@@ -191,6 +207,39 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
       </button>
       {gameOn && <Game />}
     </section>
+  );
+}
+
+/**
+ * Анонс вещи, торг на которую ещё не заведён: голограмма вместо фото, как на
+ * торге до открытия. Кнопки нет - открывать нечего, а дату скажет письмо.
+ */
+function Upcoming({ thing }: { thing: UpcomingThing }) {
+  const stage = useRef<Stage | null>(null);
+  return (
+    <div className="hero">
+      <div className="hero-photo in3d">
+        <div className="hero-stage">
+          <ThingStage
+            picked={null}
+            onPick={() => {}}
+            stage={stage}
+            onReady={() => stage.current?.look("ghost")}
+          />
+        </div>
+        <span className="now-pill">
+          <span className="dot" />
+          COMING SOON
+        </span>
+      </div>
+      <div className="hero-card">
+        <div>
+          <h2 className="hero-name">{thing.title}</h2>
+          {thing.tagline && <p className="hero-who">{thing.tagline}</p>}
+        </div>
+        <span className="muted">Opening date to be announced.</span>
+      </div>
+    </div>
   );
 }
 
