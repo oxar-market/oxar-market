@@ -2567,3 +2567,122 @@ input:focus {
   font-size: 0.8125rem;
   color: var(--mut);
 }
+
+
+/* ── Точная сверка с бордом: бейдж, поле суммы, строки ставок. ── */
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--mut2);
+}
+
+.live-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e0381c;
+}
+
+.live-badge.soon {
+  color: #e0381c;
+}
+
+.bid-head-title {
+  font-size: 1.75rem;
+}
+
+/* Поле суммы - рамкой борда: своя коробка, знак и цифры одним кеглем. */
+.bid-field {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  padding: 0.75rem 1rem;
+}
+
+.bid-field:focus-within {
+  border-color: var(--ink);
+}
+
+.bid-sign,
+.bid-field input {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.bal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.bal-row b {
+  font-weight: 400;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Строка ставки: логотип, имя со временем, статус, сумма. Нажатие
+   перематывает вещь к этой ставке. */
+.bid-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  margin: 0 -0.5rem;
+  width: calc(100% + 1rem);
+  border: 0;
+  border-bottom: 1px solid var(--line2);
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bid-row.on {
+  background: var(--soft);
+  border-bottom-color: transparent;
+}
+
+.bid-row-art {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: var(--card);
+  border: 1px solid var(--line2);
+}
+
+.bid-row-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bid-row-who em {
+  font-style: normal;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.bid-row-amt {
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}

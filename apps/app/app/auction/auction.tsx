@@ -338,6 +338,12 @@ export function Auction() {
     <section className="lot">
       <header className="lot-top">
         <div className="lot-title">
+        {started && closesAt !== null && closesAt > now && (
+          <span className={endingSoon ? "live-badge soon" : "live-badge"}>
+            <i aria-hidden />
+            {endingSoon ? "ENDING SOON" : "LIVE"}
+          </span>
+        )}
         <p className="over">{thing?.tagline ?? "Superteam Ukraine"}</p>
         <h1>{thing?.title ?? "Local Event Tee"}</h1>
 
@@ -614,7 +620,7 @@ export function Auction() {
             <em>
               {art[picked]
                 ? "Tap to swap it - black and white prints best"
-                : "Required, black and white - fabric takes flat ink"}
+                : "Required. Black and white prints best - PNG, JPG, SVG or WebP"}
             </em>
           </span>
         </label>
@@ -665,57 +671,6 @@ export function Auction() {
         />
       )}
 
-      {/* История места: каждое деление - ставка, и в нём стоит сам логотип,
-          который в тот момент был на вещи. Без картинки лента отвечала бы
-          только «сколько и когда», а главный вопрос к истории торга - что на
-          футболке стояло. Свежая справа, как в переписке. Лента появляется со
-          второй ставкой: у одной истории нет. */}
-      {bids.length > 1 && (
-        <div className="track-wrap">
-          {/* Без подписи лента читалась набором цифр: непонятно, что это
-              история и что деления нажимаются. Заголовок называет её, подпись
-              зовёт перемотать. */}
-          <p className="list-head">
-            Bid history <span>tap a bid to see it on the shirt</span>
-          </p>
-        <ol className="track" aria-label="Bid history">
-          {[...bids].reverse().map((bid, index) => (
-            <li key={bid.id}>
-              <button
-                type="button"
-                className={bid.id === rewound ? "tick on" : "tick"}
-                aria-pressed={bid.id === rewound}
-                onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
-              >
-                <img className="tick-art" src={bid.media_url} alt="" />
-                <span className="tick-sum">{formatUsd(bid.amount_cents)}</span>
-                <span className="tick-when">
-                  {index === 0 ? "opened" : when(bid.created_at)}
-                </span>
-              </button>
-            </li>
-          ))}
-          <li>
-            <button
-              type="button"
-              className={rewound ? "tick" : "tick on"}
-              aria-pressed={!rewound}
-              onClick={() => setRewound(null)}
-            >
-              {/* Верхняя ставка и есть то, что стоит на вещи сейчас. */}
-              <img className="tick-art" src={bids[0].media_url} alt="" />
-              <span className="tick-sum">Now</span>
-              <span className="tick-when">on the shirt</span>
-            </button>
-          </li>
-        </ol>
-        </div>
-      )}
-      {rewound && (
-        <p className="muted">
-          Rewound. This is what the shirt looked like at that bid, not now.
-        </p>
-      )}
 
       <nav className="lot-tabs">
         {(["about", "spots", "rules"] as const).map((name) => (
@@ -821,14 +776,37 @@ export function Auction() {
       {/* На телефоне дуг нет, и ставки выбранного места живут здесь. */}
       {bids.length > 0 && (
         <div className="lot-bids">
-          {/* Подпись, чей это список: без неё суммы с именами читались как
-              обрывок непонятно чего. Верхняя строка - лидер. */}
+          {/* Каждая строка - и запись, и перемотка: нажми, и вещь покажет,
+              как выглядела при той ставке. Верхняя - лидер. */}
           <p className="list-head">
-            Bids <span>{bids.length === 1 ? "1 bid" : `${bids.length} bids`}</span>
+            Bids on spot {SPOTS.find((spot) => spot.code === picked)?.label}
+            <span>
+              {bids.length === 1 ? "1 bid" : `${bids.length} bids`} · tap to
+              see it on the shirt
+            </span>
           </p>
-          {bids.slice(0, 4).map((bid, index) => (
-            <Row key={bid.id} bid={bid} lead={index === 0} />
+          {bids.map((bid, index) => (
+            <button
+              key={bid.id}
+              type="button"
+              className={bid.id === rewound ? "bid-row on" : "bid-row"}
+              aria-pressed={bid.id === rewound}
+              onClick={() => setRewound(bid.id === rewound ? null : bid.id)}
+            >
+              <img className="bid-row-art" src={bid.media_url} alt="" />
+              <span className="bid-row-who">
+                {bid.brand}
+                <em>{index === bids.length - 1 ? "opened" : when(bid.created_at)}</em>
+              </span>
+              {index === 0 && <span className="tagchip">LEADING</span>}
+              <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
+            </button>
           ))}
+          {rewound && (
+            <p className="muted small">
+              Rewound. This is what the shirt looked like at that bid, not now.
+            </p>
+          )}
         </div>
       )}
     </section>
