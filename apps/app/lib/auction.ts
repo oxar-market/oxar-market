@@ -158,6 +158,13 @@ export type MyStand = {
 };
 
 /**
+ * До этой минуты площадка жила прогонами: торги на доллар-два, которыми мы
+ * проверяли цикл перед запуском. В историю людей они не идут - это наша
+ * репетиция, а не их биография.
+ */
+const PUBLIC_OPENING = Date.parse("2026-09-24T09:00:00Z");
+
+/**
  * Все лоты, где человек ставил: по одной строке на лот, моя верхняя ставка
  * против верхней ставки лота. Открытые - это «мои ставки», закрытые - история.
  */
@@ -204,7 +211,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       leading,
       won: !open && lot.status === "won" && leading,
     };
-  });
+  }).filter((one) => one.open || Date.parse(one.closesAt) >= PUBLIC_OPENING);
 }
 
 /**

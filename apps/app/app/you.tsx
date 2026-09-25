@@ -226,11 +226,19 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
         </div>
       )}
 
-      {history.length > 0 && (
+      <div className="bids-head">
+        <span className="hist-title">History</span>
+      </div>
+      {history.length === 0 ? (
+        // Пустая история - не пустое место: она говорит, когда наполнится.
+        // Победы и поражения записываются после закрытия торга, и до первого
+        // разбора здесь честно нечего показывать.
+        <p className="muted">
+          Nothing here yet. Bid on a spot - wins and losses land here after
+          the auction closes.
+        </p>
+      ) : (
         <>
-          <div className="bids-head">
-            <span className="hist-title">History</span>
-          </div>
           <div className="hist-list">
             {history.map((one) => (
               <div className="hist-row" key={one.lotId}>
