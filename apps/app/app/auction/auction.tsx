@@ -623,7 +623,7 @@ export function Auction() {
           торга её нет вовсе: кнопка, которой некуда нажать, хуже её отсутствия.
           На голограмме её тоже нет: торг там ещё не начался. */}
       {lot && running && look !== "ghost" && (
-        <BidForm lot={lot} need={need} art={art[picked]} onPlaced={refresh} />
+        <BidForm key={lot.id} lot={lot} need={need} art={art[picked]} onPlaced={refresh} />
       )}
 
       {/* История места: каждое деление - ставка, и в нём стоит сам логотип,
