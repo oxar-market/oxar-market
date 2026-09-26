@@ -138,6 +138,7 @@ h1 {
   position: relative;
   flex: 1;
   min-height: 0;
+  container-type: size;
   background: var(--photo);
   display: flex;
   align-items: center;
@@ -146,26 +147,28 @@ h1 {
 
 /* Разметка мест поверх фото: занятое - залитый номер, свободное - контур.
    Те же красные уголки, что на самой вещи в приложении. */
+/* Квадратный кадр снимка: самый большой квадрат, что влезает в фотозону.
+   Сетка кладётся поверх него процентами, поэтому стоит на футболке при
+   любом размере карточки. */
+.live-frame {
+  position: relative;
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+}
+
 .live-grid {
   position: absolute;
-  left: 50%;
-  top: 44%;
-  transform: translate(-50%, -50%);
-  display: grid;
-  grid-template-columns: repeat(3, 60px);
-  gap: 12px;
+  inset: 0;
 }
 
 .cell {
-  position: relative;
-  width: 60px;
-  height: 60px;
+  position: absolute;
 }
 
 .cell i {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 25%;
+  height: 25%;
   border: 0 solid #e0381c;
 }
 
@@ -295,21 +298,6 @@ h1 {
     max-height: none;
   }
 
-  .live-grid {
-    grid-template-columns: repeat(3, 30px);
-    gap: 6px;
-  }
-
-  .cell {
-    width: 30px;
-    height: 30px;
-  }
-
-  .cell i {
-    width: 6px;
-    height: 6px;
-  }
-
   .cell b {
     font-size: 0.6875rem;
     padding: 2px 4px;
@@ -341,9 +329,9 @@ h1 {
    печатают ровно обведённое, и превью честно это повторяет. */
 .cell img {
   position: absolute;
-  inset: 6px;
-  width: calc(100% - 12px);
-  height: calc(100% - 12px);
+  inset: 8%;
+  width: 84%;
+  height: 84%;
   object-fit: contain;
 }
 
@@ -409,15 +397,17 @@ h1 {
 /* Фото - самостоятельной карточкой: у снимка шумные полупрозрачные края,
    и на тёмном фоне голым он давал грязный ореол. */
 .live-shot {
-  max-width: 100%;
-  max-height: 100%;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
-:root[data-theme="dark"] .live-shot {
-  max-width: 86%;
-  max-height: 86%;
+/* В тёмной теме светлая карточка - у самого кадра, а не полями у картинки:
+   поля сдвинули бы снимок относительно сетки. */
+:root[data-theme="dark"] .live-frame {
+  width: min(86cqw, 86cqh);
+  height: min(86cqw, 86cqh);
   background: #e9e8e2;
   border-radius: 14px;
-  padding: 10px 22px;
 }

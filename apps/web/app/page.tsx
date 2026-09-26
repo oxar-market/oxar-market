@@ -28,6 +28,24 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 /** Места вещи в порядке сетки 3x3 - тот же порядок, что на самой футболке. */
 const SPOTS = ["slot_01", "slot_02", "slot_03", "slot_04", "slot_05", "slot_06", "slot_07", "slot_08", "slot_09"];
 
+/**
+ * Где места лежат на снимке: левый край, верх, ширина, высота - процентами
+ * стороны кадра, в порядке SPOTS. Те же координаты, что у фото-режима в
+ * приложении (TEMP_FRONT_QUADS), - они перенесены с 3D-модели, поэтому сетка
+ * на лендинге, в приложении и на модели стоит одинаково.
+ */
+const CELLS: [number, number, number, number][] = [
+  [38.46, 29.61, 6.35, 7.02],
+  [46.80, 29.55, 6.62, 6.97],
+  [55.24, 29.75, 6.53, 6.93],
+  [38.57, 37.36, 5.98, 7.01],
+  [46.74, 37.33, 6.74, 7.04],
+  [55.65, 37.50, 6.52, 6.94],
+  [38.63, 45.23, 5.83, 7.01],
+  [46.76, 45.22, 6.68, 6.99],
+  [55.89, 45.29, 6.53, 6.97],
+];
+
 type Live = {
   title: string;
   closesAt: number;
@@ -191,12 +209,26 @@ export default function Home() {
               </div>
             ) : (
               <>
+                {/* Снимок и сетка в одном квадратном кадре: клетки стоят
+                    процентами этого кадра и едут вместе со снимком при
+                    любом размере карточки. */}
+                <div className="live-frame">
                 <img className="live-shot" src="/TEMP-photo-front.webp" alt="" />
                 <div className="live-grid" aria-hidden>
                   {SPOTS.map((code, at) => {
                     const art = live?.art[code];
+                    const [left, top, width, height] = CELLS[at];
                     return (
-                      <span key={code} className={art ? "cell" : "cell free"}>
+                      <span
+                        key={code}
+                        className={art ? "cell" : "cell free"}
+                        style={{
+                          left: `${left}%`,
+                          top: `${top}%`,
+                          width: `${width}%`,
+                          height: `${height}%`,
+                        }}
+                      >
                         <i /><i /><i /><i />
                         {art ? (
                           // Настоящий логотип лидера: то, что напечатают,
@@ -208,6 +240,7 @@ export default function Home() {
                       </span>
                     );
                   })}
+                </div>
                 </div>
                 <i className="crop tl" /><i className="crop tr" />
                 <i className="crop bl" /><i className="crop br" />
