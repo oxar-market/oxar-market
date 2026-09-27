@@ -25,12 +25,12 @@ export type PilotCase = {
 export const DELORA: PilotCase = {
   title: "Delora suitcases",
   partner: "Delora",
-  date: "2026-09-27",
+  date: "2026-09-24",
   spots: [
     { code: "suitcase_panel", brand: "Nomadz", logo: "/cases/delora/nomadz.webp" },
     { code: "suitcase_upper_left", brand: "Delora", logo: "/cases/delora/delora.webp" },
     { code: "suitcase_upper_right", brand: "OXAR", logo: "/cases/delora/oxar.webp" },
-    { code: "suitcase_lower_left", brand: "Unnamed project", logo: "/cases/delora/red-bars.webp" },
+    { code: "suitcase_lower_left", brand: "Solwear", logo: "/cases/delora/solwear.webp" },
     { code: "suitcase_lower_right", brand: "Echoes", logo: "/cases/delora/echoes.webp" },
   ],
 };
