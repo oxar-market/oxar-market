@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { fitInside } from "./fit.ts";
 import {
-  DECAL_DEPTH,
   FRAME_PAD,
   REPAINT,
-  SPOTS,
+  SHIRT,
+  type Shape,
   type Spot,
 } from "./spots.ts";
 import { develop } from "./tone.ts";
@@ -69,6 +69,7 @@ export function ThingStage({
   onPick,
   stage,
   onReady,
+  shape = SHIRT,
 }: {
   /** Код выбранного места: оно горит на вещи постоянно. */
   picked: string | null;
@@ -82,6 +83,8 @@ export function ThingStage({
    * креатив в кадр.
    */
   onReady?: (views: Views) => void;
+  /** Какая вещь на сцене. По умолчанию футболка. */
+  shape?: Shape;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
@@ -99,6 +102,10 @@ export function ThingStage({
   const ready = useRef(onReady);
   ready.current = onReady;
   const pickedNow = useRef(picked);
+  // Вещь читается один раз, при сборке сцены: сменить её значит собрать сцену
+  // заново, и такой смены у нас нет - одна сцена показывает одну вещь.
+  const thingShape = useRef(shape);
+  const { spots: SPOTS, noun } = thingShape.current;
   const mark = useRef<((code: string | null) => void) | null>(null);
 
   useEffect(() => {
@@ -181,7 +188,7 @@ export function ThingStage({
 
         const gltf = await new GLTFLoader()
           .setMeshoptDecoder(MeshoptDecoder)
-          .loadAsync("/models/shirt.glb");
+          .loadAsync(thingShape.current.model);
 
         // Номера мест рисуются в канвас, а текстура кэшируется навсегда.
         // Успей мы до того, как доехал шрифт, - цифры на вещи остались бы
@@ -218,6 +225,10 @@ export function ThingStage({
           InstanceType<typeof THREE.Material>
         >();
         for (const mesh of meshes) {
+          if (!thingShape.current.cloth) {
+            cloth.set(mesh, mesh.material as InstanceType<typeof THREE.Material>);
+            continue;
+          }
           const came = mesh.material as InstanceType<
             typeof THREE.MeshStandardMaterial
           >;
@@ -502,13 +513,13 @@ export function ThingStage({
             around(
               surface,
               hit.point,
-              Math.max(spot.size[0], spot.size[1], DECAL_DEPTH) * 1.5,
+              Math.max(spot.size[0], spot.size[1], thingShape.current.depth) * 1.5,
             ) ?? surface;
           const geometry = new DecalGeometry(
             patch,
             hit.point,
             anchor.rotation,
-            new THREE.Vector3(spot.size[0], spot.size[1], DECAL_DEPTH),
+            new THREE.Vector3(spot.size[0], spot.size[1], thingShape.current.depth),
           );
           if (patch !== surface) patch.geometry.dispose();
           const material = new THREE.MeshStandardMaterial({
@@ -920,9 +931,9 @@ export function ThingStage({
 
   return (
     <div className={ghosting ? "stage dark" : "stage"} ref={mount}>
-      {state === "loading" && <span className="stage-note">Loading the shirt…</span>}
+      {state === "loading" && <span className="stage-note">Loading the {noun}…</span>}
       {state === "failed" && (
-        <span className="stage-note">The shirt could not be shown here.</span>
+        <span className="stage-note">The {noun} could not be shown here.</span>
       )}
       {state === "ready" && (
         <span className="stage-hint">
@@ -930,7 +941,7 @@ export function ThingStage({
               подпись выдавала бы то, что спрятано. */}
           {hovered && !ghosting
             ? (SPOTS.find((spot) => spot.code === hovered)?.label ?? "Spot")
-            : "Drag to turn the shirt. Tap a spot."}
+            : `Drag to turn the ${noun}. Tap a spot.`}
         </span>
       )}
     </div>

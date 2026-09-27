@@ -10,9 +10,12 @@ export {
   DECAL_DEPTH,
   FRAME_PAD,
   REPAINT,
+  SHIRT,
   SPOTS,
+  type Shape,
   type Spot,
 } from "./spots.ts";
+export { SUITCASE, SUITCASE_SPOTS } from "./suitcase.ts";
 export { fitInside } from "./fit.ts";
 export { applyQuad, quadTransform, type Corners } from "./quad.ts";
 export { acesFilmic, develop, toSrgb } from "./tone.ts";

@@ -11,6 +11,8 @@ import {
   type UpcomingThing,
 } from "@/lib/auction";
 import { Game } from "./game/game";
+import { CaseView } from "./case.tsx";
+import { DELORA } from "@/lib/cases";
 import { PhotoView } from "./auction/photo.tsx";
 // TEMP_FRONT: тот же временный снимок и замер, что на торге.
 import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
@@ -143,6 +145,20 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
     one.setDate(start.getDate() + at);
     return one;
   });
+
+  // Пилот открывается поверх маркета, как страница вещи: вернуться - одна
+  // кнопка, торги под ним не пересобираются.
+  const [pilotOpen, setPilotOpen] = useState(false);
+  if (pilotOpen) {
+    return (
+      <section className="screen">
+        <h1 className="mk-title">
+          OXAR <span>Market</span>
+        </h1>
+        <CaseView pilot={DELORA} onBack={() => setPilotOpen(false)} />
+      </section>
+    );
+  }
 
   return (
     <section className="screen">
@@ -332,7 +348,18 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
         </div>
       ))}
 
-      <h2 className="mk-head">Past auctions</h2>
+      <h2 className="mk-head">Past</h2>
+      <div className="held-list">
+        <button
+          type="button"
+          className="held-row held-pilot"
+          onClick={() => setPilotOpen(true)}
+        >
+          <span className="held-date">{day(DELORA.date)}</span>
+          <span className="held-name">{DELORA.title}</span>
+          <span className="held-sum">Pilot</span>
+        </button>
+      </div>
       {held.length === 0 && things[0] && (
         <p className="held-empty">
           No auction has closed yet. {things[0].title} will be the first here
