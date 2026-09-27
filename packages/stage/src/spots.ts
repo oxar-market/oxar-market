@@ -97,3 +97,31 @@ export const REPAINT = { color: 0xf1f2f5, roughness: 0.92 };
  * отмечено.
  */
 export const FRAME_PAD = 0.06;
+
+/**
+ * Вещь для сцены: модель и её места. Сцена одна на все вещи, а различаются
+ * они только этим.
+ */
+export type Shape = {
+  /** Путь к модели в public приложения. */
+  model: string;
+  spots: Spot[];
+  /** Глубина коробки декали - своя у каждой поверхности, см. DECAL_DEPTH. */
+  depth: number;
+  /**
+   * Перекрасить ли вещь в белую ткань. Футболке это нужно: у модели чужой
+   * запечённый принт. У чемодана свои материалы - корпус, колёса, ручка, - и
+   * одна краска на всё сделала бы из него болванку.
+   */
+  cloth: boolean;
+  /** Как вещь зовётся в подписях сцены: «Loading the shirt…». */
+  noun: string;
+};
+
+export const SHIRT: Shape = {
+  model: "/models/shirt.glb",
+  spots: SPOTS,
+  depth: DECAL_DEPTH,
+  cloth: true,
+  noun: "shirt",
+};
