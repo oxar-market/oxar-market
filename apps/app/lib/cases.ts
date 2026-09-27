@@ -17,6 +17,8 @@ export type CaseSpot = {
 export type PilotCase = {
   title: string;
   partner: string;
+  /** Где партнёра найти: имя на странице кейса ведёт сюда. */
+  partnerUrl: string;
   /** Когда договорились и отдали наклейки, ISO-дата. */
   date: string;
   spots: CaseSpot[];
@@ -25,6 +27,7 @@ export type PilotCase = {
 export const DELORA: PilotCase = {
   title: "Delora suitcases",
   partner: "Delora",
+  partnerUrl: "https://x.com/deloraprotocol",
   date: "2026-09-24",
   spots: [
     { code: "suitcase_panel", brand: "Nomadz", logo: "/cases/delora/nomadz.webp" },
