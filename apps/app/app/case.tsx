@@ -42,7 +42,11 @@ export function CaseView({ pilot, onBack }: { pilot: PilotCase; onBack: () => vo
         <span className="case-pill">PILOT</span>
         <h2 className="hero-name">{pilot.title}</h2>
         <p className="hero-who">
-          With {pilot.partner} · {day(pilot.date)}
+          With{" "}
+          <a className="case-partner" href={pilot.partnerUrl} target="_blank" rel="noreferrer">
+            {pilot.partner}
+          </a>{" "}
+          · {day(pilot.date)}
         </p>
       </div>
 
@@ -82,13 +86,6 @@ export function CaseView({ pilot, onBack }: { pilot: PilotCase; onBack: () => vo
         Our first placement off a shirt. We printed the stickers, {pilot.partner}{" "}
         put them on their suitcases. No auction and no payment - a first test
         that both sides want this.
-      </p>
-      <p className="case-credit">
-        Suitcase model by{" "}
-        <a href="https://poly.pizza/m/041xs8FnZZ" target="_blank" rel="noreferrer">
-          J-Toastie
-        </a>
-        , CC BY 3.0
       </p>
     </>
   );

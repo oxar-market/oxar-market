@@ -60,6 +60,21 @@ export default function Terms() {
           Questions: <a href="mailto:support@oxar.app">support@oxar.app</a>
         </p>
 
+        {/* Лицензия CC BY требует подписи автора. Под самим чемоданом она
+            мешала, а «любой разумный способ» лицензии - это и страница
+            условий. Убрать отсюда нельзя. */}
+        <p className="muted small">
+          Suitcase 3D model by{" "}
+          <a href="https://poly.pizza/m/041xs8FnZZ" target="_blank" rel="noreferrer">
+            J-Toastie
+          </a>
+          , licensed under{" "}
+          <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">
+            CC BY 3.0
+          </a>
+          .
+        </p>
+
         <a className="ghost" href="/">
           Back to the auction
         </a>

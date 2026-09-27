@@ -3200,6 +3200,12 @@ input:focus {
   color: var(--mut);
 }
 
+/* Имя партнёра ведёт на его X: тем же тоном, что строка, но с подчёркиванием. */
+.case-partner {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
 .case-stage {
   width: 100%;
 }
@@ -3244,16 +3250,4 @@ input:focus {
   font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--mut);
-}
-
-.case-credit {
-  width: 100%;
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--mut);
-}
-
-.case-credit a {
-  color: inherit;
-  text-underline-offset: 3px;
 }
