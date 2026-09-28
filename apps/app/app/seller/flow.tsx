@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  useConnectedStandardWallets,
+  useStandardSignTransaction,
+} from "@privy-io/react-auth/solana";
+import { PublicKey } from "@solana/web3.js";
+import { WALLET_CHAIN, connection } from "@/lib/chain";
+import { publishAuctions } from "@/lib/publish";
+import {
   answerRequest,
   landCapture,
   loadDealsToRate,
@@ -54,6 +61,10 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [problem, setProblem] = useState("");
+  const { wallets } = useConnectedStandardWallets();
+  const { signTransaction } = useStandardSignTransaction();
+  const wallet = wallets[0];
 
   const reload = useCallback(() => {
     void loadSellerScore().then(setScore);
@@ -75,6 +86,7 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
 
   function go(next: View) {
     setFailed(false);
+    setProblem("");
     setBusy(false);
     setView(next);
   }
@@ -126,12 +138,51 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
           onBack={home}
           publishing={busy}
           failed={failed}
+          problem={problem}
           onPublish={async (plans) => {
             setBusy(true);
-            const ok = await savePlans(view.thing.id, plans);
+            setFailed(false);
+            setProblem("");
+            if (!(await savePlans(view.thing.id, plans))) {
+              setBusy(false);
+              return setFailed(true);
+            }
+            // Аукционы открывает кошелёк продавца: он и получит выплату.
+            // Аренда в цепочку не ходит - ей хватило сохранения.
+            const auctions = plans.filter((one) => one.plan.kind === "auction").length;
+            if (auctions > 0) {
+              if (!wallet) {
+                setBusy(false);
+                return setProblem("No wallet connected. Sign in again to get one.");
+              }
+              const owner = new PublicKey(wallet.address);
+              // Места и хранилища создаются за счёт продавца: около 0.004 SOL
+              // на место и 0.002 на торг. Нет SOL - транзакция не пройдёт.
+              const need = 0.002 + 0.004 * auctions;
+              const sol = (await connection.getBalance(owner)) / 1e9;
+              if (sol < need) {
+                setBusy(false);
+                return setProblem(
+                  `Opening ${auctions === 1 ? "an auction" : `${auctions} auctions`} needs about ${need.toFixed(3)} SOL in your wallet for network rent. You have ${sol.toFixed(3)}.`,
+                );
+              }
+              const opened = await publishAuctions(view.thing.id, owner, async (transaction) => {
+                const { signedTransaction } = await signTransaction({
+                  transaction: transaction.serialize(),
+                  wallet,
+                  chain: WALLET_CHAIN,
+                });
+                return signedTransaction;
+              }).catch(() => null);
+              if (opened === null) {
+                setBusy(false);
+                return setProblem(
+                  "The auctions did not open. Prices are saved - try Publish again.",
+                );
+              }
+            }
             setBusy(false);
-            if (ok) home();
-            else setFailed(true);
+            home();
           }}
         />
       );

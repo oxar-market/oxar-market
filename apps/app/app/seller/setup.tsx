@@ -35,12 +35,15 @@ export function SetUpSpots({
   onPublish,
   publishing,
   failed,
+  problem,
 }: {
   thing: PricingThing;
   onBack: () => void;
   onPublish: (plans: { spotId: string; plan: SpotPlan }[]) => void;
   publishing: boolean;
   failed: boolean;
+  /** Почему не открылись аукционы: нет кошелька, SOL или сети. */
+  problem?: string;
 }) {
   const [drafts, setDrafts] = useState<Draft[]>(() =>
     thing.spots.map((_, index) => fresh(index < 2 ? "auction" : "rent")),
@@ -172,6 +175,7 @@ export function SetUpSpots({
       )}
 
       {failed && <p className="bad">Could not save the prices. Try again.</p>}
+      {problem && <p className="bad">{problem}</p>}
 
       <div className="sl-card sl-publish">
         <b>

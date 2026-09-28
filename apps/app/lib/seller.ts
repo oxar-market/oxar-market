@@ -446,7 +446,9 @@ export async function landCapture(id: string, photos: Blob[]): Promise<boolean> 
     const path = `${auth.user.id}/capture-${id}/${at}.jpg`;
     const { error } = await db.storage
       .from("things")
-      .upload(path, photo, { contentType: photo.type || "image/jpeg", upsert: true });
+      // Путь уникален сессией, перезаписывать нечего - а перезапись
+      // потребовала бы права на чтение и правку чужих файлов в бакете.
+      .upload(path, photo, { contentType: photo.type || "image/jpeg", upsert: false });
     if (error) return false;
     paths.push(path);
   }
