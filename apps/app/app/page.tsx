@@ -8,6 +8,7 @@ import { Auction } from "./auction/auction";
 import { Market } from "./market";
 import { Tabs, useTab } from "./tabs";
 import { ThemeRow, You } from "./you";
+import { PhoneCapture } from "./seller/flow.tsx";
 
 /**
  * Приложение.
@@ -26,6 +27,17 @@ export default function Home() {
   const [linked, setLinked] = useState<"idle" | "linking" | "ready" | "failed">(
     "idle",
   );
+
+  // Телефон пришёл по QR с десктопа продавца: сразу камера на вкладке You.
+  const [capture, setCapture] = useState<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("capture");
+    if (id && /^[0-9a-f-]{36}$/.test(id)) {
+      setCapture(id);
+      setTab("you");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!ready || !authenticated || !db) return;
@@ -64,6 +76,16 @@ export default function Home() {
         // на миг мелькнёт «Sign in», пока не подтвердится сессия.
         (!ready ? (
           <section className="screen" />
+        ) : authenticated && capture ? (
+          <section className="screen">
+            <PhoneCapture
+              session={capture}
+              onClose={() => {
+                setCapture(null);
+                window.history.replaceState(null, "", "/");
+              }}
+            />
+          </section>
         ) : authenticated ? (
           <You onOpenAuction={() => setTab("auction")} />
         ) : (

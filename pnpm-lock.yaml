@@ -50,6 +50,9 @@ importers:
       next:
         specifier: ^15.1.0
         version: 15.5.25(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      qrcode-generator:
+        specifier: ^1.4.4
+        version: 1.5.2
       react:
         specifier: ^19.0.0
         version: 19.3.0
@@ -2567,6 +2570,9 @@ packages:
 
   pump@3.0.4:
     resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
+
+  qrcode-generator@1.5.2:
+    resolution: {integrity: sha512-pItrW0Z9HnDBnFmgiNrY1uxRdri32Uh9EjNYLPVC2zZ3ZRIIEqBoDgm4DkvDwNNDHTK7FNkmr8zAa77BYc9xNw==}
 
   qrcode@1.5.3:
     resolution: {integrity: sha512-puyri6ApkEHYiVl4CFzo1tDkAZ+ATcnbJrJ6RiBM1Fhctdn/ix9MTE3hRph33omisEbC/2fcfemsseiKgBPKZg==}
@@ -7050,6 +7056,8 @@ snapshots:
     dependencies:
       end-of-stream: 1.4.5
       once: 1.4.0
+
+  qrcode-generator@1.5.2: {}
 
   qrcode@1.5.3:
     dependencies:

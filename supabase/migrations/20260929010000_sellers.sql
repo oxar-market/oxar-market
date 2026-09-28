@@ -156,7 +156,8 @@ create table rent_requests (
   -- Сутки на ответ: дольше покупатель ждать не обязан.
   answer_by timestamptz not null default now() + interval '24 hours',
   answered_at timestamptz,
-  check (ends_on > starts_on)
+  -- ends_on - последний день аренды, включительно.
+  check (ends_on >= starts_on)
 );
 
 alter table rent_requests enable row level security;

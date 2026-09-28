@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@oxar/core": "workspace:*",
+    "@oxar/stage": "workspace:*",
     "@privy-io/react-auth": "^2.13.0",
     "@solana/kit": "^5.5.1",
     "@solana/spl-token": "^0.4.15",
@@ -19,9 +20,9 @@
     "bs58": "^6.0.0",
     "buffer": "^6.0.3",
     "next": "^15.1.0",
+    "qrcode-generator": "^1.4.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@oxar/stage": "workspace:*"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

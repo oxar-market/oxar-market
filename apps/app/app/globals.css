@@ -3251,3 +3251,1293 @@ input:focus {
   line-height: 1.5;
   color: var(--mut);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Продавец: кабинет, вещь с камеры, места, цены, заявки, оценки.
+   Размеры сняты с борда (кадр телефона 390 px): заголовки 28/1.1 600,
+   текст 15/1.5, подписи 13, капс 11 600. Карточки 20 px, поля 14 px.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.sl-toggle {
+  width: 100%;
+}
+
+.sl-toggle .role-tab {
+  padding: 0.75rem;
+}
+
+.sl-card {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+/* Счёт продавца: две колонки цифр и строка, откуда они берутся. */
+.sl-score {
+  display: grid;
+  grid-template-columns: 181px 1fr;
+  row-gap: 10px;
+  padding: 18px 18px 16px;
+}
+
+.sl-score-cap {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-score-num {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sl-score-note {
+  grid-column: 1 / 3;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+/* Заявка ждёт ответа: карточка с тёмной рамкой, как кнопка. */
+.sl-waiting {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1.5px solid var(--ink);
+  border-radius: 20px;
+  background: var(--card);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sl-waiting .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e0381c;
+}
+
+.sl-waiting b {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.sl-waiting small {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--mut);
+}
+
+.sl-waiting .go {
+  font-size: 0.9375rem;
+}
+
+.sl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  padding-top: 14px;
+}
+
+.sl-head h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sl-head span {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+/* Вещи продавца: строка - обложка, имя, статус, одна строка про торг. */
+.sl-things {
+  padding: 4px 16px;
+}
+
+.sl-thing {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  align-items: center;
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line2);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sl-thing:last-child {
+  border-bottom: 0;
+}
+
+.sl-thing:disabled {
+  cursor: default;
+}
+
+.sl-thumb {
+  grid-row: 1 / 3;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, var(--st1) 0 10px, var(--st2) 10px 20px);
+  object-fit: cover;
+}
+
+/* Листинг собирается: обложка - тёмная голограмма, а не снимок. */
+.sl-thumb.holo {
+  background: #0d1512;
+  border: 1px solid rgba(63, 209, 168, 0.35);
+}
+
+.sl-thing-name {
+  align-self: end;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sl-thing-sub {
+  grid-column: 2 / 4;
+  align-self: start;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--mut);
+}
+
+.sl-state {
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.sl-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.sl-state.live i {
+  background: #e0381c;
+}
+
+.sl-state.idle i {
+  background: transparent;
+  border: 1.5px solid var(--mut);
+  width: 7px;
+  height: 7px;
+}
+
+.sl-state.preparing i {
+  background: #3fd1a8;
+}
+
+.sl-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  padding: 10px 4px 0;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-foot .build {
+  margin: 0;
+}
+
+.sl-foot a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+.sl-empty {
+  margin: 0;
+  padding: 14px 0;
+  font-size: 0.9375rem;
+  color: var(--mut);
+}
+
+/* ── Шапка шагов: «Back», заголовок по центру, «2 of 3». ── */
+
+.sl-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+}
+
+.sl-bar button {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.sl-bar h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.sl-bar span {
+  justify-self: end;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-lead {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.sl-h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  /* Чуть плотнее обычного заголовка: «Did the spot actually stand?» на
+     борде встаёт в строку впритык, и полпикселя переносили его. */
+  letter-spacing: -0.025em;
+}
+
+.sl-btn {
+  width: 100%;
+  padding: 15px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.sl-btn.dark {
+  border: 0;
+  background: var(--ink);
+  color: var(--card);
+}
+
+.sl-btn.dark:disabled {
+  background: var(--line);
+  color: var(--mut);
+  cursor: default;
+}
+
+.sl-btn.light {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+
+.sl-pill {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sl-pill:disabled {
+  color: var(--mut);
+  cursor: default;
+}
+
+/* ── Камера: всегда тёмная, во весь экран, над вкладками. ── */
+
+.sl-camera {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: #0f1216;
+  color: #ecebe6;
+}
+
+.sl-camera-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: calc(14px + env(safe-area-inset-top)) 20px 14px;
+  font-size: 0.9375rem;
+}
+
+.sl-camera-bar button {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+.sl-camera-bar b {
+  font-weight: 600;
+}
+
+.sl-camera-bar span {
+  justify-self: end;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.sl-finder {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: repeating-linear-gradient(135deg, #1b1f25 0 14px, #171a20 14px 28px);
+}
+
+.sl-finder video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sl-finder i {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border: 0 solid #ffffff;
+}
+
+.sl-finder i:nth-of-type(1) { left: 28px; top: 28px; border-left-width: 2px; border-top-width: 2px; }
+.sl-finder i:nth-of-type(2) { right: 28px; top: 28px; border-right-width: 2px; border-top-width: 2px; }
+.sl-finder i:nth-of-type(3) { left: 28px; bottom: 28px; border-left-width: 2px; border-bottom-width: 2px; }
+.sl-finder i:nth-of-type(4) { right: 28px; bottom: 28px; border-right-width: 2px; border-bottom-width: 2px; }
+
+.sl-finder-note {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.sl-camera-hint {
+  margin: 0;
+  padding: 26px 32px 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.sl-camera-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 44px 24px calc(28px + env(safe-area-inset-bottom));
+}
+
+.sl-shots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.sl-shots img,
+.sl-shots em {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.sl-shots em {
+  background: repeating-linear-gradient(135deg, #2a2f37 0 6px, #22262d 6px 12px);
+}
+
+.sl-shots span {
+  margin-left: 6px;
+}
+
+.sl-shutter {
+  width: 76px;
+  height: 76px;
+  padding: 5px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sl-shutter::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #ecebe6;
+}
+
+.sl-shutter:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sl-next {
+  justify-self: end;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #ecebe6;
+  color: #16181d;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sl-next:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Разметка мест на снимке. ── */
+
+.sl-photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 350 / 460;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: repeating-linear-gradient(135deg, var(--st1) 0 14px, var(--st2) 14px 28px);
+  touch-action: none;
+  user-select: none;
+}
+
+.sl-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.sl-photo-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: var(--mut);
+  pointer-events: none;
+}
+
+.sl-spot {
+  position: absolute;
+  background: color-mix(in srgb, #e0381c 10%, var(--card));
+  pointer-events: none;
+}
+
+.sl-spot i {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid #e0381c;
+}
+
+.sl-spot i:nth-of-type(1) { left: 0; top: 0; border-left-width: 2px; border-top-width: 2px; }
+.sl-spot i:nth-of-type(2) { right: 0; top: 0; border-right-width: 2px; border-top-width: 2px; }
+.sl-spot i:nth-of-type(3) { left: 0; bottom: 0; border-left-width: 2px; border-bottom-width: 2px; }
+.sl-spot i:nth-of-type(4) { right: 0; bottom: 0; border-right-width: 2px; border-bottom-width: 2px; }
+
+.sl-spot b {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  min-width: 16px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #e0381c;
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+}
+
+.sl-spot img {
+  position: absolute;
+  inset: 12%;
+  width: 76%;
+  height: 76%;
+  object-fit: contain;
+}
+
+.sl-marked {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  font-size: 0.9375rem;
+}
+
+.sl-marked div {
+  display: flex;
+  gap: 6px;
+}
+
+.sl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.sl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 0.8125rem;
+}
+
+.sl-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ── Отправлено: голограмма листинга и шаги. ── */
+
+.sl-holo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  height: 200px;
+  border: 1px solid rgba(63, 209, 168, 0.35);
+  border-radius: 20px;
+  background: radial-gradient(70% 90% at 50% 40%, #102520 0%, #0a1311 100%);
+}
+
+.sl-holo div {
+  width: 168px;
+  height: 128px;
+  border: 1px solid rgba(63, 209, 168, 0.55);
+  border-radius: 12px;
+  background: repeating-linear-gradient(135deg, rgba(63, 209, 168, 0.18) 0 12px, rgba(63, 209, 168, 0.04) 12px 24px);
+  box-shadow: 0 0 36px rgba(63, 209, 168, 0.25);
+}
+
+.sl-holo span {
+  font-size: 0.8125rem;
+  color: #6fe0bf;
+}
+
+.sl-steps {
+  padding: 4px 18px;
+}
+
+.sl-step {
+  display: grid;
+  grid-template-columns: 8px 1fr;
+  gap: 2px 20px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line2);
+}
+
+.sl-step:last-child {
+  border-bottom: 0;
+}
+
+.sl-step i {
+  grid-row: 1 / 3;
+  align-self: start;
+  margin-top: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.sl-step i.now {
+  background: #3fd1a8;
+}
+
+.sl-step i.later {
+  background: transparent;
+  border: 1.5px solid var(--mut);
+}
+
+.sl-step b {
+  font-size: 0.9375rem;
+  font-weight: 400;
+}
+
+.sl-step small {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+/* ── Десктоп: QR ведёт на камеру телефона. ── */
+
+.sl-desk {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+.sl-desk-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.sl-desk-top button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--mut);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sl-desk-title {
+  margin: 26px 0 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sl-desk-lead {
+  margin: 0;
+  max-width: 30rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--mut);
+}
+
+.sl-qr-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 44px 32px 32px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+  text-align: center;
+}
+
+.sl-qr-card > i {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 0 solid #e0381c;
+}
+
+.sl-qr-card > i:nth-of-type(1) { left: 14px; top: 14px; border-left-width: 1.5px; border-top-width: 1.5px; }
+.sl-qr-card > i:nth-of-type(2) { right: 14px; top: 14px; border-right-width: 1.5px; border-top-width: 1.5px; }
+.sl-qr-card > i:nth-of-type(3) { left: 14px; bottom: 14px; border-left-width: 1.5px; border-bottom-width: 1.5px; }
+.sl-qr-card > i:nth-of-type(4) { right: 14px; bottom: 14px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+
+.sl-qr {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 261px;
+  height: 261px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.sl-qr svg {
+  width: 218px;
+  height: 218px;
+  color: var(--ink);
+}
+
+.sl-qr b {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: var(--card);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.sl-qr-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sl-qr-wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-qr-wait i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3fd1a8;
+}
+
+.sl-qr-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.sl-qr-actions label,
+.sl-qr-actions button {
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sl-qr-actions input {
+  display: none;
+}
+
+/* ── Цены по местам. ── */
+
+.sl-thing-card {
+  display: grid;
+  grid-template-columns: 102px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 16px 12px 12px;
+}
+
+.sl-mini {
+  position: relative;
+  width: 102px;
+  height: 76px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: repeating-linear-gradient(135deg, var(--st1) 0 8px, var(--st2) 8px 16px);
+}
+
+.sl-mini img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Места на миниатюре - теми же уголками, что на снимке, только мельче. */
+.sl-mini span {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e0381c;
+  font-size: 0.75rem;
+  font-weight: 600;
+  --c: #e0381c;
+  background:
+    linear-gradient(var(--c), var(--c)) left top / 6px 1.5px,
+    linear-gradient(var(--c), var(--c)) left top / 1.5px 6px,
+    linear-gradient(var(--c), var(--c)) right top / 6px 1.5px,
+    linear-gradient(var(--c), var(--c)) right top / 1.5px 6px,
+    linear-gradient(var(--c), var(--c)) left bottom / 6px 1.5px,
+    linear-gradient(var(--c), var(--c)) left bottom / 1.5px 6px,
+    linear-gradient(var(--c), var(--c)) right bottom / 6px 1.5px,
+    linear-gradient(var(--c), var(--c)) right bottom / 1.5px 6px;
+  background-repeat: no-repeat;
+}
+
+.sl-thing-card h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sl-thing-card p {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--mut);
+}
+
+.sl-plan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px 12px;
+  padding: 18px 18px 16px;
+}
+
+.sl-plan-head {
+  grid-column: 1 / 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sl-plan-head h3 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sl-kind {
+  display: flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--soft);
+}
+
+.sl-kind button {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.sl-kind button.on {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.sl-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-field.wide {
+  grid-column: 1 / 3;
+}
+
+.sl-input {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--mut);
+  font-size: 0.9375rem;
+}
+
+:root[data-theme="dark"] .sl-input {
+  background: var(--bg);
+}
+
+.sl-input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+}
+
+.sl-input.soft {
+  border-color: transparent;
+  background: var(--soft);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .sl-input.soft {
+  background: var(--soft);
+}
+
+.sl-input.soft input {
+  color-scheme: light dark;
+}
+
+.sl-plan-note {
+  grid-column: 1 / 3;
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--mut);
+}
+
+.sl-copy {
+  align-self: flex-start;
+  border: 0;
+  padding: 4px 2px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sl-publish {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px 14px;
+  padding: 18px 18px 18px;
+}
+
+.sl-publish b {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.sl-publish span {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--mut);
+}
+
+.sl-publish .sl-btn {
+  grid-column: 1 / 3;
+}
+
+/* ── Заявка на аренду. ── */
+
+.sl-meta {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-buyer {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 2px 14px;
+  align-items: center;
+  padding: 14px 18px;
+}
+
+.sl-buyer i {
+  grid-row: 1 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--soft);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.sl-buyer b {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9375rem;
+  font-weight: 400;
+}
+
+.sl-buyer small {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-table {
+  padding: 2px 18px;
+}
+
+.sl-table div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 46px;
+  border-bottom: 1px solid var(--line2);
+  font-size: 0.9375rem;
+}
+
+.sl-table div:last-child {
+  border-bottom: 0;
+}
+
+.sl-table div > span:first-child {
+  color: var(--mut);
+}
+
+.sl-table div.total span:last-child {
+  font-weight: 600;
+}
+
+.sl-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ── Оценки. ── */
+
+.sl-deal {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 2px 14px;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.sl-deal .sl-thumb {
+  width: 52px;
+  height: 52px;
+}
+
+.sl-deal b {
+  align-self: end;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.sl-deal small {
+  align-self: start;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sl-option {
+  padding: 10px 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sl-option.on {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
+}
+
+.sl-stars {
+  display: flex;
+  gap: 6px;
+}
+
+.sl-stars button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--line3);
+  cursor: pointer;
+}
+
+.sl-stars button.on {
+  color: var(--ink);
+}
+
+.sl-line {
+  width: 100%;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .sl-line {
+  background: var(--card);
+}
+
+.sl-checks {
+  padding: 2px 18px;
+}
+
+.sl-checks div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 62px;
+  border-bottom: 1px solid var(--line2);
+  font-size: 0.9375rem;
+}
+
+.sl-checks div:first-child {
+  min-height: 48px;
+}
+
+.sl-checks div:last-child {
+  border-bottom: 0;
+}
+
+.sl-checks small {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.sl-yesno {
+  display: flex;
+  gap: 8px;
+}
+
+.sl-yesno button {
+  min-width: 56px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sl-yesno button.on {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
+}
+
+.sl-small-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+/* Время торга и срок аренды - текстом как на борде, а выбор - системный,
+   прозрачным полем поверх. */
+.sl-when {
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sl-pick {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.sl-pick.half {
+  right: 50%;
+  width: 50%;
+}
+
+.sl-pick.half.end {
+  left: 50%;
+  right: 0;
+}

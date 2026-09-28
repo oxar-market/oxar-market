@@ -1,0 +1,150 @@
+"use client";
+
+import type { DealToRate, Score, SellerRequest, SellerThing } from "@/lib/seller";
+import { BUILD } from "@/lib/build";
+import { Thumb, clock, shortDay, usd } from "./parts.tsx";
+
+/**
+ * Кабинет продавца по борду «Seller - home and add a thing»: счёт, заявка,
+ * ждущая ответа, вещи с одним статусом и кнопка «Add a thing».
+ *
+ * Меньше трёх сделок - «New seller», а не цифра: две пятёрки подряд ещё не
+ * репутация (правило «Where scores live» с борда).
+ */
+export function SellerHome({
+  score,
+  requests,
+  toRate,
+  things,
+  now,
+  onAdd,
+  onRequest,
+  onRate,
+  onSetup,
+}: {
+  score: Score;
+  requests: SellerRequest[];
+  toRate: DealToRate[];
+  things: SellerThing[];
+  now: number;
+  onAdd: () => void;
+  onRequest: (request: SellerRequest) => void;
+  onRate: (deal: DealToRate) => void;
+  onSetup: (thingId: string) => void;
+}) {
+  const first = requests[0];
+  return (
+    <>
+      <div className="sl-card sl-score">
+        <div>
+          <span className="sl-score-cap">Seller score</span>
+          <span className="sl-score-num">
+            {score.deals < 3 || score.rating === null ? "New" : `★ ${score.rating.toFixed(1)}`}
+          </span>
+        </div>
+        <div>
+          <span className="sl-score-cap">Deals</span>
+          <span className="sl-score-num">{score.deals}</span>
+        </div>
+        <p className="sl-score-note">
+          Buyers rate each deal once it ends. It shows on your things in the
+          Market.
+        </p>
+      </div>
+
+      {first && (
+        <button type="button" className="sl-waiting" onClick={() => onRequest(first)}>
+          <span className="dot" />
+          <span>
+            <b>
+              {requests.length === 1 ? "1 request waiting" : `${requests.length} requests waiting`}
+            </b>
+            <small>
+              {first.spotLabel} · {first.thingTitle} · {days(first)} days ·{" "}
+              {usd(days(first) * first.pricePerDayCents)}
+            </small>
+          </span>
+          <span className="go">Review</span>
+        </button>
+      )}
+
+      {/* Оценка сделки - та же карточка, что заявка: это тоже ход за
+          продавцом, и прятать его ниже вещей значило бы забыть о нём. */}
+      {toRate[0] && (
+        <button type="button" className="sl-waiting" onClick={() => onRate(toRate[0]!)}>
+          <span className="dot" />
+          <span>
+            <b>{toRate.length === 1 ? "1 deal to rate" : `${toRate.length} deals to rate`}</b>
+            <small>{toRate[0].title}</small>
+          </span>
+          <span className="go">Rate</span>
+        </button>
+      )}
+
+      <div className="sl-head">
+        <h2>Your things</h2>
+        <span>{things.length}</span>
+      </div>
+
+      {things.length > 0 && (
+        <div className="sl-card sl-things">
+          {things.map((one) => (
+            <button
+              type="button"
+              key={one.id}
+              className="sl-thing"
+              // Цены ставятся, когда листинг готов; торг и аренду правят
+              // только до открытия - после этого строка лишь показывает ход.
+              disabled={one.state !== "idle"}
+              onClick={() => onSetup(one.id)}
+            >
+              <Thumb src={one.cover} holo={one.state === "preparing"} />
+              <span className="sl-thing-name">{one.title}</span>
+              <span className={`sl-state ${one.state}`}>
+                <i />
+                {LABEL[one.state]}
+              </span>
+              <span className="sl-thing-sub">{line(one, now)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button type="button" className="sl-btn dark" onClick={onAdd}>
+        Add a thing
+      </button>
+
+      <p className="sl-foot">
+        <span className="build">Build {BUILD}</span>
+        <a href="/terms">Terms</a>
+      </p>
+    </>
+  );
+}
+
+const LABEL = {
+  live: "LIVE AUCTION",
+  rented: "RENTED",
+  idle: "IDLE",
+  preparing: "PREPARING",
+} as const;
+
+function line(one: SellerThing, now: number): string {
+  switch (one.state) {
+    case "live":
+      return `Closes in ${clock(Date.parse(one.closesAt ?? "") - now)} · ${one.bidSpots} of ${one.spots} spots bid`;
+    case "rented":
+      return `${one.rentedSpots} of ${one.spots} spots rented${
+        one.rentedUntil ? `, until ${shortDay(one.rentedUntil)}` : ""
+      }`;
+    case "idle":
+      return "Spots not priced yet. Set up spots";
+    case "preparing":
+      return "We build the 3D listing, usually within a day";
+  }
+}
+
+/** Последний день аренды входит в срок: «Oct 1 - Oct 14» - это 14 дней. */
+function days(request: SellerRequest): number {
+  return Math.round((Date.parse(request.endsOn) - Date.parse(request.startsOn)) / 86_400_000) + 1;
+}

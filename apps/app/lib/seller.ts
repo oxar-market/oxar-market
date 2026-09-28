@@ -456,3 +456,95 @@ export async function landCapture(id: string, photos: Blob[]): Promise<boolean> 
     .eq("id", id);
   return !error;
 }
+
+/** Сделка, которую сторона ещё не оценила. */
+export type DealToRate = {
+  lotId?: string;
+  requestId?: string;
+  title: string;
+  line: string;
+  cover: string | null;
+  escrow: boolean;
+};
+
+/**
+ * Что ждёт оценки от вошедшего: как покупателя (выигранные торги и одобренные
+ * аренды, которые уже начались) и как продавца (то же на его вещах).
+ * Оценённое базой отсекается - вторую оценку она всё равно не примет.
+ */
+export async function loadDealsToRate(
+  side: "buyer" | "seller",
+): Promise<DealToRate[]> {
+  if (!db) return [];
+  const { data: auth } = await db.auth.getUser();
+  if (!auth.user) return [];
+  const me = auth.user.id;
+
+  const { data: mine } = await db
+    .from("ratings")
+    .select("lot_id, rent_request")
+    .eq("author", me)
+    .eq("side", side);
+  const doneLots = new Set((mine ?? []).map((one) => one.lot_id).filter(Boolean));
+  const doneRequests = new Set((mine ?? []).map((one) => one.rent_request).filter(Boolean));
+  const out: DealToRate[] = [];
+
+  // Торги: выигранные лоты, где я - победитель или владелец вещи.
+  const { data: lots } = await db
+    .from("lots")
+    .select("id, closes_at, thing_spots(label), things(title, seller, photos), lot_bids(bidder, bidder_wallet, amount_cents, created_at)")
+    .eq("status", "won");
+  for (const lot of lots ?? []) {
+    if (doneLots.has(lot.id)) continue;
+    const thing = lot.things as unknown as { title: string; seller: string | null; photos: string[] | null } | null;
+    const bids = ((lot.lot_bids as unknown as {
+      bidder: string; bidder_wallet: string; amount_cents: number; created_at: string;
+    }[] | null) ?? []).sort(
+      (a, b) => b.amount_cents - a.amount_cents || a.created_at.localeCompare(b.created_at),
+    );
+    const top = bids[0];
+    if (!top || !thing) continue;
+    const spot = (lot.thing_spots as unknown as { label: string } | null)?.label ?? "Spot";
+    const ended = new Date(lot.closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const cover = thing.photos?.[0] ? photoUrl(thing.photos[0]) : null;
+    const price = `$${(top.amount_cents / 100).toFixed(2)}`;
+    if (side === "buyer" && top.bidder === me) {
+      out.push({ lotId: lot.id, title: `${spot} · ${thing.title}`, line: `Auction ended ${ended} · you paid ${price}`, cover, escrow: true });
+    }
+    if (side === "seller" && thing.seller === me) {
+      out.push({
+        lotId: lot.id,
+        title: `${spot} · ${thing.title}`,
+        line: `Auction ended ${ended} · ${top.bidder_wallet.slice(0, 4)}..${top.bidder_wallet.slice(-4)}`,
+        cover,
+        escrow: true,
+      });
+    }
+  }
+
+  // Аренды: одобренные и уже начавшиеся.
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: rents } = await db
+    .from("rent_requests")
+    .select("id, buyer, buyer_wallet, starts_on, ends_on, thing_spots(label, things(title, seller, photos))")
+    .eq("status", "approved")
+    .lte("starts_on", today);
+  for (const rent of rents ?? []) {
+    if (doneRequests.has(rent.id)) continue;
+    const spot = rent.thing_spots as unknown as {
+      label: string; things: { title: string; seller: string | null; photos: string[] | null } | null;
+    } | null;
+    if (!spot?.things) continue;
+    const ours = side === "buyer" ? rent.buyer === me : spot.things.seller === me;
+    if (!ours) continue;
+    const span = `${new Date(rent.starts_on).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${new Date(rent.ends_on).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    out.push({
+      requestId: rent.id,
+      title: `${spot.label} · ${spot.things.title}`,
+      line: `Rented ${span} · ${rent.buyer_wallet.slice(0, 4)}..${rent.buyer_wallet.slice(-4)}`,
+      cover: spot.things.photos?.[0] ? photoUrl(spot.things.photos[0]) : null,
+      escrow: false,
+    });
+  }
+  return out;
+}
