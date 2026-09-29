@@ -33,11 +33,14 @@ export function SetUpSpots({
   failed,
   problem,
   onDelete,
+  onRename,
 }: {
   thing: PricingThing;
   onBack: () => void;
   /** Удалить вещь целиком - пока торг не открыт. */
   onDelete: () => Promise<boolean>;
+  /** Переименовать вещь - пока торг не открыт. */
+  onRename: (name: string) => Promise<boolean>;
   onPublish: (plans: { spotId: string; plan: SpotPlan }[]) => void;
   publishing: boolean;
   failed: boolean;
@@ -45,6 +48,9 @@ export function SetUpSpots({
   problem?: string;
 }) {
   const [drafts, setDrafts] = useState<Draft[]>(() => thing.spots.map(fresh));
+  const [name, setName] = useState(thing.title);
+  const [saved, setSaved] = useState(thing.title);
+  const [naming, setNaming] = useState<"idle" | "failed">("idle");
   // Удаление в два касания: первое спрашивает, второе удаляет.
   const [removing, setRemoving] = useState<"idle" | "ask" | "busy" | "failed">("idle");
 
@@ -80,7 +86,24 @@ export function SetUpSpots({
           )}
         </div>
         <div>
-          <h2>{thing.title}</h2>
+          {/* Название - продавца: правится здесь, пока торг не открыт. */}
+          <input
+            className="sl-name"
+            aria-label="Name of the thing"
+            value={name}
+            maxLength={60}
+            onChange={(event) => {
+              setName(event.target.value);
+              setNaming("idle");
+            }}
+            onBlur={async () => {
+              const next = name.trim();
+              if (!next || next === saved) return setName(saved);
+              if (await onRename(next)) setSaved(next);
+              else setNaming("failed");
+            }}
+          />
+          {naming === "failed" && <p className="bad">Could not rename it. Try again.</p>}
           <p>
             {thing.spots.length === 1 ? "1 spot" : `${thing.spots.length} spots`}. Defaults
             are set, change what you need.

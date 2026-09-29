@@ -24,13 +24,14 @@ export function MarkSpots({
 }: {
   photos: string[];
   onBack: () => void;
-  onSend: (spots: Marked[]) => void;
+  onSend: (spots: Marked[], title: string) => void;
   sending: boolean;
   failed: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [spots, setSpots] = useState<Marked[]>([]);
   const [shown, setShown] = useState(0);
+  const [title, setTitle] = useState("");
   const [draft, setDraft] = useState<Rect | null>(null);
   const from = useRef<{ x: number; y: number } | null>(null);
 
@@ -164,6 +165,19 @@ export function MarkSpots({
         </div>
       )}
 
+      {/* Название даёт продавец: его видят покупатели на маркете. */}
+      <label className="sl-field sl-name-field">
+        Name your thing
+        <span className="sl-input soft">
+          <input
+            value={title}
+            maxLength={60}
+            placeholder="Laptop lid, backpack, jacket"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </span>
+      </label>
+
       {failed && (
         <p className="bad">Could not send the thing. Check the connection and try again.</p>
       )}
@@ -171,8 +185,8 @@ export function MarkSpots({
       <button
         type="button"
         className="sl-btn dark"
-        disabled={spots.length === 0 || sending}
-        onClick={() => onSend(spots)}
+        disabled={spots.length === 0 || !title.trim() || sending}
+        onClick={() => onSend(spots, title.trim())}
       >
         {sending ? "Sending…" : "Send to OXAR"}
       </button>
