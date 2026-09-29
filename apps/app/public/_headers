@@ -68,8 +68,9 @@
   # Чужим сайтам не сообщаем, с какой именно страницы к ним пришли.
   Referrer-Policy: strict-origin-when-cross-origin
 
-  # Ничего из этого нам не нужно, и пусть будет выключено.
-  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  # Камера - только нашей странице: продавец снимает вещь с телефона.
+  # Остальное нам не нужно, и пусть будет выключено.
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=()
 
 # В имени файла хэш сборки, поэтому по этому адресу содержимое не меняется.
 /_next/static/*
