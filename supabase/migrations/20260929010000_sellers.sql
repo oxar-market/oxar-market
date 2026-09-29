@@ -389,3 +389,66 @@ revoke all on function capture_open(text) from public;
 revoke all on function capture_land(text, integer) from public;
 grant execute on function capture_open(text) to anon, authenticated;
 grant execute on function capture_land(text, integer) to anon, authenticated;
+
+-- ── Админ: мы сами ────────────────────────────────────────────────────────
+
+-- Кто проверяет присланные вещи, даёт им имя, прикладывает 3D-модель,
+-- расставляет на ней места и выводит вещь на маркет. Список ведётся
+-- миграциями, как и роль продавца.
+create table admins (
+  user_id uuid primary key references auth.users (id) on delete cascade
+);
+
+alter table admins enable row level security;
+
+create policy "админ видит себя" on admins for select
+  using (user_id = auth.uid());
+
+create or replace function is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from admins where user_id = auth.uid());
+$$;
+
+-- Владелец площадки: пользователь за кошельком AkC8…DtB. Ему же роль
+-- продавца - чтобы проверить кабинет на своей вещи. Нет такого
+-- пользователя (локальная база) - строк не будет.
+insert into admins (user_id)
+select id from auth.users where id = '78e0f74a-3474-4f4b-875f-7030e18234fd'
+on conflict do nothing;
+
+insert into profiles (user_id, is_seller, seller_since)
+select id, true, now() from auth.users where id = '78e0f74a-3474-4f4b-875f-7030e18234fd'
+on conflict (user_id) do update
+  set is_seller = true, seller_since = coalesce(profiles.seller_since, now());
+
+create policy "админ видит все вещи" on things for select
+  using (is_admin());
+
+-- Имя, этап листинга, модель и показ на маркете - за админом. Продавцу
+-- права на update у вещи нет вовсе.
+create policy "админ правит вещи" on things for update
+  using (is_admin()) with check (is_admin());
+
+-- Геометрия места на 3D-модели: высота (0 - низ, 1 - верх габарита), угол
+-- вокруг оси и размер пятна - те же поля, что у мест футболки в коде.
+alter table thing_spots
+  add column height real check (height is null or height between 0 and 1),
+  add column azimuth real check (azimuth is null or azimuth between -360 and 360),
+  add column size_w real check (size_w is null or size_w > 0),
+  add column size_h real check (size_h is null or size_h > 0);
+
+create policy "админ правит места" on thing_spots for update
+  using (is_admin()) with check (is_admin());
+
+insert into storage.buckets (id, name, public)
+values ('models', 'models', true)
+on conflict (id) do nothing;
+
+create policy "админ кладёт модели" on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'models' and is_admin());

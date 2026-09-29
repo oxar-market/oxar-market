@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toPortrait } from "./desktop.tsx";
 
 /** Сколько снимков просим: прямо и по одному с каждой стороны. */
 const SHOTS = 3;
@@ -106,6 +107,24 @@ export function Camera({
         Whole thing in the frame, flat even light. One shot straight on, then
         one from each side.
       </p>
+      {/* Снимки уже есть в галерее - брать их, а не переснимать. Режутся к
+          той же пропорции 4:5, что и кадры камеры. */}
+      <label className="sl-gallery">
+        Choose from your photos
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={async (event) => {
+            const files = [...(event.target.files ?? [])].slice(0, SHOTS - photos.length);
+            event.target.value = "";
+            const cropped = await Promise.all(files.map(toPortrait));
+            setPhotos((was) =>
+              [...was, ...cropped.map((blob) => ({ blob, url: URL.createObjectURL(blob) }))].slice(0, SHOTS),
+            );
+          }}
+        />
+      </label>
 
       <div className="sl-camera-row">
         <span className="sl-shots">

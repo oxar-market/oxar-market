@@ -21,8 +21,8 @@ export function Sent({
       </div>
       <h2 className="sl-h2">We prepare your thing</h2>
       <p className="sl-lead">
-        Usually within a day. We build the 3D listing from your photos and
-        check the spots. You get an email when it is ready to price.
+        We check the spots and build the 3D listing, usually within a day.
+        The thing shows up here as ready to price.
       </p>
       <div className="sl-card sl-steps">
         <div className="sl-step">

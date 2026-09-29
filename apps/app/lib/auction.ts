@@ -273,9 +273,13 @@ export async function loadMarket(): Promise<{
 
   // Анонс - вещь без единого лота. Вещь, у которой торг уже был, сюда не
   // попадает и после его закрытия: она уходит в «Held earlier».
+  // Анонсы - только наши вещи: вещь продавца без лотов - это его черновик,
+  // а не афиша, и вошедшему продавцу база его показывает.
   const { data: catalog } = await db
     .from("things")
     .select("id, title, tagline, lots(id)")
+    .is("seller", null)
+    .eq("active", true)
     .order("created_at");
   const upcoming: UpcomingThing[] = (catalog ?? [])
     .filter((one) => (one.lots as unknown[]).length === 0)
@@ -284,7 +288,7 @@ export async function loadMarket(): Promise<{
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active)",
     )
     .in("status", ["open", "won", "unsold"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -297,7 +301,15 @@ export async function loadMarket(): Promise<{
   const things = new Map<string, MarketThing>();
   const heldBy = new Map<string, HeldRow>();
   for (const lot of data) {
-    const info = lot.things as unknown as { title?: string; tagline?: string | null } | null;
+    const info = lot.things as unknown as {
+      title?: string;
+      tagline?: string | null;
+      active?: boolean;
+    } | null;
+    // Лоты с открытым торгом видны всем, а вещь - только выставленная.
+    // Вещь продавца, которую мы ещё не вывели на маркет, в показ не идёт,
+    // даже если он уже открыл на неё аукцион.
+    if (!info || info.active === false) continue;
     const top = tops[lot.id];
     const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
     if (open) {

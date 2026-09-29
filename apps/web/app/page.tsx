@@ -69,17 +69,20 @@ async function rest(path: string): Promise<unknown[] | null> {
 
 async function loadLive(): Promise<Live | null> {
   const lots = (await rest(
-    "lots?status=eq.open&select=id,closes_at,thing_id,thing_spots(code),things:thing_id(title)",
+    "lots?status=eq.open&select=id,closes_at,thing_id,thing_spots(code),things:thing_id(title,seller,active)",
   )) as
     | {
         id: string;
         closes_at: string;
         thing_id: string;
         thing_spots: { code: string } | null;
-        things: { title: string } | null;
+        things: { title: string; seller: string | null; active: boolean } | null;
       }[]
     | null;
-  if (!lots || lots.length === 0) return null;
+  // Лендинг - витрина наших вещей: афиша рисует футболку по нашей модели
+  // и снимку, и вещь продавца на ней легла бы чужими пятнами.
+  const ours = (lots ?? []).filter((one) => one.things && one.things.active && one.things.seller === null);
+  if (ours.length === 0) return null;
 
   // Верхняя ставка каждого лота: строки уже от высокой к низкой.
   const bids = (await rest(
@@ -92,11 +95,11 @@ async function loadLive(): Promise<Live | null> {
 
   // Вещь выбирают деньги: наибольшая сумма лидирующих ставок - самый хайп.
   const score = new Map<string, number>();
-  for (const lot of lots) {
+  for (const lot of ours) {
     score.set(lot.thing_id, (score.get(lot.thing_id) ?? 0) + (top.get(lot.id)?.amount ?? 0));
   }
   const hottest = [...score.entries()].sort((a, b) => b[1] - a[1])[0][0];
-  const featured = lots.filter((one) => one.thing_id === hottest);
+  const featured = ours.filter((one) => one.thing_id === hottest);
 
   const art: Record<string, string> = {};
   for (const lot of featured) {
