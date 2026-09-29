@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { DealToRate, Score, SellerRequest, SellerThing } from "@/lib/seller";
+import { loadMyHandle, saveMyHandle } from "@/lib/reviews";
 import { BUILD } from "@/lib/build";
 import { Thumb, clock, shortDay, usd } from "./parts.tsx";
 
@@ -58,6 +60,8 @@ export function SellerHome({
           </button>
         </p>
       </div>
+
+      <NameCard />
 
       {first && (
         <button type="button" className="sl-waiting" onClick={() => onRequest(first)}>
@@ -154,4 +158,65 @@ function line(one: SellerThing, now: number): string {
 /** Последний день аренды входит в срок: «Oct 1 - Oct 14» - это 14 дней. */
 function days(request: SellerRequest): number {
   return Math.round((Date.parse(request.endsOn) - Date.parse(request.startsOn)) / 86_400_000) + 1;
+}
+
+/**
+ * Имя на маркете: «Sold by @name» под каждой вещью. Без него покупатели
+ * видят кошелёк.
+ */
+function NameCard() {
+  const [saved, setSaved] = useState<string | null>(null);
+  const [value, setValue] = useState("");
+  const [state, setState] = useState<"idle" | "saving" | "ok" | "taken" | "bad">("idle");
+  useEffect(() => {
+    void loadMyHandle().then((handle) => {
+      setSaved(handle);
+      setValue(handle ?? "");
+    });
+  }, []);
+
+  return (
+    <form
+      className="sl-card ad-card"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setState("saving");
+        const result = await saveMyHandle(value.trim());
+        setState(result);
+        if (result === "ok") setSaved(value.trim());
+      }}
+    >
+      <label className="sl-field">
+        Your name on the Market
+        <span className="sl-input soft">
+          @
+          <input
+            value={value}
+            maxLength={15}
+            placeholder="nickname"
+            onChange={(event) => {
+              setValue(event.target.value.replace(/[^A-Za-z0-9_]/g, ""));
+              setState("idle");
+            }}
+          />
+        </span>
+      </label>
+      <p className="muted">
+        {state === "taken"
+          ? "That name is taken."
+          : state === "bad"
+            ? "Letters, digits and _, up to 15."
+            : state === "ok"
+              ? "Saved. Buyers see it under your things."
+              : "Without a name, buyers see your wallet."}
+      </p>
+      <button
+        type="submit"
+        className="sl-btn"
+        disabled={!value.trim() || value.trim() === saved || state === "saving"}
+      >
+        {state === "saving" ? "Saving…" : "Save name"}
+      </button>
+    </form>
+  );
 }

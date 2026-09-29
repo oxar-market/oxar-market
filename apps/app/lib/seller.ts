@@ -178,6 +178,8 @@ export async function sendThing(
   // снимки, которые телефон сдал десктопу.
   photos: (Blob | string)[],
   spots: Rect[],
+  /** Кошелёк продавца: им вещь подписана на маркете, пока нет никнейма. */
+  wallet: string | null,
 ): Promise<boolean> {
   if (!db || photos.length === 0 || spots.length === 0) return false;
   const { data: auth } = await db.auth.getUser();
@@ -215,6 +217,7 @@ export async function sendThing(
     active: true,
     stage: "ready",
     seller: owner,
+    seller_wallet: wallet,
     photos: paths,
   });
   if (thingError) return false;

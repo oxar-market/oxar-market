@@ -141,7 +141,7 @@ export function SellerFlow({
           failed={failed}
           onSend={async (spots: Rect[]) => {
             setBusy(true);
-            const ok = await sendThing(view.photos, spots);
+            const ok = await sendThing(view.photos, spots, wallet?.address ?? null);
             setBusy(false);
             if (ok) go({ name: "sent", photos: view.photos.length, spots: spots.length });
             else setFailed(true);
