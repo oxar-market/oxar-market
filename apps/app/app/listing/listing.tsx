@@ -6,6 +6,7 @@ import { ThingStage, type Stage } from "@oxar/stage";
 import { loadBids, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
 import { SellerLine } from "../reviews.tsx";
+import { SoonHologram } from "../soon.tsx";
 import { BidForm } from "../auction/bid.tsx";
 
 /**
@@ -143,6 +144,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     ? Math.min(...lots.map((one) => Date.parse(one.opens_at as string)))
     : null;
   const started = hasOpened(opensAt, now);
+  const soon = lots.length > 0 && !started;
   const top = bids[0] ?? null;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents) : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
@@ -177,6 +179,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           )}
         </div>
         <div className="lot-side">
+          {!started && opensAt !== null && (
+            <div className="lot-cd">
+              <span className="lot-cd-cap">Opens in</span>
+              <span className="lot-cd-num" suppressHydrationWarning>
+                {clock(opensAt - now)}
+              </span>
+            </div>
+          )}
           {started && closesAt !== null && (
             <div className="lot-cd">
               <span className="lot-cd-cap">Ends in</span>
@@ -189,7 +199,12 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       </header>
 
       <div className="lot-scene">
-        {look === "live" && thing.shape ? (
+        {/* Торг назначен, но ещё не открылся - знак вопроса голограммой. */}
+        {soon ? (
+          <div className="look">
+            <SoonHologram />
+          </div>
+        ) : look === "live" && thing.shape ? (
           <div className="look">
             <ThingStage
               shape={thing.shape}
@@ -233,7 +248,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         )}
 
-        {thing.shape && (
+        {thing.shape && !soon && (
           <div className="looks over-scene" role="group" aria-label="How to view">
             {([
               ["live", "3D"],
@@ -253,7 +268,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         )}
       </div>
 
-      {look === "shot" && thing.photos.length > 1 && (
+      {look === "shot" && !soon && thing.photos.length > 1 && (
         <div className="angles">
           {thing.photos.map((url, index) => (
             <button

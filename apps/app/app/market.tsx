@@ -15,6 +15,7 @@ import { CaseView } from "./case.tsx";
 import { DELORA } from "@/lib/cases";
 import { PhotoView } from "./auction/photo.tsx";
 import { SellerLine } from "./reviews.tsx";
+import { SoonHologram } from "./soon.tsx";
 // TEMP_FRONT: тот же временный снимок и замер, что на торге.
 import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
@@ -183,8 +184,19 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         const soon = Date.parse(one.closesAt) - now < 86_400_000;
         return (
           <div className="hero" key={one.id}>
-            <div className={heroLook === "live" && !one.seller ? "hero-photo in3d" : "hero-photo"}>
-              {one.seller ? (
+            <div
+              className={
+                (heroLook === "live" && !one.seller) || (one.seller && opensLater)
+                  ? "hero-photo in3d"
+                  : "hero-photo"
+              }
+            >
+              {one.seller && opensLater ? (
+                // Торг продавца назначен, но не открыт - знак вопроса.
+                <div className="hero-stage">
+                  <SoonHologram />
+                </div>
+              ) : one.seller ? (
                 // Вещь продавца: снимок, который он прислал. Модель к ней
                 // прикладываем мы, и видна она на странице торга.
                 one.photo && (

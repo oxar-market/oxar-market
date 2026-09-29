@@ -16,6 +16,7 @@ export {
   type Spot,
 } from "./spots.ts";
 export { SUITCASE, SUITCASE_SPOTS } from "./suitcase.ts";
+export { SOON } from "./soon.ts";
 export { fitInside } from "./fit.ts";
 export { applyQuad, quadTransform, type Corners } from "./quad.ts";
 export { acesFilmic, develop, toSrgb } from "./tone.ts";
