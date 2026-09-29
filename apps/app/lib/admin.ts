@@ -62,6 +62,19 @@ export async function updateThing(
   return !error;
 }
 
+/** Наши вещи (футболка и другие): по ним в админке - что печатать. */
+export async function loadHouseThings(): Promise<{ id: string; title: string }[]> {
+  if (!db) return [];
+  const { data } = await db
+    .from("things")
+    .select("id, title, lots(id)")
+    .eq("house", true)
+    .order("created_at", { ascending: false });
+  return (data ?? [])
+    .filter((one) => (one.lots as unknown[]).length > 0)
+    .map((one) => ({ id: one.id, title: one.title }));
+}
+
 /** Модель уезжает в публичное хранилище models; в вещь пишется её адрес. */
 export async function uploadModel(thingId: string, file: File): Promise<string | null> {
   if (!db) return null;

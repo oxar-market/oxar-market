@@ -17,7 +17,7 @@ export type Rect = { x: number; y: number; w: number; h: number };
 /** Место, размеченное на снимке: номер снимка и доли его сторон. */
 export type Marked = Rect & { photo: number };
 
-export type ThingState = "live" | "rented" | "idle" | "preparing";
+export type ThingState = "live" | "ended" | "rented" | "idle" | "preparing";
 
 export type SellerThing = {
   id: string;
@@ -25,6 +25,8 @@ export type SellerThing = {
   /** Первый снимок - обложка строки. */
   cover: string | null;
   state: ThingState;
+  /** Сколько мест ушли с победителем - у закончившегося торга. */
+  wonSpots: number;
   /** Одобрена админом и видна на маркете. */
   onMarket: boolean;
   spots: number;
@@ -143,6 +145,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
     const spots = (one.thing_spots as { id: string }[] | null) ?? [];
     const lots = (one.lots as { id: string; status: string; closes_at: string }[] | null) ?? [];
     const open = lots.filter((lot) => lot.status === "open");
+    const closed = lots.filter((lot) => lot.status === "won" || lot.status === "unsold");
     const mine = new Set(spots.map((spot) => spot.id));
     const rented = (rents ?? []).filter((rent) => mine.has(rent.spot_id));
     const photos = (one.photos as string[] | null) ?? [];
@@ -151,7 +154,9 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
         ? "preparing"
         : open.length > 0
           ? "live"
-          : rented.length > 0
+          : closed.length > 0
+            ? "ended"
+            : rented.length > 0
             ? "rented"
             : "idle";
     return {
@@ -159,6 +164,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
       title: one.title,
       cover: photos[0] ? photoUrl(photos[0]) : null,
       state,
+      wonSpots: closed.filter((lot) => lot.status === "won").length,
       onMarket: one.active,
       spots: spots.length,
       bidSpots: open.filter((lot) => bidLots.has(lot.id)).length,

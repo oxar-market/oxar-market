@@ -139,6 +139,12 @@ export function SetUpSpots({
         </button>
       </div>
 
+      {/* Где потом брать то, что печатать: продавцу это нужно знать заранее. */}
+      <p className="sl-plan-note">
+        When the auction ends, the winning logos wait for you in Your things -
+        tap this thing to open and save them.
+      </p>
+
       <button
         type="button"
         className="sl-copy"
