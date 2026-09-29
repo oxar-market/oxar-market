@@ -2,7 +2,7 @@
 
 import { Bar } from "./parts.tsx";
 
-/** Отправлено: вещь уже на маркете по снимкам, модель приложим мы. */
+/** Отправлено: вещь сохранена; на маркет - после торга и нашего одобрения. */
 export function Sent({
   photos,
   spots,
@@ -19,10 +19,10 @@ export function Sent({
         <div />
         <span>Hologram - 3D model in preparation</span>
       </div>
-      <h2 className="sl-h2">Your thing is on the Market</h2>
+      <h2 className="sl-h2">Your thing is saved</h2>
       <p className="sl-lead">
-        Buyers see it with your photos now. Price the spots to open the
-        auction. We add a 3D model later, usually within a day.
+        Only you see it for now. Price the spots and publish the auction -
+        then we review it and put it on the Market, usually within a day.
       </p>
       <div className="sl-card sl-steps">
         <div className="sl-step">
@@ -37,13 +37,13 @@ export function Sent({
         </div>
         <div className="sl-step">
           <i className="now" />
-          <b>Price the spots</b>
-          <small>Open your thing and set prices</small>
+          <b>Price and publish</b>
+          <small>Set prices and when the auction opens</small>
         </div>
         <div className="sl-step">
           <i className="later" />
-          <b>3D model</b>
-          <small>We add it, usually within a day</small>
+          <b>On the Market</b>
+          <small>After we approve it</small>
         </div>
       </div>
       <button type="button" className="sl-btn light" onClick={onBack}>

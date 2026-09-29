@@ -294,16 +294,14 @@ export async function loadMarket(): Promise<{
 
   // Анонс - вещь без единого лота. Вещь, у которой торг уже был, сюда не
   // попадает и после его закрытия: она уходит в «Held earlier».
-  // Вещь продавца попадает сюда сразу после отправки: цен ещё нет, но
-  // вещь уже видна по снимкам. Скрытую (не выведенную на маркет) видит
-  // только сам продавец - остальным база её и не отдаёт.
-  const { data: auth } = await db.auth.getSession();
-  const me = auth.session?.user.id ?? null;
+  // Анонсы - только наши вещи. Вещь продавца появляется на маркете, когда
+  // он открыл торг и админ её одобрил; до торга анонсом она не идёт.
   const { data: raw } = await db
     .from("things")
-    .select("id, title, tagline, seller, house, active, photos, lots(id)")
+    .select("id, title, tagline, seller, house, photos, lots(id)")
+    .eq("active", true)
     .order("created_at");
-  const catalog = (raw ?? []).filter((one) => one.active || (me !== null && one.seller === me));
+  const catalog = (raw ?? []).filter((one) => one.house);
   const shots = db.storage.from("things");
   const upcoming: UpcomingThing[] = catalog
     .filter((one) => (one.lots as unknown[]).length === 0)
@@ -341,10 +339,10 @@ export async function loadMarket(): Promise<{
       house?: boolean;
       photos?: string[] | null;
     } | null;
-    // Лоты с открытым торгом видны всем, а вещь - только выставленная.
-    // Вещь продавца, которую мы ещё не вывели на маркет, в показ не идёт,
-    // даже если он уже открыл на неё аукцион, - кроме как ему самому.
-    if (!info || (info.active === false && (me === null || info.seller !== me))) continue;
+    // Лоты с открытым торгом видны всем, а вещь - только одобренная. Вещь
+    // продавца, которую мы ещё не вывели на маркет, в показ не идёт, даже
+    // если он уже открыл на неё аукцион.
+    if (!info || info.active === false) continue;
     const top = tops[lot.id];
     const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
     if (open) {

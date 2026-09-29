@@ -143,7 +143,9 @@ const LABEL = {
 function line(one: SellerThing, now: number): string {
   switch (one.state) {
     case "live":
-      return `Closes in ${clock(Date.parse(one.closesAt ?? "") - now)} · ${one.bidSpots} of ${one.spots} spots bid`;
+      return one.onMarket
+        ? `Closes in ${clock(Date.parse(one.closesAt ?? "") - now)} · ${one.bidSpots} of ${one.spots} spots bid`
+        : "Published. Waiting for our approval to show on the Market";
     case "rented":
       return `${one.rentedSpots} of ${one.spots} spots rented${
         one.rentedUntil ? `, until ${shortDay(one.rentedUntil)}` : ""
