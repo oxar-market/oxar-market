@@ -13,6 +13,7 @@ import {
   landCapture,
   loadDealsToRate,
   deleteThing,
+  renameThing,
   loadPricingThing,
   loadSellerRequests,
   loadSellerScore,
@@ -141,9 +142,9 @@ export function SellerFlow({
           onBack={home}
           sending={busy}
           failed={failed}
-          onSend={async (spots) => {
+          onSend={async (spots, title) => {
             setBusy(true);
-            const ok = await sendThing(view.photos, spots, wallet?.address ?? null);
+            const ok = await sendThing(view.photos, spots, wallet?.address ?? null, title);
             setBusy(false);
             if (ok) go({ name: "sent", photos: view.photos.length, spots: spots.length });
             else setFailed(true);
@@ -160,6 +161,7 @@ export function SellerFlow({
           publishing={busy}
           failed={failed}
           problem={problem}
+          onRename={(name) => renameThing(view.thing.id, name)}
           onDelete={async () => {
             const ok = await deleteThing(view.thing.id);
             if (ok) home();
