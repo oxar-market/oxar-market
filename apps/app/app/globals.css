@@ -3668,6 +3668,23 @@ input:focus {
   color: rgba(255, 255, 255, 0.55);
 }
 
+.sl-open-camera {
+  padding: 14px 26px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #16181d;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sl-open-camera:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .sl-camera-hint {
   margin: 0;
   padding: 26px 32px 0;

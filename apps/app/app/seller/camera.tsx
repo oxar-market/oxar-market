@@ -105,10 +105,17 @@ export function Camera({
       <div className="sl-finder">
         <video ref={video} playsInline muted />
         {live !== "on" && (
+          // Пока живой картинки нет - кнопка посередине: открыть камеру
+          // телефона. В браузере кошелька картинки может не быть вовсе.
           <span className="sl-finder-note">
-            {live === "starting"
-              ? "Starting the camera"
-              : "Tap the shutter to open your phone camera."}
+            <button
+              type="button"
+              className="sl-open-camera"
+              disabled={photos.length >= SHOTS}
+              onClick={() => native.current?.click()}
+            >
+              Open camera
+            </button>
           </span>
         )}
         <i />
