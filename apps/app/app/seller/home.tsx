@@ -25,6 +25,7 @@ export function SellerHome({
   onSetup,
   onOpen,
   onReviews,
+  onWinners,
 }: {
   score: Score;
   requests: SellerRequest[];
@@ -37,6 +38,8 @@ export function SellerHome({
   onSetup: (thingId: string) => void;
   onOpen: (thingId: string) => void;
   onReviews: () => void;
+  /** Закончившийся торг: логотипы победителей. */
+  onWinners: (thing: SellerThing) => void;
 }) {
   const first = requests[0];
   return (
@@ -107,7 +110,9 @@ export function SellerHome({
               // Цены ставятся, когда листинг готов; идущий торг открывается
               // той же страницей, что у покупателей.
               disabled={one.state === "preparing" || one.state === "rented"}
-              onClick={() => (one.state === "live" ? onOpen(one.id) : onSetup(one.id))}
+              onClick={() =>
+                one.state === "live" ? onOpen(one.id) : one.state === "ended" ? onWinners(one) : onSetup(one.id)
+              }
             >
               <Thumb src={one.cover} holo={one.state === "preparing"} />
               <span className="sl-thing-name">{one.title}</span>
@@ -135,6 +140,7 @@ export function SellerHome({
 
 const LABEL = {
   live: "LIVE AUCTION",
+  ended: "ENDED",
   rented: "RENTED",
   idle: "IDLE",
   preparing: "PREPARING",
@@ -146,6 +152,10 @@ function line(one: SellerThing, now: number): string {
       return one.onMarket
         ? `Closes in ${clock(Date.parse(one.closesAt ?? "") - now)} · ${one.bidSpots} of ${one.spots} spots bid`
         : "Published. Waiting for our approval to show on the Market";
+    case "ended":
+      return one.wonSpots > 0
+        ? `Auction ended · ${one.wonSpots} of ${one.spots} spots won · Get the logos`
+        : "Auction ended without bids";
     case "rented":
       return `${one.rentedSpots} of ${one.spots} spots rented${
         one.rentedUntil ? `, until ${shortDay(one.rentedUntil)}` : ""

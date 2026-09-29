@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ThingStage, type Stage } from "@oxar/stage";
 import {
   loadAdminThings,
+  loadHouseThings,
   saveSpotGeo,
   updateThing,
   uploadModel,
@@ -12,6 +13,7 @@ import {
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
+import { Winners } from "../winners.tsx";
 
 /**
  * Админка по вещам продавцов. Вещь попадает на маркет, когда продавец
@@ -61,6 +63,8 @@ export function Admin() {
   return (
     <>
       {sections}
+
+      <HouseLogos />
 
       <div className="sl-head">
         <h2>Seller things</h2>
@@ -376,6 +380,38 @@ function Applications() {
               Approve
             </button>
           </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Наши вещи: что печатать. Пока торг идёт - лидеры, после закрытия -
+ * победители. Футболку печатаем мы, и логотипы нужны нам самим.
+ */
+function HouseLogos() {
+  const [things, setThings] = useState<{ id: string; title: string }[]>([]);
+  const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => {
+    void loadHouseThings().then(setThings);
+  }, []);
+  if (things.length === 0) return null;
+  return (
+    <>
+      <div className="sl-head">
+        <h2>Our things - logos</h2>
+      </div>
+      {things.map((one) => (
+        <div key={one.id} className="ad-house">
+          <button
+            type="button"
+            className="sl-btn light"
+            onClick={() => setOpen(open === one.id ? null : one.id)}
+          >
+            {open === one.id ? `Hide ${one.title}` : one.title}
+          </button>
+          {open === one.id && <Winners thingId={one.id} />}
         </div>
       ))}
     </>

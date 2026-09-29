@@ -45,6 +45,11 @@ export function Sent({
           <b>On the Market</b>
           <small>After we approve it</small>
         </div>
+        <div className="sl-step">
+          <i className="later" />
+          <b>Winning logos</b>
+          <small>After the auction, in Your things</small>
+        </div>
       </div>
       <button type="button" className="sl-btn light" onClick={onBack}>
         Back to your things

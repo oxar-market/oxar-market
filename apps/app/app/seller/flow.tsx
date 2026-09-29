@@ -39,6 +39,7 @@ import { Sent } from "./sent.tsx";
 import { SetUpSpots } from "./setup.tsx";
 import { db } from "@/lib/session";
 import { Reviews } from "../reviews.tsx";
+import { Winners } from "../winners.tsx";
 
 type View =
   | { name: "home" }
@@ -48,7 +49,8 @@ type View =
   | { name: "sent"; photos: number; spots: number }
   | { name: "setup"; thing: PricingThing }
   | { name: "request"; request: SellerRequest }
-  | { name: "rate"; deal: DealToRate };
+  | { name: "rate"; deal: DealToRate }
+  | { name: "winners"; thing: SellerThing };
 
 /**
  * Кабинет продавца целиком: главный экран и шаги поверх него. Шаги - это
@@ -250,7 +252,18 @@ export function SellerFlow({
           }}
         />
       );
-    default:
+    case "winners":
+      return column(
+        <>
+          <Bar title="Winning logos" onBack={home} />
+          <p className="sl-lead">
+            {view.thing.title}: what to put on each spot. Open a logo to save the
+            file.
+          </p>
+          <Winners thingId={view.thing.id} />
+        </>,
+      );
+        default:
       return (
           <>
           {reviews && me && (
@@ -258,6 +271,7 @@ export function SellerFlow({
           )}
           <SellerHome
             onReviews={() => setReviews(true)}
+            onWinners={(thing) => go({ name: "winners", thing })}
             score={score}
             requests={requests}
             toRate={toRate}
