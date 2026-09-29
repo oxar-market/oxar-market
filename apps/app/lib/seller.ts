@@ -538,7 +538,9 @@ export async function loadDealsToRate(
   const { data: lots } = await db
     .from("lots")
     .select("id, closes_at, thing_spots(label), things(title, seller, photos), lot_bids(bidder, bidder_wallet, amount_cents, created_at)")
-    .eq("status", "won");
+    .eq("status", "won")
+    // Прогоны до первого настоящего торга не оцениваются.
+    .eq("rehearsal", false);
   for (const lot of lots ?? []) {
     if (doneLots.has(lot.id)) continue;
     const thing = lot.things as unknown as { title: string; seller: string | null; photos: string[] | null } | null;

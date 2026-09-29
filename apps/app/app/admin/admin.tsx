@@ -119,7 +119,7 @@ function AdminThingView({
         </label>
         <button
           type="button"
-          className="sl-btn"
+          className="sl-btn light"
           disabled={busy || !title.trim() || (title === thing.title && tagline === (thing.tagline ?? ""))}
           onClick={() =>
             run(
@@ -146,7 +146,7 @@ function AdminThingView({
 
       <div className="sl-card ad-card">
         <h3>3D model</h3>
-        <label className="sl-btn">
+        <label className="sl-btn light">
           {thing.model ? "Replace .glb" : "Upload .glb"}
           <input
             type="file"
@@ -226,7 +226,7 @@ function AdminThingView({
                 {spot.geo && (
                   <button
                     type="button"
-                    className="sl-btn"
+                    className="sl-btn light"
                     disabled={busy}
                     onClick={() =>
                       run(
