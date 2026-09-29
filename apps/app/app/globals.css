@@ -4601,3 +4601,38 @@ input:focus {
 .sl-gallery input {
   display: none;
 }
+
+/* Торг вещи продавца: снимок с местами, место - кнопка выбора. */
+.ls-photo {
+  max-width: 30rem;
+  margin: 0 auto;
+}
+
+.sl-spot.ls-spot {
+  padding: 0;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.sl-spot.ls-spot.on {
+  outline: 2px solid #e0381c;
+  outline-offset: 2px;
+}
+
+/* Снимок вещи продавца в герое маркета: вписан в высоту, как фото футболки. */
+.hero-shot {
+  height: 86%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.hero-shot img {
+  height: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 12px;
+}

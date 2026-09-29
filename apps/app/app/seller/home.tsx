@@ -21,6 +21,7 @@ export function SellerHome({
   onRequest,
   onRate,
   onSetup,
+  onOpen,
 }: {
   score: Score;
   requests: SellerRequest[];
@@ -31,6 +32,7 @@ export function SellerHome({
   onRequest: (request: SellerRequest) => void;
   onRate: (deal: DealToRate) => void;
   onSetup: (thingId: string) => void;
+  onOpen: (thingId: string) => void;
 }) {
   const first = requests[0];
   return (
@@ -93,10 +95,10 @@ export function SellerHome({
               type="button"
               key={one.id}
               className="sl-thing"
-              // Цены ставятся, когда листинг готов; торг и аренду правят
-              // только до открытия - после этого строка лишь показывает ход.
-              disabled={one.state !== "idle"}
-              onClick={() => onSetup(one.id)}
+              // Цены ставятся, когда листинг готов; идущий торг открывается
+              // той же страницей, что у покупателей.
+              disabled={one.state === "preparing" || one.state === "rented"}
+              onClick={() => (one.state === "live" ? onOpen(one.id) : onSetup(one.id))}
             >
               <Thumb src={one.cover} holo={one.state === "preparing"} />
               <span className="sl-thing-name">{one.title}</span>

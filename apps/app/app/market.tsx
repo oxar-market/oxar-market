@@ -29,7 +29,7 @@ import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
 type Mail = "idle" | "sending" | "done" | "failed";
 
-export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
+export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) => void }) {
   const [things, setThings] = useState<MarketThing[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingThing[]>([]);
   const [held, setHeld] = useState<HeldRow[]>([]);
@@ -66,7 +66,8 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
   const [heroLook, setHeroLook] = useState<"live" | "photo">("live");
   const heroStage = useRef<Stage | null>(null);
   function dressHero() {
-    const art: Record<string, string> = things[0]?.art ?? {};
+    // Модель на маркете одна - наша футболка; вещи продавцов идут снимком.
+    const art: Record<string, string> = things.find((one) => !one.seller)?.art ?? {};
     for (const [code, url] of Object.entries(art)) {
       const image = new Image();
       image.crossOrigin = "anonymous";
@@ -181,8 +182,20 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
         const soon = Date.parse(one.closesAt) - now < 86_400_000;
         return (
           <div className="hero" key={one.id}>
-            <div className={heroLook === "live" ? "hero-photo in3d" : "hero-photo"}>
-              {heroLook === "live" ? (
+            <div className={heroLook === "live" && !one.seller ? "hero-photo in3d" : "hero-photo"}>
+              {one.seller ? (
+                // Вещь продавца: снимок, который он прислал. Модель к ней
+                // прикладываем мы, и видна она на странице торга.
+                one.photo && (
+                  <button
+                    type="button"
+                    className="hero-shot"
+                    onClick={() => onOpenAuction(one.id)}
+                  >
+                    <img src={one.photo} alt={one.title} />
+                  </button>
+                )
+              ) : heroLook === "live" ? (
                 <div className="hero-stage">
                   <ThingStage
                     picked={null}
@@ -206,6 +219,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
                   art={one.art}
                 />
               )}
+              {!one.seller && (
               <span className="look-flip">
                 {(["live", "photo"] as const).map((view) => (
                   <button
@@ -218,6 +232,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
                   </button>
                 ))}
               </span>
+              )}
               <span className="now-pill">
                 <span className="dot" />
                 {opensLater ? "OPENS SOON" : soon ? "CLOSING SOON" : "LIVE NOW"}
@@ -245,7 +260,11 @@ export function Market({ onOpenAuction }: { onOpenAuction: () => void }) {
                   </span>
                 )}
               </div>
-              <button type="button" className="primary wide" onClick={onOpenAuction}>
+              <button
+                type="button"
+                className="primary wide"
+                onClick={() => onOpenAuction(one.seller ? one.id : undefined)}
+              >
                 Open
               </button>
             </div>

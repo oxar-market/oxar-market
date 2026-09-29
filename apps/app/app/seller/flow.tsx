@@ -52,7 +52,14 @@ type View =
  * состояние, а не адреса: вкладки приложения тоже состояние, и «назад»
  * везде ведёт к вещам.
  */
-export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }) {
+export function SellerFlow({
+  onView,
+  onOpen,
+}: {
+  onView?: (name: View["name"]) => void;
+  /** Открыть торг своей вещи - ту же страницу, что видят покупатели. */
+  onOpen: (thingId: string) => void;
+}) {
   const [view, setView] = useState<View>({ name: "home" });
   const [score, setScore] = useState<Score>({ rating: null, deals: 0 });
   const [things, setThings] = useState<SellerThing[]>([]);
@@ -238,6 +245,7 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
             now={now}
             onRequest={(request) => go({ name: "request", request })}
             onRate={(deal) => go({ name: "rate", deal })}
+            onOpen={onOpen}
             onSetup={async (thingId) => {
               const thing = await loadPricingThing(thingId);
               if (thing) go({ name: "setup", thing });

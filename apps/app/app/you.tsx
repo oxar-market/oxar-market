@@ -24,7 +24,7 @@ import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
 /** Куда зовёт разговор. Тот же адрес, что был в прошлой версии продукта. */
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
-export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
+export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => void }) {
   const { user, logout } = usePrivy();
   const wallet = user?.wallet?.address;
   const email = user?.email?.address;
@@ -146,7 +146,7 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
             {roleToggle}
           </>
         )}
-        <SellerFlow onView={setSellerView} />
+        <SellerFlow onView={setSellerView} onOpen={onOpenAuction} />
       </section>
     );
   }
@@ -261,7 +261,7 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
               // Торг откроется сразу на этом месте: код едет через
               // sessionStorage, вкладки - состояние экрана, а не адреса.
               window.sessionStorage.setItem("oxar.jump", one.code);
-              onOpenAuction();
+              onOpenAuction(one.sellerThing ?? undefined);
             }}
           >
             Raise your bid
