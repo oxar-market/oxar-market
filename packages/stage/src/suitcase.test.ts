@@ -4,8 +4,8 @@ import { SUITCASE, SUITCASE_SPOTS } from "./suitcase.ts";
 
 test("места чемодана лежат на плоской полосе лицевой грани", () => {
   for (const spot of SUITCASE_SPOTS) {
-    assert.ok(spot.height >= 0.2 && spot.height <= 0.75, spot.code);
-    assert.ok(spot.azimuth >= 60 && spot.azimuth <= 120, spot.code);
+    assert.ok(spot.height >= 0.1 && spot.height <= 0.62, spot.code);
+    assert.ok(spot.azimuth >= -120 && spot.azimuth <= -60, spot.code);
   }
 });
 
