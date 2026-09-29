@@ -29,13 +29,14 @@ export async function amIAdmin(): Promise<boolean> {
   return data === true;
 }
 
-/** Вещи продавцов, новые сверху. Наши вещи заводятся миграциями, их тут нет. */
+/** Вещи продавцов, новые сверху. Наши вещи (house) заводятся миграциями, их тут нет. */
 export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
     .select(`id, title, tagline, active, photos, model_url, created_at, thing_spots(${SPOT_COLUMNS})`)
     .not("seller", "is", null)
+    .eq("house", false)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,

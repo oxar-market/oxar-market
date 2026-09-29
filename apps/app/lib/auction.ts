@@ -176,7 +176,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
   const { data } = await db
     .from("lot_bids")
     .select(
-      "amount_cents, lot_id, lots!inner(status, closes_at, thing_spots(code, label), things:thing_id(id, title, seller))",
+      "amount_cents, lot_id, lots!inner(status, closes_at, thing_spots(code, label), things:thing_id(id, title, house))",
     )
     .eq("bidder_wallet", wallet)
     .order("amount_cents", { ascending: false })
@@ -195,7 +195,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       status: string;
       closes_at: string;
       thing_spots: { code?: string; label?: string } | null;
-      things: { id?: string; title?: string; seller?: string | null } | null;
+      things: { id?: string; title?: string; house?: boolean } | null;
     };
     const top = tops[row.lot_id];
     const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
@@ -205,7 +205,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       spot: lot.thing_spots?.label ?? "?",
       code: lot.thing_spots?.code ?? "",
       thing: lot.things?.title ?? "",
-      sellerThing: lot.things?.seller ? (lot.things.id ?? null) : null,
+      sellerThing: lot.things && !lot.things.house ? (lot.things.id ?? null) : null,
       closesAt: lot.closes_at,
       open,
       mineCents: row.amount_cents,
@@ -247,7 +247,11 @@ export type MarketThing = {
   opensAt: string | null;
   /** Код места - логотип лидера: одеть модель тем, что реально стоит. */
   art: Record<string, string>;
-  /** Вещь продавца: у неё своя страница торга и вместо модели - снимок. */
+  /**
+   * Продавец, если вещь показывается как вещь продавца: своя страница торга
+   * и снимок вместо модели. У наших вещей (house) пусто, даже если продавец
+   * записан, - они идут по своей модели.
+   */
   seller: string | null;
   photo: string | null;
 };
@@ -286,7 +290,7 @@ export async function loadMarket(): Promise<{
   // вещь уже видна по снимкам.
   const { data: catalog } = await db
     .from("things")
-    .select("id, title, tagline, seller, photos, lots(id)")
+    .select("id, title, tagline, seller, house, photos, lots(id)")
     .eq("active", true)
     .order("created_at");
   const shots = db.storage.from("things");
@@ -296,14 +300,14 @@ export async function loadMarket(): Promise<{
       id: one.id,
       title: one.title,
       tagline: one.tagline,
-      seller: one.seller,
+      seller: one.house ? null : one.seller,
       photo: one.photos?.[0] ? shots.getPublicUrl(one.photos[0]).data.publicUrl : null,
     }));
 
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, photos)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, photos)",
     )
     .in("status", ["open", "won", "unsold"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -321,6 +325,7 @@ export async function loadMarket(): Promise<{
       tagline?: string | null;
       active?: boolean;
       seller?: string | null;
+      house?: boolean;
       photos?: string[] | null;
     } | null;
     // Лоты с открытым торгом видны всем, а вещь - только выставленная.
@@ -343,7 +348,7 @@ export async function loadMarket(): Promise<{
           closesAt: lot.closes_at,
           opensAt: lot.opens_at,
           art: {},
-          seller: info.seller ?? null,
+          seller: info.house ? null : (info.seller ?? null),
           photo: info.photos?.[0]
             ? db.storage.from("things").getPublicUrl(info.photos[0]).data.publicUrl
             : null,

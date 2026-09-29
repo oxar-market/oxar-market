@@ -69,19 +69,19 @@ async function rest(path: string): Promise<unknown[] | null> {
 
 async function loadLive(): Promise<Live | null> {
   const lots = (await rest(
-    "lots?status=eq.open&select=id,closes_at,thing_id,thing_spots(code),things:thing_id(title,seller,active)",
+    "lots?status=eq.open&select=id,closes_at,thing_id,thing_spots(code),things:thing_id(title,house,active)",
   )) as
     | {
         id: string;
         closes_at: string;
         thing_id: string;
         thing_spots: { code: string } | null;
-        things: { title: string; seller: string | null; active: boolean } | null;
+        things: { title: string; house: boolean; active: boolean } | null;
       }[]
     | null;
   // Лендинг - витрина наших вещей: афиша рисует футболку по нашей модели
   // и снимку, и вещь продавца на ней легла бы чужими пятнами.
-  const ours = (lots ?? []).filter((one) => one.things && one.things.active && one.things.seller === null);
+  const ours = (lots ?? []).filter((one) => one.things && one.things.active && one.things.house);
   if (ours.length === 0) return null;
 
   // Верхняя ставка каждого лота: строки уже от высокой к низкой.
