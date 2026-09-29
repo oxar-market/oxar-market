@@ -81,16 +81,36 @@ export function awaitsReview(thing: AdminThing): boolean {
 }
 
 /** Наши вещи (футболка и другие): по ним в админке - что печатать. */
-export async function loadHouseThings(): Promise<{ id: string; title: string }[]> {
+export type HouseThing = {
+  id: string;
+  title: string;
+  cover: string | null;
+  /** Последний срок закрытия её торгов - по нему свежие наверху. */
+  closesAt: string;
+  /** Торг ещё идёт - в списке лидеры, а не победители. */
+  open: boolean;
+};
+
+export async function loadHouseThings(): Promise<HouseThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select("id, title, lots(id)")
-    .eq("house", true)
-    .order("created_at", { ascending: false });
+    .select("id, title, photos, lots(status, closes_at)")
+    .eq("house", true);
   return (data ?? [])
-    .filter((one) => (one.lots as unknown[]).length > 0)
-    .map((one) => ({ id: one.id, title: one.title }));
+    .map((one) => {
+      const lots = (one.lots ?? []) as { status: string; closes_at: string }[];
+      const photos = (one.photos as string[] | null) ?? [];
+      return {
+        id: one.id,
+        title: one.title,
+        cover: photos[0] ? photoUrl(photos[0]) : null,
+        closesAt: lots.map((lot) => lot.closes_at).sort().at(-1) ?? "",
+        open: lots.some((lot) => lot.status === "open"),
+      };
+    })
+    .filter((one) => one.closesAt)
+    .sort((a, b) => b.closesAt.localeCompare(a.closesAt));
 }
 
 /** Модель уезжает в публичное хранилище models; в вещь пишется её адрес. */

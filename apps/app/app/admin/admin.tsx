@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ThingStage, type Stage } from "@oxar/stage";
 import {
+  type HouseThing,
   awaitsReview,
   reviewThing,
   loadAdminThings,
@@ -37,9 +38,26 @@ export function Admin() {
   useEffect(reload, []);
   const toReview = (things ?? []).filter(awaitsReview).length;
 
+  // Решение принято - сразу следующая вещь, что ждёт решения; нет таких -
+  // обратно к списку. Список берём свежий: решение только что его изменило.
+  async function next(done: string) {
+    const list = await loadAdminThings();
+    setThings(list);
+    void loadApplications().then((people) => setPeople(people.length));
+    setOpen(list.find((one) => one.id !== done && awaitsReview(one))?.id ?? null);
+  }
+
   const thing = things?.find((one) => one.id === open);
   if (thing) {
-    return <AdminThingView thing={thing} onBack={() => setOpen(null)} onChanged={reload} />;
+    return (
+      <AdminThingView
+        key={thing.id}
+        thing={thing}
+        onBack={() => setOpen(null)}
+        onChanged={reload}
+        onReviewed={() => void next(thing.id)}
+      />
+    );
   }
 
   const sections = (
@@ -116,16 +134,20 @@ function AdminThingView({
   thing,
   onBack,
   onChanged,
+  onReviewed,
 }: {
   thing: AdminThing;
   onBack: () => void;
   onChanged: () => void;
+  /** Одобрена или отклонена - дальше следующая. */
+  onReviewed: () => void;
 }) {
   const [title, setTitle] = useState(thing.title);
   const [tagline, setTagline] = useState(thing.tagline ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
+  const [viewing, setViewing] = useState<number | null>(null);
   const [picked, setPicked] = useState(
     () => (thing.spots.find((spot) => !spot.geo) ?? thing.spots[0])?.code ?? null,
   );
@@ -134,6 +156,16 @@ function AdminThingView({
   const stage = useRef<Stage | null>(null);
 
   useEffect(() => setSize(sizeOf(spot)), [spot?.code]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Решение: получилось - к следующей вещи, нет - остаёмся с ошибкой.
+  async function decide(job: () => Promise<boolean>, failure: string) {
+    setBusy(true);
+    setError("");
+    const ok = await job();
+    setBusy(false);
+    if (ok) onReviewed();
+    else setError(failure);
+  }
 
   async function run(job: () => Promise<boolean>, failure: string) {
     setBusy(true);
@@ -183,18 +215,23 @@ function AdminThingView({
         </button>
       </div>
 
+      {/* Снимки открываются крупно - для 3D-модели их смотрят с разметкой и
+          без, и сохраняют оригинал. */}
       <div className="ad-photos">
         {thing.photos.map((url, index) => (
-          <div className="sl-photo" key={url}>
+          <button type="button" className="sl-photo ad-photo" key={url} onClick={() => setViewing(index)}>
             <img src={url} alt="" />
             {thing.spots.map((one, at) =>
               one.rect && one.photo === index ? (
                 <SpotMark key={one.id} rect={one.rect} outline={one.outline} number={at + 1} />
               ) : null,
             )}
-          </div>
+          </button>
         ))}
       </div>
+      {viewing !== null && (
+        <PhotoViewer thing={thing} at={viewing} onAt={setViewing} onClose={() => setViewing(null)} />
+      )}
 
       <div className="sl-card ad-card">
         <h3>3D model</h3>
@@ -324,7 +361,7 @@ function AdminThingView({
             type="button"
             className="sl-btn dark"
             disabled={busy}
-            onClick={() => run(() => reviewThing(thing.id, true), "Could not approve it.")}
+            onClick={() => decide(() => reviewThing(thing.id, true), "Could not approve it.")}
           >
             Approve
           </button>
@@ -355,7 +392,7 @@ function AdminThingView({
               type="button"
               className="sl-btn light"
               disabled={busy || reason.trim().length < 3}
-              onClick={() => run(() => reviewThing(thing.id, false, reason.trim()), "Could not decline it.")}
+              onClick={() => decide(() => reviewThing(thing.id, false, reason.trim()), "Could not decline it.")}
             >
               Decline
             </button>
@@ -454,7 +491,7 @@ function Applications({ onChanged }: { onChanged: () => void }) {
  * победители. Футболку печатаем мы, и логотипы нужны нам самим.
  */
 function HouseLogos() {
-  const [things, setThings] = useState<{ id: string; title: string }[]>([]);
+  const [things, setThings] = useState<HouseThing[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   useEffect(() => {
     void loadHouseThings().then(setThings);
@@ -464,19 +501,105 @@ function HouseLogos() {
     <>
       <div className="sl-head">
         <h2>Our things - logos</h2>
+        <span>{things.length}</span>
       </div>
-      {things.map((one) => (
-        <div key={one.id} className="ad-house">
-          <button
-            type="button"
-            className="sl-btn light"
-            onClick={() => setOpen(open === one.id ? null : one.id)}
-          >
-            {open === one.id ? `Hide ${one.title}` : one.title}
-          </button>
-          {open === one.id && <Winners thingId={one.id} />}
-        </div>
-      ))}
+      {/* Строкой, свежие сверху: торгов станет десять и больше, и столбик
+          кнопок читался бы хуже списка. Логотипы раскрываются под строкой. */}
+      <div className="sl-card sl-things">
+        {things.map((one) => (
+          <div key={one.id}>
+            <button
+              type="button"
+              className="sl-thing"
+              aria-expanded={open === one.id}
+              onClick={() => setOpen(open === one.id ? null : one.id)}
+            >
+              <Thumb src={one.cover} />
+              <span className="sl-thing-name">{one.title}</span>
+              <span className={`sl-state ${one.open ? "live" : "idle"}`}>
+                <i />
+                {one.open ? "LIVE" : "ENDED"}
+              </span>
+              <span className="sl-thing-sub">
+                {one.open ? "Leaders now" : "Winners"} · closes{" "}
+                {new Date(one.closesAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </span>
+            </button>
+            {open === one.id && (
+              <div className="ad-house-logos">
+                <Winners thingId={one.id} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </>
+  );
+}
+
+/**
+ * Снимок крупно: с разметкой мест или без - по ней и по голому кадру
+ * собирают 3D-модель. «Original» открывает сам файл, его и сохраняют.
+ */
+function PhotoViewer({
+  thing,
+  at,
+  onAt,
+  onClose,
+}: {
+  thing: AdminThing;
+  at: number;
+  onAt: (at: number) => void;
+  onClose: () => void;
+}) {
+  const [marks, setMarks] = useState(true);
+  const count = thing.photos.length;
+  return (
+    <div className="reviews-dim" onClick={onClose}>
+      <div className="ad-viewer" role="dialog" aria-label="Photo" onClick={(event) => event.stopPropagation()}>
+        <div className="ad-viewer-bar">
+          <div className="role-toggle slim">
+            {([true, false] as const).map((one) => (
+              <button
+                key={String(one)}
+                type="button"
+                className={marks === one ? "role-tab on" : "role-tab"}
+                onClick={() => setMarks(one)}
+              >
+                {one ? "With spots" : "Clean"}
+              </button>
+            ))}
+          </div>
+          <a className="sl-pill" href={thing.photos[at]} target="_blank" rel="noreferrer">
+            Original
+          </a>
+          <button type="button" className="case-back" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <div className="sl-photo ad-viewer-photo">
+          <img src={thing.photos[at]} alt="" />
+          {marks &&
+            thing.spots.map((one, index) =>
+              one.rect && one.photo === at ? (
+                <SpotMark key={one.id} rect={one.rect} outline={one.outline} number={index + 1} />
+              ) : null,
+            )}
+        </div>
+        {count > 1 && (
+          <div className="ad-viewer-nav">
+            <button type="button" className="sl-pill" onClick={() => onAt((at - 1 + count) % count)}>
+              &larr; Prev
+            </button>
+            <span className="muted">
+              {at + 1} of {count}
+            </span>
+            <button type="button" className="sl-pill" onClick={() => onAt((at + 1) % count)}>
+              Next &rarr;
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
