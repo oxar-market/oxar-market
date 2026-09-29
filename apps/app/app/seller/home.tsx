@@ -22,6 +22,7 @@ export function SellerHome({
   onRate,
   onSetup,
   onOpen,
+  onReviews,
 }: {
   score: Score;
   requests: SellerRequest[];
@@ -33,6 +34,7 @@ export function SellerHome({
   onRate: (deal: DealToRate) => void;
   onSetup: (thingId: string) => void;
   onOpen: (thingId: string) => void;
+  onReviews: () => void;
 }) {
   const first = requests[0];
   return (
@@ -50,7 +52,10 @@ export function SellerHome({
         </div>
         <p className="sl-score-note">
           Buyers rate each deal once it ends. It shows on your things in the
-          Market.
+          Market.{" "}
+          <button type="button" className="seller-line" onClick={onReviews}>
+            <b>See reviews</b>
+          </button>
         </p>
       </div>
 

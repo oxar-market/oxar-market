@@ -36,6 +36,8 @@ import { RateBuyer, RateSeller } from "./rate.tsx";
 import { RequestView } from "./request.tsx";
 import { Sent } from "./sent.tsx";
 import { SetUpSpots } from "./setup.tsx";
+import { db } from "@/lib/session";
+import { Reviews } from "../reviews.tsx";
 
 type View =
   | { name: "home" }
@@ -62,6 +64,12 @@ export function SellerFlow({
 }) {
   const [view, setView] = useState<View>({ name: "home" });
   const [score, setScore] = useState<Score>({ rating: null, deals: 0 });
+  // Отзывы о себе - та же выкладка, что видят покупатели.
+  const [me, setMe] = useState<string | null>(null);
+  const [reviews, setReviews] = useState(false);
+  useEffect(() => {
+    void db?.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
+  }, []);
   const [things, setThings] = useState<SellerThing[]>([]);
   const [requests, setRequests] = useState<SellerRequest[]>([]);
   const [toRate, setToRate] = useState<DealToRate[]>([]);
@@ -237,7 +245,12 @@ export function SellerFlow({
       );
     default:
       return (
+          <>
+          {reviews && me && (
+            <Reviews seller={me} name="Your reviews" score={score} onClose={() => setReviews(false)} />
+          )}
           <SellerHome
+            onReviews={() => setReviews(true)}
             score={score}
             requests={requests}
             toRate={toRate}
@@ -258,6 +271,7 @@ export function SellerFlow({
               })
             }
           />
+          </>
       );
   }
 }

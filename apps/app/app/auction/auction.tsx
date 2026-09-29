@@ -20,6 +20,7 @@ import {
 } from "@/lib/auction";
 import { BidForm } from "./bid.tsx";
 import { PhotoView } from "./photo.tsx";
+import { SellerLine } from "../reviews.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
 import { TEMP_ANGLES, TEMP_FRONT_QUADS, TEMP_SHOTS } from "./temp-photo.ts";
@@ -376,6 +377,7 @@ export function Auction() {
         )}
         <p className="over">{thing?.tagline ?? "Superteam Ukraine"}</p>
         <h1>{thing?.title ?? "Local Event Tee"}</h1>
+        {thing?.seller && <SellerLine seller={thing.seller} house={thing.house} />}
 
         {/* Сколько денег стоит на кону по всей вещи. Это ровно то, что лежит
             в хранилищах программы: перебитые ставки уже вернулись хозяевам,

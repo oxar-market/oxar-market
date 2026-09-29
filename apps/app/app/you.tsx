@@ -12,6 +12,8 @@ import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
 import { amIAdmin } from "@/lib/admin";
 import { Admin } from "./admin/admin.tsx";
+import { loadScoreOf, scoreText } from "@/lib/reviews";
+import type { Score } from "@/lib/seller";
 
 /**
  * Страница человека, собранная по дизайн-борду «OXAR Auction design
@@ -107,6 +109,14 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
   // Шаги кабинета со своей шапкой прячут шапку экрана и переключатель.
   const [sellerView, setSellerView] = useState("home");
 
+  // Счёт покупателя: как его оценили продавцы. Видно самому человеку.
+  const [buyerScore, setBuyerScore] = useState<Score | null>(null);
+  useEffect(() => {
+    void db?.auth.getUser().then(({ data }) => {
+      if (data.user) void loadScoreOf(data.user.id, "buyer").then(setBuyerScore);
+    });
+  }, []);
+
   // Оценка сделки покупателем: вход отсюда, из режима Buyer.
   const [toRate, setToRate] = useState<DealToRate[]>([]);
   const [rating, setRating] = useState<DealToRate | null>(null);
@@ -190,6 +200,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
           <p className="you-sub">
             {email ? "Signed in with email" : "Signed in with a wallet"}
           </p>
+          {buyerScore && <p className="you-sub">Buyer score · {scoreText(buyerScore, "buyer")}</p>}
         </div>
       </div>
 

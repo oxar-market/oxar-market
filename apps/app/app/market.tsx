@@ -14,6 +14,7 @@ import { Game } from "./game/game";
 import { CaseView } from "./case.tsx";
 import { DELORA } from "@/lib/cases";
 import { PhotoView } from "./auction/photo.tsx";
+import { SellerLine } from "./reviews.tsx";
 // TEMP_FRONT: тот же временный снимок и замер, что на торге.
 import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
@@ -248,6 +249,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
               <div>
                 <h2 className="hero-name">{one.title}</h2>
                 {one.tagline && <p className="hero-who">{one.tagline}</p>}
+                {one.owner && <SellerLine seller={one.owner} house={one.house} />}
               </div>
               <div className="hero-stat">
                 <span className="muted">
@@ -481,6 +483,7 @@ function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void 
         <div>
           <h2 className="hero-name">{thing.title}</h2>
           {thing.tagline && <p className="hero-who">{thing.tagline}</p>}
+          {thing.owner && <SellerLine seller={thing.owner} house={thing.house} />}
         </div>
         <span className="muted">Opening date to be announced.</span>
         {thing.seller && (

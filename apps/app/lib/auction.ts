@@ -19,6 +19,9 @@ export type Thing = {
   slug: string;
   title: string;
   tagline: string | null;
+  /** Кого оценивают покупатели. */
+  seller: string | null;
+  house: boolean;
 };
 
 export type Lot = {
@@ -63,7 +66,7 @@ export async function loadThing(): Promise<{
 
   const { data: thing } = await db
     .from("things")
-    .select("id, slug, title, tagline")
+    .select("id, slug, title, tagline, seller, house")
     .eq("slug", THING_SLUG)
     .maybeSingle();
   // Вещи в каталоге нет - значит и торгов нет. Это не сбой: так выглядит
@@ -254,6 +257,9 @@ export type MarketThing = {
    */
   seller: string | null;
   photo: string | null;
+  /** Кого оценивают покупатели, и наша ли это вещь - для строки «Sold by». */
+  owner: string | null;
+  house: boolean;
 };
 
 /** Анонс: вещь уже в каталоге, но торга на неё ещё не заводили. */
@@ -264,6 +270,8 @@ export type UpcomingThing = {
   /** Вещь продавца: анонс её снимком, а не голограммой футболки. */
   seller: string | null;
   photo: string | null;
+  owner: string | null;
+  house: boolean;
 };
 
 /** Строка «Held earlier»: чем кончился прошедший торг. */
@@ -301,6 +309,8 @@ export async function loadMarket(): Promise<{
       title: one.title,
       tagline: one.tagline,
       seller: one.house ? null : one.seller,
+      owner: one.seller,
+      house: one.house,
       photo: one.photos?.[0] ? shots.getPublicUrl(one.photos[0]).data.publicUrl : null,
     }));
 
@@ -349,6 +359,8 @@ export async function loadMarket(): Promise<{
           opensAt: lot.opens_at,
           art: {},
           seller: info.house ? null : (info.seller ?? null),
+          owner: info.seller ?? null,
+          house: info.house ?? false,
           photo: info.photos?.[0]
             ? db.storage.from("things").getPublicUrl(info.photos[0]).data.publicUrl
             : null,

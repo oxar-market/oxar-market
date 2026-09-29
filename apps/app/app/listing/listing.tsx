@@ -5,6 +5,7 @@ import { formatUsd, hasOpened, isOpen, minBidCents } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import { loadBids, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
+import { SellerLine } from "../reviews.tsx";
 import { BidForm } from "../auction/bid.tsx";
 
 /**
@@ -141,10 +142,6 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
   const pot = lots.reduce((sum, one) => sum + (tops[one.id]?.amount_cents ?? 0), 0);
   const spotLabel = thing.spots.find((spot) => spot.code === picked)?.label ?? "";
-  const scoreLine =
-    thing.score.deals < 3 || thing.score.rating === null
-      ? "New seller"
-      : `Seller ★ ${thing.score.rating.toFixed(1)} · ${thing.score.deals} deals`;
 
   return (
     <section className="lot">
@@ -165,7 +162,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               LIVE
             </span>
           )}
-          <p className="over">{scoreLine}</p>
+          {thing.seller && <SellerLine seller={thing.seller} house={false} />}
           <h1>{thing.title}</h1>
           {pot > 0 && (
             <p className="lot-pot">

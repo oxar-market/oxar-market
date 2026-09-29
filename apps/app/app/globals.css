@@ -4699,3 +4699,88 @@ input:focus {
 .ad-size .sl-btn {
   grid-column: 1 / -1;
 }
+
+/* Кто продаёт: тихая строка под именем вещи, тап - отзывы. */
+.seller-line {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.seller-line:hover b {
+  text-decoration: underline;
+}
+
+.reviews-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.reviews {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 20px 20px 0 0;
+  background: var(--card);
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+@media (min-width: 64rem) {
+  .reviews-dim {
+    align-items: center;
+  }
+
+  .reviews {
+    border-radius: 20px;
+  }
+}
+
+.reviews-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.reviews-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.reviews-head p {
+  margin: 4px 0 0;
+}
+
+.review {
+  display: grid;
+  gap: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.review p {
+  margin: 0;
+}
+
+.review-stars {
+  color: #e0381c;
+  letter-spacing: 2px;
+}
+
+.review-stars i {
+  font-style: normal;
+  opacity: 0.25;
+}

@@ -3,7 +3,7 @@
 import type { Shape, Spot } from "@oxar/stage";
 import type { Lot } from "./auction.ts";
 import { db } from "./session.ts";
-import { photoUrl, type Rect, type Score } from "./seller.ts";
+import { photoUrl, type Rect } from "./seller.ts";
 
 /**
  * Вещь продавца на торге: снимки, места и, если мы уже приложили её, модель.
@@ -32,7 +32,8 @@ export type ListedThing = {
   shape: Shape | null;
   spots: ListedSpot[];
   lots: Lot[];
-  score: Score;
+  /** Кого оценивают покупатели. */
+  seller: string | null;
 };
 
 type SpotRow = {
@@ -103,16 +104,11 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
   const spots = listedSpots((thing.thing_spots as SpotRow[] | null) ?? []);
   const codeOf = new Map(spots.map((spot) => [spot.id, spot.code]));
 
-  const [{ data: lots }, { data: score }] = await Promise.all([
-    db
-      .from("lots")
-      .select("id, spot_id, status, reserve_cents, min_step_cents, opens_at, closes_at")
-      .eq("thing_id", thingId)
-      .eq("status", "open"),
-    thing.seller
-      ? db.from("seller_scores").select("rating, deals").eq("seller", thing.seller).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const { data: lots } = await db
+    .from("lots")
+    .select("id, spot_id, status, reserve_cents, min_step_cents, opens_at, closes_at")
+    .eq("thing_id", thingId)
+    .eq("status", "open");
 
   return {
     id: thing.id,
@@ -125,9 +121,6 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
       const spot_code = codeOf.get(lot.spot_id);
       return spot_code ? [{ ...lot, spot_code } as Lot] : [];
     }),
-    score: {
-      rating: score?.rating === null || score?.rating === undefined ? null : Number(score.rating),
-      deals: score?.deals ?? 0,
-    },
+    seller: thing.seller,
   };
 }
