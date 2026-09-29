@@ -187,6 +187,8 @@ export async function sendThing(
   spots: Marked[],
   /** Кошелёк продавца: им вещь подписана на маркете, пока нет никнейма. */
   wallet: string | null,
+  /** Название вещи - его даёт продавец. */
+  title: string,
 ): Promise<boolean> {
   if (!db || photos.length === 0 || spots.length === 0) return false;
   const { data: auth } = await db.auth.getUser();
@@ -218,7 +220,7 @@ export async function sendThing(
   const { error: thingError } = await db.from("things").insert({
     id,
     slug: `thing-${id.slice(0, 8)}`,
-    title: `New thing No. ${number}`,
+    title: title.trim() || `New thing No. ${number}`,
     model_url: "",
     // Скрыта, пока продавец не откроет торг и админ не одобрит её для
     // маркета.
@@ -615,5 +617,12 @@ export async function loadDealsToRate(
 export async function deleteThing(thingId: string): Promise<boolean> {
   if (!db) return false;
   const { data, error } = await db.rpc("seller_deletes_thing", { thing: thingId });
+  return !error && data === true;
+}
+
+/** Переименовать свою вещь, пока торг не открыт. */
+export async function renameThing(thingId: string, name: string): Promise<boolean> {
+  if (!db) return false;
+  const { data, error } = await db.rpc("seller_renames_thing", { thing: thingId, name });
   return !error && data === true;
 }

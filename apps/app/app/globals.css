@@ -4870,3 +4870,27 @@ input:focus {
     font-size: 16px;
   }
 }
+
+/* Название вещи на экране цен: выглядит заголовком, правится как поле. */
+.sl-name {
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sl-name:focus {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.sl-name-field {
+  width: 100%;
+}
