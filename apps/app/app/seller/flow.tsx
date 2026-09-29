@@ -16,6 +16,7 @@ import {
   loadSellerRequests,
   loadSellerScore,
   loadSellerThings,
+  findCapture,
   markShooting,
   savePlans,
   sendRating,
@@ -254,14 +255,25 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
  * Телефон по QR с десктопа: та же камера, но снимки уходят в сессию, а
  * размечает их десктоп.
  */
-export function PhoneCapture({ session, onClose }: { session: string; onClose: () => void }) {
-  const [state, setState] = useState<"shooting" | "sending" | "done" | "failed">("shooting");
+export function PhoneCapture({ code, onClose }: { code: string; onClose: () => void }) {
+  const [state, setState] = useState<"finding" | "shooting" | "sending" | "done" | "failed">(
+    "finding",
+  );
+  const [session, setSession] = useState<string | null>(null);
 
+  // Код из QR - в сессию. Её видит только владелец, поэтому чужой код или
+  // вход другим аккаунтом приводят к честному «не нашли», а не к чужой вещи.
   useEffect(() => {
-    void markShooting(session);
-  }, [session]);
+    void findCapture(code).then((id) => {
+      if (!id) return setState("failed");
+      setSession(id);
+      setState("shooting");
+      void markShooting(id);
+    });
+  }, [code]);
 
-  if (state === "shooting") {
+  if (state === "finding") return null;
+  if (state === "shooting" && session) {
     return (
       <Camera
         onCancel={onClose}

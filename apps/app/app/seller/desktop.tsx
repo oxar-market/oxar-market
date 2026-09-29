@@ -19,15 +19,15 @@ export function AddOnDesktop({
   /** Снимки для разметки: пути из хранилища (с телефона) или файлы. */
   onPhotos: (photos: (Blob | string)[], preview: string) => void;
 }) {
-  const [session, setSession] = useState<string | null>(null);
+  const [session, setSession] = useState<{ id: string; code: string } | null>(null);
   const [state, setState] = useState<"waiting" | "shooting" | "landed">("waiting");
   // Сессию не завели - QR вести некуда; остаётся загрузка файлами.
   const [noSession, setNoSession] = useState(false);
 
   useEffect(() => {
-    void startCapture().then((id) => {
-      setSession(id);
-      setNoSession(id === null);
+    void startCapture().then((started) => {
+      setSession(started);
+      setNoSession(started === null);
     });
   }, []);
 
@@ -35,7 +35,7 @@ export function AddOnDesktop({
   useEffect(() => {
     if (!session) return;
     const tick = setInterval(async () => {
-      const read = await readCapture(session);
+      const read = await readCapture(session.id);
       if (!read) return;
       setState(read.state);
       if (read.state === "landed" && read.photos.length > 0) {
@@ -46,9 +46,9 @@ export function AddOnDesktop({
     return () => clearInterval(tick);
   }, [session, onPhotos]);
 
-  // Ссылка короткая намеренно: чем меньше знаков, тем крупнее точка кода и
-  // тем увереннее его берёт камера с расстояния.
-  const link = session ? `${window.location.origin}/?c=${session.replace(/-/g, "")}` : "";
+  // Ссылка короткая намеренно: восемь знаков кода вместо uuid - и сетка
+  // 29 на 29 вместо 49, полоски вдвое крупнее, камера берёт код увереннее.
+  const link = session ? `${window.location.origin}/?c=${session.code}` : "";
 
   return (
     <div className="sl-desk">
@@ -72,7 +72,10 @@ export function AddOnDesktop({
         <i />
         <i />
         <i />
-        <div className="sl-qr">{link && <Dots text={link} />}</div>
+        <div className="sl-qr">
+          {link && <Code text={link} />}
+          <img className="sl-qr-mark" src="/oxar-mark.webp" alt="" />
+        </div>
         <h3 className="sl-qr-title">
           {state === "shooting" ? "Shooting on your phone" : "Scan with your phone camera"}
         </h3>
@@ -111,33 +114,50 @@ export function AddOnDesktop({
 }
 
 /**
- * QR кругом, как на борде: настоящий код в центре, вокруг - точки той же
- * плотности до окружности, и квадрат кода растворяется в круге. Угловые
- * метки - кольца с точкой. Между кодом и узором вокруг - зазор в один
- * модуль: без него сканер не находит край кода (проверено - не читается). Центр закрыт кружком с «OXAR» -
- * это около 13% кода, поэтому коррекция ошибок Q (восстанавливает до 25%):
- * выше коррекция - больше модулей и мельче точки.
+ * QR в духе App Clip: код полосками, угловые метки - кольца с точкой, вокруг
+ * - штриховые кольца, в центре знак OXAR.
  *
- * Геометрия проверена декодером zxing (тем же, что в Android-сканерах) на
- * размерах от 494 до 160 px, вместе с надписью в центре.
+ * Полоски - это соседние тёмные модули строки, слитые в капсулу: форма
+ * остаётся в клетках модулей, поэтому сканер читает код как обычный.
+ * Кольца лежат за зазором в модуль от кода и в данные не попадают. Центр
+ * под знаком - около 8% кода, коррекция Q восстанавливает до 25%; дырка
+ * крупнее (13%) на сетке 29 на 29 уже ломала чтение.
+ *
+ * Проверено декодером zxing (тем же, что в Android-сканерах): короткая
+ * ссылка читается на размерах от 494 до 160 px с кольцами и знаком.
  */
-function Dots({ text }: { text: string }) {
+function Code({ text }: { text: string }) {
   const shape = useMemo(() => {
     const code = qrcode(0, "Q");
     code.addData(text);
     code.make();
-    const size = code.getModuleCount();
-    const gap = 1;
-    // Круг описывает квадрат кода с запасом; чётность подгоняется, чтобы код
-    // лёг в сетку ровно, без полумодуля.
-    let total = 2 * (Math.ceil((size / 2) * Math.SQRT2) + 2);
-    if ((total - size) % 2) total += 1;
-    const off = (total - size) / 2;
+    const n = code.getModuleCount();
     const finder = (x: number, y: number) =>
-      (x < 7 && y < 7) || (x >= size - 7 && y < 7) || (x < 7 && y >= size - 7);
+      (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
+    const half = (n / 2) * Math.SQRT2;
+    const gap = 1;
+    const rings = 3;
+    const step = 1.9;
+    const radius = half + gap + rings * step + 0.6;
+    const offset = radius - n / 2;
 
-    // Кольцо - случайное, но одно и то же для одного адреса: иначе код
-    // мерцал бы узором при каждой перерисовке.
+    // Полоски: серии тёмных модулей в строке, без угловых меток.
+    const bars: { x: number; y: number; length: number }[] = [];
+    for (let y = 0; y < n; y++) {
+      let x = 0;
+      while (x < n) {
+        if (code.isDark(y, x) && !finder(x, y)) {
+          const start = x;
+          while (x < n && code.isDark(y, x) && !finder(x, y)) x++;
+          bars.push({ x: start + offset, y: y + offset, length: x - start });
+        } else {
+          x++;
+        }
+      }
+    }
+
+    // Штрихи колец - случайные, но одни и те же для одного адреса: иначе
+    // узор мерцал бы при каждой перерисовке.
     let seed = [...text].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) >>> 0, 7);
     const random = () => {
       seed = (seed + 0x6d2b79f5) >>> 0;
@@ -146,50 +166,56 @@ function Dots({ text }: { text: string }) {
       t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
-
-    const dots: [number, number][] = [];
-    const radius = total / 2 - 0.6;
-    for (let gy = 0; gy < total; gy++) {
-      for (let gx = 0; gx < total; gx++) {
-        const cx = gx + 0.5;
-        const cy = gy + 0.5;
-        if (Math.hypot(cx - total / 2, cy - total / 2) > radius) continue;
-        const x = gx - off;
-        const y = gy - off;
-        if (x >= 0 && x < size && y >= 0 && y < size) {
-          if (!finder(x, y) && code.isDark(y, x)) dots.push([cx, cy]);
-        } else if (
-          !(x >= -gap && x < size + gap && y >= -gap && y < size + gap) &&
-          random() < 0.5
-        ) {
-          dots.push([cx, cy]);
-        }
+    const arcs: string[] = [];
+    for (let ring = 0; ring < rings; ring++) {
+      const r = half + gap + 0.5 + ring * step;
+      let a = random() * Math.PI * 2;
+      const end = a + Math.PI * 2 - 0.15;
+      while (a < end) {
+        const length = Math.min((0.18 + random() * 0.42) * (1 - 0.15 * ring), end - a);
+        if (length < 0.05) break;
+        const from = [radius + r * Math.cos(a), radius + r * Math.sin(a)];
+        const to = [radius + r * Math.cos(a + length), radius + r * Math.sin(a + length)];
+        arcs.push(
+          `M${from[0]!.toFixed(3)} ${from[1]!.toFixed(3)}A${r} ${r} 0 0 1 ${to[0]!.toFixed(3)} ${to[1]!.toFixed(3)}`,
+        );
+        a += length + 0.1 + random() * 0.12;
       }
     }
-    const finders = [
+
+    const eyes = [
       [0, 0],
-      [size - 7, 0],
-      [0, size - 7],
-    ].map(([x, y]) => [x! + off, y! + off] as const);
-    return { total, dots, finders, label: size * 0.2 };
+      [n - 7, 0],
+      [0, n - 7],
+    ].map(([x, y]) => [x! + offset + 3.5, y! + offset + 3.5] as const);
+    const hole = Math.sqrt((0.08 * n * n) / Math.PI);
+    return { size: radius * 2, bars, arcs, eyes, hole, middle: radius };
   }, [text]);
 
-  const middle = shape.total / 2;
+  const thick = 0.78;
   return (
-    <svg viewBox={`0 0 ${shape.total} ${shape.total}`} aria-label="QR code">
-      {shape.dots.map(([x, y]) => (
-        <circle key={`${x}-${y}`} cx={x} cy={y} r={0.4} fill="currentColor" />
+    <svg viewBox={`0 0 ${shape.size} ${shape.size}`} aria-label="QR code">
+      {shape.bars.map((bar) => (
+        <rect
+          key={`${bar.x}-${bar.y}`}
+          x={bar.x + (1 - thick) / 2}
+          y={bar.y + (1 - thick) / 2}
+          width={bar.length - (1 - thick)}
+          height={thick}
+          rx={thick / 2}
+          fill="currentColor"
+        />
       ))}
-      {shape.finders.map(([x, y]) => (
+      {shape.eyes.map(([x, y]) => (
         <g key={`${x}-${y}`}>
-          <circle cx={x + 3.5} cy={y + 3.5} r={3} fill="none" stroke="currentColor" strokeWidth={1} />
-          <circle cx={x + 3.5} cy={y + 3.5} r={1.5} fill="currentColor" />
+          <circle cx={x} cy={y} r={3} fill="none" stroke="currentColor" strokeWidth={1} />
+          <circle cx={x} cy={y} r={1.5} fill="currentColor" />
         </g>
       ))}
-      <circle cx={middle} cy={middle} r={shape.label} className="sl-qr-hole" />
-      <text x={middle} y={middle} className="sl-qr-word" textAnchor="middle" dominantBaseline="central">
-        OXAR
-      </text>
+      {shape.arcs.map((path) => (
+        <path key={path} d={path} fill="none" stroke="currentColor" strokeWidth={0.85} strokeLinecap="round" />
+      ))}
+      <circle cx={shape.middle} cy={shape.middle} r={shape.hole} className="sl-qr-hole" />
     </svg>
   );
 }

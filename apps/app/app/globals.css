@@ -4015,38 +4015,40 @@ input:focus {
 .sl-qr-card > i:nth-of-type(4) { right: 14px; bottom: 14px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
 
 .sl-qr {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 261px;
   height: 261px;
   margin-bottom: 12px;
-  border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--card);
   color: var(--ink);
 }
 
 .sl-qr svg {
-  width: 247px;
-  height: 247px;
+  width: 261px;
+  height: 261px;
 }
 
 .sl-qr-hole {
   fill: var(--card);
 }
 
-.sl-qr-word {
-  fill: currentColor;
-  font-size: 3.4px;
-  font-weight: 600;
+/* Знак OXAR в дырке по центру кода. */
+.sl-qr-mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  transform: translate(-50%, -50%);
 }
 
-/* В тёмной теме круг - светлый стикер с тёмными точками. Светлые точки на
-   тёмном читает не всякий сканер: встроенная камера iPhone инвертированный
-   код берёт через раз, а на проверке это значит «не работает». */
+/* В тёмной теме круг - светлый стикер с тёмным кодом. Светлый код на тёмном
+   читает не всякий сканер: встроенная камера iPhone инвертированный код
+   берёт через раз, а на проверке это значит «не работает». */
 :root[data-theme="dark"] .sl-qr {
-  border-color: transparent;
   background: #ecebe6;
   color: #16181d;
 }

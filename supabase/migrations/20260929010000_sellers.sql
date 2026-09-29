@@ -321,6 +321,9 @@ create policy "продавец кладёт снимки своей вещи" o
 -- дописывает пути снимков сюда, десктоп их подхватывает.
 create table capture_sessions (
   id uuid primary key default gen_random_uuid(),
+  -- Короткий код для QR: восемь знаков вместо uuid делают код вдвое
+  -- крупнее. Угадать чужой бесполезно - сессию видит только её владелец.
+  code text not null unique default substr(md5(random()::text || clock_timestamp()::text), 1, 8),
   owner uuid not null default auth.uid() references auth.users (id) on delete cascade,
   created_at timestamptz not null default now(),
   state text not null default 'waiting'
