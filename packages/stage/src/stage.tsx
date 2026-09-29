@@ -962,7 +962,9 @@ export function ThingStage({
               подпись выдавала бы то, что спрятано. */}
           {hovered && !ghosting
             ? (SPOTS.find((spot) => spot.code === hovered)?.label ?? "Spot")
-            : `Drag to turn the ${noun}. Tap a spot.`}
+            : SPOTS.length === 0
+              ? `Drag to turn the ${noun}.`
+              : `Drag to turn the ${noun}. Tap a spot.`}
         </span>
       )}
     </div>
