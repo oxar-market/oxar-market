@@ -22,6 +22,8 @@ export type SellerThing = {
   /** Первый снимок - обложка строки. */
   cover: string | null;
   state: ThingState;
+  /** Одобрена админом и видна на маркете. */
+  onMarket: boolean;
   spots: number;
   /** Сколько мест с открытым торгом получили хоть одну ставку. */
   bidSpots: number;
@@ -101,7 +103,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
 
   const { data: things } = await db
     .from("things")
-    .select("id, title, stage, photos, created_at, thing_spots(id), lots(id, status, closes_at)")
+    .select("id, title, stage, active, photos, created_at, thing_spots(id), lots(id, status, closes_at)")
     .eq("seller", auth.user.id)
     // Наши вещи (футболка) записаны на владельца площадки ради оценок, но
     // ведутся миграциями и скриптами, а не кабинетом.
@@ -154,6 +156,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
       title: one.title,
       cover: photos[0] ? photoUrl(photos[0]) : null,
       state,
+      onMarket: one.active,
       spots: spots.length,
       bidSpots: open.filter((lot) => bidLots.has(lot.id)).length,
       rentedSpots: new Set(rented.map((rent) => rent.spot_id)).size,
@@ -213,9 +216,9 @@ export async function sendThing(
     slug: `thing-${id.slice(0, 8)}`,
     title: `New thing No. ${number}`,
     model_url: "",
-    // Видна всем сразу: продавцов одобряем мы, по заявке. Убрать вещь с
-    // маркета может админ.
-    active: true,
+    // Скрыта, пока продавец не откроет торг и админ не одобрит её для
+    // маркета.
+    active: false,
     stage: "ready",
     seller: owner,
     seller_wallet: wallet,

@@ -14,13 +14,15 @@ import { decideSeller, loadApplications, type Application } from "@/lib/applicat
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
 
 /**
- * Админка по вещам продавцов. Вещь на маркете с момента отправки, по
- * снимкам; здесь ей дают имя, прикладывают модель и ставят на ней места.
- * «Hide from market» - если вещь там быть не должна.
+ * Админка по вещам продавцов. Вещь попадает на маркет, когда продавец
+ * открыл торг и админ её одобрил; здесь же ей дают имя, прикладывают
+ * модель и ставят на ней места.
  */
 export function Admin() {
   const [things, setThings] = useState<AdminThing[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  // Люди и вещи - разные очереди: заявки в продавцы не тонут среди вещей.
+  const [section, setSection] = useState<"people" | "things">("things");
 
   function reload() {
     void loadAdminThings().then(setThings);
@@ -32,9 +34,33 @@ export function Admin() {
     return <AdminThingView thing={thing} onBack={() => setOpen(null)} onChanged={reload} />;
   }
 
+  const sections = (
+    <div className="role-toggle slim">
+      {(["things", "people"] as const).map((one) => (
+        <button
+          key={one}
+          type="button"
+          className={section === one ? "role-tab on" : "role-tab"}
+          onClick={() => setSection(one)}
+        >
+          {one === "things" ? "Things" : "People"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (section === "people") {
+    return (
+      <>
+        {sections}
+        <Applications />
+      </>
+    );
+  }
+
   return (
     <>
-      <Applications />
+      {sections}
 
       <div className="sl-head">
         <h2>Seller things</h2>
@@ -47,9 +73,9 @@ export function Admin() {
             <button type="button" key={one.id} className="sl-thing" onClick={() => setOpen(one.id)}>
               <Thumb src={one.photos[0] ?? null} />
               <span className="sl-thing-name">{one.title}</span>
-              <span className={`sl-state ${one.active ? "live" : "idle"}`}>
+              <span className={`sl-state ${one.active ? "live" : one.published ? "rented" : "idle"}`}>
                 <i />
-                {one.active ? "ON MARKET" : "HIDDEN"}
+                {one.active ? "ON MARKET" : one.published ? "WAITING APPROVAL" : "DRAFT"}
               </span>
               <span className="sl-thing-sub">
                 {one.spots.length} spots · {one.model ? "3D" : "no 3D"}
@@ -259,13 +285,16 @@ function AdminThingView({
 
       <div className="sl-card ad-card">
         <h3>Status</h3>
+        {!thing.published && (
+          <p className="muted">The seller has not published the auction yet. Approval opens after that.</p>
+        )}
         <button
           type="button"
           className="sl-btn dark"
-          disabled={busy}
+          disabled={busy || (!thing.active && !thing.published)}
           onClick={() => run(() => updateThing(thing.id, { active: !thing.active }), "Could not change it.")}
         >
-          {thing.active ? "Hide from market" : "Show on market"}
+          {thing.active ? "Hide from market" : "Approve for the Market"}
         </button>
       </div>
 

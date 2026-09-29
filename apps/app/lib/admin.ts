@@ -17,6 +17,8 @@ export type AdminThing = {
   title: string;
   tagline: string | null;
   active: boolean;
+  /** Продавец открыл торг в цепочке: есть лот не в черновике. */
+  published: boolean;
   photos: string[];
   model: string | null;
   spots: ListedSpot[];
@@ -34,7 +36,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, photos, model_url, created_at, thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, photos, model_url, created_at, lots(status), thing_spots(${SPOT_COLUMNS})`)
     .not("seller", "is", null)
     .eq("house", false)
     .order("created_at", { ascending: false });
@@ -43,6 +45,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     title: row.title,
     tagline: row.tagline,
     active: row.active,
+    published: ((row.lots ?? []) as { status: string }[]).some((lot) => lot.status !== "draft"),
     photos: ((row.photos as string[] | null) ?? []).map(photoUrl),
     model: (row.model_url as string) || null,
     spots: listedSpots((row.thing_spots ?? []) as Parameters<typeof listedSpots>[0]),
