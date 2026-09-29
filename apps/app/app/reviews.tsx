@@ -7,8 +7,8 @@ import { loadReviews, loadScoreOf, loadSellerName, scoreText, type Review } from
 /**
  * Кто продаёт и его счёт - строкой под именем вещи. Тап открывает отзывы.
  *
- * Наши вещи подписаны «OXAR». Продавец - своим никнеймом, без него -
- * кошельком, а если нет и его - просто «Seller».
+ * Продавец подписан своим никнеймом, без него - кошельком. Если нет ни
+ * того ни другого - «OXAR» у наших вещей и «Seller» у остальных.
  */
 export function SellerLine({ seller, house }: { seller: string; house: boolean }) {
   const [score, setScore] = useState<Score | null>(null);
@@ -16,9 +16,9 @@ export function SellerLine({ seller, house }: { seller: string; house: boolean }
   const [named, setNamed] = useState<string | null>(null);
   useEffect(() => {
     void loadScoreOf(seller).then(setScore);
-    if (!house) void loadSellerName(seller).then(setNamed);
-  }, [seller, house]);
-  const name = house ? "OXAR" : (named ?? "Seller");
+    void loadSellerName(seller).then(setNamed);
+  }, [seller]);
+  const name = named ?? (house ? "OXAR" : "Seller");
 
   return (
     <>
