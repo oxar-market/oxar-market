@@ -4806,3 +4806,15 @@ input:focus {
   font-style: normal;
   opacity: 0.25;
 }
+
+/* Заявка в продавцы на вкладке You. */
+.apply {
+  display: grid;
+  gap: 12px;
+}
+
+.ad-decide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}

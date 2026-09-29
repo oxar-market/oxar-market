@@ -12,6 +12,7 @@ import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
 import { amIAdmin } from "@/lib/admin";
 import { Admin } from "./admin/admin.tsx";
+import { SellerApply } from "./seller/apply.tsx";
 import { loadScoreOf, scoreText } from "@/lib/reviews";
 import type { Score } from "@/lib/seller";
 
@@ -24,9 +25,6 @@ import type { Score } from "@/lib/seller";
  * либо создан Privy при входе почтой, либо это его собственный Phantom.
  * Путаница здесь стоила бы доверия, поэтому подпись говорит это прямо.
  */
-
-/** Куда зовёт разговор. Тот же адрес, что был в прошлой версии продукта. */
-const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
 export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => void }) {
   const { user, logout } = usePrivy();
@@ -383,15 +381,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
             and comes back if someone outbids you.
           </p>
         ) : (
-          <>
-            <p className="role-note">
-              Want your thing here? The first auctions are run by us - book a
-              call.
-            </p>
-            <a className="primary center" href={CALL_URL} target="_blank" rel="noreferrer">
-              Book a call
-            </a>
-          </>
+          <SellerApply wallet={wallet ?? null} />
         )}
       </div>
       )}
