@@ -2,21 +2,23 @@
 
 import { useEffect, useState } from "react";
 import type { Score } from "@/lib/seller";
-import { loadReviews, loadScoreOf, scoreText, type Review } from "@/lib/reviews";
+import { loadReviews, loadScoreOf, loadSellerName, scoreText, type Review } from "@/lib/reviews";
 
 /**
  * Кто продаёт и его счёт - строкой под именем вещи. Тап открывает отзывы.
  *
- * Имени у продавца пока нет: наши вещи подписаны «OXAR», остальные -
- * «Seller». Счёт и отзывы при этом настоящие, из базы.
+ * Наши вещи подписаны «OXAR». Продавец - своим никнеймом, без него -
+ * кошельком, а если нет и его - просто «Seller».
  */
 export function SellerLine({ seller, house }: { seller: string; house: boolean }) {
   const [score, setScore] = useState<Score | null>(null);
   const [open, setOpen] = useState(false);
+  const [named, setNamed] = useState<string | null>(null);
   useEffect(() => {
     void loadScoreOf(seller).then(setScore);
-  }, [seller]);
-  const name = house ? "OXAR" : "Seller";
+    if (!house) void loadSellerName(seller).then(setNamed);
+  }, [seller, house]);
+  const name = house ? "OXAR" : (named ?? "Seller");
 
   return (
     <>
