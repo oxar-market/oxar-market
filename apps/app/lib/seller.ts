@@ -597,3 +597,13 @@ export async function loadDealsToRate(
   }
   return out;
 }
+
+/**
+ * Удалить свою вещь целиком, пока торг не открыт: снимки остаются файлами,
+ * а вещь, места и черновики цен уходят. После публикации база откажет.
+ */
+export async function deleteThing(thingId: string): Promise<boolean> {
+  if (!db) return false;
+  const { data, error } = await db.rpc("seller_deletes_thing", { thing: thingId });
+  return !error && data === true;
+}

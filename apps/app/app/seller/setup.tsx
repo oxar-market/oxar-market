@@ -32,9 +32,12 @@ export function SetUpSpots({
   publishing,
   failed,
   problem,
+  onDelete,
 }: {
   thing: PricingThing;
   onBack: () => void;
+  /** Удалить вещь целиком - пока торг не открыт. */
+  onDelete: () => Promise<boolean>;
   onPublish: (plans: { spotId: string; plan: SpotPlan }[]) => void;
   publishing: boolean;
   failed: boolean;
@@ -42,6 +45,8 @@ export function SetUpSpots({
   problem?: string;
 }) {
   const [drafts, setDrafts] = useState<Draft[]>(() => thing.spots.map(fresh));
+  // Удаление в два касания: первое спрашивает, второе удаляет.
+  const [removing, setRemoving] = useState<"idle" | "ask" | "busy" | "failed">("idle");
 
   function patch(index: number, change: Partial<Draft>) {
     setDrafts((was) => was.map((one, at) => (at === index ? { ...one, ...change } : one)));
@@ -132,6 +137,24 @@ export function SetUpSpots({
           {publishing ? "Publishing…" : "Publish"}
         </button>
       </div>
+
+      <button
+        type="button"
+        className="sl-copy"
+        disabled={removing === "busy" || publishing}
+        onClick={async () => {
+          if (removing !== "ask") return setRemoving("ask");
+          setRemoving("busy");
+          if (!(await onDelete())) setRemoving("failed");
+        }}
+      >
+        {removing === "ask"
+          ? "Tap again to delete this thing"
+          : removing === "busy"
+            ? "Deleting…"
+            : "Delete this thing"}
+      </button>
+      {removing === "failed" && <p className="bad">Could not delete it. Try again.</p>}
     </>
   );
 }
