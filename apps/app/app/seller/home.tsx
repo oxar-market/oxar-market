@@ -212,7 +212,7 @@ function NameCard() {
       </p>
       <button
         type="submit"
-        className="sl-btn"
+        className="sl-btn light"
         disabled={!value.trim() || value.trim() === saved || state === "saving"}
       >
         {state === "saving" ? "Saving…" : "Save name"}
