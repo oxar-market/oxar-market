@@ -115,6 +115,16 @@ function openLot(
 export type Signer = (transaction: VersionedTransaction) => Promise<Uint8Array>;
 
 /**
+ * Сколько мест в каждом торге: места с одним сроком закрытия идут одним
+ * торгом, с разными - разными (как их и открывает publishAuctions).
+ */
+export function spotsPerSale(closesAt: string[]): number[] {
+  const bySale = new Map<string, number>();
+  for (const at of closesAt) bySale.set(at, (bySale.get(at) ?? 0) + 1);
+  return [...bySale.values()];
+}
+
+/**
  * Открыть в цепочке все черновики лотов вещи и отметить их открытыми.
  *
  * Возвращает, сколько мест открыто, или null при сбое. Лот, открытый в
