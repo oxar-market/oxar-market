@@ -53,6 +53,8 @@ export type Score = { rating: number | null; deals: number };
 
 /** Публичный адрес снимка в хранилище. */
 export function photoUrl(path: string): string {
+  // Снимки наших вещей лежат в самом приложении: путь от корня.
+  if (path.startsWith("/")) return path;
   if (!db) return path;
   return db.storage.from("things").getPublicUrl(path).data.publicUrl;
 }
