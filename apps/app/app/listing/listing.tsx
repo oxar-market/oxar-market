@@ -7,6 +7,7 @@ import { loadBids, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
+import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
 
 /**
@@ -226,22 +227,16 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   <button
                     type="button"
                     key={spot.code}
-                    className={spot.code === picked ? "sl-spot ls-spot on" : "sl-spot ls-spot"}
-                    style={{
-                      left: `${spot.rect.x * 100}%`,
-                      top: `${spot.rect.y * 100}%`,
-                      width: `${spot.rect.w * 100}%`,
-                      height: `${spot.rect.h * 100}%`,
-                    }}
+                    className={[
+                      "sl-spot ls-spot",
+                      spot.outline ? "shaped" : "",
+                      spot.code === picked ? "on" : "",
+                    ].join(" ")}
+                    style={spotBox(spot.rect)}
                     aria-label={spot.label}
                     onClick={() => setPicked(spot.code)}
                   >
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                    {url && <img src={url} alt="" />}
-                    <b>{index + 1}</b>
+                    <SpotInside rect={spot.rect} outline={spot.outline} number={index + 1} art={url} />
                   </button>
                 );
               })}

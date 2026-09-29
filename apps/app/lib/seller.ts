@@ -14,8 +14,8 @@ import { db } from "./session.ts";
 /** Прямоугольник места на снимке: доли сторон кадра, от левого верхнего. */
 export type Rect = { x: number; y: number; w: number; h: number };
 
-/** Место, размеченное на снимке: номер снимка и доли его сторон. */
-export type Marked = Rect & { photo: number };
+/** Место, размеченное на снимке: номер снимка, описанная рамка и контур. */
+export type Marked = Rect & { photo: number; outline?: [number, number][] };
 
 export type ThingState = "live" | "ended" | "rented" | "idle" | "preparing";
 
@@ -239,12 +239,13 @@ export async function sendThing(
   if (thingError) return false;
 
   const { error: spotError } = await db.from("thing_spots").insert(
-    spots.map(({ photo, ...rect }, at) => ({
+    spots.map(({ photo, outline, ...rect }, at) => ({
       thing_id: id,
       code: `spot_${at + 1}`,
       label: `Spot ${at + 1}`,
       sort: at + 1,
       photo,
+      outline: outline ?? null,
       ...rect,
     })),
   );
