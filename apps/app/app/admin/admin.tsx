@@ -10,6 +10,7 @@ import {
   type AdminThing,
 } from "@/lib/admin";
 import { shapeOf } from "@/lib/listing";
+import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
 
 /**
@@ -33,6 +34,8 @@ export function Admin() {
 
   return (
     <>
+      <Applications />
+
       <div className="sl-head">
         <h2>Seller things</h2>
         <span>{things?.length ?? ""}</span>
@@ -290,4 +293,63 @@ function emptyShape(model: string) {
 
 function round(value: number): number {
   return Math.round(value * 1000) / 1000;
+}
+
+/** Заявки в продавцы: одобрить - и у человека появляется вкладка Seller. */
+function Applications() {
+  const [list, setList] = useState<Application[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  function reload() {
+    void loadApplications().then(setList);
+  }
+  useEffect(reload, []);
+
+  async function decide(userId: string, approve: boolean) {
+    setBusy(userId);
+    setFailed(false);
+    const ok = await decideSeller(userId, approve);
+    setBusy(null);
+    if (!ok) setFailed(true);
+    reload();
+  }
+
+  return (
+    <>
+      <div className="sl-head">
+        <h2>Seller applications</h2>
+        <span>{list?.length ?? ""}</span>
+      </div>
+      {list?.length === 0 && <p className="muted">No applications waiting.</p>}
+      {failed && <p className="bad">Could not save the decision. Try again.</p>}
+      {list?.map((one) => (
+        <div className="sl-card ad-card" key={one.userId}>
+          <b>{one.contact}</b>
+          {one.about && <p className="muted">{one.about}</p>}
+          <p className="muted mono">
+            {one.wallet ?? "no wallet"} ·{" "}
+            {new Date(one.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </p>
+          <div className="ad-decide">
+            <button
+              type="button"
+              className="sl-btn light"
+              disabled={busy === one.userId}
+              onClick={() => decide(one.userId, false)}
+            >
+              Decline
+            </button>
+            <button
+              type="button"
+              className="sl-btn dark"
+              disabled={busy === one.userId}
+              onClick={() => decide(one.userId, true)}
+            >
+              Approve
+            </button>
+          </div>
+        </div>
+      ))}
+    </>
+  );
 }
