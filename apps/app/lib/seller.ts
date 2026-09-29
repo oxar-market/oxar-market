@@ -17,7 +17,7 @@ export type Rect = { x: number; y: number; w: number; h: number };
 /** Место, размеченное на снимке: номер снимка, описанная рамка и контур. */
 export type Marked = Rect & { photo: number; outline?: [number, number][] };
 
-export type ThingState = "live" | "ended" | "rented" | "idle" | "preparing";
+export type ThingState = "declined" | "live" | "ended" | "rented" | "idle" | "preparing";
 
 export type SellerThing = {
   id: string;
@@ -29,6 +29,8 @@ export type SellerThing = {
   wonSpots: number;
   /** Одобрена админом и видна на маркете. */
   onMarket: boolean;
+  /** Отклонена админом - и почему. */
+  declinedReason: string | null;
   spots: number;
   /** Сколько мест с открытым торгом получили хоть одну ставку. */
   bidSpots: number;
@@ -108,7 +110,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
 
   const { data: things } = await db
     .from("things")
-    .select("id, title, stage, active, photos, created_at, thing_spots(id), lots(id, status, closes_at)")
+    .select("id, title, stage, active, declined_reason, photos, created_at, thing_spots(id), lots(id, status, closes_at)")
     .eq("seller", auth.user.id)
     // Наши вещи (футболка) записаны на владельца площадки ради оценок, но
     // ведутся миграциями и скриптами, а не кабинетом.
@@ -150,7 +152,9 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
     const rented = (rents ?? []).filter((rent) => mine.has(rent.spot_id));
     const photos = (one.photos as string[] | null) ?? [];
     const state: ThingState =
-      one.stage === "preparing"
+      one.declined_reason
+        ? "declined"
+        : one.stage === "preparing"
         ? "preparing"
         : open.length > 0
           ? "live"
@@ -166,6 +170,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
       state,
       wonSpots: closed.filter((lot) => lot.status === "won").length,
       onMarket: one.active,
+      declinedReason: one.declined_reason ?? null,
       spots: spots.length,
       bidSpots: open.filter((lot) => bidLots.has(lot.id)).length,
       rentedSpots: new Set(rented.map((rent) => rent.spot_id)).size,

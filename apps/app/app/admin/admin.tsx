@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ThingStage, type Stage } from "@oxar/stage";
 import {
+  awaitsReview,
+  reviewThing,
   loadAdminThings,
   loadHouseThings,
   saveSpotGeo,
@@ -25,11 +27,15 @@ export function Admin() {
   const [open, setOpen] = useState<string | null>(null);
   // Люди и вещи - разные очереди: заявки в продавцы не тонут среди вещей.
   const [section, setSection] = useState<"people" | "things">("things");
+  // Сколько ждут решения - число на вкладке, чтобы было видно, есть ли дело.
+  const [people, setPeople] = useState(0);
 
   function reload() {
     void loadAdminThings().then(setThings);
+    void loadApplications().then((list) => setPeople(list.length));
   }
   useEffect(reload, []);
+  const toReview = (things ?? []).filter(awaitsReview).length;
 
   const thing = things?.find((one) => one.id === open);
   if (thing) {
@@ -46,6 +52,9 @@ export function Admin() {
           onClick={() => setSection(one)}
         >
           {one === "things" ? "Things" : "People"}
+          {(one === "things" ? toReview : people) > 0 && (
+            <span className="ad-count">{one === "things" ? toReview : people}</span>
+          )}
         </button>
       ))}
     </div>
@@ -55,7 +64,7 @@ export function Admin() {
     return (
       <>
         {sections}
-        <Applications />
+        <Applications onChanged={reload} />
       </>
     );
   }
@@ -77,9 +86,17 @@ export function Admin() {
             <button type="button" key={one.id} className="sl-thing" onClick={() => setOpen(one.id)}>
               <Thumb src={one.photos[0] ?? null} />
               <span className="sl-thing-name">{one.title}</span>
-              <span className={`sl-state ${one.active ? "live" : one.published ? "rented" : "idle"}`}>
+              <span
+                className={`sl-state ${one.active ? "live" : one.declinedReason ? "declined" : "preparing"}`}
+              >
                 <i />
-                {one.active ? "ON MARKET" : one.published ? "WAITING APPROVAL" : "DRAFT"}
+                {one.active
+                  ? "ON MARKET"
+                  : one.declinedReason
+                    ? "DECLINED"
+                    : one.published
+                      ? "PUBLISHED - REVIEW"
+                      : "TO REVIEW"}
               </span>
               <span className="sl-thing-sub">
                 {one.spots.length} spots · {one.model ? "3D" : "no 3D"}
@@ -108,6 +125,7 @@ function AdminThingView({
   const [tagline, setTagline] = useState(thing.tagline ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
   const [picked, setPicked] = useState(
     () => (thing.spots.find((spot) => !spot.geo) ?? thing.spots[0])?.code ?? null,
   );
@@ -289,18 +307,60 @@ function AdminThingView({
       </div>
 
       <div className="sl-card ad-card">
-        <h3>Status</h3>
-        {!thing.published && (
-          <p className="muted">The seller has not published the auction yet. Approval opens after that.</p>
+        <h3>Review</h3>
+        {thing.active ? (
+          <p className="muted">Approved. It shows on the Market while its auction is open.</p>
+        ) : thing.declinedReason ? (
+          <p className="muted">Declined: {thing.declinedReason}</p>
+        ) : (
+          <p className="muted">
+            {thing.published
+              ? "The seller published the auction. Approve it to show it on the Market."
+              : "Not published yet. Approve now and it shows on the Market once the seller publishes."}
+          </p>
         )}
-        <button
-          type="button"
-          className="sl-btn dark"
-          disabled={busy || (!thing.active && !thing.published)}
-          onClick={() => run(() => updateThing(thing.id, { active: !thing.active }), "Could not change it.")}
-        >
-          {thing.active ? "Hide from market" : "Approve for the Market"}
-        </button>
+        {!thing.active && (
+          <button
+            type="button"
+            className="sl-btn dark"
+            disabled={busy}
+            onClick={() => run(() => reviewThing(thing.id, true), "Could not approve it.")}
+          >
+            Approve
+          </button>
+        )}
+        {thing.active && (
+          <button
+            type="button"
+            className="sl-btn light"
+            disabled={busy}
+            onClick={() => run(() => updateThing(thing.id, { active: false }), "Could not hide it.")}
+          >
+            Hide from market
+          </button>
+        )}
+        {!thing.declinedReason && (
+          <>
+            <label className="sl-field ad-reason">
+              Reason to decline - the seller sees it
+              <textarea
+                value={reason}
+                maxLength={500}
+                rows={3}
+                placeholder="The spots are on a curved part, logos would not print well."
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="sl-btn light"
+              disabled={busy || reason.trim().length < 3}
+              onClick={() => run(() => reviewThing(thing.id, false, reason.trim()), "Could not decline it.")}
+            >
+              Decline
+            </button>
+          </>
+        )}
       </div>
 
       {error && <p className="bad">{error}</p>}
@@ -330,7 +390,7 @@ function round(value: number): number {
 }
 
 /** Заявки в продавцы: одобрить - и у человека появляется вкладка Seller. */
-function Applications() {
+function Applications({ onChanged }: { onChanged: () => void }) {
   const [list, setList] = useState<Application[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -346,6 +406,7 @@ function Applications() {
     setBusy(null);
     if (!ok) setFailed(true);
     reload();
+    onChanged();
   }
 
   return (

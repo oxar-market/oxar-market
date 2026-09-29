@@ -50,7 +50,8 @@ type View =
   | { name: "setup"; thing: PricingThing }
   | { name: "request"; request: SellerRequest }
   | { name: "rate"; deal: DealToRate }
-  | { name: "winners"; thing: SellerThing };
+  | { name: "winners"; thing: SellerThing }
+  | { name: "declined"; thing: SellerThing };
 
 /**
  * Кабинет продавца целиком: главный экран и шаги поверх него. Шаги - это
@@ -252,6 +253,18 @@ export function SellerFlow({
           }}
         />
       );
+    case "declined":
+      return column(
+        <Declined
+          thing={view.thing}
+          onBack={home}
+          onDelete={async () => {
+            const ok = await deleteThing(view.thing.id);
+            if (ok) home();
+            return ok;
+          }}
+        />,
+      );
     case "winners":
       return column(
         <>
@@ -272,6 +285,7 @@ export function SellerFlow({
           <SellerHome
             onReviews={() => setReviews(true)}
             onWinners={(thing) => go({ name: "winners", thing })}
+            onDeclined={(thing) => go({ name: "declined", thing })}
             score={score}
             requests={requests}
             toRate={toRate}
@@ -367,5 +381,45 @@ export function BuyerRating({ deal, onDone }: { deal: DealToRate; onDone: () => 
         else setFailed(true);
       }}
     />
+  );
+}
+
+/** Отклонённая вещь: почему - словами админа, и что с ней можно сделать. */
+function Declined({
+  thing,
+  onBack,
+  onDelete,
+}: {
+  thing: SellerThing;
+  onBack: () => void;
+  onDelete: () => Promise<boolean>;
+}) {
+  const [state, setState] = useState<"idle" | "ask" | "busy" | "failed">("idle");
+  return (
+    <>
+      <Bar title="Not approved" onBack={onBack} />
+      <div className="sl-card ad-card">
+        <h3>{thing.title}</h3>
+        <p className="muted">We did not approve this thing for the Market:</p>
+        <p>{thing.declinedReason}</p>
+        <p className="muted">
+          It cannot be published. Delete it and send the thing again with the
+          fix.
+        </p>
+      </div>
+      <button
+        type="button"
+        className="sl-btn light"
+        disabled={state === "busy"}
+        onClick={async () => {
+          if (state !== "ask") return setState("ask");
+          setState("busy");
+          if (!(await onDelete())) setState("failed");
+        }}
+      >
+        {state === "ask" ? "Tap again to delete" : state === "busy" ? "Deleting…" : "Delete this thing"}
+      </button>
+      {state === "failed" && <p className="bad">Could not delete it. Try again.</p>}
+    </>
   );
 }

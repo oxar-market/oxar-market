@@ -26,6 +26,7 @@ export function SellerHome({
   onOpen,
   onReviews,
   onWinners,
+  onDeclined,
 }: {
   score: Score;
   requests: SellerRequest[];
@@ -40,6 +41,8 @@ export function SellerHome({
   onReviews: () => void;
   /** Закончившийся торг: логотипы победителей. */
   onWinners: (thing: SellerThing) => void;
+  /** Отклонённая вещь: причина и удаление. */
+  onDeclined: (thing: SellerThing) => void;
 }) {
   const first = requests[0];
   return (
@@ -111,7 +114,13 @@ export function SellerHome({
               // той же страницей, что у покупателей.
               disabled={one.state === "preparing" || one.state === "rented"}
               onClick={() =>
-                one.state === "live" ? onOpen(one.id) : one.state === "ended" ? onWinners(one) : onSetup(one.id)
+                one.state === "live"
+                  ? onOpen(one.id)
+                  : one.state === "ended"
+                    ? onWinners(one)
+                    : one.state === "declined"
+                      ? onDeclined(one)
+                      : onSetup(one.id)
               }
             >
               <Thumb src={one.cover} holo={one.state === "preparing"} />
@@ -139,6 +148,7 @@ export function SellerHome({
 }
 
 const LABEL = {
+  declined: "DECLINED",
   live: "LIVE AUCTION",
   ended: "ENDED",
   rented: "RENTED",
@@ -152,6 +162,8 @@ function line(one: SellerThing, now: number): string {
       return one.onMarket
         ? `Closes in ${clock(Date.parse(one.closesAt ?? "") - now)} · ${one.bidSpots} of ${one.spots} spots bid`
         : "Published. Waiting for our approval to show on the Market";
+    case "declined":
+      return `Not approved: ${one.declinedReason ?? ""}`;
     case "ended":
       return one.wonSpots > 0
         ? `Auction ended · ${one.wonSpots} of ${one.spots} spots won · Get the logos`
