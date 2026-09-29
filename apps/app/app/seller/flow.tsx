@@ -12,6 +12,7 @@ import {
   answerRequest,
   landCapture,
   loadDealsToRate,
+  deleteThing,
   loadPricingThing,
   loadSellerRequests,
   loadSellerScore,
@@ -158,6 +159,11 @@ export function SellerFlow({
           publishing={busy}
           failed={failed}
           problem={problem}
+          onDelete={async () => {
+            const ok = await deleteThing(view.thing.id);
+            if (ok) home();
+            return ok;
+          }}
           onPublish={async (plans) => {
             setBusy(true);
             setFailed(false);
