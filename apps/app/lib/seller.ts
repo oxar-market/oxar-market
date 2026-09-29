@@ -257,20 +257,29 @@ export type PricingThing = {
   id: string;
   title: string;
   cover: string | null;
-  spots: { id: string; label: string; rect: Rect | null; photo: number }[];
+  /** Все снимки вещи: на экране цен места видны каждое на своём. */
+  photos: string[];
+  spots: {
+    id: string;
+    label: string;
+    rect: Rect | null;
+    photo: number;
+    outline: [number, number][] | null;
+  }[];
 };
 
 export async function loadPricingThing(thingId: string): Promise<PricingThing | null> {
   if (!db) return null;
   const { data } = await db
     .from("things")
-    .select("id, title, photos, thing_spots(id, label, sort, photo, x, y, w, h)")
+    .select("id, title, photos, thing_spots(id, label, sort, photo, outline, x, y, w, h)")
     .eq("id", thingId)
     .maybeSingle();
   if (!data) return null;
   const photos = (data.photos as string[] | null) ?? [];
   const spots = ((data.thing_spots as {
     id: string; label: string; sort: number; photo: number | null;
+    outline: [number, number][] | null;
     x: number | null; y: number | null; w: number | null; h: number | null;
   }[] | null) ?? [])
     .sort((a, b) => a.sort - b.sort)
@@ -278,6 +287,7 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
       id: spot.id,
       label: spot.label,
       photo: spot.photo ?? 0,
+      outline: spot.outline ?? null,
       rect:
         spot.x === null || spot.y === null || spot.w === null || spot.h === null
           ? null
@@ -287,6 +297,7 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
     id: data.id,
     title: data.title,
     cover: photos[0] ? photoUrl(photos[0]) : null,
+    photos: photos.map(photoUrl),
     spots,
   };
 }
