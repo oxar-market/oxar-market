@@ -165,10 +165,9 @@ function AdminThingView({
         {thing.photos.map((url, index) => (
           <div className="sl-photo" key={url}>
             <img src={url} alt="" />
-            {index === 0 &&
-              thing.spots.map((one, at) =>
-                one.rect ? <SpotMark key={one.id} rect={one.rect} number={at + 1} /> : null,
-              )}
+            {thing.spots.map((one, at) =>
+              one.rect && one.photo === index ? <SpotMark key={one.id} rect={one.rect} number={at + 1} /> : null,
+            )}
           </div>
         ))}
       </div>

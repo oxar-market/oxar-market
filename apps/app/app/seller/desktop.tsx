@@ -17,7 +17,7 @@ export function AddOnDesktop({
 }: {
   onBack: () => void;
   /** Снимки для разметки: пути из хранилища (с телефона) или файлы. */
-  onPhotos: (photos: (Blob | string)[], preview: string) => void;
+  onPhotos: (photos: (Blob | string)[], previews: string[]) => void;
 }) {
   const [session, setSession] = useState<{ id: string; secret: string } | null>(null);
   const [state, setState] = useState<"waiting" | "shooting" | "landed">("waiting");
@@ -40,7 +40,7 @@ export function AddOnDesktop({
       setState(read.state);
       if (read.state === "landed" && read.photos.length > 0) {
         clearInterval(tick);
-        onPhotos(read.photos, photoUrl(read.photos[0]!));
+        onPhotos(read.photos, read.photos.map(photoUrl));
       }
     }, 2000);
     return () => clearInterval(tick);
@@ -102,7 +102,7 @@ export function AddOnDesktop({
                 const files = [...(event.target.files ?? [])].slice(0, 3);
                 if (files.length === 0) return;
                 const cropped = await Promise.all(files.map(toPortrait));
-                onPhotos(cropped, URL.createObjectURL(cropped[0]!));
+                onPhotos(cropped, cropped.map((one) => URL.createObjectURL(one)));
               }}
             />
           </label>
