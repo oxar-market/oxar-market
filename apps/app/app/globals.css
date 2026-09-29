@@ -4946,3 +4946,59 @@ input:focus {
   gap: 10px;
   width: 100%;
 }
+
+/* Обведённое место: заливка и обводка - сама фигура, а не рамка. */
+.sl-spot.shaped {
+  background: transparent;
+}
+
+.sl-spot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sl-spot svg polygon,
+.sl-spot svg polyline {
+  fill: color-mix(in srgb, #e0381c 14%, transparent);
+  stroke: #e0381c;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-spot.shaped img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Контур, который ведут прямо сейчас: линия поверх снимка. */
+.sl-draft {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.sl-draft polyline {
+  fill: color-mix(in srgb, #e0381c 10%, transparent);
+  stroke: #e0381c;
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Выбранное обведённое место: подсвечивается сама фигура, а не рамка. */
+.sl-spot.ls-spot.shaped.on {
+  outline: none;
+}
+
+.sl-spot.ls-spot.shaped.on svg polygon {
+  fill: color-mix(in srgb, #e0381c 26%, transparent);
+  stroke-width: 3px;
+}

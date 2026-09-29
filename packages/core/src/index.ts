@@ -26,3 +26,12 @@ export {
 } from "./money.ts";
 
 export { AVATAR_TONES, avatarLetter, avatarTone } from "./avatar.ts";
+
+export {
+  OUTLINE_MAX,
+  outlineBox,
+  outlineInBox,
+  simplifyOutline,
+  type Box,
+  type Point,
+} from "./outline.ts";

@@ -1,5 +1,6 @@
 "use client";
 
+import { outlineInBox } from "@oxar/core";
 import type { Rect } from "@/lib/seller";
 
 /** Шапка шага: «Back» слева, заголовок по центру, счётчик шагов справа. */
@@ -27,32 +28,69 @@ export function Bar({
   );
 }
 
-/** Место на снимке: розовая заливка, красные уголки, номер в углу. */
-export function SpotMark({
+/** Где место стоит на снимке: его описанная рамка в процентах кадра. */
+export function spotBox(rect: Rect): React.CSSProperties {
+  return {
+    left: `${rect.x * 100}%`,
+    top: `${rect.y * 100}%`,
+    width: `${rect.w * 100}%`,
+    height: `${rect.h * 100}%`,
+  };
+}
+
+/**
+ * Что внутри рамки места. Обведённое место - фигура по контуру, и логотип
+ * в ней обрезан по той же фигуре; место-прямоугольник - красные уголки.
+ */
+export function SpotInside({
   rect,
+  outline,
   number,
   art,
 }: {
   rect: Rect;
+  outline?: [number, number][] | null;
+  number: number;
+  art?: string;
+}) {
+  const shape = outline ? outlineInBox(outline, rect) : null;
+  const points = shape?.map(([x, y]) => `${x},${y}`).join(" ");
+  const clip = shape ? `polygon(${shape.map(([x, y]) => `${x}% ${y}%`).join(", ")})` : undefined;
+  return (
+    <>
+      {shape ? (
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+          <polygon points={points} />
+        </svg>
+      ) : (
+        <>
+          <i />
+          <i />
+          <i />
+          <i />
+        </>
+      )}
+      {art && <img src={art} alt="" style={clip ? { clipPath: clip } : undefined} />}
+      <b>{number}</b>
+    </>
+  );
+}
+
+/** Место на снимке: розовая заливка, красные уголки или контур, номер. */
+export function SpotMark({
+  rect,
+  outline,
+  number,
+  art,
+}: {
+  rect: Rect;
+  outline?: [number, number][] | null;
   number: number;
   art?: string;
 }) {
   return (
-    <span
-      className="sl-spot"
-      style={{
-        left: `${rect.x * 100}%`,
-        top: `${rect.y * 100}%`,
-        width: `${rect.w * 100}%`,
-        height: `${rect.h * 100}%`,
-      }}
-    >
-      <i />
-      <i />
-      <i />
-      <i />
-      {art && <img src={art} alt="" />}
-      <b>{number}</b>
+    <span className={outline ? "sl-spot shaped" : "sl-spot"} style={spotBox(rect)}>
+      <SpotInside rect={rect} outline={outline} number={number} art={art} />
     </span>
   );
 }
