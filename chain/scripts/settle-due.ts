@@ -23,6 +23,7 @@
 import * as anchor from "@anchor-lang/core";
 import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import {
+  createAssociatedTokenAccountIdempotentInstruction,
   createTransferCheckedInstruction,
   getAccount,
   getAssociatedTokenAddressSync,
@@ -87,9 +88,10 @@ async function main() {
   // Просроченные по часам базы. Решают часы цепи, ниже: ставка могла продлить
   // торг, и тогда цепь ещё открыта, что бы ни думала база.
   // Выручка продавца не задерживается на рабочем ключе: всё, что лежит на
-  // его счёте в монете площадки, уезжает в кассу. Продавец первых торгов -
-  // рабочий ключ, и без этого шага его выручка ждала бы ручного перегона;
-  // комиссия и так приходит в кассу самими выплатами. Смётся и при пустом
+  // его счёте в монете площадки, уезжает владельцу - админу настроек
+  // площадки. Продавец наших торгов (футболка) - рабочий ключ, и без этого
+  // шага его 90% ждали бы ручного перегона. Комиссия сюда не попадает: она
+  // приходит на кошелёк комиссии самими выплатами. Смётся и при пустом
   // разборе - хвосты не должны зависеть от того, был ли сегодня торг.
   async function sweepProceeds() {
     const [configPda] = PublicKey.findProgramAddressSync(
@@ -105,7 +107,7 @@ async function main() {
     const amount = (await getAccount(connection, from)).amount;
     if (amount === 0n) return;
 
-    const to = getAssociatedTokenAddressSync(config.mint, config.platform);
+    const to = getAssociatedTokenAddressSync(config.mint, config.admin);
     const { decimals } = await getMint(connection, config.mint);
     const signature = await provider.sendAndConfirm(
       new Transaction().add(
@@ -120,7 +122,7 @@ async function main() {
       ),
     );
     console.log(
-      `выручка: $${(Number(amount) / 10 ** decimals).toFixed(2)} → касса, ${signature}`,
+      `выручка: $${(Number(amount) / 10 ** decimals).toFixed(2)} → владелец ${config.admin.toBase58()}, ${signature}`,
     );
   }
 
@@ -163,6 +165,17 @@ async function main() {
         lot.topBidder !== null &&
         BigInt(lot.topBid.toString()) >= BigInt(lot.reserve.toString());
 
+      // Программа платит на готовый счёт продавца в монете торга и сама его
+      // не заводит. У свежего кошелька (Privy или внешнего, которым продавец
+      // только подписал открытие) такого счёта может не быть, и выплата
+      // падала бы. Заводим его сами, если нет; если есть - инструкция пустая.
+      const sellerTokens = createAssociatedTokenAccountIdempotentInstruction(
+        crank.publicKey,
+        getAssociatedTokenAddressSync(lot.mint, sale.seller),
+        sale.seller,
+        lot.mint,
+      );
+
       if (won) {
         const signature = await program.methods
           .lotPaysSeller()
@@ -175,6 +188,7 @@ async function main() {
             mint: lot.mint,
             tokenProgram: TOKEN_PROGRAM_ID,
           })
+          .preInstructions([sellerTokens])
           .rpc();
         await rest(`lots?id=eq.${row.id}`, {
           method: "PATCH",
@@ -193,6 +207,7 @@ async function main() {
             mint: lot.mint,
             tokenProgram: TOKEN_PROGRAM_ID,
           })
+          .preInstructions([sellerTokens])
           .rpc();
         await rest(`lots?id=eq.${row.id}`, {
           method: "PATCH",
