@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Rect } from "@/lib/seller";
 import { Bar, SpotMark } from "./parts.tsx";
 
@@ -29,6 +29,24 @@ export function MarkSpots({
   const [spots, setSpots] = useState<Rect[]>([]);
   const [draft, setDraft] = useState<Rect | null>(null);
   const from = useRef<{ x: number; y: number } | null>(null);
+
+  // Рамку тянут пальцем, часто от левого края - а там же живёт жест
+  // «назад» браузера (Safari, встроенные браузеры кошельков). touch-action
+  // его не останавливает; останавливает только отменённое касание, а
+  // слушатели касаний в React пассивные и отменить не могут. Поэтому свой,
+  // непассивный. События указателя, по которым рисуется рамка, при этом
+  // приходят как прежде.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const stop = (event: TouchEvent) => event.preventDefault();
+    el.addEventListener("touchstart", stop, { passive: false });
+    el.addEventListener("touchmove", stop, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", stop);
+      el.removeEventListener("touchmove", stop);
+    };
+  }, []);
 
   function at(event: React.PointerEvent): { x: number; y: number } {
     const frame = box.current!.getBoundingClientRect();
