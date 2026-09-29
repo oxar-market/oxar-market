@@ -4553,3 +4553,14 @@ input:focus {
   left: 50%;
   right: 0;
 }
+
+/* Шаги кабинета продавца - колонкой по центру, как экран QR на десктопе. */
+.sl-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.875rem;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+}

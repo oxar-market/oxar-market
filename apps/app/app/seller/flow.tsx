@@ -101,6 +101,10 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
     [],
   );
 
+  // Шаги со своей шапкой живут колонкой, как экран QR на десктопе: на
+  // широком экране форма в полэкрана читается хуже, чем в телефоне.
+  const column = (content: React.ReactNode) => <div className="sl-column">{content}</div>;
+
   switch (view.name) {
     case "camera":
       return (
@@ -114,7 +118,7 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
     case "desktop":
       return <AddOnDesktop onBack={home} onPhotos={onPhotos} />;
     case "mark":
-      return (
+      return column(
         <MarkSpots
           photo={view.preview}
           onBack={home}
@@ -130,9 +134,9 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
         />
       );
     case "sent":
-      return <Sent photos={view.photos} spots={view.spots} onBack={home} />;
+      return column(<Sent photos={view.photos} spots={view.spots} onBack={home} />);
     case "setup":
-      return (
+      return column(
         <SetUpSpots
           thing={view.thing}
           onBack={home}
@@ -187,7 +191,7 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
         />
       );
     case "request":
-      return (
+      return column(
         <RequestView
           request={view.request}
           now={now}
@@ -204,7 +208,7 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
         />
       );
     case "rate":
-      return (
+      return column(
         <RateBuyer
           deal={view.deal}
           onBack={home}
