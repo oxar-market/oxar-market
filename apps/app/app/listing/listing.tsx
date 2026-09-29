@@ -123,7 +123,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
 
   if (!thing) {
     return (
-      <section className="screen">
+      <section className="lot">
         <button type="button" className="case-back" onClick={onBack}>
           &larr; Market
         </button>
@@ -147,7 +147,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       : `Seller ★ ${thing.score.rating.toFixed(1)} · ${thing.score.deals} deals`;
 
   return (
-    <section className="screen">
+    <section className="lot">
       <div className="lot-brandbar">
         <span className="mk-title">
           OXAR <span>Auction</span>
@@ -187,13 +187,15 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
 
       <div className="lot-scene">
         {look === "live" && thing.shape ? (
-          <ThingStage
-            shape={thing.shape}
-            picked={picked}
-            onPick={(code) => setPicked(code)}
-            stage={stage}
-            onReady={dress}
-          />
+          <div className="look">
+            <ThingStage
+              shape={thing.shape}
+              picked={picked}
+              onPick={(code) => setPicked(code)}
+              stage={stage}
+              onReady={dress}
+            />
+          </div>
         ) : (
           <div className="sl-photo ls-photo">
             {thing.photos[photo] && <img src={thing.photos[photo]} alt="" />}

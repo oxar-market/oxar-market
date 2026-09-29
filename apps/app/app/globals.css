@@ -4636,3 +4636,66 @@ input:focus {
   object-fit: cover;
   border-radius: 12px;
 }
+
+/* Админка: те же карточки кабинета, стопкой. */
+.ad-card {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+}
+
+.ad-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ad-card label.sl-btn {
+  cursor: pointer;
+  text-align: center;
+}
+
+.ad-photos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.ad-scene {
+  height: 26rem;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.ad-spots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ad-spot {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.ad-spot.on {
+  border-color: #e0381c;
+  color: #e0381c;
+}
+
+.ad-size {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.ad-size .sl-btn {
+  grid-column: 1 / -1;
+}

@@ -10,6 +10,8 @@ import { loadMyStands, type MyStand } from "@/lib/auction";
 import { db } from "@/lib/session";
 import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
+import { amIAdmin } from "@/lib/admin";
+import { Admin } from "./admin/admin.tsx";
 
 /**
  * Страница человека, собранная по дизайн-борду «OXAR Auction design
@@ -89,13 +91,18 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
 
   // Роли одним переключателем: Seller - не второй режим, а дверь к разговору,
   // и до своего кабинета он живёт одной карточкой с Buyer.
-  const [role, setRole] = useState<"buyer" | "seller">("buyer");
+  const [role, setRole] = useState<"buyer" | "seller" | "admin">("buyer");
 
   // Продавцу роль выдаём мы после звонка. У него переключатель встаёт наверх
   // и Seller открывает кабинет; остальным Seller - по-прежнему разговор.
   const [seller, setSeller] = useState(false);
   useEffect(() => {
     void amISeller().then(setSeller);
+  }, []);
+  // Админ - это мы: третья вкладка переключателя, остальным её нет.
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    void amIAdmin().then(setAdmin);
   }, []);
   // Шаги кабинета со своей шапкой прячут шапку экрана и переключатель.
   const [sellerView, setSellerView] = useState("home");
@@ -122,18 +129,32 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
 
   const roleToggle = (
     <div className="role-toggle sl-toggle">
-      {(["buyer", "seller"] as const).map((one) => (
+      {(admin ? (["buyer", "seller", "admin"] as const) : (["buyer", "seller"] as const)).map((one) => (
         <button
           key={one}
           type="button"
           className={role === one ? "role-tab on" : "role-tab"}
           onClick={() => setRole(one)}
         >
-          {one === "buyer" ? "Buyer" : "Seller"}
+          {one === "buyer" ? "Buyer" : one === "seller" ? "Seller" : "Admin"}
         </button>
       ))}
     </div>
   );
+
+  if (admin && role === "admin") {
+    return (
+      <section className="screen">
+        <h1 className="mk-title">
+          OXAR <span>You</span>
+        </h1>
+        {roleToggle}
+        <div className="sl-column">
+          <Admin />
+        </div>
+      </section>
+    );
+  }
 
   if (seller && role === "seller") {
     return (
@@ -157,7 +178,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
         OXAR <span>You</span>
       </h1>
 
-      {seller && roleToggle}
+      {(seller || admin) && roleToggle}
 
       <div className="you-card">
         <span className="you-face" aria-hidden>
@@ -334,14 +355,14 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
       {!seller && (
       <div className="role-card">
         <div className="role-toggle">
-          {(["buyer", "seller"] as const).map((one) => (
+          {(admin ? (["buyer", "seller", "admin"] as const) : (["buyer", "seller"] as const)).map((one) => (
             <button
               key={one}
               type="button"
               className={role === one ? "role-tab on" : "role-tab"}
               onClick={() => setRole(one)}
             >
-              {one === "buyer" ? "Buyer" : "Seller"}
+              {one === "buyer" ? "Buyer" : one === "seller" ? "Seller" : "Admin"}
             </button>
           ))}
         </div>
