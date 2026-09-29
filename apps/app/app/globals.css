@@ -4019,17 +4019,17 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 261px;
-  height: 261px;
+  width: 232px;
+  height: 232px;
   margin-bottom: 12px;
-  border-radius: 50%;
+  border-radius: 28px;
   background: var(--card);
   color: var(--ink);
 }
 
 .sl-qr svg {
-  width: 261px;
-  height: 261px;
+  width: 232px;
+  height: 232px;
 }
 
 .sl-qr-hole {

@@ -19,7 +19,7 @@ export function AddOnDesktop({
   /** Снимки для разметки: пути из хранилища (с телефона) или файлы. */
   onPhotos: (photos: (Blob | string)[], preview: string) => void;
 }) {
-  const [session, setSession] = useState<{ id: string; code: string } | null>(null);
+  const [session, setSession] = useState<string | null>(null);
   const [state, setState] = useState<"waiting" | "shooting" | "landed">("waiting");
   // Сессию не завели - QR вести некуда; остаётся загрузка файлами.
   const [noSession, setNoSession] = useState(false);
@@ -35,7 +35,7 @@ export function AddOnDesktop({
   useEffect(() => {
     if (!session) return;
     const tick = setInterval(async () => {
-      const read = await readCapture(session.id);
+      const read = await readCapture(session);
       if (!read) return;
       setState(read.state);
       if (read.state === "landed" && read.photos.length > 0) {
@@ -46,9 +46,9 @@ export function AddOnDesktop({
     return () => clearInterval(tick);
   }, [session, onPhotos]);
 
-  // Ссылка короткая намеренно: восемь знаков кода вместо uuid - и сетка
-  // 29 на 29 вместо 49, полоски вдвое крупнее, камера берёт код увереннее.
-  const link = session ? `${window.location.origin}/?c=${session.code}` : "";
+  // Ссылка постоянная: сессию телефон найдёт сам по аккаунту. Поэтому код
+  // может быть готовой картинкой, нарисованной один раз.
+  const link = session ? `${window.location.origin}/?c` : "";
 
   return (
     <div className="sl-desk">
@@ -114,17 +114,10 @@ export function AddOnDesktop({
 }
 
 /**
- * QR в духе App Clip: код полосками, угловые метки - кольца с точкой, вокруг
- * - штриховые кольца, в центре знак OXAR.
- *
- * Полоски - это соседние тёмные модули строки, слитые в капсулу: форма
- * остаётся в клетках модулей, поэтому сканер читает код как обычный.
- * Кольца лежат за зазором в модуль от кода и в данные не попадают. Центр
- * под знаком - около 8% кода, коррекция Q восстанавливает до 25%; дырка
- * крупнее (13%) на сетке 29 на 29 уже ломала чтение.
- *
- * Проверено декодером zxing (тем же, что в Android-сканерах): короткая
- * ссылка читается на размерах от 494 до 160 px с кольцами и знаком.
+ * QR: крупные скруглённые модули, скруглённые угловые метки, знак OXAR в
+ * центре. Ссылка постоянная и короткая, поэтому сетка маленькая и модули
+ * крупные. Центр под знаком - около 6% кода: на маленькой сетке 8% уже
+ * ломали чтение крупным планом.
  */
 function Code({ text }: { text: string }) {
   const shape = useMemo(() => {
@@ -134,88 +127,32 @@ function Code({ text }: { text: string }) {
     const n = code.getModuleCount();
     const finder = (x: number, y: number) =>
       (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
-    const half = (n / 2) * Math.SQRT2;
-    const gap = 1;
-    const rings = 3;
-    const step = 1.9;
-    const radius = half + gap + rings * step + 0.6;
-    const offset = radius - n / 2;
-
-    // Полоски: серии тёмных модулей в строке, без угловых меток.
-    const bars: { x: number; y: number; length: number }[] = [];
+    const cells: [number, number][] = [];
     for (let y = 0; y < n; y++) {
-      let x = 0;
-      while (x < n) {
-        if (code.isDark(y, x) && !finder(x, y)) {
-          const start = x;
-          while (x < n && code.isDark(y, x) && !finder(x, y)) x++;
-          bars.push({ x: start + offset, y: y + offset, length: x - start });
-        } else {
-          x++;
-        }
+      for (let x = 0; x < n; x++) {
+        if (code.isDark(y, x) && !finder(x, y)) cells.push([x, y]);
       }
     }
-
-    // Штрихи колец - случайные, но одни и те же для одного адреса: иначе
-    // узор мерцал бы при каждой перерисовке.
-    let seed = [...text].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) >>> 0, 7);
-    const random = () => {
-      seed = (seed + 0x6d2b79f5) >>> 0;
-      let t = seed;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-    const arcs: string[] = [];
-    for (let ring = 0; ring < rings; ring++) {
-      const r = half + gap + 0.5 + ring * step;
-      let a = random() * Math.PI * 2;
-      const end = a + Math.PI * 2 - 0.15;
-      while (a < end) {
-        const length = Math.min((0.18 + random() * 0.42) * (1 - 0.15 * ring), end - a);
-        if (length < 0.05) break;
-        const from = [radius + r * Math.cos(a), radius + r * Math.sin(a)];
-        const to = [radius + r * Math.cos(a + length), radius + r * Math.sin(a + length)];
-        arcs.push(
-          `M${from[0]!.toFixed(3)} ${from[1]!.toFixed(3)}A${r} ${r} 0 0 1 ${to[0]!.toFixed(3)} ${to[1]!.toFixed(3)}`,
-        );
-        a += length + 0.1 + random() * 0.12;
-      }
-    }
-
-    const eyes = [
-      [0, 0],
-      [n - 7, 0],
-      [0, n - 7],
-    ].map(([x, y]) => [x! + offset + 3.5, y! + offset + 3.5] as const);
-    const hole = Math.sqrt((0.08 * n * n) / Math.PI);
-    return { size: radius * 2, bars, arcs, eyes, hole, middle: radius };
+    return { n, cells, hole: Math.sqrt((0.06 * n * n) / Math.PI) };
   }, [text]);
 
-  const thick = 0.78;
+  const { n } = shape;
   return (
-    <svg viewBox={`0 0 ${shape.size} ${shape.size}`} aria-label="QR code">
-      {shape.bars.map((bar) => (
-        <rect
-          key={`${bar.x}-${bar.y}`}
-          x={bar.x + (1 - thick) / 2}
-          y={bar.y + (1 - thick) / 2}
-          width={bar.length - (1 - thick)}
-          height={thick}
-          rx={thick / 2}
-          fill="currentColor"
-        />
+    <svg viewBox={`-2 -2 ${n + 4} ${n + 4}`} aria-label="QR code">
+      {shape.cells.map(([x, y]) => (
+        <rect key={`${x}-${y}`} x={x + 0.06} y={y + 0.06} width={0.88} height={0.88} rx={0.3} fill="currentColor" />
       ))}
-      {shape.eyes.map(([x, y]) => (
+      {[
+        [0, 0],
+        [n - 7, 0],
+        [0, n - 7],
+      ].map(([x, y]) => (
         <g key={`${x}-${y}`}>
-          <circle cx={x} cy={y} r={3} fill="none" stroke="currentColor" strokeWidth={1} />
-          <circle cx={x} cy={y} r={1.5} fill="currentColor" />
+          <rect x={x! + 0.5} y={y! + 0.5} width={6} height={6} rx={1.8} fill="none" stroke="currentColor" strokeWidth={1} />
+          <rect x={x! + 2} y={y! + 2} width={3} height={3} rx={0.9} fill="currentColor" />
         </g>
       ))}
-      {shape.arcs.map((path) => (
-        <path key={path} d={path} fill="none" stroke="currentColor" strokeWidth={0.85} strokeLinecap="round" />
-      ))}
-      <circle cx={shape.middle} cy={shape.middle} r={shape.hole} className="sl-qr-hole" />
+      <circle cx={n / 2} cy={n / 2} r={shape.hole} className="sl-qr-hole" />
     </svg>
   );
 }

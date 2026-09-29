@@ -29,12 +29,11 @@ export default function Home() {
   );
 
   // Телефон пришёл по QR с десктопа продавца: сразу камера на вкладке You.
-  const [capture, setCapture] = useState<string | null>(null);
+  // QR постоянный - «/?c»: сессию телефон найдёт сам по аккаунту.
+  const [capture, setCapture] = useState(false);
   useEffect(() => {
-    // В QR - короткий код сессии съёмки: короче ссылка, крупнее код.
-    const code = new URLSearchParams(window.location.search).get("c");
-    if (code && /^[0-9a-f]{8}$/.test(code)) {
-      setCapture(code);
+    if (new URLSearchParams(window.location.search).has("c")) {
+      setCapture(true);
       setTab("you");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,9 +79,8 @@ export default function Home() {
         ) : authenticated && capture ? (
           <section className="screen">
             <PhoneCapture
-              code={capture}
               onClose={() => {
-                setCapture(null);
+                setCapture(false);
                 window.history.replaceState(null, "", "/");
               }}
             />

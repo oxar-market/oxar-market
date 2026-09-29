@@ -16,7 +16,7 @@ import {
   loadSellerRequests,
   loadSellerScore,
   loadSellerThings,
-  findCapture,
+  findWaitingCapture,
   markShooting,
   savePlans,
   sendRating,
@@ -255,22 +255,22 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
  * Телефон по QR с десктопа: та же камера, но снимки уходят в сессию, а
  * размечает их десктоп.
  */
-export function PhoneCapture({ code, onClose }: { code: string; onClose: () => void }) {
+export function PhoneCapture({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<"finding" | "shooting" | "sending" | "done" | "failed">(
     "finding",
   );
   const [session, setSession] = useState<string | null>(null);
 
-  // Код из QR - в сессию. Её видит только владелец, поэтому чужой код или
-  // вход другим аккаунтом приводят к честному «не нашли», а не к чужой вещи.
+  // Сессию ждёт десктоп того же аккаунта. Вход другим аккаунтом или
+  // закрытый десктоп - честное «не нашли», а не чужая вещь.
   useEffect(() => {
-    void findCapture(code).then((id) => {
+    void findWaitingCapture().then((id) => {
       if (!id) return setState("failed");
       setSession(id);
       setState("shooting");
       void markShooting(id);
     });
-  }, [code]);
+  }, []);
 
   if (state === "finding") return null;
   if (state === "shooting" && session) {
@@ -292,7 +292,7 @@ export function PhoneCapture({ code, onClose }: { code: string; onClose: () => v
           ? "Sending the photos to your computer."
           : state === "done"
             ? "The photos are on your computer. Mark the spots there."
-            : "The photos did not reach your computer. Check the connection and scan again."}
+            : "Open Add a thing on your computer first, signed in with the same account, then scan again."}
       </p>
     </>
   );

@@ -412,21 +412,30 @@ export async function sendRating(input: RatingInput): Promise<boolean> {
   return !error;
 }
 
-/** Сессия съёмки для десктопа: QR ведёт телефон сюда же по короткому коду. */
-export async function startCapture(): Promise<{ id: string; code: string } | null> {
+/** Сессия съёмки для десктопа. */
+export async function startCapture(): Promise<string | null> {
   if (!db) return null;
-  const { data, error } = await db
-    .from("capture_sessions")
-    .insert({})
-    .select("id, code")
-    .single();
-  return error ? null : { id: data.id, code: data.code };
+  const { data, error } = await db.from("capture_sessions").insert({}).select("id").single();
+  return error ? null : data.id;
 }
 
-/** Телефон по коду из QR находит сессию. Видна она только своему владельцу. */
-export async function findCapture(code: string): Promise<string | null> {
+/**
+ * Телефон находит сессию, которую ждёт десктоп того же человека.
+ *
+ * QR поэтому постоянный: в нём нет id сессии, только адрес. Телефон входит
+ * тем же аккаунтом и берёт самую свежую ждущую сессию - её видит только
+ * владелец. Старше четверти часа не берём: десктоп давно закрыт.
+ */
+export async function findWaitingCapture(): Promise<string | null> {
   if (!db) return null;
-  const { data } = await db.from("capture_sessions").select("id").eq("code", code).maybeSingle();
+  const { data } = await db
+    .from("capture_sessions")
+    .select("id")
+    .eq("state", "waiting")
+    .gt("created_at", new Date(Date.now() - 15 * 60_000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   return data?.id ?? null;
 }
 
