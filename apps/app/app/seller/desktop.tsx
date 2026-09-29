@@ -111,10 +111,10 @@ export function AddOnDesktop({
 }
 
 /**
- * QR кругом, как на борде: настоящий код в центре, вокруг - кольцо
- * декоративных точек до окружности. Сканер читает только квадрат кода по
- * трём угловым меткам, поэтому метки остаются метками (скруглёнными), а между
- * кодом и кольцом - зазор в два модуля. Центр закрыт кружком с «OXAR» -
+ * QR кругом, как на борде: настоящий код в центре, вокруг - точки той же
+ * плотности до окружности, и квадрат кода растворяется в круге. Угловые
+ * метки - кольца с точкой. Между кодом и узором вокруг - зазор в один
+ * модуль: без него сканер не находит край кода (проверено - не читается). Центр закрыт кружком с «OXAR» -
  * это около 13% кода, поэтому коррекция ошибок Q (восстанавливает до 25%):
  * выше коррекция - больше модулей и мельче точки.
  *
@@ -127,7 +127,7 @@ function Dots({ text }: { text: string }) {
     code.addData(text);
     code.make();
     const size = code.getModuleCount();
-    const gap = 2;
+    const gap = 1;
     // Круг описывает квадрат кода с запасом; чётность подгоняется, чтобы код
     // лёг в сетку ровно, без полумодуля.
     let total = 2 * (Math.ceil((size / 2) * Math.SQRT2) + 2);
@@ -182,8 +182,8 @@ function Dots({ text }: { text: string }) {
       ))}
       {shape.finders.map(([x, y]) => (
         <g key={`${x}-${y}`}>
-          <rect x={x + 0.5} y={y + 0.5} width={6} height={6} rx={1.9} fill="none" stroke="currentColor" strokeWidth={1} />
-          <rect x={x + 2} y={y + 2} width={3} height={3} rx={0.9} fill="currentColor" />
+          <circle cx={x + 3.5} cy={y + 3.5} r={3} fill="none" stroke="currentColor" strokeWidth={1} />
+          <circle cx={x + 3.5} cy={y + 3.5} r={1.5} fill="currentColor" />
         </g>
       ))}
       <circle cx={middle} cy={middle} r={shape.label} className="sl-qr-hole" />
