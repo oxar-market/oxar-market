@@ -16,7 +16,6 @@ export type AdminThing = {
   id: string;
   title: string;
   tagline: string | null;
-  stage: "preparing" | "ready";
   active: boolean;
   photos: string[];
   model: string | null;
@@ -26,10 +25,8 @@ export type AdminThing = {
 
 export async function amIAdmin(): Promise<boolean> {
   if (!db) return false;
-  const { data: auth } = await db.auth.getUser();
-  if (!auth.user) return false;
-  const { data } = await db.from("admins").select("user_id").eq("user_id", auth.user.id).maybeSingle();
-  return Boolean(data);
+  const { data } = await db.rpc("is_admin");
+  return data === true;
 }
 
 /** Вещи продавцов, новые сверху. Наши вещи заводятся миграциями, их тут нет. */
@@ -37,14 +34,13 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, stage, active, photos, model_url, created_at, thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, photos, model_url, created_at, thing_spots(${SPOT_COLUMNS})`)
     .not("seller", "is", null)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
     title: row.title,
     tagline: row.tagline,
-    stage: row.stage as AdminThing["stage"],
     active: row.active,
     photos: ((row.photos as string[] | null) ?? []).map(photoUrl),
     model: (row.model_url as string) || null,
@@ -55,7 +51,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
 
 export async function updateThing(
   id: string,
-  patch: Partial<{ title: string; tagline: string | null; stage: AdminThing["stage"]; active: boolean; model_url: string }>,
+  patch: Partial<{ title: string; tagline: string | null; active: boolean; model_url: string }>,
 ): Promise<boolean> {
   if (!db) return false;
   const { error } = await db.from("things").update(patch).eq("id", id);

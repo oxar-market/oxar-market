@@ -257,6 +257,9 @@ export type UpcomingThing = {
   id: string;
   title: string;
   tagline: string | null;
+  /** Вещь продавца: анонс её снимком, а не голограммой футболки. */
+  seller: string | null;
+  photo: string | null;
 };
 
 /** Строка «Held earlier»: чем кончился прошедший торг. */
@@ -279,17 +282,23 @@ export async function loadMarket(): Promise<{
 
   // Анонс - вещь без единого лота. Вещь, у которой торг уже был, сюда не
   // попадает и после его закрытия: она уходит в «Held earlier».
-  // Анонсы - только наши вещи: вещь продавца без лотов - это его черновик,
-  // а не афиша, и вошедшему продавцу база его показывает.
+  // Вещь продавца попадает сюда сразу после отправки: цен ещё нет, но
+  // вещь уже видна по снимкам.
   const { data: catalog } = await db
     .from("things")
-    .select("id, title, tagline, lots(id)")
-    .is("seller", null)
+    .select("id, title, tagline, seller, photos, lots(id)")
     .eq("active", true)
     .order("created_at");
+  const shots = db.storage.from("things");
   const upcoming: UpcomingThing[] = (catalog ?? [])
     .filter((one) => (one.lots as unknown[]).length === 0)
-    .map((one) => ({ id: one.id, title: one.title, tagline: one.tagline }));
+    .map((one) => ({
+      id: one.id,
+      title: one.title,
+      tagline: one.tagline,
+      seller: one.seller,
+      photo: one.photos?.[0] ? shots.getPublicUrl(one.photos[0]).data.publicUrl : null,
+    }));
 
   const { data } = await db
     .from("lots")

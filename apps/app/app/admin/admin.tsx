@@ -13,10 +13,9 @@ import { shapeOf } from "@/lib/listing";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
 
 /**
- * Админка по вещам продавцов. Порядок работы - сверху вниз по экрану вещи:
- * имя, модель, места на модели, «готово» (продавец может ставить цены) и
- * «на маркет» (вещь видна покупателям). Модель не обязательна: без неё
- * торг идёт снимком с местами, которые разметил продавец.
+ * Админка по вещам продавцов. Вещь на маркете с момента отправки, по
+ * снимкам; здесь ей дают имя, прикладывают модель и ставят на ней места.
+ * «Hide from market» - если вещь там быть не должна.
  */
 export function Admin() {
   const [things, setThings] = useState<AdminThing[] | null>(null);
@@ -43,11 +42,11 @@ export function Admin() {
         <div className="sl-card sl-things">
           {things.map((one) => (
             <button type="button" key={one.id} className="sl-thing" onClick={() => setOpen(one.id)}>
-              <Thumb src={one.photos[0] ?? null} holo={one.stage === "preparing"} />
+              <Thumb src={one.photos[0] ?? null} />
               <span className="sl-thing-name">{one.title}</span>
-              <span className={`sl-state ${one.active ? "live" : one.stage === "ready" ? "idle" : "preparing"}`}>
+              <span className={`sl-state ${one.active ? "live" : "idle"}`}>
                 <i />
-                {one.active ? "ON MARKET" : one.stage === "ready" ? "READY" : "PREPARING"}
+                {one.active ? "ON MARKET" : "HIDDEN"}
               </span>
               <span className="sl-thing-sub">
                 {one.spots.length} spots · {one.model ? "3D" : "no 3D"}
@@ -257,19 +256,6 @@ function AdminThingView({
 
       <div className="sl-card ad-card">
         <h3>Status</h3>
-        <button
-          type="button"
-          className="sl-btn"
-          disabled={busy}
-          onClick={() =>
-            run(
-              () => updateThing(thing.id, { stage: thing.stage === "ready" ? "preparing" : "ready" }),
-              "Could not change the stage.",
-            )
-          }
-        >
-          {thing.stage === "ready" ? "Back to preparing" : "Ready: seller can set prices"}
-        </button>
         <button
           type="button"
           className="sl-btn dark"

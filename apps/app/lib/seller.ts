@@ -205,8 +205,9 @@ export async function sendThing(
     slug: `thing-${id.slice(0, 8)}`,
     title: `New thing No. ${number}`,
     model_url: "",
-    active: false,
-    stage: "preparing",
+    // На маркете сразу, по снимкам; модель мы приложим потом.
+    active: true,
+    stage: "ready",
     seller: owner,
     photos: paths,
   });
@@ -538,7 +539,8 @@ export async function loadDealsToRate(
       (a, b) => b.amount_cents - a.amount_cents || a.created_at.localeCompare(b.created_at),
     );
     const top = bids[0];
-    if (!top || !thing) continue;
+    // Наши вещи, как футболка, не оцениваются: оценка - это счёт продавца.
+    if (!top || !thing?.seller) continue;
     const spot = (lot.thing_spots as unknown as { label: string } | null)?.label ?? "Spot";
     const ended = new Date(lot.closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
     const cover = thing.photos?.[0] ? photoUrl(thing.photos[0]) : null;

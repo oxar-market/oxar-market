@@ -15,8 +15,8 @@
 -- seller пустой у вещей площадки: их заводим мы миграциями, как футболку.
 alter table things
   add column seller uuid references auth.users (id) on delete restrict,
-  -- preparing - фото и места присланы, мы собираем 3D-листинг;
-  -- ready - листинг готов, продавец ставит цены.
+  -- preparing - вещь ждёт нас; ready - продавец ставит цены. Вещь продавца
+  -- рождается ready: модель мы прикладываем потом, торг идёт и по фото.
   add column stage text not null default 'ready'
     check (stage in ('preparing', 'ready')),
   -- Пути снимков в хранилище things, по порядку съёмки.
@@ -25,13 +25,11 @@ alter table things
 create policy "продавец видит свои вещи" on things for select
   using (seller = auth.uid());
 
--- Вещь продавца рождается скрытой: на маркет её выводим мы, когда листинг
--- собран. active и stage поэтому зафиксированы при вставке.
+-- Вещь продавца видна на маркете сразу, по снимкам, - без нашей проверки:
+-- роль продавца мы и так выдаём сами. Убрать вещь с маркета может админ.
 create policy "одобренный продавец заводит вещь" on things for insert
   with check (
     seller = auth.uid()
-    and active = false
-    and stage = 'preparing'
     and exists (
       select 1 from profiles p where p.user_id = auth.uid() and p.is_seller
     )
@@ -59,8 +57,10 @@ create policy "продавец размечает свою вещь" on thing_s
   with check (
     exists (
       select 1 from things t
-      where t.id = thing_id and t.seller = auth.uid() and t.stage = 'preparing'
+      where t.id = thing_id and t.seller = auth.uid()
     )
+    -- Места размечаются до торга: посреди торга новое место не появится.
+    and not exists (select 1 from lots l where l.thing_id = thing_spots.thing_id)
   );
 
 -- ── Цены: аукцион ─────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ as $$
   select case
     when lot is not null then exists (
       select 1 from lots l join things t on t.id = l.thing_id
-      where l.id = lot and l.status = 'won'
+      where l.id = lot and l.status = 'won' and t.seller is not null
         and (
           (side = 'seller' and t.seller = auth.uid())
           or (
@@ -288,12 +288,26 @@ create or replace view buyer_scores as
 with deals as (
   select r.buyer, null::uuid as lot_id, r.id as request
     from rent_requests r where r.status = 'approved'
+  union all
+  -- Выигранный торг на вещи продавца: покупатель - верхняя ставка.
+  select top.bidder, l.id, null
+    from lots l
+    join things t on t.id = l.thing_id
+    cross join lateral (
+      select b.bidder from lot_bids b
+       where b.lot_id = l.id
+       order by b.amount_cents desc, b.created_at asc
+       limit 1
+    ) top
+   where l.status = 'won' and t.seller is not null
 )
 select d.buyer,
        count(*)::int as deals,
        round(avg(rt.rating)::numeric, 1) as rating
   from deals d
-  left join ratings rt on rt.side = 'seller' and rt.rent_request = d.request
+  left join ratings rt
+    on rt.side = 'seller'
+   and (rt.lot_id = d.lot_id or rt.rent_request = d.request)
  group by d.buyer;
 
 grant select on seller_scores, buyer_scores to anon, authenticated;
@@ -392,17 +406,17 @@ grant execute on function capture_land(text, integer) to anon, authenticated;
 
 -- ── Админ: мы сами ────────────────────────────────────────────────────────
 
--- Кто проверяет присланные вещи, даёт им имя, прикладывает 3D-модель,
--- расставляет на ней места и выводит вещь на маркет. Список ведётся
--- миграциями, как и роль продавца.
+-- Кто даёт вещам имя, прикладывает 3D-модель, расставляет на ней места и
+-- убирает вещь с маркета. Список ведётся миграциями, как и роль продавца.
+--
+-- Ключ - идентификатор Privy, а не user_id: так админа можно завести
+-- раньше, чем он впервые войдёт, - аккаунт Supabase появляется только при
+-- первом входе, а идентификатор Privy известен заранее.
 create table admins (
-  user_id uuid primary key references auth.users (id) on delete cascade
+  privy_id text primary key
 );
 
 alter table admins enable row level security;
-
-create policy "админ видит себя" on admins for select
-  using (user_id = auth.uid());
 
 create or replace function is_admin()
 returns boolean
@@ -411,14 +425,17 @@ stable
 security definer
 set search_path = public
 as $$
-  select exists (select 1 from admins where user_id = auth.uid());
+  select exists (
+    select 1 from admins a join identities i on i.privy_id = a.privy_id
+    where i.user_id = auth.uid()
+  );
 $$;
 
 -- Владелец площадки: пользователь за кошельком AkC8…DtB. Ему же роль
 -- продавца - чтобы проверить кабинет на своей вещи. Нет такого
 -- пользователя (локальная база) - строк не будет.
-insert into admins (user_id)
-select id from auth.users where id = '78e0f74a-3474-4f4b-875f-7030e18234fd'
+insert into admins (privy_id)
+select privy_id from identities where user_id = '78e0f74a-3474-4f4b-875f-7030e18234fd'
 on conflict do nothing;
 
 insert into profiles (user_id, is_seller, seller_since)

@@ -273,7 +273,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       })}
 
       {upcoming.map((one) => (
-        <Upcoming key={one.id} thing={one} />
+        <Upcoming key={one.id} thing={one} onOpen={() => onOpenAuction(one.id)} />
       ))}
       </div>
       {/* Стрелки по бокам вещи: точки под каруселью легко не заметить. */}
@@ -451,19 +451,27 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
  * Анонс вещи, торг на которую ещё не заведён: голограмма вместо фото, как на
  * торге до открытия. Кнопки нет - открывать нечего, а дату скажет письмо.
  */
-function Upcoming({ thing }: { thing: UpcomingThing }) {
+function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void }) {
   const stage = useRef<Stage | null>(null);
   return (
     <div className="hero">
-      <div className="hero-photo in3d">
-        <div className="hero-stage">
-          <ThingStage
-            picked={null}
-            onPick={() => {}}
-            stage={stage}
-            onReady={() => stage.current?.look("ghost")}
-          />
-        </div>
+      <div className={thing.seller ? "hero-photo" : "hero-photo in3d"}>
+        {thing.seller ? (
+          thing.photo && (
+            <button type="button" className="hero-shot" onClick={onOpen}>
+              <img src={thing.photo} alt={thing.title} />
+            </button>
+          )
+        ) : (
+          <div className="hero-stage">
+            <ThingStage
+              picked={null}
+              onPick={() => {}}
+              stage={stage}
+              onReady={() => stage.current?.look("ghost")}
+            />
+          </div>
+        )}
         <span className="now-pill">
           <span className="dot" />
           COMING SOON
@@ -475,6 +483,11 @@ function Upcoming({ thing }: { thing: UpcomingThing }) {
           {thing.tagline && <p className="hero-who">{thing.tagline}</p>}
         </div>
         <span className="muted">Opening date to be announced.</span>
+        {thing.seller && (
+          <button type="button" className="primary wide" onClick={onOpen}>
+            Open
+          </button>
+        )}
       </div>
     </div>
   );
