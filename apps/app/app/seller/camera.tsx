@@ -20,6 +20,10 @@ export function Camera({
   onDone: (photos: Blob[]) => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
+  // Системная камера телефона. Браузер внутри кошелька (Phantom и другие)
+  // часто не даёт странице живой поток, а выбор файла с capture открывает
+  // обычную камеру - этим путём затвор и работает, когда потока нет.
+  const native = useRef<HTMLInputElement>(null);
   const [live, setLive] = useState<"starting" | "on" | "off">("starting");
   const [photos, setPhotos] = useState<{ blob: Blob; url: string }[]>([]);
 
@@ -54,6 +58,16 @@ export function Camera({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+
+  // Снимки из галереи и из системной камеры режутся к той же пропорции 4:5,
+  // что и кадры живого потока.
+  async function add(list: FileList | null) {
+    const files = [...(list ?? [])].slice(0, SHOTS - photos.length);
+    const cropped = await Promise.all(files.map(toPortrait));
+    setPhotos((was) =>
+      [...was, ...cropped.map((blob) => ({ blob, url: URL.createObjectURL(blob) }))].slice(0, SHOTS),
+    );
+  }
 
   function shoot() {
     const source = video.current;
@@ -94,7 +108,7 @@ export function Camera({
           <span className="sl-finder-note">
             {live === "starting"
               ? "Starting the camera"
-              : "The camera is off. Allow camera access for this site in the browser settings."}
+              : "Tap the shutter to open your phone camera."}
           </span>
         )}
         <i />
@@ -115,16 +129,23 @@ export function Camera({
           type="file"
           accept="image/*"
           multiple
-          onChange={async (event) => {
-            const files = [...(event.target.files ?? [])].slice(0, SHOTS - photos.length);
-            event.target.value = "";
-            const cropped = await Promise.all(files.map(toPortrait));
-            setPhotos((was) =>
-              [...was, ...cropped.map((blob) => ({ blob, url: URL.createObjectURL(blob) }))].slice(0, SHOTS),
-            );
+          onChange={(event) => {
+            const list = event.target.files;
+            void add(list).then(() => (event.target.value = ""));
           }}
         />
       </label>
+      <input
+        ref={native}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(event) => {
+          const list = event.target.files;
+          void add(list).then(() => (event.target.value = ""));
+        }}
+      />
 
       <div className="sl-camera-row">
         <span className="sl-shots">
@@ -143,8 +164,10 @@ export function Camera({
           type="button"
           className="sl-shutter"
           aria-label="Take a photo"
-          disabled={live !== "on" || photos.length >= SHOTS}
-          onClick={shoot}
+          // Не ждём разрешения на поток: в браузере кошелька оно может не
+          // прийти никогда, а системная камера работает и без него.
+          disabled={photos.length >= SHOTS}
+          onClick={() => (live === "on" ? shoot() : native.current?.click())}
         />
         <button
           type="button"
