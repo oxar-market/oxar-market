@@ -31,9 +31,12 @@ export default function Home() {
   // Телефон пришёл по QR с десктопа продавца: сразу камера на вкладке You.
   const [capture, setCapture] = useState<string | null>(null);
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("capture");
-    if (id && /^[0-9a-f-]{36}$/.test(id)) {
-      setCapture(id);
+    // В QR uuid сессии без дефисов - короче ссылка, крупнее точки кода.
+    const hex = new URLSearchParams(window.location.search).get("c");
+    if (hex && /^[0-9a-f]{32}$/.test(hex)) {
+      setCapture(
+        `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`,
+      );
       setTab("you");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -4015,7 +4015,6 @@ input:focus {
 .sl-qr-card > i:nth-of-type(4) { right: 14px; bottom: 14px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
 
 .sl-qr {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4024,25 +4023,36 @@ input:focus {
   margin-bottom: 12px;
   border: 1px solid var(--line);
   border-radius: 50%;
-}
-
-.sl-qr svg {
-  width: 218px;
-  height: 218px;
+  background: var(--card);
   color: var(--ink);
 }
 
-.sl-qr b {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 92px;
-  height: 92px;
-  border-radius: 50%;
-  background: var(--card);
-  font-size: 0.9375rem;
+.sl-qr svg {
+  width: 247px;
+  height: 247px;
+}
+
+.sl-qr-hole {
+  fill: var(--card);
+}
+
+.sl-qr-word {
+  fill: currentColor;
+  font-size: 3.4px;
   font-weight: 600;
+}
+
+/* В тёмной теме круг - светлый стикер с тёмными точками. Светлые точки на
+   тёмном читает не всякий сканер: встроенная камера iPhone инвертированный
+   код берёт через раз, а на проверке это значит «не работает». */
+:root[data-theme="dark"] .sl-qr {
+  border-color: transparent;
+  background: #ecebe6;
+  color: #16181d;
+}
+
+:root[data-theme="dark"] .sl-qr-hole {
+  fill: #ecebe6;
 }
 
 .sl-qr-title {

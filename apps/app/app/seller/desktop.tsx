@@ -46,7 +46,9 @@ export function AddOnDesktop({
     return () => clearInterval(tick);
   }, [session, onPhotos]);
 
-  const link = session ? `${window.location.origin}/?capture=${session}` : "";
+  // Ссылка короткая намеренно: чем меньше знаков, тем крупнее точка кода и
+  // тем увереннее его берёт камера с расстояния.
+  const link = session ? `${window.location.origin}/?c=${session.replace(/-/g, "")}` : "";
 
   return (
     <div className="sl-desk">
@@ -70,7 +72,7 @@ export function AddOnDesktop({
         <i />
         <i />
         <i />
-        <div className="sl-qr">{link && <Dots text={link} />}<b>OXAR</b></div>
+        <div className="sl-qr">{link && <Dots text={link} />}</div>
         <h3 className="sl-qr-title">
           {state === "shooting" ? "Shooting on your phone" : "Scan with your phone camera"}
         </h3>
@@ -109,36 +111,85 @@ export function AddOnDesktop({
 }
 
 /**
- * QR точками. Модули рисуются кружками, а не квадратами - как на борде; три
- * угловых поиска остаются целыми, иначе телефон код не прочтёт. Центр
- * закрыт кружком с «OXAR», поэтому коррекция ошибок - высокая.
+ * QR кругом, как на борде: настоящий код в центре, вокруг - кольцо
+ * декоративных точек до окружности. Сканер читает только квадрат кода по
+ * трём угловым меткам, поэтому метки остаются метками (скруглёнными), а между
+ * кодом и кольцом - зазор в два модуля. Центр закрыт кружком с «OXAR» -
+ * это около 13% кода, поэтому коррекция ошибок Q (восстанавливает до 25%):
+ * выше коррекция - больше модулей и мельче точки.
+ *
+ * Геометрия проверена декодером zxing (тем же, что в Android-сканерах) на
+ * размерах от 494 до 160 px, вместе с надписью в центре.
  */
 function Dots({ text }: { text: string }) {
-  const cells = useMemo(() => {
-    const code = qrcode(0, "H");
+  const shape = useMemo(() => {
+    const code = qrcode(0, "Q");
     code.addData(text);
     code.make();
     const size = code.getModuleCount();
-    const out: { x: number; y: number; finder: boolean }[] = [];
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        if (!code.isDark(y, x)) continue;
-        const finder =
-          (x < 7 && y < 7) || (x >= size - 7 && y < 7) || (x < 7 && y >= size - 7);
-        out.push({ x, y, finder });
+    const gap = 2;
+    // Круг описывает квадрат кода с запасом; чётность подгоняется, чтобы код
+    // лёг в сетку ровно, без полумодуля.
+    let total = 2 * (Math.ceil((size / 2) * Math.SQRT2) + 2);
+    if ((total - size) % 2) total += 1;
+    const off = (total - size) / 2;
+    const finder = (x: number, y: number) =>
+      (x < 7 && y < 7) || (x >= size - 7 && y < 7) || (x < 7 && y >= size - 7);
+
+    // Кольцо - случайное, но одно и то же для одного адреса: иначе код
+    // мерцал бы узором при каждой перерисовке.
+    let seed = [...text].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) >>> 0, 7);
+    const random = () => {
+      seed = (seed + 0x6d2b79f5) >>> 0;
+      let t = seed;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    const dots: [number, number][] = [];
+    const radius = total / 2 - 0.6;
+    for (let gy = 0; gy < total; gy++) {
+      for (let gx = 0; gx < total; gx++) {
+        const cx = gx + 0.5;
+        const cy = gy + 0.5;
+        if (Math.hypot(cx - total / 2, cy - total / 2) > radius) continue;
+        const x = gx - off;
+        const y = gy - off;
+        if (x >= 0 && x < size && y >= 0 && y < size) {
+          if (!finder(x, y) && code.isDark(y, x)) dots.push([cx, cy]);
+        } else if (
+          !(x >= -gap && x < size + gap && y >= -gap && y < size + gap) &&
+          random() < 0.5
+        ) {
+          dots.push([cx, cy]);
+        }
       }
     }
-    return { size, out };
+    const finders = [
+      [0, 0],
+      [size - 7, 0],
+      [0, size - 7],
+    ].map(([x, y]) => [x! + off, y! + off] as const);
+    return { total, dots, finders, label: size * 0.2 };
   }, [text]);
+
+  const middle = shape.total / 2;
   return (
-    <svg viewBox={`0 0 ${cells.size} ${cells.size}`} aria-label="QR code">
-      {cells.out.map((cell) =>
-        cell.finder ? (
-          <rect key={`${cell.x}-${cell.y}`} x={cell.x} y={cell.y} width={1} height={1} fill="currentColor" />
-        ) : (
-          <circle key={`${cell.x}-${cell.y}`} cx={cell.x + 0.5} cy={cell.y + 0.5} r={0.36} fill="currentColor" />
-        ),
-      )}
+    <svg viewBox={`0 0 ${shape.total} ${shape.total}`} aria-label="QR code">
+      {shape.dots.map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r={0.4} fill="currentColor" />
+      ))}
+      {shape.finders.map(([x, y]) => (
+        <g key={`${x}-${y}`}>
+          <rect x={x + 0.5} y={y + 0.5} width={6} height={6} rx={1.9} fill="none" stroke="currentColor" strokeWidth={1} />
+          <rect x={x + 2} y={y + 2} width={3} height={3} rx={0.9} fill="currentColor" />
+        </g>
+      ))}
+      <circle cx={middle} cy={middle} r={shape.label} className="sl-qr-hole" />
+      <text x={middle} y={middle} className="sl-qr-word" textAnchor="middle" dominantBaseline="central">
+        OXAR
+      </text>
     </svg>
   );
 }
