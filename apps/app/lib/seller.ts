@@ -101,6 +101,9 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
     .from("things")
     .select("id, title, stage, photos, created_at, thing_spots(id), lots(id, status, closes_at)")
     .eq("seller", auth.user.id)
+    // Наши вещи (футболка) записаны на владельца площадки ради оценок, но
+    // ведутся миграциями и скриптами, а не кабинетом.
+    .eq("house", false)
     .order("created_at", { ascending: true });
   if (!things) return [];
 
@@ -182,7 +185,8 @@ export async function sendThing(
   const { count } = await db
     .from("things")
     .select("id", { count: "exact", head: true })
-    .eq("seller", owner);
+    .eq("seller", owner)
+    .eq("house", false);
   const number = (count ?? 0) + 1;
   const id = crypto.randomUUID();
 
