@@ -14,6 +14,9 @@ import { db } from "./session.ts";
 /** Прямоугольник места на снимке: доли сторон кадра, от левого верхнего. */
 export type Rect = { x: number; y: number; w: number; h: number };
 
+/** Место, размеченное на снимке: номер снимка и доли его сторон. */
+export type Marked = Rect & { photo: number };
+
 export type ThingState = "live" | "rented" | "idle" | "preparing";
 
 export type SellerThing = {
@@ -177,7 +180,8 @@ export async function sendThing(
   // Снимок - либо файл с камеры, либо путь уже в хранилище: так приходят
   // снимки, которые телефон сдал десктопу.
   photos: (Blob | string)[],
-  spots: Rect[],
+  /** Места с номером снимка, на котором их разметили. */
+  spots: Marked[],
   /** Кошелёк продавца: им вещь подписана на маркете, пока нет никнейма. */
   wallet: string | null,
 ): Promise<boolean> {
@@ -224,12 +228,12 @@ export async function sendThing(
   if (thingError) return false;
 
   const { error: spotError } = await db.from("thing_spots").insert(
-    spots.map((rect, at) => ({
+    spots.map(({ photo, ...rect }, at) => ({
       thing_id: id,
       code: `spot_${at + 1}`,
       label: `Spot ${at + 1}`,
       sort: at + 1,
-      photo: 0,
+      photo,
       ...rect,
     })),
   );
@@ -241,26 +245,27 @@ export type PricingThing = {
   id: string;
   title: string;
   cover: string | null;
-  spots: { id: string; label: string; rect: Rect | null }[];
+  spots: { id: string; label: string; rect: Rect | null; photo: number }[];
 };
 
 export async function loadPricingThing(thingId: string): Promise<PricingThing | null> {
   if (!db) return null;
   const { data } = await db
     .from("things")
-    .select("id, title, photos, thing_spots(id, label, sort, x, y, w, h)")
+    .select("id, title, photos, thing_spots(id, label, sort, photo, x, y, w, h)")
     .eq("id", thingId)
     .maybeSingle();
   if (!data) return null;
   const photos = (data.photos as string[] | null) ?? [];
   const spots = ((data.thing_spots as {
-    id: string; label: string; sort: number;
+    id: string; label: string; sort: number; photo: number | null;
     x: number | null; y: number | null; w: number | null; h: number | null;
   }[] | null) ?? [])
     .sort((a, b) => a.sort - b.sort)
     .map((spot) => ({
       id: spot.id,
       label: spot.label,
+      photo: spot.photo ?? 0,
       rect:
         spot.x === null || spot.y === null || spot.w === null || spot.h === null
           ? null
@@ -336,7 +341,7 @@ export async function loadSellerRequests(): Promise<SellerRequest[]> {
   const { data } = await db
     .from("rent_requests")
     .select(
-      "id, buyer, buyer_wallet, artwork_url, starts_on, ends_on, price_per_day_cents, answer_by, thing_spots(label, x, y, w, h, things(title, photos))",
+      "id, buyer, buyer_wallet, artwork_url, starts_on, ends_on, price_per_day_cents, answer_by, thing_spots(label, photo, x, y, w, h, things(title, photos))",
     )
     .eq("status", "waiting")
     .gt("answer_by", new Date().toISOString())
@@ -353,6 +358,7 @@ export async function loadSellerRequests(): Promise<SellerRequest[]> {
   return data.map((one) => {
     const spot = one.thing_spots as unknown as {
       label: string;
+      photo: number | null;
       x: number | null; y: number | null; w: number | null; h: number | null;
       things: { title: string; photos: string[] | null } | null;
     } | null;
@@ -366,7 +372,8 @@ export async function loadSellerRequests(): Promise<SellerRequest[]> {
           ? { x: spot.x, y: spot.y, w: spot.w, h: spot.h }
           : null,
       thingTitle: spot?.things?.title ?? "",
-      thingPhoto: photos[0] ? photoUrl(photos[0]) : null,
+      // Место размечено на своём снимке - его и показываем.
+      thingPhoto: photos[spot?.photo ?? 0] ? photoUrl(photos[spot?.photo ?? 0]!) : null,
       buyerWallet: one.buyer_wallet,
       buyerRating:
         score?.rating === null || score?.rating === undefined ? null : Number(score.rating),

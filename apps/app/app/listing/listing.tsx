@@ -46,6 +46,12 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     return () => clearInterval(tick);
   }, [thingId]);
 
+  // Выбрали место - показываем снимок, на котором оно размечено.
+  useEffect(() => {
+    const spot = thing?.spots.find((one) => one.code === picked);
+    if (spot) setPhoto(spot.photo);
+  }, [picked, thing]);
+
   const lots = thing?.lots ?? [];
   const lotOf = (code: string) => lots.find((lot) => lot.spot_code === code) ?? null;
   const lot = picked ? lotOf(picked) : null;
@@ -196,9 +202,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         ) : (
           <div className="sl-photo ls-photo">
             {thing.photos[photo] && <img src={thing.photos[photo]} alt="" />}
-            {photo === 0 &&
-              thing.spots.map((spot, index) => {
-                if (!spot.rect) return null;
+            {thing.spots.map((spot, index) => {
+                // Каждое место - на своём снимке.
+                if (!spot.rect || spot.photo !== photo) return null;
                 const one = lotOf(spot.code);
                 const url = art[spot.code]?.url ?? (one ? tops[one.id]?.media_url : undefined);
                 return (

@@ -19,6 +19,8 @@ export type ListedSpot = {
   code: string;
   label: string;
   rect: Rect | null;
+  /** На каком снимке размечено место. */
+  photo: number;
   /** Геометрия на модели; null - место ещё не поставлено на 3D. */
   geo: { height: number; azimuth: number; size: [number, number] } | null;
 };
@@ -41,6 +43,7 @@ type SpotRow = {
   code: string;
   label: string;
   sort: number;
+  photo: number | null;
   x: number | null;
   y: number | null;
   w: number | null;
@@ -58,6 +61,7 @@ export function listedSpots(rows: SpotRow[]): ListedSpot[] {
       id: row.id,
       code: row.code,
       label: row.label,
+      photo: row.photo ?? 0,
       rect:
         row.x === null || row.y === null || row.w === null || row.h === null
           ? null
@@ -90,7 +94,7 @@ export function shapeOf(model: string | null, spots: ListedSpot[]): Shape | null
 }
 
 export const SPOT_COLUMNS =
-  "id, code, label, sort, x, y, w, h, height, azimuth, size_w, size_h";
+  "id, code, label, sort, photo, x, y, w, h, height, azimuth, size_w, size_h";
 
 export async function loadListedThing(thingId: string): Promise<ListedThing | null> {
   if (!db) return null;

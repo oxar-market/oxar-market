@@ -4818,3 +4818,44 @@ input:focus {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+
+/* Разметка: переключатель снимков над кадром, у каждого - число мест. */
+.sl-mark-shots {
+  display: flex;
+  gap: 8px;
+}
+
+.sl-mark-shots button {
+  position: relative;
+  width: 56px;
+  aspect-ratio: 4 / 5;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--soft);
+  cursor: pointer;
+}
+
+.sl-mark-shots button.on {
+  border-color: #e0381c;
+}
+
+.sl-mark-shots img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sl-mark-shots span {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.6875rem;
+  line-height: 16px;
+}

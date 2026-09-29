@@ -58,7 +58,8 @@ export function SetUpSpots({
         <div className="sl-mini">
           {thing.cover && <img src={thing.cover} alt="" />}
           {thing.spots.map((spot, index) =>
-            spot.rect ? (
+            // Обложка - первый снимок: на ней только его места.
+            spot.rect && spot.photo === 0 ? (
               <span
                 key={spot.id}
                 style={{

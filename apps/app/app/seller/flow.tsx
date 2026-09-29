@@ -22,7 +22,6 @@ import {
   sendThing,
   type DealToRate,
   type PricingThing,
-  type Rect,
   type Score,
   type SellerRequest,
   type SellerThing,
@@ -43,7 +42,7 @@ type View =
   | { name: "home" }
   | { name: "camera" }
   | { name: "desktop" }
-  | { name: "mark"; photos: (Blob | string)[]; preview: string }
+  | { name: "mark"; photos: (Blob | string)[]; previews: string[] }
   | { name: "sent"; photos: number; spots: number }
   | { name: "setup"; thing: PricingThing }
   | { name: "request"; request: SellerRequest }
@@ -112,7 +111,7 @@ export function SellerFlow({
   }
 
   const onPhotos = useCallback(
-    (photos: (Blob | string)[], preview: string) => go({ name: "mark", photos, preview }),
+    (photos: (Blob | string)[], previews: string[]) => go({ name: "mark", photos, previews }),
     [],
   );
 
@@ -126,7 +125,7 @@ export function SellerFlow({
         <Camera
           onCancel={home}
           onDone={(photos) =>
-            go({ name: "mark", photos, preview: URL.createObjectURL(photos[0]!) })
+            go({ name: "mark", photos, previews: photos.map((one) => URL.createObjectURL(one)) })
           }
         />
       );
@@ -135,11 +134,11 @@ export function SellerFlow({
     case "mark":
       return column(
         <MarkSpots
-          photo={view.preview}
+          photos={view.previews}
           onBack={home}
           sending={busy}
           failed={failed}
-          onSend={async (spots: Rect[]) => {
+          onSend={async (spots) => {
             setBusy(true);
             const ok = await sendThing(view.photos, spots, wallet?.address ?? null);
             setBusy(false);
