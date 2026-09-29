@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { publishCost, type PublishCost } from "@oxar/core";
 import type { PricingThing, SpotPlan } from "@/lib/seller";
-import { Bar } from "./parts.tsx";
+import { spotsPerSale } from "@/lib/publish";
+import { Bar, SpotMark } from "./parts.tsx";
 
 /** Значения по умолчанию: те же, что у первой футболки. */
 const DEFAULT_RESERVE = "10.00";
@@ -66,25 +68,6 @@ export function SetUpSpots({
       <Bar title="Set up spots" onBack={onBack} />
 
       <div className="sl-card sl-thing-card">
-        <div className="sl-mini">
-          {thing.cover && <img src={thing.cover} alt="" />}
-          {thing.spots.map((spot, index) =>
-            // Обложка - первый снимок: на ней только его места.
-            spot.rect && spot.photo === 0 ? (
-              <span
-                key={spot.id}
-                style={{
-                  left: `${spot.rect.x * 100}%`,
-                  top: `${spot.rect.y * 100}%`,
-                  width: `${spot.rect.w * 100}%`,
-                  height: `${spot.rect.h * 100}%`,
-                }}
-              >
-                {index + 1}
-              </span>
-            ) : null,
-          )}
-        </div>
         <div>
           {/* Название - продавца: правится здесь, пока торг не открыт. */}
           <input
@@ -108,6 +91,19 @@ export function SetUpSpots({
             {thing.spots.length === 1 ? "1 spot" : `${thing.spots.length} spots`}. Defaults
             are set, change what you need.
           </p>
+        </div>
+        {/* Все снимки вещи, на каждом - его места, как их разметили. */}
+        <div className="sl-minis">
+          {(thing.photos.length ? thing.photos : [thing.cover]).map((url, at) => (
+            <div className="sl-mini" key={url ?? at}>
+              {url && <img src={url} alt="" />}
+              {thing.spots.map((spot, index) =>
+                spot.rect && spot.photo === at ? (
+                  <SpotMark key={spot.id} rect={spot.rect} outline={spot.outline} number={index + 1} />
+                ) : null,
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -148,6 +144,14 @@ export function SetUpSpots({
 
       {failed && <p className="bad">Could not save the prices. Try again.</p>}
       {problem && <p className="bad">{problem}</p>}
+
+      {valid && (
+        <p className="sl-plan-note">
+          {costLine(
+            publishCost(spotsPerSale(plans.map((one) => (one.plan as { closesAt: string }).closesAt))),
+          )}
+        </p>
+      )}
 
       <div className="sl-card sl-publish">
         <b>{drafts.length === 1 ? "1 by auction" : `${drafts.length} by auction`}</b>
@@ -291,4 +295,14 @@ function toPlan(one: Draft): SpotPlan | null {
     opensAt: new Date(opens).toISOString(),
     closesAt: new Date(closes).toISOString(),
   };
+}
+
+const sol = (lamports: number) => (lamports / 1e9).toFixed(3);
+
+/**
+ * Во что обойдётся публикация - честно: залог за места вернётся после
+ * торга, а аккаунт торга и подписи уходят сети.
+ */
+export function costLine(cost: PublishCost): string {
+  return `Publishing needs about ${sol(cost.totalLamports)} SOL in your wallet. ${sol(cost.backLamports)} SOL of it is a deposit that comes back to you when the auction ends; ${sol(cost.keptLamports)} SOL pays the network and does not come back.`;
 }

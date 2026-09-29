@@ -35,3 +35,5 @@ export {
   type Box,
   type Point,
 } from "./outline.ts";
+
+export { publishCost, type PublishCost } from "./publish.ts";

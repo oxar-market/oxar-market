@@ -7,7 +7,9 @@ import {
 } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
 import { WALLET_CHAIN, connection } from "@/lib/chain";
-import { publishAuctions } from "@/lib/publish";
+import { publishAuctions, spotsPerSale } from "@/lib/publish";
+import { publishCost } from "@oxar/core";
+import { costLine } from "./setup.tsx";
 import {
   answerRequest,
   landCapture,
@@ -184,14 +186,18 @@ export function SellerFlow({
                 return setProblem("No wallet connected. Sign in again to get one.");
               }
               const owner = new PublicKey(wallet.address);
-              // Места и хранилища создаются за счёт продавца: около 0.004 SOL
-              // на место и 0.002 на торг. Нет SOL - транзакция не пройдёт.
-              const need = 0.002 + 0.004 * auctions;
+              // Лоты, хранилища и торг создаются за счёт продавца (залог
+              // Solana). Нет SOL - транзакция не пройдёт.
+              const cost = publishCost(
+                spotsPerSale(
+                  plans.flatMap((one) => (one.plan.kind === "auction" ? [one.plan.closesAt] : [])),
+                ),
+              );
               const sol = (await connection.getBalance(owner)) / 1e9;
-              if (sol < need) {
+              if (sol * 1e9 < cost.totalLamports) {
                 setBusy(false);
                 return setProblem(
-                  `Opening ${auctions === 1 ? "an auction" : `${auctions} auctions`} needs about ${need.toFixed(3)} SOL in your wallet for network rent. You have ${sol.toFixed(3)}.`,
+                  `${costLine(cost)} You have ${sol.toFixed(3)} SOL - top up the wallet and publish again.`,
                 );
               }
               const opened = await publishAuctions(view.thing.id, owner, async (transaction) => {
