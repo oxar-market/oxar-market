@@ -8,6 +8,8 @@ import { Auction } from "./auction/auction";
 import { Market } from "./market";
 import { Tabs, useTab } from "./tabs";
 import { ThemeRow, You } from "./you";
+import { PhoneCapture } from "./seller/flow.tsx";
+import { ListingAuction } from "./listing/listing.tsx";
 
 /**
  * Приложение.
@@ -23,9 +25,29 @@ export default function Home() {
   const { ready, authenticated, getAccessToken } = usePrivy();
   const { login } = useLogin();
   const [tab, setTab] = useTab();
+  // Вещь продавца, открытая с маркета или из кабинета. Пусто - на вкладке
+  // торга наша футболка, как было.
+  const [openThing, setOpenThing] = useState<string | null>(null);
+  function openAuction(thingId?: string) {
+    setOpenThing(thingId ?? null);
+    setTab("auction");
+  }
   const [linked, setLinked] = useState<"idle" | "linking" | "ready" | "failed">(
     "idle",
   );
+
+  // Телефон пришёл по QR с десктопа продавца: сразу камера на вкладке You.
+  // Телефон пришёл по QR с десктопа: сразу камера, без входа - в ссылке
+  // секрет сессии съёмки, он и есть допуск.
+  const [capture, setCapture] = useState<string | null>(null);
+  useEffect(() => {
+    const secret = new URLSearchParams(window.location.search).get("c");
+    if (secret && /^[a-z0-9]{10}$/.test(secret)) {
+      setCapture(secret);
+      setTab("you");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!ready || !authenticated || !db) return;
@@ -57,20 +79,47 @@ export default function Home() {
         </p>
       )}
 
-      {tab === "market" && <Market onOpenAuction={() => setTab("auction")} />}
-      {tab === "auction" && <Auction />}
-      {tab === "you" &&
+      {tab === "market" && <Market onOpenAuction={openAuction} />}
+      {tab === "auction" &&
+        (openThing ? (
+          <ListingAuction
+            thingId={openThing}
+            onBack={() => {
+              setOpenThing(null);
+              setTab("market");
+            }}
+          />
+        ) : (
+          <Auction />
+        ))}
+      {tab === "you" && capture ? (
+        <section className="screen">
+          <PhoneCapture
+            secret={capture}
+            onClose={() => {
+              setCapture(null);
+              window.history.replaceState(null, "", "/");
+            }}
+          />
+        </section>
+      ) : tab === "you" &&
         // Пока Privy не готов, не показываем ни Guest, ни You: иначе вошедшему
         // на миг мелькнёт «Sign in», пока не подтвердится сессия.
         (!ready ? (
           <section className="screen" />
         ) : authenticated ? (
-          <You onOpenAuction={() => setTab("auction")} />
+          <You onOpenAuction={openAuction} />
         ) : (
           <Guest onSignIn={login} />
         ))}
 
-      <Tabs tab={tab} onPick={setTab} />
+      <Tabs
+        tab={tab}
+        onPick={(next) => {
+          if (next === "auction") setOpenThing(null);
+          setTab(next);
+        }}
+      />
     </main>
   );
 }

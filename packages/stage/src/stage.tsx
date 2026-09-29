@@ -70,6 +70,7 @@ export function ThingStage({
   stage,
   onReady,
   shape = SHIRT,
+  onSurface,
 }: {
   /** Код выбранного места: оно горит на вещи постоянно. */
   picked: string | null;
@@ -85,6 +86,12 @@ export function ThingStage({
   onReady?: (views: Views) => void;
   /** Какая вещь на сцене. По умолчанию футболка. */
   shape?: Shape;
+  /**
+   * Клик по самой вещи мимо мест - в тех же высоте и угле, что у места.
+   * Нужен админке: так места ставятся на новую модель щелчком, а не
+   * подбором чисел.
+   */
+  onSurface?: (at: { height: number; azimuth: number }) => void;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
@@ -101,6 +108,8 @@ export function ThingStage({
   pick.current = onPick;
   const ready = useRef(onReady);
   ready.current = onReady;
+  const surface = useRef(onSurface);
+  surface.current = onSurface;
   const pickedNow = useRef(picked);
   // Вещь читается один раз, при сборке сцены: сменить её значит собрать сцену
   // заново, и такой смены у нас нет - одна сцена показывает одну вещь.
@@ -265,7 +274,9 @@ export function ThingStage({
         // Начальный разворот - к выбранному месту: оно могло смениться, пока
         // сцена собиралась.
         const startSpot =
-          SPOTS.find((spot) => spot.code === pickedNow.current) ?? SPOTS[0];
+          SPOTS.find((spot) => spot.code === pickedNow.current) ?? SPOTS[0] ?? {
+            azimuth: 0,
+          };
         // К грани, на которой место, а не точно под его угол: угол у места
         // двойной службы, он же сдвиг вбок внутри грани, и камера, поставленная
         // под него, показывала бы вещь вполоборота с первого кадра.
@@ -652,7 +663,17 @@ export function ThingStage({
           if (Math.abs(event.clientX - start.x) > 5) return;
           if (Math.abs(event.clientY - start.y) > 5) return;
           const found = under(event);
-          if (found) pick.current(found.code);
+          if (found) return pick.current(found.code);
+          if (!surface.current) return;
+          // Обратное к тому, как места ставятся: луч летит к оси по
+          // горизонтали, значит точка на вещи и задаёт угол, а её высота в
+          // габарите - высоту.
+          const hit = raycaster.intersectObjects(meshes, true)[0];
+          if (!hit) return;
+          surface.current({
+            height: Math.min(1, Math.max(0, (hit.point.y - low) / tall)),
+            azimuth: (Math.atan2(hit.point.x, hit.point.z) * 180) / Math.PI,
+          });
         };
 
         renderer.domElement.addEventListener("pointermove", onMove);

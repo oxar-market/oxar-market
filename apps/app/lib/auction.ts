@@ -146,6 +146,8 @@ export type MyStand = {
   /** Код места: по нему кнопка «перебить» открывает торг сразу на нём. */
   code: string;
   thing: string;
+  /** Id вещи, если она продавца: торг у неё на своей странице. */
+  sellerThing: string | null;
   closesAt: string;
   /** Торг ещё идёт. */
   open: boolean;
@@ -174,7 +176,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
   const { data } = await db
     .from("lot_bids")
     .select(
-      "amount_cents, lot_id, lots!inner(status, closes_at, thing_spots(code, label), things:thing_id(title))",
+      "amount_cents, lot_id, lots!inner(status, closes_at, thing_spots(code, label), things:thing_id(id, title, seller))",
     )
     .eq("bidder_wallet", wallet)
     .order("amount_cents", { ascending: false })
@@ -193,7 +195,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       status: string;
       closes_at: string;
       thing_spots: { code?: string; label?: string } | null;
-      things: { title?: string } | null;
+      things: { id?: string; title?: string; seller?: string | null } | null;
     };
     const top = tops[row.lot_id];
     const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
@@ -203,6 +205,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       spot: lot.thing_spots?.label ?? "?",
       code: lot.thing_spots?.code ?? "",
       thing: lot.things?.title ?? "",
+      sellerThing: lot.things?.seller ? (lot.things.id ?? null) : null,
       closesAt: lot.closes_at,
       open,
       mineCents: row.amount_cents,
@@ -244,6 +247,9 @@ export type MarketThing = {
   opensAt: string | null;
   /** Код места - логотип лидера: одеть модель тем, что реально стоит. */
   art: Record<string, string>;
+  /** Вещь продавца: у неё своя страница торга и вместо модели - снимок. */
+  seller: string | null;
+  photo: string | null;
 };
 
 /** Анонс: вещь уже в каталоге, но торга на неё ещё не заводили. */
@@ -251,6 +257,9 @@ export type UpcomingThing = {
   id: string;
   title: string;
   tagline: string | null;
+  /** Вещь продавца: анонс её снимком, а не голограммой футболки. */
+  seller: string | null;
+  photo: string | null;
 };
 
 /** Строка «Held earlier»: чем кончился прошедший торг. */
@@ -273,18 +282,28 @@ export async function loadMarket(): Promise<{
 
   // Анонс - вещь без единого лота. Вещь, у которой торг уже был, сюда не
   // попадает и после его закрытия: она уходит в «Held earlier».
+  // Вещь продавца попадает сюда сразу после отправки: цен ещё нет, но
+  // вещь уже видна по снимкам.
   const { data: catalog } = await db
     .from("things")
-    .select("id, title, tagline, lots(id)")
+    .select("id, title, tagline, seller, photos, lots(id)")
+    .eq("active", true)
     .order("created_at");
+  const shots = db.storage.from("things");
   const upcoming: UpcomingThing[] = (catalog ?? [])
     .filter((one) => (one.lots as unknown[]).length === 0)
-    .map((one) => ({ id: one.id, title: one.title, tagline: one.tagline }));
+    .map((one) => ({
+      id: one.id,
+      title: one.title,
+      tagline: one.tagline,
+      seller: one.seller,
+      photo: one.photos?.[0] ? shots.getPublicUrl(one.photos[0]).data.publicUrl : null,
+    }));
 
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, photos)",
     )
     .in("status", ["open", "won", "unsold"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -297,7 +316,17 @@ export async function loadMarket(): Promise<{
   const things = new Map<string, MarketThing>();
   const heldBy = new Map<string, HeldRow>();
   for (const lot of data) {
-    const info = lot.things as unknown as { title?: string; tagline?: string | null } | null;
+    const info = lot.things as unknown as {
+      title?: string;
+      tagline?: string | null;
+      active?: boolean;
+      seller?: string | null;
+      photos?: string[] | null;
+    } | null;
+    // Лоты с открытым торгом видны всем, а вещь - только выставленная.
+    // Вещь продавца, которую мы ещё не вывели на маркет, в показ не идёт,
+    // даже если он уже открыл на неё аукцион.
+    if (!info || info.active === false) continue;
     const top = tops[lot.id];
     const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
     if (open) {
@@ -314,6 +343,10 @@ export async function loadMarket(): Promise<{
           closesAt: lot.closes_at,
           opensAt: lot.opens_at,
           art: {},
+          seller: info.seller ?? null,
+          photo: info.photos?.[0]
+            ? db.storage.from("things").getPublicUrl(info.photos[0]).data.publicUrl
+            : null,
         });
       known.spots += 1;
       if (top) {

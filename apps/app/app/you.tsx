@@ -8,6 +8,10 @@ import { BUILD } from "@/lib/build";
 import { connection, walletUnits } from "@/lib/chain";
 import { loadMyStands, type MyStand } from "@/lib/auction";
 import { db } from "@/lib/session";
+import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
+import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
+import { amIAdmin } from "@/lib/admin";
+import { Admin } from "./admin/admin.tsx";
 
 /**
  * Страница человека, собранная по дизайн-борду «OXAR Auction design
@@ -22,7 +26,7 @@ import { db } from "@/lib/session";
 /** Куда зовёт разговор. Тот же адрес, что был в прошлой версии продукта. */
 const CALL_URL = "https://calendly.com/daniel-l-oxar";
 
-export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
+export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => void }) {
   const { user, logout } = usePrivy();
   const wallet = user?.wallet?.address;
   const email = user?.email?.address;
@@ -87,18 +91,94 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
 
   // Роли одним переключателем: Seller - не второй режим, а дверь к разговору,
   // и до своего кабинета он живёт одной карточкой с Buyer.
-  const [role, setRole] = useState<"buyer" | "seller">("buyer");
+  const [role, setRole] = useState<"buyer" | "seller" | "admin">("buyer");
+
+  // Продавцу роль выдаём мы после звонка. У него переключатель встаёт наверх
+  // и Seller открывает кабинет; остальным Seller - по-прежнему разговор.
+  const [seller, setSeller] = useState(false);
+  useEffect(() => {
+    void amISeller().then(setSeller);
+  }, []);
+  // Админ - это мы: третья вкладка переключателя, остальным её нет.
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    void amIAdmin().then(setAdmin);
+  }, []);
+  // Шаги кабинета со своей шапкой прячут шапку экрана и переключатель.
+  const [sellerView, setSellerView] = useState("home");
+
+  // Оценка сделки покупателем: вход отсюда, из режима Buyer.
+  const [toRate, setToRate] = useState<DealToRate[]>([]);
+  const [rating, setRating] = useState<DealToRate | null>(null);
+  useEffect(() => {
+    void loadDealsToRate("buyer").then(setToRate);
+  }, [rating]);
 
   const outbid = stands.filter((one) => one.open && !one.leading);
   const leading = stands.filter((one) => one.open && one.leading);
   const history = stands.filter((one) => !one.open);
   const activeCount = outbid.length + leading.length;
 
+  if (rating) {
+    return (
+      <section className="screen">
+        <BuyerRating deal={rating} onDone={() => setRating(null)} />
+      </section>
+    );
+  }
+
+  const roleToggle = (
+    <div className="role-toggle sl-toggle">
+      {(admin ? (["buyer", "seller", "admin"] as const) : (["buyer", "seller"] as const)).map((one) => (
+        <button
+          key={one}
+          type="button"
+          className={role === one ? "role-tab on" : "role-tab"}
+          onClick={() => setRole(one)}
+        >
+          {one === "buyer" ? "Buyer" : one === "seller" ? "Seller" : "Admin"}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (admin && role === "admin") {
+    return (
+      <section className="screen">
+        <h1 className="mk-title">
+          OXAR <span>You</span>
+        </h1>
+        {roleToggle}
+        <div className="sl-column">
+          <Admin />
+        </div>
+      </section>
+    );
+  }
+
+  if (seller && role === "seller") {
+    return (
+      <section className="screen">
+        {sellerView === "home" && (
+          <>
+            <h1 className="mk-title">
+              OXAR <span>You</span>
+            </h1>
+            {roleToggle}
+          </>
+        )}
+        <SellerFlow onView={setSellerView} onOpen={onOpenAuction} />
+      </section>
+    );
+  }
+
   return (
     <section className="screen">
       <h1 className="mk-title">
         OXAR <span>You</span>
       </h1>
+
+      {(seller || admin) && roleToggle}
 
       <div className="you-card">
         <span className="you-face" aria-hidden>
@@ -202,7 +282,7 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
               // Торг откроется сразу на этом месте: код едет через
               // sessionStorage, вкладки - состояние экрана, а не адреса.
               window.sessionStorage.setItem("oxar.jump", one.code);
-              onOpenAuction();
+              onOpenAuction(one.sellerThing ?? undefined);
             }}
           >
             Raise your bid
@@ -226,6 +306,17 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
             </div>
           ))}
         </div>
+      )}
+
+      {toRate[0] && (
+        <button type="button" className="sl-waiting" onClick={() => setRating(toRate[0]!)}>
+          <span className="dot" />
+          <span>
+            <b>{toRate.length === 1 ? "1 deal to rate" : `${toRate.length} deals to rate`}</b>
+            <small>{toRate[0].title}</small>
+          </span>
+          <span className="go">Rate</span>
+        </button>
       )}
 
       <div className="bids-head">
@@ -261,16 +352,17 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
         </>
       )}
 
+      {!seller && (
       <div className="role-card">
         <div className="role-toggle">
-          {(["buyer", "seller"] as const).map((one) => (
+          {(admin ? (["buyer", "seller", "admin"] as const) : (["buyer", "seller"] as const)).map((one) => (
             <button
               key={one}
               type="button"
               className={role === one ? "role-tab on" : "role-tab"}
               onClick={() => setRole(one)}
             >
-              {one === "buyer" ? "Buyer" : "Seller"}
+              {one === "buyer" ? "Buyer" : one === "seller" ? "Seller" : "Admin"}
             </button>
           ))}
         </div>
@@ -291,6 +383,7 @@ export function You({ onOpenAuction }: { onOpenAuction: () => void }) {
           </>
         )}
       </div>
+      )}
 
       <ThemeRow />
 
