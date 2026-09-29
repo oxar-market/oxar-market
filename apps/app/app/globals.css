@@ -5001,3 +5001,36 @@ input:focus {
   width: 6px;
   height: 6px;
 }
+
+/* Счётчик на вкладке админки: сколько ждут решения. */
+.ad-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #e0381c;
+  color: #fff;
+  font-size: 0.6875rem;
+  line-height: 18px;
+  text-align: center;
+}
+
+.sl-state.declined i {
+  background: transparent;
+  border: 1.5px solid #e0381c;
+  width: 7px;
+  height: 7px;
+}
+
+.ad-reason textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
