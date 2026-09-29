@@ -213,8 +213,8 @@ export async function sendThing(
     slug: `thing-${id.slice(0, 8)}`,
     title: `New thing No. ${number}`,
     model_url: "",
-    // На маркете сразу, по снимкам; модель мы приложим потом.
-    active: true,
+    // Пока вещь видит только продавец: на маркет её выводит админ.
+    active: false,
     stage: "ready",
     seller: owner,
     seller_wallet: wallet,
