@@ -412,31 +412,71 @@ export async function sendRating(input: RatingInput): Promise<boolean> {
   return !error;
 }
 
-/** Сессия съёмки для десктопа. */
-export async function startCapture(): Promise<string | null> {
-  if (!db) return null;
-  const { data, error } = await db.from("capture_sessions").insert({}).select("id").single();
-  return error ? null : data.id;
-}
+/** Сколько снимков просит камера - столько ссылок загрузки и готовим. */
+const CAPTURE_SHOTS = 3;
 
 /**
- * Телефон находит сессию, которую ждёт десктоп того же человека.
+ * Сессия съёмки для десктопа: секрет для QR и подписанные ссылки загрузки.
  *
- * QR поэтому постоянный: в нём нет id сессии, только адрес. Телефон входит
- * тем же аккаунтом и берёт самую свежую ждущую сессию - её видит только
- * владелец. Старше четверти часа не берём: десктоп давно закрыт.
+ * Телефон - просто камера, входить ему не нужно: кошелёк на телефоне - это
+ * отдельный вход, чужой браузер кошелька и сессия, которая не переживает
+ * обновление. Поэтому ссылки загрузки готовит вошедший десктоп, а телефон
+ * получает их по секрету из QR.
  */
-export async function findWaitingCapture(): Promise<string | null> {
+export async function startCapture(): Promise<{ id: string; secret: string } | null> {
   if (!db) return null;
-  const { data } = await db
+  const { data: auth } = await db.auth.getUser();
+  if (!auth.user) return null;
+  const { data, error } = await db
     .from("capture_sessions")
-    .select("id")
-    .eq("state", "waiting")
-    .gt("created_at", new Date(Date.now() - 15 * 60_000).toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data?.id ?? null;
+    .insert({})
+    .select("id, secret")
+    .single();
+  if (error) return null;
+
+  const uploads: { path: string; token: string }[] = [];
+  for (let at = 0; at < CAPTURE_SHOTS; at++) {
+    const path = `${auth.user.id}/capture-${data.id}/${at}.jpg`;
+    const { data: signed, error: signError } = await db.storage
+      .from("things")
+      .createSignedUploadUrl(path);
+    if (signError || !signed) return null;
+    uploads.push({ path, token: signed.token });
+  }
+  const { error: saveError } = await db
+    .from("capture_sessions")
+    .update({ uploads })
+    .eq("id", data.id);
+  return saveError ? null : { id: data.id, secret: data.secret };
+}
+
+/** Телефон по секрету из QR открывает съёмку: получает ссылки загрузки. */
+export async function openCapture(
+  secret: string,
+): Promise<{ path: string; token: string }[] | null> {
+  if (!db) return null;
+  const { data, error } = await db.rpc("capture_open", { secret });
+  if (error || !Array.isArray(data) || data.length === 0) return null;
+  return data as { path: string; token: string }[];
+}
+
+/** Телефон заливает снимки по подписанным ссылкам и сдаёт их десктопу. */
+export async function landCapture(
+  secret: string,
+  uploads: { path: string; token: string }[],
+  photos: Blob[],
+): Promise<boolean> {
+  if (!db) return false;
+  const shots = photos.slice(0, uploads.length);
+  for (const [at, photo] of shots.entries()) {
+    const { path, token } = uploads[at]!;
+    const { error } = await db.storage
+      .from("things")
+      .uploadToSignedUrl(path, token, photo, { contentType: photo.type || "image/jpeg" });
+    if (error) return false;
+  }
+  const { data, error } = await db.rpc("capture_land", { secret, shots: shots.length });
+  return !error && data === true;
 }
 
 export async function readCapture(
@@ -451,33 +491,6 @@ export async function readCapture(
   return data ? { state: data.state, photos: data.photos ?? [] } : null;
 }
 
-/** Телефон отмечает, что начал снимать, и потом сдаёт снимки. */
-export async function markShooting(id: string): Promise<void> {
-  if (!db) return;
-  await db.from("capture_sessions").update({ state: "shooting" }).eq("id", id);
-}
-
-export async function landCapture(id: string, photos: Blob[]): Promise<boolean> {
-  if (!db) return false;
-  const { data: auth } = await db.auth.getUser();
-  if (!auth.user) return false;
-  const paths: string[] = [];
-  for (const [at, photo] of photos.entries()) {
-    const path = `${auth.user.id}/capture-${id}/${at}.jpg`;
-    const { error } = await db.storage
-      .from("things")
-      // Путь уникален сессией, перезаписывать нечего - а перезапись
-      // потребовала бы права на чтение и правку чужих файлов в бакете.
-      .upload(path, photo, { contentType: photo.type || "image/jpeg", upsert: false });
-    if (error) return false;
-    paths.push(path);
-  }
-  const { error } = await db
-    .from("capture_sessions")
-    .update({ state: "landed", photos: paths })
-    .eq("id", id);
-  return !error;
-}
 
 /** Сделка, которую сторона ещё не оценила. */
 export type DealToRate = {

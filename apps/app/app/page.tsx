@@ -29,11 +29,13 @@ export default function Home() {
   );
 
   // Телефон пришёл по QR с десктопа продавца: сразу камера на вкладке You.
-  // QR постоянный - «/?c»: сессию телефон найдёт сам по аккаунту.
-  const [capture, setCapture] = useState(false);
+  // Телефон пришёл по QR с десктопа: сразу камера, без входа - в ссылке
+  // секрет сессии съёмки, он и есть допуск.
+  const [capture, setCapture] = useState<string | null>(null);
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has("c")) {
-      setCapture(true);
+    const secret = new URLSearchParams(window.location.search).get("c");
+    if (secret && /^[a-z0-9]{10}$/.test(secret)) {
+      setCapture(secret);
       setTab("you");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,20 +73,21 @@ export default function Home() {
 
       {tab === "market" && <Market onOpenAuction={() => setTab("auction")} />}
       {tab === "auction" && <Auction />}
-      {tab === "you" &&
+      {tab === "you" && capture ? (
+        <section className="screen">
+          <PhoneCapture
+            secret={capture}
+            onClose={() => {
+              setCapture(null);
+              window.history.replaceState(null, "", "/");
+            }}
+          />
+        </section>
+      ) : tab === "you" &&
         // Пока Privy не готов, не показываем ни Guest, ни You: иначе вошедшему
         // на миг мелькнёт «Sign in», пока не подтвердится сессия.
         (!ready ? (
           <section className="screen" />
-        ) : authenticated && capture ? (
-          <section className="screen">
-            <PhoneCapture
-              onClose={() => {
-                setCapture(false);
-                window.history.replaceState(null, "", "/");
-              }}
-            />
-          </section>
         ) : authenticated ? (
           <You onOpenAuction={() => setTab("auction")} />
         ) : (

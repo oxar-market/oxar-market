@@ -317,14 +317,22 @@ create policy "продавец кладёт снимки своей вещи" o
 
 -- ── Съёмка с телефона для десктопа ────────────────────────────────────────
 
--- Десктоп показывает QR с id сессии, телефон того же человека снимает и
--- дописывает пути снимков сюда, десктоп их подхватывает.
+-- Десктоп показывает QR с секретом сессии; телефон - просто камера, входить
+-- ему не нужно. Десктоп (вошедший продавец) заранее готовит подписанные
+-- ссылки загрузки в свою папку и кладёт их в сессию; телефон по секрету
+-- получает эти ссылки функцией и заливает снимки. Секрет живёт четверть
+-- часа и открывает только эту сессию.
 create table capture_sessions (
   id uuid primary key default gen_random_uuid(),
   owner uuid not null default auth.uid() references auth.users (id) on delete cascade,
   created_at timestamptz not null default now(),
+  -- Десять знаков [a-z0-9] - около 50 бит: на четверть часа хватает с запасом.
+  secret text not null unique
+    default substr(translate(encode(extensions.gen_random_bytes(24), 'base64'), '+/=ABCDEFGHIJKLMNOPQRSTUVWXYZ', ''), 1, 10),
   state text not null default 'waiting'
     check (state in ('waiting', 'shooting', 'landed')),
+  -- Подписанные ссылки загрузки: [{path, token}], их готовит десктоп.
+  uploads jsonb not null default '[]',
   photos text[] not null default '{}'
 );
 
@@ -333,3 +341,51 @@ alter table capture_sessions enable row level security;
 create policy "своя сессия съёмки" on capture_sessions for all
   using (owner = auth.uid())
   with check (owner = auth.uid());
+
+-- Телефон по секрету открывает съёмку и получает ссылки загрузки.
+create or replace function capture_open(secret text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  found jsonb;
+begin
+  update capture_sessions c
+     set state = 'shooting'
+   where c.secret = capture_open.secret
+     and c.state in ('waiting', 'shooting')
+     and c.created_at > now() - interval '15 minutes'
+  returning c.uploads into found;
+  return found;
+end;
+$$;
+
+-- Телефон сдаёт снимки: сколько залил - столько первых путей и берём.
+create or replace function capture_land(secret text, shots integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update capture_sessions c
+     set state = 'landed',
+         photos = array(
+           select u ->> 'path'
+             from jsonb_array_elements(c.uploads) with ordinality as t(u, n)
+            where t.n <= greatest(1, least(shots, jsonb_array_length(c.uploads)))
+            order by t.n
+         )
+   where c.secret = capture_land.secret
+     and c.state = 'shooting'
+     and c.created_at > now() - interval '15 minutes';
+  return found;
+end;
+$$;
+
+revoke all on function capture_open(text) from public;
+revoke all on function capture_land(text, integer) from public;
+grant execute on function capture_open(text) to anon, authenticated;
+grant execute on function capture_land(text, integer) to anon, authenticated;

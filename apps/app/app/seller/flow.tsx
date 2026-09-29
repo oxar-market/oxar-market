@@ -16,8 +16,7 @@ import {
   loadSellerRequests,
   loadSellerScore,
   loadSellerThings,
-  findWaitingCapture,
-  markShooting,
+  openCapture,
   savePlans,
   sendRating,
   sendThing,
@@ -252,47 +251,47 @@ export function SellerFlow({ onView }: { onView?: (name: View["name"]) => void }
 }
 
 /**
- * Телефон по QR с десктопа: та же камера, но снимки уходят в сессию, а
- * размечает их десктоп.
+ * Телефон по QR с десктопа: просто камера, без входа и кошелька. Секрет из
+ * QR открывает съёмку, снимки уходят по подписанным ссылкам, размечает их
+ * десктоп.
  */
-export function PhoneCapture({ onClose }: { onClose: () => void }) {
-  const [state, setState] = useState<"finding" | "shooting" | "sending" | "done" | "failed">(
-    "finding",
+export function PhoneCapture({ secret, onClose }: { secret: string; onClose: () => void }) {
+  const [state, setState] = useState<"opening" | "shooting" | "sending" | "done" | "expired" | "failed">(
+    "opening",
   );
-  const [session, setSession] = useState<string | null>(null);
+  const [uploads, setUploads] = useState<{ path: string; token: string }[]>([]);
 
-  // Сессию ждёт десктоп того же аккаунта. Вход другим аккаунтом или
-  // закрытый десктоп - честное «не нашли», а не чужая вещь.
   useEffect(() => {
-    void findWaitingCapture().then((id) => {
-      if (!id) return setState("failed");
-      setSession(id);
+    void openCapture(secret).then((found) => {
+      if (!found) return setState("expired");
+      setUploads(found);
       setState("shooting");
-      void markShooting(id);
     });
-  }, []);
+  }, [secret]);
 
-  if (state === "finding") return null;
-  if (state === "shooting" && session) {
+  if (state === "opening") return null;
+  if (state === "shooting") {
     return (
       <Camera
         onCancel={onClose}
         onDone={async (photos) => {
           setState("sending");
-          setState((await landCapture(session, photos)) ? "done" : "failed");
+          setState((await landCapture(secret, uploads, photos)) ? "done" : "failed");
         }}
       />
     );
   }
   return (
     <>
-      <Bar title={state === "failed" ? "Not sent" : "Sent"} onBack={onClose} />
+      <Bar title={state === "done" || state === "sending" ? "Sent" : "Not sent"} onBack={onClose} />
       <p className="sl-lead">
         {state === "sending"
           ? "Sending the photos to your computer."
           : state === "done"
             ? "The photos are on your computer. Mark the spots there."
-            : "Open Add a thing on your computer first, signed in with the same account, then scan again."}
+            : state === "expired"
+              ? "This code has expired. Open Add a thing on your computer and scan the new code."
+              : "The photos did not reach your computer. Check the connection and scan again."}
       </p>
     </>
   );

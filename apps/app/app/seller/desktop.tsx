@@ -19,7 +19,7 @@ export function AddOnDesktop({
   /** Снимки для разметки: пути из хранилища (с телефона) или файлы. */
   onPhotos: (photos: (Blob | string)[], preview: string) => void;
 }) {
-  const [session, setSession] = useState<string | null>(null);
+  const [session, setSession] = useState<{ id: string; secret: string } | null>(null);
   const [state, setState] = useState<"waiting" | "shooting" | "landed">("waiting");
   // Сессию не завели - QR вести некуда; остаётся загрузка файлами.
   const [noSession, setNoSession] = useState(false);
@@ -35,7 +35,7 @@ export function AddOnDesktop({
   useEffect(() => {
     if (!session) return;
     const tick = setInterval(async () => {
-      const read = await readCapture(session);
+      const read = await readCapture(session.id);
       if (!read) return;
       setState(read.state);
       if (read.state === "landed" && read.photos.length > 0) {
@@ -46,9 +46,8 @@ export function AddOnDesktop({
     return () => clearInterval(tick);
   }, [session, onPhotos]);
 
-  // Ссылка постоянная: сессию телефон найдёт сам по аккаунту. Поэтому код
-  // может быть готовой картинкой, нарисованной один раз.
-  const link = session ? `${window.location.origin}/?c` : "";
+  // В ссылке секрет сессии: по нему телефон снимает без входа и кошелька.
+  const link = session ? `${window.location.origin}/?c=${session.secret}` : "";
 
   return (
     <div className="sl-desk">
