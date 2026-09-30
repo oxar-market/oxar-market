@@ -121,13 +121,11 @@ export default function Home() {
   const [live, setLive] = useState<Live | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  // Тема: запомненная, иначе системная. Ставится атрибутом на html, чтобы
+  // Тема: запомненная, иначе светлая. Ставится атрибутом на html, чтобы
   // фон страницы переключался целиком, а не только внутри main.
   const [theme, setTheme] = useState<Theme>("light");
   useEffect(() => {
-    const saved = window.localStorage.getItem("oxar.theme");
-    const system = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    setTheme(saved === "dark" || saved === "light" ? saved : system);
+    if (window.localStorage.getItem("oxar.theme") === "dark") setTheme("dark");
   }, []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
