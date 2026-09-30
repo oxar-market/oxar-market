@@ -58,7 +58,7 @@ export function GET() {
           position: "relative",
           background: "#fbfbf9",
           color: "#16181d",
-          fontFamily: "Bricolage",
+          fontFamily: "Inter",
         }}
       >
         {/* Обведённый пунктиром вагон на гравюре - то же самое, что место на
@@ -100,14 +100,14 @@ export function GET() {
       ...size,
       fonts: [
         {
-          name: "Bricolage",
-          data: local("Bricolage-Regular.ttf"),
+          name: "Inter",
+          data: local("Inter-Regular.ttf"),
           weight: 400,
           style: "normal",
         },
         {
-          name: "Bricolage",
-          data: local("Bricolage-Bold.ttf"),
+          name: "Inter",
+          data: local("Inter-Bold.ttf"),
           weight: 700,
           style: "normal",
         },

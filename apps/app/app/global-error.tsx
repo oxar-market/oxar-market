@@ -1,6 +1,6 @@
 "use client";
 
-import { Bricolage_Grotesque } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 /**
@@ -9,8 +9,9 @@ import "./globals.css";
  * <html>, свой шрифт и свои стили: layout сюда не оборачивает, и без этого
  * экран выходит голым системным шрифтом, не нашим.
  */
-const oxar = Bricolage_Grotesque({
+const oxar = Inter({
   subsets: ["latin"],
+  axes: ["opsz"],
   variable: "--font-oxar",
   display: "swap",
 });
