@@ -61,10 +61,11 @@ export default function RootLayout({
     <html lang="en" className={oxar.variable} suppressHydrationWarning>
       <body>
         {/* Тема ставится до первой отрисовки, иначе тёмный экран мигает
-            светлым кадром. Выбор лежит в localStorage; пусто - системная. */}
+            светлым кадром. Выбор лежит в localStorage; пусто - светлая,
+            а за системной темой идём, только если её выбрали явно. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("oxar.theme");if(t!=="light"&&t!=="dark"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}`,
+            __html: `try{var t=localStorage.getItem("oxar.theme");if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}else if(t!=="dark"){t="light"}document.documentElement.dataset.theme=t}catch(e){}`,
           }}
         />
         <Login>{children}</Login>

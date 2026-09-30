@@ -401,20 +401,20 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
 }
 
 /**
- * Ряд темы: свой выбор или системная. Живёт и у гостя - тёмная тема не
+ * Ряд темы: светлая, тёмная или системная. По умолчанию светлая; системная -
+ * такой же явный выбор, как две другие. Живёт и у гостя - тёмная тема не
  * привилегия вошедшего. Применяется атрибутом на html, тем же, что ставит
  * скрипт в layout до первой отрисовки.
  */
 export function ThemeRow() {
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
   useEffect(() => {
     const saved = window.localStorage.getItem("oxar.theme");
-    if (saved === "light" || saved === "dark") setTheme(saved);
+    if (saved === "dark" || saved === "system") setTheme(saved);
   }, []);
   function pickTheme(next: "light" | "dark" | "system") {
     setTheme(next);
-    if (next === "system") window.localStorage.removeItem("oxar.theme");
-    else window.localStorage.setItem("oxar.theme", next);
+    window.localStorage.setItem("oxar.theme", next);
     const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     document.documentElement.dataset.theme =
       next === "system" ? (dark ? "dark" : "light") : next;
