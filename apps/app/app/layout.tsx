@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Login } from "./providers";
 import "./globals.css";
 
@@ -11,8 +11,9 @@ import "./globals.css";
  * не вкусовщина: CSP здесь строгий, `font-src 'self'`, и чужой домен пришлось
  * бы в него вписывать.
  */
-const oxar = Bricolage_Grotesque({
+const oxar = Inter({
   subsets: ["latin"],
+  axes: ["opsz"],
   variable: "--font-oxar",
   display: "swap",
 });

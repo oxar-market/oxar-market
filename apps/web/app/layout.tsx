@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
+import { Inter } from "next/font/google";
 import "@oxar/stage/stage.css";
 import "./globals.css";
 
@@ -15,8 +15,9 @@ import "./globals.css";
  * домен пришлось бы открывать в CSP, и он же видел бы каждого нашего
  * посетителя.
  */
-const oxar = Bricolage_Grotesque({
+const oxar = Inter({
   subsets: ["latin"],
+  axes: ["opsz"],
   variable: "--font-oxar",
   display: "swap",
 });
