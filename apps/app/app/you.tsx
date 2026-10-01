@@ -38,31 +38,54 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
   // null - ещё не прочитали; показываем прочерк, а не врём нулём.
   const [usdc, setUsdc] = useState<number | null>(null);
   const [sol, setSol] = useState<number | null>(null);
+  // Чтение упало - говорим об этом и даём повторить. Раньше любая ошибка
+  // глоталась и оставляла прочерк, а прочерк на телефоне читался как «денег
+  // нет», когда на деле не ответила нода (сказали на показе 1 октября 2026).
+  const [failed, setFailed] = useState(false);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
     if (!wallet || !db) return;
     let live = true;
+    setFailed(false);
+    let owner: PublicKey;
+    try {
+      owner = new PublicKey(wallet);
+    } catch {
+      // Не адрес Solana: такое бывает у старого кошелька Privy другой сети.
+      setFailed(true);
+      return;
+    }
+    // SOL и USDC читаем порознь: отказ одного не прячет другой.
+    connection.getBalance(owner).then(
+      (lamports) => {
+        if (live) setSol(lamports / 1e9);
+      },
+      () => {
+        if (live) setFailed(true);
+      },
+    );
     (async () => {
-      const owner = new PublicKey(wallet);
-      const lamports = await connection.getBalance(owner);
-      if (live) setSol(lamports / 1e9);
       // Монету берём у последнего торга, а не у открытого: между торгами
       // открытых нет, и баланс пропадал бы ровно тогда, когда человек
       // смотрит, что ему вернулось или ушло.
-      const { data } = await db!
+      const { data, error } = await db!
         .from("lots")
         .select("mint")
         .not("mint", "is", null)
         .order("closes_at", { ascending: false })
         .limit(1);
+      if (error) throw error;
       const mint = data?.[0]?.mint;
       if (!mint) return;
       const units = await walletUnits(new PublicKey(mint), owner);
       if (live) setUsdc(Number(units / 10_000n) / 100);
-    })().catch(() => {});
+    })().catch(() => {
+      if (live) setFailed(true);
+    });
     return () => {
       live = false;
     };
-  }, [wallet]);
+  }, [wallet, tries]);
 
   // Мои ставки: живые наверху экрана, закрытые - историей внизу.
   const [stands, setStands] = useState<MyStand[]>([]);
@@ -239,6 +262,14 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
               <span className="balance-unit">SOL</span>
             </span>
           </div>
+          {failed && (
+            <p className="bad">
+              Could not read the balance from the network.{" "}
+              <button type="button" className="link" onClick={() => setTries((was) => was + 1)}>
+                Try again
+              </button>
+            </p>
+          )}
 
           <div className="addr-box">
             <span>{wallet}</span>

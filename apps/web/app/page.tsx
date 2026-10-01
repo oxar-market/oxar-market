@@ -216,15 +216,16 @@ export default function Home() {
   const between = loaded && live === null;
   const taken = live ? Object.keys(live.art).length : 0;
 
-  // Чем показывать вещь: фото или той же сценой, что на торге. 3D включается
-  // рукой: мегабайт модели не должен грузиться раньше, чем его попросили.
-  const [look, setLook] = useState<"photo" | "live">("photo");
+  // Чем показывать вещь: той же сценой, что на торге, или фото. Сначала 3D:
+  // так сказали на показе 1 октября 2026 - вещь должна встречать объёмом, а
+  // фото остаётся на переключателе. Цена - мегабайт модели на первом экране.
+  const [look, setLook] = useState<"photo" | "live">("live");
   const stage = useRef<Stage | null>(null);
 
   // У прошлого торга свой переключатель и своя сцена. Общие были бы хуже:
   // включив 3D на одном слайде, человек получил бы вторую сцену на соседнем,
   // которую не просил, - а это второй мегабайт и второй холст WebGL.
-  const [pastLook, setPastLook] = useState<"photo" | "live">("photo");
+  const [pastLook, setPastLook] = useState<"photo" | "live">("live");
   const pastStage = useRef<Stage | null>(null);
 
   // Какой слайд открыт и чем его листают. Полоса прокрутки своя у каждого
@@ -331,7 +332,7 @@ export default function Home() {
               <span className="live-name">Not announced yet</span>
               <span className="live-cd" />
               <span className="live-sub">
-                What it is, who wears it, where and when - we say all of it before bidding opens.
+                What it is, who has it, where and when - we say all of it before bidding opens.
               </span>
             </a>
           </div>
@@ -476,7 +477,7 @@ export default function Home() {
               <span className="live-name">{past.title}</span>
               <span className="live-cd">{usd(past.raisedCents)}</span>
               <span className="live-sub">
-                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} printed
+                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} placed
                 {past.worn.by ? ` \u00b7 ${past.worn.by}` : ""}
                 {past.worn.where ? ` \u00b7 ${past.worn.where}` : ""}
                 {past.worn.when ? ` \u00b7 ${past.worn.when}` : ""}

@@ -130,7 +130,7 @@ export function SetUpSpots({
           <When label="Opens" value={one.opens} onChange={(opens) => patch(index, { opens })} />
           <When label="Closes" value={one.closes} onChange={(closes) => patch(index, { closes })} />
           <p className="sl-plan-note">
-            Runs {runDays(one)} days. Highest bid at the close gets printed,
+            Runs {runDays(one)} days. Highest bid at the close wins the spot,
             no approval step.
           </p>
         </div>
@@ -150,7 +150,7 @@ export function SetUpSpots({
         <div className="sl-plan-head">
           <h3>Who, where and when</h3>
         </div>
-        <Text label="Who wears or carries it" value={worn.by} example="Our founder" onChange={(by) => setWorn({ ...worn, by })} />
+        <Text label="Who has it" value={worn.by} example="Our founder" onChange={(by) => setWorn({ ...worn, by })} />
         <Text label="Where" value={worn.where} example="Demo Day, Kyiv" onChange={(where) => setWorn({ ...worn, where })} />
         <Text label="When" value={worn.when} example="October 10" onChange={(when) => setWorn({ ...worn, when })} />
         <Note
