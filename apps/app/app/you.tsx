@@ -133,7 +133,13 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
   if (rating) {
     return (
       <section className="screen">
-        <BuyerRating deal={rating} onDone={() => setRating(null)} />
+        <BuyerRating
+          key={rating.lotId ?? rating.requestId}
+          deal={rating}
+          onDone={() => setRating(null)}
+          // Оценки подряд: следующая сделка сама, пустая очередь - обратно на You.
+          onSent={() => void loadDealsToRate("buyer").then((left) => setRating(left[0] ?? null))}
+        />
       </section>
     );
   }
@@ -201,7 +207,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
           <p className="you-sub">
             {email ? "Signed in with email" : "Signed in with a wallet"}
           </p>
-          {buyerScore && <p className="you-sub">Buyer score · {scoreText(buyerScore, "buyer")}</p>}
+          {buyerScore && <p className="you-sub">Buyer score · {scoreText(buyerScore, "buyer", true)}</p>}
         </div>
       </div>
 

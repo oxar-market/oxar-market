@@ -241,6 +241,8 @@ export function SellerFlow({
     case "rate":
       return column(
         <RateBuyer
+          // Ключ - сделка: следующая оценка начинается с чистых звёзд.
+          key={view.deal.lotId ?? view.deal.requestId}
           deal={view.deal}
           onBack={home}
           busy={busy}
@@ -254,8 +256,13 @@ export function SellerFlow({
               ...rating,
             });
             setBusy(false);
-            if (ok) home();
-            else setFailed(true);
+            if (!ok) return setFailed(true);
+            // Очередь оценок идёт подряд: следующая сделка открывается сама,
+            // а когда оценивать больше нечего - домой.
+            const left = await loadDealsToRate("seller");
+            setToRate(left);
+            if (left[0]) go({ name: "rate", deal: left[0] });
+            else home();
           }}
         />
       );
@@ -364,8 +371,20 @@ export function PhoneCapture({ secret, onClose }: { secret: string; onClose: () 
   );
 }
 
-/** Покупатель оценивает продавца - вход с экрана You в режиме Buyer. */
-export function BuyerRating({ deal, onDone }: { deal: DealToRate; onDone: () => void }) {
+/**
+ * Покупатель оценивает продавца - вход с экрана You в режиме Buyer.
+ * `onSent` зовётся после удачной отправки: экран сам решает, открыть
+ * следующую сделку или вернуться.
+ */
+export function BuyerRating({
+  deal,
+  onDone,
+  onSent,
+}: {
+  deal: DealToRate;
+  onDone: () => void;
+  onSent: () => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   return (
@@ -383,7 +402,7 @@ export function BuyerRating({ deal, onDone }: { deal: DealToRate; onDone: () => 
           ...rating,
         });
         setBusy(false);
-        if (ok) onDone();
+        if (ok) onSent();
         else setFailed(true);
       }}
     />
