@@ -331,7 +331,7 @@ export default function Home() {
               <span className="live-name">Not announced yet</span>
               <span className="live-cd" />
               <span className="live-sub">
-                What it is, who wears it, where and when - we say all of it before bidding opens.
+                What it is, who has it, where and when - we say all of it before bidding opens.
               </span>
             </a>
           </div>
@@ -476,7 +476,7 @@ export default function Home() {
               <span className="live-name">{past.title}</span>
               <span className="live-cd">{usd(past.raisedCents)}</span>
               <span className="live-sub">
-                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} printed
+                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} placed
                 {past.worn.by ? ` \u00b7 ${past.worn.by}` : ""}
                 {past.worn.where ? ` \u00b7 ${past.worn.where}` : ""}
                 {past.worn.when ? ` \u00b7 ${past.worn.when}` : ""}

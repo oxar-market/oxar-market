@@ -959,14 +959,14 @@ function Between() {
       <ol className="between-steps">
         <li>
           <b>We announce the thing</b>
-          <span>What it is, who wears or carries it, where and when - all before bidding opens.</span>
+          <span>What it is, who has it, where and when - all before bidding opens.</span>
         </li>
         <li>
           <b>Bidding runs for a week</b>
           <span>Every marked spot on it is auctioned. A late bid extends the clock.</span>
         </li>
         <li>
-          <b>The highest bid gets printed</b>
+          <b>The highest bid wins the spot</b>
           <span>Winning logos go on the thing, and photos of it in use show up here.</span>
         </li>
       </ol>
