@@ -1043,7 +1043,9 @@ input:focus {
    кольцо-подставку под вещью и терялся. Подпись места остаётся по центру. */
 .stage-hint-turn {
   left: auto;
-  right: 0.75rem;
+  /* Рядом с вещью, а не в углу: на широкой сцене угол в полуметре от
+     модели. Отступ от середины сцены чуть больше радиуса подставки. */
+  right: max(0.75rem, calc(50% - 13.5rem));
   bottom: 0.5rem;
 }
 
@@ -5495,17 +5497,16 @@ input:focus {
   color: var(--mut2);
 }
 
-/* Что будет дальше: три шага, номером, без украшений. */
+/* Что будет дальше: три шага, номером, без украшений. Внутри карточки, под
+   чертой - продолжение «Bidding opens: Soon», а не сноска под экраном. */
 .between-steps {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
-  /* Той же ширины, что карточка над ними, и чуть отступив от неё: иначе
-     шаги читались выпавшими из карточки. */
   width: 100%;
-  max-width: 36rem;
-  margin: 0.5rem auto 0;
-  padding: 0;
+  margin: 0;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--line);
   list-style: none;
   counter-reset: step;
 }
