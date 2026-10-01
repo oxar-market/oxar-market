@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ThingStage, type Stage } from "@oxar/stage";
+import { SOON, ThingStage, type Stage } from "@oxar/stage";
 
 /**
  * Лендинг на oxar.app по дизайн-борду: один экран, слева манифест и одна
@@ -115,10 +115,56 @@ async function loadLive(): Promise<Live | null> {
   };
 }
 
+/** Последний закрытый торг нашей вещи: что продали, кому и на ком она будет. */
+type Past = {
+  title: string;
+  closedAt: number;
+  raisedCents: number;
+  logos: { url: string; brand: string }[];
+  worn: { by: string | null; where: string | null; when: string | null };
+};
+
+async function loadPast(): Promise<Past | null> {
+  const lots = (await rest(
+    "lots?status=eq.won&rehearsal=eq.false&select=id,closes_at,thing_id,things:thing_id(title,house,active)&order=closes_at.desc&limit=100",
+  )) as
+    | { id: string; closes_at: string; thing_id: string; things: { title: string; house: boolean; active: boolean } | null }[]
+    | null;
+  const ours = (lots ?? []).filter((one) => one.things?.house && one.things.active);
+  const last = ours[0];
+  if (!last) return null;
+  // Торг - это вещь и день закрытия: у вещи их бывает несколько.
+  const day = last.closes_at.slice(0, 10);
+  const same = ours.filter((one) => one.thing_id === last.thing_id && one.closes_at.slice(0, 10) === day);
+
+  const bids = (await rest(
+    `lot_bids?lot_id=in.(${same.map((one) => one.id).join(",")})&select=lot_id,amount_cents,media_url,brand,created_at&order=amount_cents.desc,created_at.asc`,
+  )) as { lot_id: string; amount_cents: number; media_url: string; brand: string }[] | null;
+  const top = new Map<string, { amount_cents: number; media_url: string; brand: string }>();
+  for (const bid of bids ?? []) if (!top.has(bid.lot_id)) top.set(bid.lot_id, bid);
+
+  // Поля о носке отдельным запросом: их может ещё не быть в базе, и тогда
+  // карточка просто пишет «To be announced».
+  const worn = ((await rest(
+    `things?id=eq.${last.thing_id}&select=worn_by,worn_where,worn_when`,
+  )) as { worn_by: string | null; worn_where: string | null; worn_when: string | null }[] | null)?.[0];
+
+  return {
+    title: last.things?.title ?? "",
+    closedAt: Date.parse(last.closes_at),
+    raisedCents: [...top.values()].reduce((sum, one) => sum + one.amount_cents, 0),
+    logos: [...top.values()].map((one) => ({ url: one.media_url, brand: one.brand })),
+    worn: { by: worn?.worn_by ?? null, where: worn?.worn_where ?? null, when: worn?.worn_when ?? null },
+  };
+}
+
 type Theme = "light" | "dark";
 
 export default function Home() {
   const [live, setLive] = useState<Live | null>(null);
+  // Торги доехали: до этого «торга нет» - не факт, а ожидание.
+  const [loaded, setLoaded] = useState(false);
+  const [past, setPast] = useState<Past | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   // Тема: запомненная, иначе светлая. Ставится атрибутом на html, чтобы
@@ -137,12 +183,19 @@ export default function Home() {
   }
 
   useEffect(() => {
-    void loadLive().then(setLive);
+    void loadLive().then((found) => {
+      setLive(found);
+      setLoaded(true);
+    });
+    void loadPast().then(setPast);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, []);
 
   const running = live !== null && live.closesAt > now;
+  // Между торгами афиша не показывает прошлую вещь как будто живую: вместо
+  // неё знак вопроса и прямые слова, что следующая вещь ещё не объявлена.
+  const between = loaded && live === null;
   const taken = live ? Object.keys(live.art).length : 0;
 
   // Чем показывать вещь: фото или той же сценой, что на торге. 3D включается
@@ -197,6 +250,32 @@ export default function Home() {
         {/* Карточка перестала быть одной ссылкой: в 3D вещь крутят, и жест
             вращения не должен уводить на другой сайт. Дверь - нижняя полоса
             и кнопка Find a spot. */}
+        {between ? (
+          <div className="live-card">
+            <div className="live-photo in3d">
+              <div className="live-stage">
+                <ThingStage
+                  shape={SOON}
+                  picked={null}
+                  onPick={() => {}}
+                  stage={stage}
+                  onReady={() => stage.current?.look("ghost")}
+                />
+              </div>
+              <span className="now-pill">
+                <span className="dot" />
+                NEXT THING
+              </span>
+            </div>
+            <a className="live-info" href={APP_URL}>
+              <span className="live-name">Not announced yet</span>
+              <span className="live-cd" />
+              <span className="live-sub">
+                What it is, who wears it, where and when - we say all of it before bidding opens.
+              </span>
+            </a>
+          </div>
+        ) : (
         <div className="live-card">
           <div className={look === "live" ? "live-photo in3d" : "live-photo"}>
             {look === "live" ? (
@@ -277,9 +356,54 @@ export default function Home() {
             <span className="live-sub">{running ? "left in this auction" : ""}</span>
           </a>
         </div>
+        )}
       </div>
+
+      {/* Прошлый торг: что продали и на ком, где и когда будет вещь. */}
+      {past && (
+        <section className="past">
+          <h2>Last auction</h2>
+          <div className="past-card">
+            <div className="past-head">
+              <span className="past-name">{past.title}</span>
+              <span className="past-sub">
+                Closed {new Date(past.closedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ·{" "}
+                {usd(past.raisedCents)} raised · {past.logos.length}{" "}
+                {past.logos.length === 1 ? "logo" : "logos"} going on it
+              </span>
+            </div>
+            <div className="past-logos">
+              {past.logos.map((one) => (
+                <img key={one.url} src={one.url} alt={one.brand} title={one.brand} loading="lazy" />
+              ))}
+            </div>
+            <dl className="past-worn">
+              {(
+                [
+                  ["Who wears it", past.worn.by],
+                  ["Where", past.worn.where],
+                  ["When", past.worn.when],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd className={value ? "" : "tba"}>{value ?? "To be announced"}</dd>
+                </div>
+              ))}
+            </dl>
+            <a className="find" href={APP_URL}>
+              See the results
+            </a>
+          </div>
+        </section>
+      )}
     </main>
   );
+}
+
+/** Доллары из центов: «$172.80». */
+function usd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 /** Сколько осталось торгу: крупно дни, дальше часы-минуты-секунды. */
