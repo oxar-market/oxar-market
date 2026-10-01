@@ -12,10 +12,12 @@ import {
 import {
   loadBidCounts,
   loadBids,
+  loadMarket,
   loadNextHouseTitle,
   loadThing,
   loadTopBids,
   type Bid,
+  type HeldRow,
   type Lot,
   type Thing,
 } from "@/lib/auction";
@@ -23,6 +25,7 @@ import { BidForm } from "./bid.tsx";
 import { PhotoView } from "./photo.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
+import { LastAuction } from "../last.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
 import { TEMP_ANGLES, TEMP_FRONT_QUADS, TEMP_SHOTS } from "./temp-photo.ts";
@@ -52,7 +55,7 @@ const CELLS: [number, number][] = [
   [46.5, 50], [50, 50], [53.5, 50],
 ];
 
-export function Auction() {
+export function Auction({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void } = {}) {
   const [thing, setThing] = useState<Thing | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
   // Лоты доехали: до этого «торгов нет» - не факт, а ожидание.
@@ -351,7 +354,7 @@ export function Auction() {
 
   // Торгов сейчас нет: между аукционами экран показывает, что будет дальше,
   // а не голограмму прошедшей вещи. Итоги прошедшего - на маркете.
-  if (loaded && lots.length === 0) return <Between />;
+  if (loaded && lots.length === 0) return <Between onOpenPast={onOpenPast} />;
 
   return (
     <section className="lot">
@@ -912,11 +915,17 @@ function spanOf(ms: number): string {
   return rest === 0 ? daysPart : `${daysPart} ${rest} ${rest === 1 ? "hour" : "hours"}`;
 }
 
-/** Пауза между торгами: следующая вещь знаком вопроса, дата - «скоро». */
-function Between() {
+/**
+ * Пауза между торгами. Экран не должен выглядеть сломанным: сверху - что
+ * будет дальше (вещь не объявлена, знак вопроса), ниже - как это пойдёт, и
+ * последний закрытый торг с его логотипами.
+ */
+function Between({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }) {
   const [title, setTitle] = useState<string | null>(null);
+  const [last, setLast] = useState<HeldRow | null>(null);
   useEffect(() => {
     void loadNextHouseTitle().then(setTitle);
+    void loadMarket().then((loaded) => setLast(loaded.held[0] ?? null));
   }, []);
   return (
     <section className="lot">
@@ -929,6 +938,7 @@ function Between() {
         <div className="lot-title">
           <p className="over">Next on OXAR</p>
           <h1>{title ?? "Unknown item"}</h1>
+          <p className="lot-pot">Not announced yet - no auction is running right now.</p>
         </div>
         <div className="lot-side">
           <div className="lot-cd">
@@ -940,9 +950,23 @@ function Between() {
       <div className="lot-scene between-scene">
         <SoonHologram />
       </div>
-      <p className="muted">
-        No auction is running right now. Results of the last one are in the Market, under Past.
-      </p>
+
+      <ol className="between-steps">
+        <li>
+          <b>We announce the thing</b>
+          <span>What it is, who wears or carries it, where and when - all before bidding opens.</span>
+        </li>
+        <li>
+          <b>Bidding runs for a week</b>
+          <span>Every marked spot on it is auctioned. A late bid extends the clock.</span>
+        </li>
+        <li>
+          <b>The highest bid gets printed</b>
+          <span>Winning logos go on the thing, and photos of it in use show up here.</span>
+        </li>
+      </ol>
+
+      {last && onOpenPast && <LastAuction held={last} onOpen={() => onOpenPast(last)} />}
     </section>
   );
 }
