@@ -216,15 +216,16 @@ export default function Home() {
   const between = loaded && live === null;
   const taken = live ? Object.keys(live.art).length : 0;
 
-  // Чем показывать вещь: фото или той же сценой, что на торге. 3D включается
-  // рукой: мегабайт модели не должен грузиться раньше, чем его попросили.
-  const [look, setLook] = useState<"photo" | "live">("photo");
+  // Чем показывать вещь: той же сценой, что на торге, или фото. Сначала 3D:
+  // так сказали на показе 1 октября 2026 - вещь должна встречать объёмом, а
+  // фото остаётся на переключателе. Цена - мегабайт модели на первом экране.
+  const [look, setLook] = useState<"photo" | "live">("live");
   const stage = useRef<Stage | null>(null);
 
   // У прошлого торга свой переключатель и своя сцена. Общие были бы хуже:
   // включив 3D на одном слайде, человек получил бы вторую сцену на соседнем,
   // которую не просил, - а это второй мегабайт и второй холст WebGL.
-  const [pastLook, setPastLook] = useState<"photo" | "live">("photo");
+  const [pastLook, setPastLook] = useState<"photo" | "live">("live");
   const pastStage = useRef<Stage | null>(null);
 
   // Какой слайд открыт и чем его листают. Полоса прокрутки своя у каждого
