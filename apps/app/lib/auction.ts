@@ -2,7 +2,6 @@
 
 import { db } from "./session.ts";
 import { photoUrl } from "./seller.ts";
-import { DEMO, demoBids, demoSnapshot } from "./demo.ts";
 
 /**
  * Что показывает экран торга: вещь, её места, открытые лоты и ставки.
@@ -82,9 +81,6 @@ export async function loadThing(): Promise<{
     .select("id, code")
     .eq("thing_id", thing.id);
 
-  // Демо: вещь настоящая, торг - закрытый, сдвинутый так, будто он идёт.
-  if (DEMO) return { thing: thing as Thing, lots: (await demoSnapshot()).lots };
-
   const { data: lots } = await db
     .from("lots")
     .select(
@@ -125,7 +121,6 @@ export async function loadNextHouseTitle(): Promise<string | null> {
 
 /** Ставки лота: от высокой к низкой, как их и читают. */
 export async function loadBids(lotId: string): Promise<Bid[]> {
-  if (DEMO) return demoBids(lotId);
   if (!db) return [];
 
   const { data } = await db
@@ -146,15 +141,13 @@ export async function loadTopBids(
 ): Promise<Record<string, Bid | undefined>> {
   if (!db || lotIds.length === 0) return {};
 
-  const { data } = DEMO
-    ? { data: [...(await demoSnapshot()).bids].sort((a, b) => b.amount_cents - a.amount_cents || a.created_at.localeCompare(b.created_at)) }
-    : await db
-        .from("lot_bids")
-        .select(
-          "id, created_at, lot_id, bidder_wallet, amount_cents, media_url, brand",
-        )
-        .in("lot_id", lotIds)
-        .order("amount_cents", { ascending: false });
+  const { data } = await db
+    .from("lot_bids")
+    .select(
+      "id, created_at, lot_id, bidder_wallet, amount_cents, media_url, brand",
+    )
+    .in("lot_id", lotIds)
+    .order("amount_cents", { ascending: false });
 
   const top: Record<string, Bid | undefined> = {};
   for (const bid of (data ?? []) as Bid[]) {
@@ -249,13 +242,11 @@ export async function loadBidCounts(
   lotIds: string[],
 ): Promise<Record<string, number>> {
   if (!db || lotIds.length === 0) return {};
-  const { data } = DEMO
-    ? { data: (await demoSnapshot()).bids }
-    : await db
-        .from("lot_bids")
-        .select("lot_id")
-        .in("lot_id", lotIds)
-        .limit(2000);
+  const { data } = await db
+    .from("lot_bids")
+    .select("lot_id")
+    .in("lot_id", lotIds)
+    .limit(2000);
   const counts: Record<string, number> = {};
   for (const row of data ?? []) counts[row.lot_id] = (counts[row.lot_id] ?? 0) + 1;
   return counts;
@@ -346,7 +337,7 @@ export async function loadMarket(): Promise<{
       photo: one.photos?.[0] ? shots.getPublicUrl(one.photos[0]).data.publicUrl : null,
     }));
 
-  const { data: real } = await db
+  const { data } = await db
     .from("lots")
     .select(
       "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, photos)",
@@ -354,9 +345,6 @@ export async function loadMarket(): Promise<{
     .in("status", ["open", "won", "unsold"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
     .limit(400);
-  // Демо: вместо настоящих лотов - сдвинутый торг футболки, как идущий.
-  // Прошедших торгов в демо нет: тот же торг в «Past» читался бы странно.
-  const data = DEMO ? await demoMarketLots(real ?? []) : real;
   if (!data || data.length === 0) return { things: [], upcoming, held: [] };
 
   const tops = await loadTopBids(data.map((one) => one.id));
@@ -557,22 +545,4 @@ export async function loadTimeline(): Promise<PastOrPlanned[]> {
   }
 
   return [...groups.values()];
-}
-
-/** Лоты демо в той же форме, что строки маркета: вещь берём из настоящих. */
-async function demoMarketLots<T extends { thing_id: string; things: unknown }>(real: T[]): Promise<T[]> {
-  const { lots } = await demoSnapshot();
-  const info = real.find((one) => one.thing_id === lots[0]?.thing_id)?.things;
-  return lots.map(
-    (lot) =>
-      ({
-        id: lot.id,
-        status: "open",
-        opens_at: null,
-        closes_at: lot.closes_at,
-        thing_id: lot.thing_id,
-        thing_spots: { code: lot.spot_code },
-        things: info,
-      }) as unknown as T,
-  );
 }

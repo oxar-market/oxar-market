@@ -18,7 +18,6 @@ import {
   walletUnits,
 } from "@/lib/chain";
 import { recordBid, uploadCreative, type Lot } from "@/lib/auction";
-import { DEMO } from "@/lib/demo";
 
 /**
  * Ставка.
@@ -124,8 +123,6 @@ export function BidForm({
 
   async function place() {
     setError("");
-    // Демо показывает форму целиком, но ставку никуда не отправляет.
-    if (DEMO) return setError("Demo: bidding is off here. Nothing was sent or charged.");
     if (!art) return setError("Add your artwork first - it goes in with the bid.");
     if (!wallet) return setError("No wallet connected. Sign in again to get one.");
     if (cents === null) return setError("That is not an amount. Try 75 or 75.50.");
