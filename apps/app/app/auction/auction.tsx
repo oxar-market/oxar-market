@@ -953,23 +953,23 @@ function Between() {
             <span className="muted">Bidding opens</span>
             <span className="hero-top word">Soon</span>
           </div>
+          {/* Шаги в той же карточке: под ней они читались выпавшими. */}
+          <ol className="between-steps">
+            <li>
+              <b>We announce the thing</b>
+              <span>What it is, who has it, where and when - all before bidding opens.</span>
+            </li>
+            <li>
+              <b>Bidding runs for a week</b>
+              <span>Every marked spot on it is auctioned. A late bid extends the clock.</span>
+            </li>
+            <li>
+              <b>The highest bid wins the spot</b>
+              <span>Winning logos go on the thing, and photos of it in use show up here.</span>
+            </li>
+          </ol>
         </div>
       </div>
-
-      <ol className="between-steps">
-        <li>
-          <b>We announce the thing</b>
-          <span>What it is, who has it, where and when - all before bidding opens.</span>
-        </li>
-        <li>
-          <b>Bidding runs for a week</b>
-          <span>Every marked spot on it is auctioned. A late bid extends the clock.</span>
-        </li>
-        <li>
-          <b>The highest bid wins the spot</b>
-          <span>Winning logos go on the thing, and photos of it in use show up here.</span>
-        </li>
-      </ol>
     </section>
   );
 }
