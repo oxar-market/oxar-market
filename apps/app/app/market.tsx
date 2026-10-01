@@ -85,6 +85,21 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
   const rail = useRef<HTMLDivElement | null>(null);
   const [slide, setSlide] = useState(0);
   const slides = things.length + upcoming.length + (held[0] ? 1 : 0);
+  // Высота карусели - по текущему слайду, а не по самому высокому: иначе
+  // под короткой карточкой «Unknown item» лежала пустота в рост карточки
+  // прошлого торга, и полоса недели уезжала вниз.
+  useEffect(() => {
+    const el = rail.current;
+    const current = el?.children[slide] as HTMLElement | undefined;
+    if (!el || !current) return;
+    const fit = () => {
+      el.style.height = `${current.offsetHeight}px`;
+    };
+    fit();
+    const watch = new ResizeObserver(fit);
+    watch.observe(current);
+    return () => watch.disconnect();
+  }, [slide, slides]);
   // Листание по кругу: с последнего слайда вперёд - на первый. Страница
   // едет к карусели только с тапа по строке внизу; стрелки и точки стоят
   // рядом с ней, и лишний сдвиг читался бы прыжком.
@@ -514,23 +529,30 @@ function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void 
           COMING SOON
         </span>
       </div>
-      <div className="hero-card">
-        <div>
+      {thing.house ? (
+        // Наша неназванная вещь: подпись под знаком вопроса, без рамки -
+        // карточка с одной строкой текста смотрелась пустой.
+        <div className="hero-note">
           <h2 className="hero-name">{thing.title}</h2>
-          {thing.tagline && <p className="hero-who">{thing.tagline}</p>}
-          {thing.owner && !thing.house && <SellerLine seller={thing.owner} house={thing.house} />}
+          <span className="muted">
+            Our next thing. What it is and when bidding opens will be announced here and by email.
+          </span>
         </div>
-        <span className="muted">
-          {thing.house
-            ? "Our next thing. What it is and when bidding opens will be announced here and by email."
-            : "Opening date to be announced."}
-        </span>
-        {thing.seller && (
-          <button type="button" className="primary wide" onClick={onOpen}>
-            Open
-          </button>
-        )}
-      </div>
+      ) : (
+        <div className="hero-card">
+          <div>
+            <h2 className="hero-name">{thing.title}</h2>
+            {thing.tagline && <p className="hero-who">{thing.tagline}</p>}
+            {thing.owner && <SellerLine seller={thing.owner} house={thing.house} />}
+          </div>
+          <span className="muted">Opening date to be announced.</span>
+          {thing.seller && (
+            <button type="button" className="primary wide" onClick={onOpen}>
+              Open
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

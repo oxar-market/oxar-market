@@ -50,6 +50,8 @@
 
 body {
   margin: 0;
+  /* Лента недели шириной в окно не должна рождать горизонтальный скролл. */
+  overflow-x: clip;
   /* Системный стек остаётся запасным: пока шрифт едет, экран уже читается. */
   font-family: var(--font-oxar), ui-sans-serif, system-ui, sans-serif;
   color: var(--ink);
@@ -2288,6 +2290,17 @@ input:focus {
   gap: 1rem;
 }
 
+/* Подпись под знаком вопроса: заголовок и строка, по центру, без рамки. */
+.hero-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: calc(100% - 2rem);
+  max-width: 36rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
 .hero-name {
   margin: 0;
   font-size: 1.75rem;
@@ -2388,10 +2401,14 @@ input:focus {
 
 .hero-rail {
   display: flex;
+  /* Слайды не тянутся до самого высокого: высоту задаёт скрипт по текущему. */
+  align-items: flex-start;
   width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
+  transition: height 0.25s;
 }
 
 .hero-rail::-webkit-scrollbar {
@@ -2485,9 +2502,10 @@ input:focus {
   z-index: 5;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  margin: 1.75rem -1.25rem 0;
-  width: calc(100% + 2.5rem);
-  padding: 10px 20px 8px;
+  /* Лента во всю ширину окна, как на борде, а дни - в колонке контента. */
+  margin: 1rem 0 0 calc(50% - 50vw);
+  width: 100vw;
+  padding: 10px max(20px, calc(50vw - 30rem + 20px)) 8px;
   background: var(--glass);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
