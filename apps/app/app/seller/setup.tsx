@@ -153,7 +153,13 @@ export function SetUpSpots({
         <Text label="Who wears or carries it" value={worn.by} example="Our founder" onChange={(by) => setWorn({ ...worn, by })} />
         <Text label="Where" value={worn.where} example="Demo Day, Kyiv" onChange={(where) => setWorn({ ...worn, where })} />
         <Text label="When" value={worn.when} example="October 10" onChange={(when) => setWorn({ ...worn, when })} />
-        <p className="sl-plan-note">Bidders see this before they bid. All three are needed to publish.</p>
+        <Note
+          label="What makes it special (optional)"
+          value={worn.about}
+          example="Worn on stage during the pitch, in front of 300 founders"
+          onChange={(about) => setWorn({ ...worn, about })}
+        />
+        <p className="sl-plan-note">Bidders see this before they bid. Who, where and when are needed to publish.</p>
       </div>
 
       {failed && <p className="bad">Could not save the prices. Try again.</p>}
@@ -247,6 +253,28 @@ function Text({
       {label}
       <span className="sl-input">
         <input value={value} maxLength={120} placeholder={example} onChange={(event) => onChange(event.target.value)} />
+      </span>
+    </label>
+  );
+}
+
+/** Абзац, а не строка: особенность рассказывают парой предложений. */
+function Note({
+  label,
+  value,
+  example,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  example: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="sl-field wide">
+      {label}
+      <span className="sl-input tall">
+        <textarea rows={3} value={value} maxLength={300} placeholder={example} onChange={(event) => onChange(event.target.value)} />
       </span>
     </label>
   );

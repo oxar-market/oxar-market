@@ -722,10 +722,11 @@ export function Auction() {
       {tab === "about" && (
         <>
           <p className="muted">
-            One of the Superteam Ukraine leads wears this shirt. Every marked
-            area on it is a spot you can rent: the highest bid when the clock
-            runs out is what gets printed, and the shirt is worn as printed.
+            Every marked area on this shirt is a spot you can rent: the highest
+            bid when the clock runs out is what gets printed, and the shirt is
+            worn as printed.
           </p>
+          {/* Кто носит, где, когда и в чём особенность - словами продавца. */}
           {thing && <WornInfo thingId={thing.id} />}
           {/* Расписание торга, в часах читателя: у каждого своё «в полдень».
               Числа берутся из самого торга, не из текста - следующий торг

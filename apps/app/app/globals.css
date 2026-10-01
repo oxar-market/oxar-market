@@ -4568,6 +4568,23 @@ input:focus {
   color: var(--ink);
 }
 
+/* Поле на несколько строк: высота от текста, а не 48px. */
+.sl-input.tall {
+  height: auto;
+  padding: 12px 14px;
+}
+
+.sl-input textarea {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  resize: none;
+}
+
 .sl-input.soft {
   border-color: transparent;
   background: var(--soft);
