@@ -2273,7 +2273,12 @@ input:focus {
 
 .hero-card {
   position: relative;
-  margin: -6rem 1rem 0;
+  /* На широком экране колонка 60rem под сцену с дугами мест, а карточка -
+     текст: во всю колонку абзац шёл строкой на 150 знаков, а «Soon» уезжал
+     от своей подписи на полметра. Держим ширину чтения. */
+  width: calc(100% - 2rem);
+  max-width: 36rem;
+  margin: -6rem auto 0;
   padding: 1.25rem;
   border-radius: 20px;
   background: var(--card);
@@ -5419,7 +5424,11 @@ input:focus {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
-  margin: 0;
+  /* Той же ширины, что карточка над ними, и чуть отступив от неё: иначе
+     шаги читались выпавшими из карточки. */
+  width: 100%;
+  max-width: 36rem;
+  margin: 0.5rem auto 0;
   padding: 0;
   list-style: none;
   counter-reset: step;
