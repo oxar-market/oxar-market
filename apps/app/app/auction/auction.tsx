@@ -12,6 +12,7 @@ import {
 import {
   loadBidCounts,
   loadBids,
+  loadNextHouseTitle,
   loadThing,
   loadTopBids,
   type Bid,
@@ -21,6 +22,7 @@ import {
 import { BidForm } from "./bid.tsx";
 import { PhotoView } from "./photo.tsx";
 import { SellerLine } from "../reviews.tsx";
+import { SoonHologram } from "../soon.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
 import { TEMP_ANGLES, TEMP_FRONT_QUADS, TEMP_SHOTS } from "./temp-photo.ts";
@@ -53,6 +55,8 @@ const CELLS: [number, number][] = [
 export function Auction() {
   const [thing, setThing] = useState<Thing | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
+  // Лоты доехали: до этого «торгов нет» - не факт, а ожидание.
+  const [loaded, setLoaded] = useState(false);
   const [picked, setPicked] = useState(SPOTS[0].code);
   const [bids, setBids] = useState<Bid[]>([]);
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
@@ -101,7 +105,9 @@ export function Auction() {
     loadThing().then((loaded) => {
       // Вещи может не быть вовсе - тогда экран показывает саму футболку и её
       // места, без торгов. Разметка живёт в коде, и она никуда не девается.
-      if (!live || !loaded) return;
+      if (!live) return;
+      setLoaded(true);
+      if (!loaded) return;
       setThing(loaded.thing);
       setLots(loaded.lots);
     });
@@ -342,6 +348,10 @@ export function Auction() {
   // вещи. Его и подсвечиваем: там решается торг.
   const endingSoon =
     closesAt !== null && closesAt - now > 0 && closesAt - now <= 5 * 60_000;
+
+  // Торгов сейчас нет: между аукционами экран показывает, что будет дальше,
+  // а не голограмму прошедшей вещи. Итоги прошедшего - на маркете.
+  if (loaded && lots.length === 0) return <Between />;
 
   return (
     <section className="lot">
@@ -897,4 +907,39 @@ function spanOf(ms: number): string {
   if (days === 0) return `${hours} ${hours === 1 ? "hour" : "hours"}`;
   const daysPart = `${days} ${days === 1 ? "day" : "days"}`;
   return rest === 0 ? daysPart : `${daysPart} ${rest} ${rest === 1 ? "hour" : "hours"}`;
+}
+
+/** Пауза между торгами: следующая вещь знаком вопроса, дата - «скоро». */
+function Between() {
+  const [title, setTitle] = useState<string | null>(null);
+  useEffect(() => {
+    void loadNextHouseTitle().then(setTitle);
+  }, []);
+  return (
+    <section className="lot">
+      <div className="lot-brandbar">
+        <span className="mk-title">
+          OXAR <span>Auction</span>
+        </span>
+      </div>
+      <header className="lot-top">
+        <div className="lot-title">
+          <p className="over">Next on OXAR</p>
+          <h1>{title ?? "Unknown item"}</h1>
+        </div>
+        <div className="lot-side">
+          <div className="lot-cd">
+            <span className="lot-cd-cap">Opens</span>
+            <span className="lot-cd-num lot-cd-word">Will be soon</span>
+          </div>
+        </div>
+      </header>
+      <div className="lot-scene between-scene">
+        <SoonHologram />
+      </div>
+      <p className="muted">
+        No auction is running right now. Results of the last one are in the Market, under Past.
+      </p>
+    </section>
+  );
 }
