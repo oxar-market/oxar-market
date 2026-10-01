@@ -2304,14 +2304,23 @@ input:focus {
 
 .hero-stat {
   display: flex;
+  /* На телефоне подпись и сумма не всегда помещаются рядом. Тогда сумма
+     уходит на свою строку целиком, а не ломается посреди «top bid». */
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
+  gap: 0.25rem 1rem;
   border-top: 1px solid var(--line);
   padding-top: 0.875rem;
 }
 
+.hero-stat > span {
+  white-space: nowrap;
+}
+
 /* Верхняя ставка - самая крупная цифра экрана, как баланс на You. */
 .hero-top {
+  margin-left: auto;
   font-size: 2.75rem;
   font-weight: 600;
   line-height: 1;
