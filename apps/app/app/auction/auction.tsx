@@ -12,12 +12,10 @@ import {
 import {
   loadBidCounts,
   loadBids,
-  loadMarket,
   loadNextHouseTitle,
   loadThing,
   loadTopBids,
   type Bid,
-  type HeldRow,
   type Lot,
   type Thing,
 } from "@/lib/auction";
@@ -25,7 +23,6 @@ import { BidForm } from "./bid.tsx";
 import { PhotoView } from "./photo.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
-import { PastHero } from "../past.tsx";
 import { WornInfo } from "../worn.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
@@ -56,7 +53,7 @@ const CELLS: [number, number][] = [
   [46.5, 50], [50, 50], [53.5, 50],
 ];
 
-export function Auction({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void } = {}) {
+export function Auction() {
   const [thing, setThing] = useState<Thing | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
   // Лоты доехали: до этого «торгов нет» - не факт, а ожидание.
@@ -355,7 +352,7 @@ export function Auction({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }
 
   // Торгов сейчас нет: между аукционами экран показывает, что будет дальше,
   // а не голограмму прошедшей вещи. Итоги прошедшего - на маркете.
-  if (loaded && lots.length === 0) return <Between onOpenPast={onOpenPast} />;
+  if (loaded && lots.length === 0) return <Between />;
 
   return (
     <section className="lot">
@@ -918,32 +915,16 @@ function spanOf(ms: number): string {
 }
 
 /**
- * Пауза между торгами. Экран не должен выглядеть сломанным: каруселью - что
- * будет дальше (вещь не объявлена, знак вопроса) и прошедший торг на самой
- * вещи, ниже - как это пойдёт.
- *
- * Прошедший стоит слайдом, а не плашкой внизу: плашка показывала логотипы
- * рядком сами по себе и читалась сноской под экраном.
+ * Пауза между торгами. Экран не должен выглядеть сломанным: что будет дальше
+ * (вещь не объявлена, знак вопроса), ниже - как это пойдёт. Прошедший торг
+ * здесь не показываем, он живёт на маркете.
  */
-function Between({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }) {
+function Between() {
   const [title, setTitle] = useState<string | null>(null);
-  const [last, setLast] = useState<HeldRow | null>(null);
   useEffect(() => {
     void loadNextHouseTitle().then(setTitle);
-    void loadMarket().then((loaded) => setLast(loaded.held[0] ?? null));
   }, []);
 
-  // Слайды двигаем скроллом, а стрелки и точки только просят его переехать:
-  // иначе жест пальцем и кнопка разошлись бы в разные состояния.
-  const rail = useRef<HTMLDivElement | null>(null);
-  const [slide, setSlide] = useState(0);
-  function go(to: number) {
-    const el = rail.current;
-    if (!el) return;
-    el.scrollTo({ left: to * el.clientWidth, behavior: "smooth" });
-  }
-
-  const past = last && onOpenPast ? last : null;
   return (
     <section className="lot">
       <div className="lot-brandbar">
@@ -952,89 +933,31 @@ function Between({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }) {
         </span>
       </div>
 
-      <div className="hero-wrap">
-        <div
-          className="hero-rail"
-          ref={rail}
-          onScroll={(event) => {
-            const el = event.currentTarget;
-            setSlide(Math.round(el.scrollLeft / el.clientWidth));
-          }}
-        >
-          <div className="hero">
-            <div className="hero-photo in3d">
-              <div className="hero-stage between-scene">
-                <SoonHologram />
-              </div>
-              <span className="now-pill">
-                <span className="dot" />
-                NEXT THING
-              </span>
-            </div>
-            <div className="hero-card">
-              <div>
-                <h2 className="hero-name">{title ?? "Not announced yet"}</h2>
-                <p className="hero-who">
-                  The thing is not decided yet - information is coming soon. What it is, who
-                  wears or carries it, where and when: all of it shows up here before bidding
-                  opens.
-                </p>
-              </div>
-              <div className="hero-stat">
-                <span className="muted">Bidding opens</span>
-                <span className="hero-top word">Soon</span>
-              </div>
-              {/* Кнопка на второй слайд: стрелки на телефоне легко не заметить,
-                  а прошлый торг - единственное, что тут можно посмотреть. */}
-              {past && (
-                <button type="button" className="primary wide" onClick={() => go(1)}>
-                  See the last auction
-                </button>
-              )}
-            </div>
+      <div className="hero">
+        <div className="hero-photo in3d">
+          <div className="hero-stage between-scene">
+            <SoonHologram />
           </div>
-
-          {past && <PastHero held={past} onOpen={() => onOpenPast?.(past)} />}
+          <span className="now-pill">
+            <span className="dot" />
+            NEXT THING
+          </span>
         </div>
-
-        {/* Стрелки и точки стоят, только когда листать есть что. */}
-        {past && (
-          <>
-            <button
-              type="button"
-              className="hero-arrow prev"
-              aria-label="Previous"
-              disabled={slide === 0}
-              onClick={() => go(slide - 1)}
-            >
-              &larr;
-            </button>
-            <button
-              type="button"
-              className="hero-arrow next"
-              aria-label="Next"
-              disabled={slide === 1}
-              onClick={() => go(slide + 1)}
-            >
-              &rarr;
-            </button>
-          </>
-        )}
+        <div className="hero-card">
+          <div>
+            <h2 className="hero-name">{title ?? "Not announced yet"}</h2>
+            <p className="hero-who">
+              The thing is not decided yet - information is coming soon. What it is, who
+              wears or carries it, where and when: all of it shows up here before bidding
+              opens.
+            </p>
+          </div>
+          <div className="hero-stat">
+            <span className="muted">Bidding opens</span>
+            <span className="hero-top word">Soon</span>
+          </div>
+        </div>
       </div>
-
-      {past && (
-        <div className="hero-pager">
-          {[0, 1].map((at) => (
-            <button
-              key={at}
-              type="button"
-              className={at === slide ? "on" : ""}
-              aria-label={at === 0 ? "Show the next thing" : "Show the last auction"}
-              onClick={() => go(at)}
-            />
-          ))}
-        </div>
-      )}
 
       <ol className="between-steps">
         <li>

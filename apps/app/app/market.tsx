@@ -33,16 +33,7 @@ import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
 type Mail = "idle" | "sending" | "done" | "failed";
 
-export function Market({
-  onOpenAuction,
-  openPast,
-  onPastShown,
-}: {
-  onOpenAuction: (thingId?: string) => void;
-  /** Итоги, которые попросили открыть с другой вкладки. */
-  openPast?: HeldRow | null;
-  onPastShown?: () => void;
-}) {
+export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) => void }) {
   const [things, setThings] = useState<MarketThing[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingThing[]>([]);
   const [held, setHeld] = useState<HeldRow[]>([]);
@@ -165,12 +156,16 @@ export function Market({
   const [pilotOpen, setPilotOpen] = useState(false);
   // Итоги прошедшего торга открываются так же: поверх маркета, одной кнопкой назад.
   const [result, setResult] = useState<HeldRow | null>(null);
-  useEffect(() => {
-    if (!openPast) return;
-    setResult(openPast);
-    onPastShown?.();
-  }, [openPast, onPastShown]);
-  if (result) return <ResultsView held={result} onBack={() => setResult(null)} />;
+  if (result) {
+    return (
+      <section className="screen">
+        <h1 className="mk-title">
+          OXAR <span>Market</span>
+        </h1>
+        <ResultsView held={result} onBack={() => setResult(null)} />
+      </section>
+    );
+  }
   if (pilotOpen) {
     return (
       <section className="screen">
