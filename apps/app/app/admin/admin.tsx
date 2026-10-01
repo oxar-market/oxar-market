@@ -14,6 +14,7 @@ import {
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
+import { WornInfo } from "../worn.tsx";
 
 /**
  * Админка по вещам продавцов. Вещь попадает на маркет, когда продавец
@@ -209,6 +210,9 @@ function AdminThingView({
           Save name
         </button>
       </div>
+
+      {/* Пишет продавец перед публикацией: до неё здесь «To be announced». */}
+      <WornInfo thingId={thing.id} />
 
       {/* Снимки открываются крупно - для 3D-модели их смотрят с разметкой и
           без, и сохраняют оригинал. */}

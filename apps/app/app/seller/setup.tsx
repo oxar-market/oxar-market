@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { publishCost, type PublishCost } from "@oxar/core";
-import type { PricingThing, SpotPlan } from "@/lib/seller";
+import type { PricingThing, SpotPlan, Worn } from "@/lib/seller";
 import { spotsPerSale } from "@/lib/publish";
 import { Bar, SpotMark } from "./parts.tsx";
 
@@ -43,7 +43,7 @@ export function SetUpSpots({
   onDelete: () => Promise<boolean>;
   /** Переименовать вещь - пока торг не открыт. */
   onRename: (name: string) => Promise<boolean>;
-  onPublish: (plans: { spotId: string; plan: SpotPlan }[]) => void;
+  onPublish: (plans: { spotId: string; plan: SpotPlan }[], worn: Worn) => void;
   publishing: boolean;
   failed: boolean;
   /** Почему не открылись аукционы: нет кошелька, SOL или сети. */
@@ -61,6 +61,10 @@ export function SetUpSpots({
   }
 
   const plans = drafts.map((one, index) => ({ spotId: thing.spots[index]!.id, plan: toPlan(one) }));
+  // Кто носит вещь, где и когда: без этого покупатель места не знает,
+  // кто увидит его логотип, и публиковать нельзя.
+  const [worn, setWorn] = useState<Worn>(thing.worn);
+  const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0);
   const valid = plans.every((one) => one.plan !== null);
 
   return (
@@ -142,6 +146,16 @@ export function SetUpSpots({
         </button>
       )}
 
+      <div className="sl-card sl-plan">
+        <div className="sl-plan-head">
+          <h3>Who, where and when</h3>
+        </div>
+        <Text label="Who wears or carries it" value={worn.by} example="Our founder" onChange={(by) => setWorn({ ...worn, by })} />
+        <Text label="Where" value={worn.where} example="Demo Day, Kyiv" onChange={(where) => setWorn({ ...worn, where })} />
+        <Text label="When" value={worn.when} example="October 10" onChange={(when) => setWorn({ ...worn, when })} />
+        <p className="sl-plan-note">Bidders see this before they bid. All three are needed to publish.</p>
+      </div>
+
       {failed && <p className="bad">Could not save the prices. Try again.</p>}
       {problem && <p className="bad">{problem}</p>}
 
@@ -159,8 +173,8 @@ export function SetUpSpots({
         <button
           type="button"
           className="sl-btn dark"
-          disabled={!valid || publishing}
-          onClick={() => onPublish(plans as { spotId: string; plan: SpotPlan }[])}
+          disabled={!valid || !described || publishing}
+          onClick={() => onPublish(plans as { spotId: string; plan: SpotPlan }[], worn)}
         >
           {publishing ? "Publishing…" : "Publish"}
         </button>
@@ -212,6 +226,27 @@ function Money({
           value={value}
           onChange={(event) => onChange(event.target.value.replace(/[^\d.]/g, ""))}
         />
+      </span>
+    </label>
+  );
+}
+
+function Text({
+  label,
+  value,
+  example,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  example: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="sl-field wide">
+      {label}
+      <span className="sl-input">
+        <input value={value} maxLength={120} placeholder={example} onChange={(event) => onChange(event.target.value)} />
       </span>
     </label>
   );
