@@ -13,7 +13,7 @@ import {
 import { Game } from "./game/game";
 import { CaseView } from "./case.tsx";
 import { ResultsView } from "./results.tsx";
-import { LastAuction } from "./last.tsx";
+import { PastHero } from "./past.tsx";
 import { DELORA } from "@/lib/cases";
 import { PhotoView } from "./auction/photo.tsx";
 import { SellerLine } from "./reviews.tsx";
@@ -93,7 +93,7 @@ export function Market({
   // знают и точки под ней, и строки списка - строка текущего подсвечена.
   const rail = useRef<HTMLDivElement | null>(null);
   const [slide, setSlide] = useState(0);
-  const slides = things.length + upcoming.length;
+  const slides = things.length + upcoming.length + (held[0] ? 1 : 0);
   // Листание по кругу: с последнего слайда вперёд - на первый. Страница
   // едет к карусели только с тапа по строке внизу; стрелки и точки стоят
   // рядом с ней, и лишний сдвиг читался бы прыжком.
@@ -317,6 +317,11 @@ export function Market({
       {upcoming.map((one) => (
         <Upcoming key={one.id} thing={one} onOpen={() => onOpenAuction(one.id)} />
       ))}
+
+      {/* Последний закрытый торг - последним слайдом, и когда живые идут
+          тоже: он показывает, что здесь уже печатали, а это и есть довод
+          ставить. Прежде он стоял плашкой под каруселью, и только в паузу. */}
+      {held[0] && <PastHero held={held[0]} onOpen={() => setResult(held[0]!)} />}
       </div>
       {/* Стрелки по бокам вещи: точки под каруселью легко не заметить. */}
       {slides > 1 && (
@@ -354,9 +359,6 @@ export function Market({
           ))}
         </div>
       )}
-
-      {/* Пока торгов нет, на маркете - последний закрытый: пауза не пустая. */}
-      {things.length === 0 && held[0] && <LastAuction held={held[0]} onOpen={() => setResult(held[0]!)} />}
 
       {things.length > 0 && (
         <div className="mk-strip">

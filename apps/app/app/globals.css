@@ -2244,6 +2244,12 @@ input:focus {
   background: #e0381c;
 }
 
+/* Прошедший торг: та же пилюля, но без красной точки и тише живой - здесь
+   уже ничего не идёт. */
+.hero .now-pill.done {
+  color: var(--mut);
+}
+
 .hero-time {
   position: absolute;
   right: 16px;
@@ -2305,6 +2311,12 @@ input:focus {
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+/* Вместо суммы бывает слово - «Soon» между торгами: оно длиннее цифр и
+   мельче их, иначе кричало бы громче собранных денег на соседнем слайде. */
+.hero-top.word {
+  font-size: 1.75rem;
 }
 
 .hero-top-cap {
@@ -2379,6 +2391,18 @@ input:focus {
   scroll-snap-align: start;
 }
 
+/* Между торгами слайды разной высоты: у прошлого торга в карточке ещё
+   собранное и кнопка итогов. Короткая карточка тянется до высоты рельса -
+   иначе под ней зияла бы дыра до точек. */
+.lot .hero-rail > .hero {
+  display: flex;
+  flex-direction: column;
+}
+
+.lot .hero-card {
+  flex: 1;
+}
+
 /* Стрелки встают на середину снимка, по краям слайда. */
 .hero-arrow {
   position: absolute;
@@ -2395,6 +2419,13 @@ input:focus {
   font-size: 1.125rem;
   line-height: 1;
   cursor: pointer;
+}
+
+/* На маркете карусель листается по кругу, между торгами - нет: там стрелка
+   на краю гаснет, иначе она обещала бы третий слайд. */
+.hero-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .hero-arrow.prev {
@@ -2697,11 +2728,6 @@ input:focus {
 
 .between-scene .stage.dark .stage-hint {
   color: var(--mut);
-}
-
-/* Между торгами вместо часов - слово: оно длиннее цифр и мельче их. */
-.lot-cd-word {
-  font-size: 1.75rem;
 }
 
 .lot-cd.soon .lot-cd-num {
@@ -5315,39 +5341,6 @@ input:focus {
 
 .worn dd.tba {
   color: var(--mut2);
-}
-
-/* Последний закрытый торг одной карточкой: на маркете и на вкладке Auction,
-   пока живого торга нет. */
-.last-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-  width: 100%;
-  padding: 1.25rem;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  background: var(--card);
-}
-
-.last-head {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.last-logos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.last-logos img {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  object-fit: contain;
-  background: var(--photo);
 }
 
 /* Что будет дальше: три шага, номером, без украшений. */
