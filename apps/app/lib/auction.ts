@@ -1,7 +1,6 @@
 "use client";
 
 import { db } from "./session.ts";
-import type { PilotCase } from "./cases.ts";
 import { photoUrl } from "./seller.ts";
 
 /**
@@ -296,8 +295,10 @@ export type UpcomingThing = {
 export type HeldRow = {
   /** По нему итоги торга открываются с маркета. */
   thingId: string;
-  /** Пилот без торгов: данные из кода, а не из базы. */
-  pilot?: PilotCase;
+  /** Пилот без торгов: места отдали партнёру, ставок не было. */
+  pilot?: { partner: string; partnerUrl: string | null };
+  /** Путь к 3D-модели: по нему итоги выбирают силуэт вещи. */
+  model: string | null;
   closesAt: string;
   title: string;
   raisedCents: number;
@@ -314,8 +315,10 @@ export async function loadMarket(): Promise<{
   things: MarketThing[];
   upcoming: UpcomingThing[];
   held: HeldRow[];
+  /** Пилоты: размещения без торга, строками «Past». */
+  pilots: HeldRow[];
 }> {
-  if (!db) return { things: [], upcoming: [], held: [] };
+  if (!db) return { things: [], upcoming: [], held: [], pilots: [] };
 
   // Анонс - вещь без единого лота. Вещь, у которой торг уже был, сюда не
   // попадает и после его закрытия: она уходит в «Held earlier».
@@ -323,13 +326,26 @@ export async function loadMarket(): Promise<{
   // он открыл торг и админ её одобрил; до торга анонсом она не идёт.
   const { data: raw } = await db
     .from("things")
-    .select("id, title, tagline, seller, house, photos, lots(id)")
+    .select("id, title, tagline, seller, house, photos, model_url, placed_on, partner, partner_url, lots(id)")
     .eq("active", true)
     .order("created_at");
   const catalog = (raw ?? []).filter((one) => one.house);
   const shots = db.storage.from("things");
+  // Пилот - вещь без лотов, но с датой размещения: это прошедшее, не анонс.
+  const pilots: HeldRow[] = catalog
+    .filter((one) => one.placed_on)
+    .map((one) => ({
+      thingId: one.id,
+      closesAt: one.placed_on as string,
+      title: one.title,
+      raisedCents: 0,
+      house: true,
+      photo: null,
+      model: (one.model_url as string) || null,
+      pilot: { partner: (one.partner as string | null) ?? "", partnerUrl: (one.partner_url as string | null) ?? null },
+    }));
   const upcoming: UpcomingThing[] = catalog
-    .filter((one) => (one.lots as unknown[]).length === 0)
+    .filter((one) => (one.lots as unknown[]).length === 0 && !one.placed_on)
     .map((one) => ({
       id: one.id,
       title: one.title,
@@ -343,12 +359,12 @@ export async function loadMarket(): Promise<{
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, photos)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, photos, model_url)",
     )
     .in("status", ["open", "won", "unsold"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
     .limit(400);
-  if (!data || data.length === 0) return { things: [], upcoming, held: [] };
+  if (!data || data.length === 0) return { things: [], upcoming, held: [], pilots };
 
   const tops = await loadTopBids(data.map((one) => one.id));
   const now = Date.now();
@@ -363,6 +379,7 @@ export async function loadMarket(): Promise<{
       seller?: string | null;
       house?: boolean;
       photos?: string[] | null;
+      model_url?: string | null;
     } | null;
     // Лоты с открытым торгом видны всем, а вещь - только одобренная. Вещь
     // продавца, которую мы ещё не вывели на маркет, в показ не идёт, даже
@@ -413,6 +430,7 @@ export async function loadMarket(): Promise<{
           house: info.house ?? false,
           // Снимок нашей вещи лежит в самом приложении, путём от корня.
           photo: info.photos?.[0] ? photoUrl(info.photos[0]) : null,
+          model: info.model_url || null,
         } satisfies HeldRow);
       if (lot.status === "won" && top) row.raisedCents += top.amount_cents;
       heldBy.set(key, row);
@@ -425,6 +443,7 @@ export async function loadMarket(): Promise<{
     held: [...heldBy.values()].sort(
       (a, b) => Date.parse(b.closesAt) - Date.parse(a.closesAt),
     ),
+    pilots,
   };
 }
 
