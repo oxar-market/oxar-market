@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   description: "Auctions for ad spots on things people carry.",
   openGraph: {
     title: "OXAR",
-    description: "The highest bid when the clock runs out is what gets printed.",
+    description: "The highest bid when the clock runs out wins the spot.",
     url: "https://app.oxar.app",
     siteName: "OXAR",
     type: "website",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "OXAR",
-    description: "The highest bid when the clock runs out is what gets printed.",
+    description: "The highest bid when the clock runs out wins the spot.",
   },
 };
 

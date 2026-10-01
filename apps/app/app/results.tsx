@@ -174,7 +174,7 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
 
       <div className="case-proof">
         <span className="case-proof-head">Proof</span>
-        <span className="muted">Photos of the printed thing will appear here after printing.</span>
+        <span className="muted">Photos of the thing in use will appear here.</span>
       </div>
 
       <h2 className="mk-head">Winners</h2>
@@ -206,14 +206,14 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
           <span>Winning bids paid out. Every other bid refunded automatically.</span>
         </li>
         <li className="now">
-          <b>Printing</b>
-          <span>Every artwork printed as uploaded.</span>
+          <b>Preparing</b>
+          <span>Winning artwork goes on the thing as uploaded.</span>
         </li>
         <li>
-          <b>Worn</b>
+          <b>Proof</b>
           <span>
-            {worn?.when ? `From ${worn.when}` : "Date to be announced"}. Photos of the worn shirt appear
-            here.
+            {worn?.when ? `From ${worn.when}` : "Date to be announced"}. Photos of the thing in use
+            appear here.
           </span>
         </li>
       </ol>
