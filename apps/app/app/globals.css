@@ -5249,3 +5249,17 @@ input:focus {
   justify-content: space-between;
   align-items: center;
 }
+
+/* Демо по ссылке ?demo: плашка сверху, чтобы никто не принял повтор
+   закрытого торга за настоящий. */
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #fff;
+  background: #e0381c;
+}
