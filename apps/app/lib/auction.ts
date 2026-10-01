@@ -1,6 +1,7 @@
 "use client";
 
 import { db } from "./session.ts";
+import type { PilotCase } from "./cases.ts";
 import { photoUrl } from "./seller.ts";
 
 /**
@@ -295,6 +296,8 @@ export type UpcomingThing = {
 export type HeldRow = {
   /** По нему итоги торга открываются с маркета. */
   thingId: string;
+  /** Пилот без торгов: данные из кода, а не из базы. */
+  pilot?: PilotCase;
   closesAt: string;
   title: string;
   raisedCents: number;

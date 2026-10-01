@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatUsd } from "@oxar/core";
-import { ThingStage, type Stage } from "@oxar/stage";
+import { SUITCASE, SUITCASE_SPOTS, ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { loadWorn, WornInfo, type Worn } from "./worn.tsx";
 import { loadBidTimeline, loadWinners, type BidEvent, type Winner } from "@/lib/winners";
@@ -22,15 +22,36 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
   const [list, setList] = useState<Winner[] | null>(null);
   const [worn, setWorn] = useState<Worn | null>(null);
 
+  const pilot = held.pilot ?? null;
+
   useEffect(() => {
     window.scrollTo({ top: 0 });
+    if (pilot) {
+      // Пилот: места и бренды из кода, ставок не было.
+      setWorn(pilot.worn);
+      setList(
+        pilot.spots.map((spot) => ({
+          lotId: spot.code,
+          spot: SUITCASE_SPOTS.find((one) => one.code === spot.code)?.label ?? spot.code,
+          code: spot.code,
+          status: "won",
+          brand: spot.brand,
+          amountCents: 0,
+          mediaUrl: spot.logo,
+          wallet: "",
+          closesAt: pilot.date,
+          settleSignature: null,
+        })),
+      );
+      return;
+    }
     void loadWorn(held.thingId).then(setWorn);
     void loadWinners(held.thingId).then((all) =>
       // Строка на маркете - один день закрытия; торги вещи в другие дни сюда
       // не подмешиваем.
       setList(all.filter((one) => one.status === "won" && one.closesAt.slice(0, 10) === held.closesAt.slice(0, 10))),
     );
-  }, [held]);
+  }, [held, pilot]);
 
   // История торга: все ставки по времени. Ползунок стоит на числе уже
   // случившихся ставок; по умолчанию - на конце, то есть на победителях.
@@ -38,8 +59,9 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
   const [step, setStep] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   useEffect(() => {
+    if (pilot) return;
     void loadBidTimeline(held.thingId, held.closesAt).then(setEvents);
-  }, [held]);
+  }, [held, pilot]);
   const at = step ?? events.length;
 
   // Проигрывание: шаг за шагом от первой ставки до последней.
@@ -60,6 +82,15 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
   const images = useRef(new Map<string, HTMLImageElement>());
   useEffect(() => {
     if (!ready) return;
+    // У пилота истории нет: вещь одевается сразу в то, что на ней стоит.
+    if (pilot) {
+      for (const one of list ?? []) {
+        const image = new Image();
+        image.onload = () => stage.current?.show(one.code, image);
+        image.src = one.mediaUrl;
+      }
+      return;
+    }
     const lead = new Map<string, BidEvent>();
     for (const one of events.slice(0, at)) {
       const was = lead.get(one.code);
@@ -86,7 +117,7 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
         image.src = top.mediaUrl;
       }
     }
-  }, [ready, events, at]);
+  }, [ready, events, at, pilot, list]);
   const current = at > 0 ? events[at - 1] : null;
   const settled = list?.find((one) => one.code === picked)?.settleSignature ?? null;
 
@@ -100,16 +131,27 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
         <span className="case-pill">ENDED</span>
         <h2 className="hero-name">{held.title}</h2>
         <p className="hero-who">
-          Closed {day(held.closesAt)} · {formatUsd(held.raisedCents)} raised
+          Closed {day(held.closesAt)} ·{" "}
+          {pilot ? (
+            <>
+              with{" "}
+              <a className="case-partner" href={pilot.partnerUrl} target="_blank" rel="noreferrer">
+                {pilot.partner}
+              </a>
+            </>
+          ) : (
+            `${formatUsd(held.raisedCents)} raised`
+          )}
         </p>
       </div>
 
       {/* Покупатель места должен знать, на ком, где и когда будет вещь. */}
-      <WornInfo thingId={held.thingId} />
+      <WornInfo thingId={held.thingId} given={pilot?.worn} />
 
       {held.house ? (
         <div className="case-stage">
           <ThingStage
+            shape={pilot ? SUITCASE : undefined}
             picked={picked}
             onPick={(code) => setPicked((was) => (was === code ? null : code))}
             stage={stage}
@@ -190,7 +232,7 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
             <img className="results-logo" src={one.mediaUrl} alt="" />
             <span className="results-spot">{one.spot}</span>
             <span className="results-brand">{one.brand}</span>
-            <span className="results-sum">{formatUsd(one.amountCents)}</span>
+            <span className="results-sum">{pilot ? "Placed" : formatUsd(one.amountCents)}</span>
           </button>
         ))}
       </div>
@@ -203,7 +245,11 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
         </li>
         <li className="done">
           <b>Escrow settled</b>
-          <span>Winning bids paid out. Every other bid refunded automatically.</span>
+          <span>
+            {pilot
+              ? "Nothing to settle: the spots were placed without bids or payment."
+              : "Winning bids paid out. Every other bid refunded automatically."}
+          </span>
         </li>
         <li className="now">
           <b>Printing</b>

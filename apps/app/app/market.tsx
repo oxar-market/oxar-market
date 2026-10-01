@@ -11,10 +11,20 @@ import {
   type UpcomingThing,
 } from "@/lib/auction";
 import { Game } from "./game/game";
-import { CaseView } from "./case.tsx";
 import { ResultsView } from "./results.tsx";
 import { PastHero } from "./past.tsx";
 import { DELORA } from "@/lib/cases";
+
+/** Пилот в списке прошедших - строкой торга: открывается теми же итогами. */
+const PILOT_ROW: HeldRow = {
+  thingId: "pilot:delora",
+  closesAt: DELORA.date,
+  title: DELORA.title,
+  raisedCents: 0,
+  house: true,
+  photo: null,
+  pilot: DELORA,
+};
 import { PhotoView } from "./auction/photo.tsx";
 import { SellerLine } from "./reviews.tsx";
 import { SoonHologram } from "./soon.tsx";
@@ -151,10 +161,8 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
     return one;
   });
 
-  // Пилот открывается поверх маркета, как страница вещи: вернуться - одна
-  // кнопка, торги под ним не пересобираются.
-  const [pilotOpen, setPilotOpen] = useState(false);
-  // Итоги прошедшего торга открываются так же: поверх маркета, одной кнопкой назад.
+  // Итоги прошедшего торга открываются поверх маркета, одной кнопкой назад:
+  // торги под ними не пересобираются. Пилот Delora - такая же строка.
   const [result, setResult] = useState<HeldRow | null>(null);
   if (result) {
     return (
@@ -163,16 +171,6 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
           OXAR <span>Market</span>
         </h1>
         <ResultsView held={result} onBack={() => setResult(null)} />
-      </section>
-    );
-  }
-  if (pilotOpen) {
-    return (
-      <section className="screen">
-        <h1 className="mk-title">
-          OXAR <span>Market</span>
-        </h1>
-        <CaseView pilot={DELORA} onBack={() => setPilotOpen(false)} />
       </section>
     );
   }
@@ -402,36 +400,20 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       {/* Одним списком, свежие сверху: пилот - такая же строка истории, как
           торги, и стоит по своей дате, а не первым навсегда. */}
       <div className="held-list">
-        {[
-          ...held.map((one) => ({ at: one.closesAt, held: one })),
-          { at: DELORA.date, held: null },
-        ]
-          .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
-          .map(({ at, held: one }) =>
-            one ? (
-              <button
-                type="button"
-                className="held-row held-pilot"
-                key={one.closesAt + one.title}
-                onClick={() => setResult(one)}
-              >
-                <span className="held-date">{day(one.closesAt)}</span>
-                <span className="held-name">{one.title}</span>
-                <span className="held-sum">{formatUsd(one.raisedCents)}</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="held-row held-pilot"
-                key={`pilot-${at}`}
-                onClick={() => setPilotOpen(true)}
-              >
-                <span className="held-date">{day(DELORA.date)}</span>
-                <span className="held-name">{DELORA.title}</span>
-                <span className="held-sum">Pilot</span>
-              </button>
-            ),
-          )}
+        {[...held, PILOT_ROW]
+          .sort((a, b) => Date.parse(b.closesAt) - Date.parse(a.closesAt))
+          .map((one) => (
+            <button
+              type="button"
+              className="held-row held-pilot"
+              key={one.closesAt + one.title}
+              onClick={() => setResult(one)}
+            >
+              <span className="held-date">{day(one.closesAt)}</span>
+              <span className="held-name">{one.title}</span>
+              <span className="held-sum">{one.pilot ? "Pilot" : formatUsd(one.raisedCents)}</span>
+            </button>
+          ))}
       </div>
       {held.length === 0 && things[0] && (
         <p className="held-empty">
