@@ -271,16 +271,19 @@ export type PricingThing = {
     photo: number;
     outline: [number, number][] | null;
   }[];
-  /** Кто носит вещь, где и когда - продавец пишет перед публикацией. */
+  /** Кто носит вещь, где, когда и в чём особенность - продавец пишет перед публикацией. */
   worn: Worn;
 };
 
-/** Кто носит вещь, где и когда. Пусто - ещё не написано. */
-export type Worn = { by: string; where: string; when: string };
+/**
+ * Кто носит вещь, где и когда, и в чём особенность. Пусто - ещё не
+ * написано; «в чём особенность» можно и не писать.
+ */
+export type Worn = { by: string; where: string; when: string; about: string };
 
 /**
- * Записать «кто, где, когда». База примет только у своей вещи, только
- * непустое и только пока торг не открыт.
+ * Записать «кто, где, когда». База примет только у своей вещи, только с
+ * непустыми «кто, где, когда» и только пока торг не открыт.
  */
 export async function describeThing(thingId: string, worn: Worn): Promise<boolean> {
   if (!db) return false;
@@ -289,6 +292,7 @@ export async function describeThing(thingId: string, worn: Worn): Promise<boolea
     worn_by: worn.by,
     worn_where: worn.where,
     worn_when: worn.when,
+    worn_about: worn.about,
   });
   return !error && data === true;
 }
@@ -297,7 +301,7 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
   if (!db) return null;
   const { data } = await db
     .from("things")
-    .select("id, title, photos, worn_by, worn_where, worn_when, thing_spots(id, label, sort, photo, outline, x, y, w, h)")
+    .select("id, title, photos, worn_by, worn_where, worn_when, worn_about, thing_spots(id, label, sort, photo, outline, x, y, w, h)")
     .eq("id", thingId)
     .maybeSingle();
   if (!data) return null;
@@ -324,7 +328,12 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
     cover: photos[0] ? photoUrl(photos[0]) : null,
     photos: photos.map(photoUrl),
     spots,
-    worn: { by: data.worn_by ?? "", where: data.worn_where ?? "", when: data.worn_when ?? "" },
+    worn: {
+      by: data.worn_by ?? "",
+      where: data.worn_where ?? "",
+      when: data.worn_when ?? "",
+      about: data.worn_about ?? "",
+    },
   };
 }
 
