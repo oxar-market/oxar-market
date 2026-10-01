@@ -960,11 +960,28 @@ export function ThingStage({
         <span className="stage-hint">
           {/* На голограмме подписи мест нет: мест на ней не видно, и
               подпись выдавала бы то, что спрятано. */}
-          {hovered && !ghosting
-            ? (SPOTS.find((spot) => spot.code === hovered)?.label ?? "Spot")
-            : SPOTS.length === 0
-              ? `Drag to turn the ${noun}.`
-              : `Drag to turn the ${noun}. Tap a spot.`}
+          {hovered && !ghosting ? (
+            (SPOTS.find((spot) => spot.code === hovered)?.label ?? "Spot")
+          ) : (
+            // Вместо фразы - знак «вещь можно вертеть»: ладонь и две дуги.
+            // Его узнают без чтения, а фраза под вещью читалась как сбой.
+            <svg
+              className="stage-turn"
+              viewBox="0 0 48 32"
+              role="img"
+              aria-label={SPOTS.length === 0 ? `Drag to turn the ${noun}` : `Drag to turn the ${noun}, tap a spot`}
+            >
+              <path d="M9 9C5 11 3 13.5 3 16s2 5 6 7" />
+              <path d="M6 20.5 9 23l-3.2 2" />
+              <path d="M39 9c4 2 6 4.5 6 7s-2 5-6 7" />
+              <path d="M42 20.5 39 23l3.2 2" />
+              <g transform="translate(12 4)">
+                <path d="M10 13V4.5a1.5 1.5 0 0 1 3 0V12" />
+                <path d="M13 11.5V10a1.5 1.5 0 0 1 3 0v2" />
+                <path d="M16 11.5a1.5 1.5 0 0 1 3 0V16a7 7 0 0 1-7 7h-1c-2 0-3.3-.7-4.5-1.8l-3-3a1.5 1.5 0 0 1 2.1-2.1L10 18" />
+              </g>
+            </svg>
+          )}
         </span>
       )}
     </div>

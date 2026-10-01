@@ -13,6 +13,7 @@ import {
 import { Game } from "./game/game";
 import { CaseView } from "./case.tsx";
 import { ResultsView } from "./results.tsx";
+import { LastAuction } from "./last.tsx";
 import { DELORA } from "@/lib/cases";
 import { PhotoView } from "./auction/photo.tsx";
 import { SellerLine } from "./reviews.tsx";
@@ -32,7 +33,16 @@ import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
 type Mail = "idle" | "sending" | "done" | "failed";
 
-export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) => void }) {
+export function Market({
+  onOpenAuction,
+  openPast,
+  onPastShown,
+}: {
+  onOpenAuction: (thingId?: string) => void;
+  /** Итоги, которые попросили открыть с другой вкладки. */
+  openPast?: HeldRow | null;
+  onPastShown?: () => void;
+}) {
   const [things, setThings] = useState<MarketThing[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingThing[]>([]);
   const [held, setHeld] = useState<HeldRow[]>([]);
@@ -155,6 +165,11 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
   const [pilotOpen, setPilotOpen] = useState(false);
   // Итоги прошедшего торга открываются так же: поверх маркета, одной кнопкой назад.
   const [result, setResult] = useState<HeldRow | null>(null);
+  useEffect(() => {
+    if (!openPast) return;
+    setResult(openPast);
+    onPastShown?.();
+  }, [openPast, onPastShown]);
   if (result) {
     return (
       <section className="screen">
@@ -340,7 +355,10 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         </div>
       )}
 
-      {groups.length > 0 && (
+      {/* Пока торгов нет, на маркете - последний закрытый: пауза не пустая. */}
+      {things.length === 0 && held[0] && <LastAuction held={held[0]} onOpen={() => setResult(held[0]!)} />}
+
+      {things.length > 0 && (
         <div className="mk-strip">
           {week.map((one) => {
             const key = dayKey(one.getTime());
@@ -372,7 +390,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         </div>
       )}
 
-      {groups.map(([key, group]) => (
+      {things.length > 0 && groups.map(([key, group]) => (
         <div key={key} className="mk-group">
           <h2 className="mk-head" id={`mk-day-${key}`}>
             {group.title}
@@ -514,9 +532,13 @@ function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void 
         <div>
           <h2 className="hero-name">{thing.title}</h2>
           {thing.tagline && <p className="hero-who">{thing.tagline}</p>}
-          {thing.owner && <SellerLine seller={thing.owner} house={thing.house} />}
+          {thing.owner && !thing.house && <SellerLine seller={thing.owner} house={thing.house} />}
         </div>
-        <span className="muted">Opening date to be announced.</span>
+        <span className="muted">
+          {thing.house
+            ? "Our next thing. What it is and when bidding opens will be announced here and by email."
+            : "Opening date to be announced."}
+        </span>
         {thing.seller && (
           <button type="button" className="primary wide" onClick={onOpen}>
             Open

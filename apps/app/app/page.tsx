@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import { db, exchange } from "@/lib/session";
 import { BUILD } from "@/lib/build";
 import { Auction } from "./auction/auction";
 import { Market } from "./market";
+import type { HeldRow } from "@/lib/auction";
 import { Tabs, useTab } from "./tabs";
 import { ThemeRow, You } from "./you";
 import { PhoneCapture } from "./seller/flow.tsx";
@@ -28,6 +29,9 @@ export default function Home() {
   // Вещь продавца, открытая с маркета или из кабинета. Пусто - на вкладке
   // торга наша футболка, как было.
   const [openThing, setOpenThing] = useState<string | null>(null);
+  // Итоги прошлого торга, которые попросили открыть с вкладки Auction.
+  const [past, setPast] = useState<HeldRow | null>(null);
+  const clearPast = useCallback(() => setPast(null), []);
   function openAuction(thingId?: string) {
     setOpenThing(thingId ?? null);
     setTab("auction");
@@ -79,7 +83,9 @@ export default function Home() {
         </p>
       )}
 
-      {tab === "market" && <Market onOpenAuction={openAuction} />}
+      {tab === "market" && (
+        <Market onOpenAuction={openAuction} openPast={past} onPastShown={clearPast} />
+      )}
       {tab === "auction" &&
         (openThing ? (
           <ListingAuction
@@ -90,7 +96,12 @@ export default function Home() {
             }}
           />
         ) : (
-          <Auction />
+          <Auction
+            onOpenPast={(held) => {
+              setPast(held);
+              setTab("market");
+            }}
+          />
         ))}
       {tab === "you" && capture ? (
         <section className="screen">
