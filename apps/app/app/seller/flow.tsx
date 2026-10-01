@@ -15,6 +15,7 @@ import {
   landCapture,
   loadDealsToRate,
   deleteThing,
+  describeThing,
   renameThing,
   loadPricingThing,
   loadSellerRequests,
@@ -170,10 +171,14 @@ export function SellerFlow({
             if (ok) home();
             return ok;
           }}
-          onPublish={async (plans) => {
+          onPublish={async (plans, worn) => {
             setBusy(true);
             setFailed(false);
             setProblem("");
+            if (!(await describeThing(view.thing.id, worn))) {
+              setBusy(false);
+              return setProblem("Could not save who, where and when. Try again.");
+            }
             if (!(await savePlans(view.thing.id, plans))) {
               setBusy(false);
               return setFailed(true);

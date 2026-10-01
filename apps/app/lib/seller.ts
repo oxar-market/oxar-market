@@ -271,13 +271,33 @@ export type PricingThing = {
     photo: number;
     outline: [number, number][] | null;
   }[];
+  /** Кто носит вещь, где и когда - продавец пишет перед публикацией. */
+  worn: Worn;
 };
+
+/** Кто носит вещь, где и когда. Пусто - ещё не написано. */
+export type Worn = { by: string; where: string; when: string };
+
+/**
+ * Записать «кто, где, когда». База примет только у своей вещи, только
+ * непустое и только пока торг не открыт.
+ */
+export async function describeThing(thingId: string, worn: Worn): Promise<boolean> {
+  if (!db) return false;
+  const { data, error } = await db.rpc("seller_describes_thing", {
+    thing: thingId,
+    worn_by: worn.by,
+    worn_where: worn.where,
+    worn_when: worn.when,
+  });
+  return !error && data === true;
+}
 
 export async function loadPricingThing(thingId: string): Promise<PricingThing | null> {
   if (!db) return null;
   const { data } = await db
     .from("things")
-    .select("id, title, photos, thing_spots(id, label, sort, photo, outline, x, y, w, h)")
+    .select("id, title, photos, worn_by, worn_where, worn_when, thing_spots(id, label, sort, photo, outline, x, y, w, h)")
     .eq("id", thingId)
     .maybeSingle();
   if (!data) return null;
@@ -304,6 +324,7 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
     cover: photos[0] ? photoUrl(photos[0]) : null,
     photos: photos.map(photoUrl),
     spots,
+    worn: { by: data.worn_by ?? "", where: data.worn_where ?? "", when: data.worn_when ?? "" },
   };
 }
 
