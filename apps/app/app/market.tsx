@@ -484,7 +484,6 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
  * торге до открытия. Кнопки нет - открывать нечего, а дату скажет письмо.
  */
 function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void }) {
-  const stage = useRef<Stage | null>(null);
   return (
     <div className="hero">
       <div className={thing.seller ? "hero-photo" : "hero-photo in3d"}>
@@ -495,13 +494,10 @@ function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void 
             </button>
           )
         ) : (
+          // Что именно выйдет, пока не говорим: вместо вещи - знак вопроса,
+          // тот же, что у торгов, которые ещё не открылись.
           <div className="hero-stage">
-            <ThingStage
-              picked={null}
-              onPick={() => {}}
-              stage={stage}
-              onReady={() => stage.current?.look("ghost")}
-            />
+            <SoonHologram />
           </div>
         )}
         <span className="now-pill">
