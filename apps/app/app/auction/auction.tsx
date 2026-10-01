@@ -946,11 +946,7 @@ function Between() {
         <div className="hero-card">
           <div>
             <h2 className="hero-name">{title ?? "Not announced yet"}</h2>
-            <p className="hero-who">
-              The thing is not decided yet - information is coming soon. What it is, who
-              wears or carries it, where and when: all of it shows up here before bidding
-              opens.
-            </p>
+            <p className="hero-who">The thing is not decided yet. Details show up here before bidding opens.</p>
           </div>
           <div className="hero-stat">
             <span className="muted">Bidding opens</span>

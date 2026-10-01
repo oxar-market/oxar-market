@@ -195,43 +195,39 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
         ))}
       </div>
 
-      <div className="rs-card">
-        <div className="rs-head">
-          <h2>What happens now</h2>
+      <h2 className="mk-head">What happens now</h2>
+      <ol className="rs-steps">
+        <li className="done">
+          <b>Auction ended</b>
+          <span>{clock(held.closesAt)}. The highest bid on each spot won.</span>
+        </li>
+        <li className="done">
+          <b>Escrow settled</b>
+          <span>Winning bids paid out. Every other bid refunded automatically.</span>
+        </li>
+        <li className="now">
+          <b>Printing</b>
+          <span>Every artwork printed as uploaded.</span>
+        </li>
+        <li>
+          <b>Worn</b>
+          <span>
+            {worn?.when ? `From ${worn.when}` : "Date to be announced"}. Photos of the worn shirt appear
+            here.
+          </span>
+        </li>
+      </ol>
+      {/* Чем разобрали выбранное место: подпись и ссылка в обозреватель.
+          Пусто без выбранного места и у торгов, разобранных до того, как
+          подпись стали хранить. */}
+      {settled && (
+        <div className="rs-foot">
+          <span className="mono">Settlement {short(settled)}</span>
+          <a href={`https://solscan.io/tx/${settled}`} target="_blank" rel="noreferrer">
+            View on Solscan
+          </a>
         </div>
-        <ol className="rs-steps">
-          <li className="done">
-            <b>Auction ended</b>
-            <span>{clock(held.closesAt)}. The highest bid on each spot won.</span>
-          </li>
-          <li className="done">
-            <b>Escrow settled</b>
-            <span>Winning bids paid out. Every other bid refunded automatically.</span>
-          </li>
-          <li className="now">
-            <b>Printing</b>
-            <span>Every artwork printed as uploaded.</span>
-          </li>
-          <li>
-            <b>Worn</b>
-            <span>
-              {worn?.when ? `From ${worn.when}` : "Date to be announced"}. Photos of the worn shirt appear
-              here.
-            </span>
-          </li>
-        </ol>
-        {/* Чем разобрали выбранное место: подпись и ссылка в обозреватель.
-            Пусто без выбранного места и у торгов, разобранных до того, как
-            подпись стали хранить. */}
-        {settled && (
-          <div className="rs-foot">
-            <span className="mono">Settlement {short(settled)}</span>
-            <a href={`https://solscan.io/tx/${settled}`} target="_blank" rel="noreferrer">
-              View on Solscan
-            </a>
-          </div>
-        )}
-      </div>
+      )}
     </>
   );
 }

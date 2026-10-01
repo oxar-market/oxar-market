@@ -2273,7 +2273,12 @@ input:focus {
 
 .hero-card {
   position: relative;
-  margin: -6rem 1rem 0;
+  /* На широком экране колонка 60rem под сцену с дугами мест, а карточка -
+     текст: во всю колонку абзац шёл строкой на 150 знаков, а «Soon» уезжал
+     от своей подписи на полметра. Держим ширину чтения. */
+  width: calc(100% - 2rem);
+  max-width: 36rem;
+  margin: -6rem auto 0;
   padding: 1.25rem;
   border-radius: 20px;
   background: var(--card);
@@ -3427,29 +3432,15 @@ input:focus {
   font-variant-numeric: tabular-nums;
 }
 
-/* Что дальше у закрытого торга: карточка с четырьмя шагами. */
-.rs-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-  width: 100%;
-  padding: 1.25rem;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  background: var(--card);
-}
-
-.rs-head h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
-}
-
-/* Четыре шага точками. Пройденные - чёрной, текущий - красной,
-   будущий - пустой. */
+/* Что дальше у закрытого торга: четыре шага точками, той же строкой, что
+   и список победителей, - не карточкой. Карточка была единственной
+   коробкой на экране из строк и на широком экране стояла пустой на две
+   трети. Пройденные шаги - чёрной точкой, текущий - красной, будущий -
+   пустой. */
 .rs-steps {
   display: flex;
   flex-direction: column;
+  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -3497,9 +3488,10 @@ input:focus {
   color: var(--mut);
 }
 
-/* Подпись разбора и ссылка в обозреватель: подвал карточки. */
+/* Подпись разбора и ссылка в обозреватель: строка под шагами. */
 .rs-foot {
   display: flex;
+  width: 100%;
   justify-content: space-between;
   align-items: baseline;
   gap: 0.75rem;
@@ -5419,7 +5411,11 @@ input:focus {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
-  margin: 0;
+  /* Той же ширины, что карточка над ними, и чуть отступив от неё: иначе
+     шаги читались выпавшими из карточки. */
+  width: 100%;
+  max-width: 36rem;
+  margin: 0.5rem auto 0;
   padding: 0;
   list-style: none;
   counter-reset: step;
