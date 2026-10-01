@@ -232,7 +232,7 @@ function AdminThingView({
           </label>
         ))}
         <label className="sl-field ad-reason">
-          What makes it special
+          What makes it special (optional)
           <textarea
             value={worn.about}
             maxLength={300}
@@ -240,6 +240,7 @@ function AdminThingView({
             onChange={(event) => setWorn({ ...worn, about: event.target.value })}
           />
         </label>
+        <p className="muted">Who, where and when are needed before the auction opens. The rest is optional.</p>
         <button
           type="button"
           className="sl-btn light"
@@ -279,6 +280,8 @@ function AdminThingView({
         <PhotoViewer thing={thing} at={viewing} onAt={setViewing} onClose={() => setViewing(null)} />
       )}
 
+      {/* У наших вещей модель и места живут в коде: ставить их здесь нечего. */}
+      {!thing.house && (
       <div className="sl-card ad-card">
         <h3>3D model</h3>
         <label className="sl-btn light">
@@ -389,6 +392,8 @@ function AdminThingView({
         )}
       </div>
 
+      )}
+
       {/* Пруф: фото вещи в деле. Пока их нет, итоги говорят «preparing». */}
       <div className="sl-card ad-card">
         <h3>Proof</h3>
@@ -447,7 +452,8 @@ function AdminThingView({
               : "Not published yet. Approve now and it shows on the Market once the seller publishes."}
           </p>
         )}
-        {!thing.active && (
+        {/* Отклонённую не одобряют: продавцу остаётся только удалить её. */}
+        {!thing.active && !thing.declinedReason && (
           <button
             type="button"
             className="sl-btn dark"
