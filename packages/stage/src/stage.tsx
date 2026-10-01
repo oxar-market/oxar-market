@@ -957,7 +957,7 @@ export function ThingStage({
         <span className="stage-note">The {noun} could not be shown here.</span>
       )}
       {state === "ready" && (
-        <span className="stage-hint">
+        <span className={hovered && !ghosting ? "stage-hint" : "stage-hint stage-hint-turn"}>
           {/* На голограмме подписи мест нет: мест на ней не видно, и
               подпись выдавала бы то, что спрятано. */}
           {hovered && !ghosting ? (
