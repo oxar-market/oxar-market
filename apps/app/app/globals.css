@@ -4625,6 +4625,10 @@ input:focus {
   flex: 1;
   min-width: 0;
   border: 0;
+  /* Общее правило даёт полю пилюлю. Здесь пилюля - обёртка, а само поле
+     без скруглений: у поля высотой в строку скруглённый угол резал курсор
+     в первой позиции до дужки. */
+  border-radius: 0;
   padding: 0;
   background: transparent;
   font: inherit;
@@ -4641,6 +4645,7 @@ input:focus {
   flex: 1;
   min-width: 0;
   border: 0;
+  border-radius: 0;
   padding: 0;
   background: transparent;
   font: inherit;
