@@ -28,13 +28,11 @@ export async function loadWorn(thingId: string): Promise<Worn> {
   };
 }
 
-/** `given` - уже известные слова (пилот из кода): базу тогда не спрашиваем. */
-export function WornInfo({ thingId, given }: { thingId: string; given?: Worn }) {
-  const [worn, setWorn] = useState<Worn | null>(given ?? null);
+export function WornInfo({ thingId }: { thingId: string }) {
+  const [worn, setWorn] = useState<Worn | null>(null);
   useEffect(() => {
-    if (given) return;
     void loadWorn(thingId).then(setWorn);
-  }, [thingId, given]);
+  }, [thingId]);
   if (!worn) return null;
   const rows: [string, string | null][] = [
     ["Who has it", worn.by],

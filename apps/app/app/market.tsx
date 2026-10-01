@@ -13,18 +13,6 @@ import {
 import { Game } from "./game/game";
 import { ResultsView } from "./results.tsx";
 import { PastHero } from "./past.tsx";
-import { DELORA } from "@/lib/cases";
-
-/** Пилот в списке прошедших - строкой торга: открывается теми же итогами. */
-const PILOT_ROW: HeldRow = {
-  thingId: "pilot:delora",
-  closesAt: DELORA.date,
-  title: DELORA.title,
-  raisedCents: 0,
-  house: true,
-  photo: null,
-  pilot: DELORA,
-};
 import { PhotoView } from "./auction/photo.tsx";
 import { SellerLine } from "./reviews.tsx";
 import { SoonHologram } from "./soon.tsx";
@@ -46,12 +34,15 @@ type Mail = "idle" | "sending" | "done" | "failed";
 export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) => void }) {
   const [things, setThings] = useState<MarketThing[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingThing[]>([]);
+  // Пилоты - строками «Past», в карусель не идут: у них нет ни ставок, ни суммы.
+  const [pilots, setPilots] = useState<HeldRow[]>([]);
   const [held, setHeld] = useState<HeldRow[]>([]);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     void loadMarket().then((loaded) => {
       setThings(loaded.things);
       setUpcoming(loaded.upcoming);
+      setPilots(loaded.pilots);
       setHeld(loaded.held);
     });
     const tick = setInterval(() => setNow(Date.now()), 1000);
@@ -415,7 +406,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       {/* Одним списком, свежие сверху: пилот - такая же строка истории, как
           торги, и стоит по своей дате, а не первым навсегда. */}
       <div className="held-list">
-        {[...held, PILOT_ROW]
+        {[...held, ...pilots]
           .sort((a, b) => Date.parse(b.closesAt) - Date.parse(a.closesAt))
           .map((one) => (
             <button
