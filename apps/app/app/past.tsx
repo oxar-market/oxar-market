@@ -110,7 +110,7 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
         </div>
         <div className="hero-stat">
           <span className="muted">
-            {logos} {logos === 1 ? "logo" : "logos"} printed
+            {logos} {logos === 1 ? "logo" : "logos"} placed
           </span>
           <span className="hero-top">
             {formatUsd(held.raisedCents)} <span className="hero-top-cap">raised</span>

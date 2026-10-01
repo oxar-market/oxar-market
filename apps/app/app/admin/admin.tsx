@@ -9,12 +9,13 @@ import {
   saveSpotGeo,
   updateThing,
   uploadModel,
+  uploadProof,
   type AdminThing,
 } from "@/lib/admin";
+import { photoUrl } from "@/lib/seller";
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
-import { WornInfo } from "../worn.tsx";
 
 /**
  * Админка по вещам продавцов. Вещь попадает на маркет, когда продавец
@@ -90,7 +91,7 @@ export function Admin() {
       {sections}
 
       <div className="sl-head">
-        <h2>Seller things</h2>
+        <h2>Things</h2>
         <span>{things?.length ?? ""}</span>
       </div>
       {things?.length === 0 && <p className="muted">Nothing sent yet.</p>}
@@ -104,13 +105,15 @@ export function Admin() {
                 className={`sl-state ${one.active ? "live" : one.declinedReason ? "declined" : "preparing"}`}
               >
                 <i />
-                {one.active
-                  ? "ON MARKET"
-                  : one.declinedReason
-                    ? "DECLINED"
-                    : one.published
-                      ? "PUBLISHED - REVIEW"
-                      : "TO REVIEW"}
+                {one.house
+                  ? "OURS"
+                  : one.active
+                    ? "ON MARKET"
+                    : one.declinedReason
+                      ? "DECLINED"
+                      : one.published
+                        ? "PUBLISHED - REVIEW"
+                        : "TO REVIEW"}
               </span>
               <span className="sl-thing-sub">
                 {one.spots.length} spots · {one.model ? "3D" : "no 3D"}
@@ -143,6 +146,9 @@ function AdminThingView({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
+  // «Кто, где, когда, особенность» правит и админ: продавец пишет это до
+  // публикации, а поправить после неё, когда торг уже идёт, можем только мы.
+  const [worn, setWorn] = useState(thing.worn);
   const [viewing, setViewing] = useState<number | null>(null);
   const [picked, setPicked] = useState(
     () => (thing.spots.find((spot) => !spot.geo) ?? thing.spots[0])?.code ?? null,
@@ -211,8 +217,49 @@ function AdminThingView({
         </button>
       </div>
 
-      {/* Пишет продавец перед публикацией: до неё здесь «To be announced». */}
-      <WornInfo thingId={thing.id} />
+      <div className="sl-card ad-card">
+        <h3>Who, where and when</h3>
+        {(["by", "where", "when"] as const).map((key) => (
+          <label className="sl-field" key={key}>
+            {key === "by" ? "Who has it" : key === "where" ? "Where" : "When"}
+            <span className="sl-input soft">
+              <input
+                value={worn[key]}
+                maxLength={120}
+                onChange={(event) => setWorn({ ...worn, [key]: event.target.value })}
+              />
+            </span>
+          </label>
+        ))}
+        <label className="sl-field ad-reason">
+          What makes it special
+          <textarea
+            value={worn.about}
+            maxLength={300}
+            rows={3}
+            onChange={(event) => setWorn({ ...worn, about: event.target.value })}
+          />
+        </label>
+        <button
+          type="button"
+          className="sl-btn light"
+          disabled={busy || JSON.stringify(worn) === JSON.stringify(thing.worn)}
+          onClick={() =>
+            run(
+              () =>
+                updateThing(thing.id, {
+                  worn_by: worn.by.trim() || null,
+                  worn_where: worn.where.trim() || null,
+                  worn_when: worn.when.trim() || null,
+                  worn_about: worn.about.trim() || null,
+                }),
+              "Could not save it.",
+            )
+          }
+        >
+          Save
+        </button>
+      </div>
 
       {/* Снимки открываются крупно - для 3D-модели их смотрят с разметкой и
           без, и сохраняют оригинал. */}
@@ -342,6 +389,51 @@ function AdminThingView({
         )}
       </div>
 
+      {/* Пруф: фото вещи в деле. Пока их нет, итоги говорят «preparing». */}
+      <div className="sl-card ad-card">
+        <h3>Proof</h3>
+        {thing.proof.length > 0 ? (
+          <div className="ad-photos">
+            {thing.proof.map((path) => (
+              <span className="sl-photo ad-proof" key={path}>
+                <img src={photoUrl(path)} alt="" />
+                <button
+                  type="button"
+                  className="ghost small"
+                  disabled={busy}
+                  onClick={() =>
+                    run(
+                      () => updateThing(thing.id, { proof_photos: thing.proof.filter((one) => one !== path) }),
+                      "Could not remove it.",
+                    )
+                  }
+                >
+                  Remove
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">No photos yet. The results page says the thing is being prepared.</p>
+        )}
+        <label className="sl-btn light">
+          Add photos
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            disabled={busy}
+            onChange={(event) => {
+              const files = [...(event.target.files ?? [])];
+              event.target.value = "";
+              if (files.length) void run(() => uploadProof(thing.id, files, thing.proof), "Upload failed.");
+            }}
+          />
+        </label>
+      </div>
+
+      {!thing.house && (
       <div className="sl-card ad-card">
         <h3>Review</h3>
         {thing.active ? (
@@ -398,6 +490,7 @@ function AdminThingView({
           </>
         )}
       </div>
+      )}
 
       {error && <p className="bad">{error}</p>}
     </>

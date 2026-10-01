@@ -37,7 +37,7 @@ export function WornInfo({ thingId, given }: { thingId: string; given?: Worn }) 
   }, [thingId, given]);
   if (!worn) return null;
   const rows: [string, string | null][] = [
-    ["Who wears it", worn.by],
+    ["Who has it", worn.by],
     ["Where", worn.where],
     ["When", worn.when],
   ];
