@@ -8,21 +8,24 @@ import { db } from "@/lib/session";
  * покупает: не «футболку», а футболку на человеке в день и в месте. Пустое
  * поле - «To be announced», а не пропуск: молчание читалось бы как «неважно».
  */
-type Worn = { by: string | null; where: string | null; when: string | null };
+export type Worn = { by: string | null; where: string | null; when: string | null };
+
+/** Ошибка (например, поля ещё не доехали) - те же «To be announced». */
+export async function loadWorn(thingId: string): Promise<Worn> {
+  const empty = { by: null, where: null, when: null };
+  if (!db) return empty;
+  const { data } = await db
+    .from("things")
+    .select("worn_by, worn_where, worn_when")
+    .eq("id", thingId)
+    .maybeSingle();
+  return { by: data?.worn_by ?? null, where: data?.worn_where ?? null, when: data?.worn_when ?? null };
+}
 
 export function WornInfo({ thingId }: { thingId: string }) {
   const [worn, setWorn] = useState<Worn | null>(null);
   useEffect(() => {
-    if (!db) return;
-    void db
-      .from("things")
-      .select("worn_by, worn_where, worn_when")
-      .eq("id", thingId)
-      .maybeSingle()
-      // Ошибка (например, поля ещё не доехали) - те же «To be announced».
-      .then(({ data }) =>
-        setWorn({ by: data?.worn_by ?? null, where: data?.worn_where ?? null, when: data?.worn_when ?? null }),
-      );
+    void loadWorn(thingId).then(setWorn);
   }, [thingId]);
   if (!worn) return null;
   const rows: [string, string | null][] = [
