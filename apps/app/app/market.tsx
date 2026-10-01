@@ -395,16 +395,39 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       ))}
 
       <h2 className="mk-head">Past</h2>
+      {/* Одним списком, свежие сверху: пилот - такая же строка истории, как
+          торги, и стоит по своей дате, а не первым навсегда. */}
       <div className="held-list">
-        <button
-          type="button"
-          className="held-row held-pilot"
-          onClick={() => setPilotOpen(true)}
-        >
-          <span className="held-date">{day(DELORA.date)}</span>
-          <span className="held-name">{DELORA.title}</span>
-          <span className="held-sum">Pilot</span>
-        </button>
+        {[
+          ...held.map((one) => ({ at: one.closesAt, held: one })),
+          { at: DELORA.date, held: null },
+        ]
+          .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+          .map(({ at, held: one }) =>
+            one ? (
+              <button
+                type="button"
+                className="held-row held-pilot"
+                key={one.closesAt + one.title}
+                onClick={() => setResult(one)}
+              >
+                <span className="held-date">{day(one.closesAt)}</span>
+                <span className="held-name">{one.title}</span>
+                <span className="held-sum">{formatUsd(one.raisedCents)}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="held-row held-pilot"
+                key={`pilot-${at}`}
+                onClick={() => setPilotOpen(true)}
+              >
+                <span className="held-date">{day(DELORA.date)}</span>
+                <span className="held-name">{DELORA.title}</span>
+                <span className="held-sum">Pilot</span>
+              </button>
+            ),
+          )}
       </div>
       {held.length === 0 && things[0] && (
         <p className="held-empty">
@@ -417,24 +440,6 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
           })}
           .
         </p>
-      )}
-      {held.length > 0 && (
-        <>
-          <div className="held-list">
-            {held.map((one) => (
-              <button
-                type="button"
-                className="held-row held-pilot"
-                key={one.closesAt + one.title}
-                onClick={() => setResult(one)}
-              >
-                <span className="held-date">{day(one.closesAt)}</span>
-                <span className="held-name">{one.title}</span>
-                <span className="held-sum">{formatUsd(one.raisedCents)}</span>
-              </button>
-            ))}
-          </div>
-        </>
       )}
 
       <div className="mail-card">
