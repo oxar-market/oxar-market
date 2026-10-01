@@ -25,7 +25,7 @@ import { BidForm } from "./bid.tsx";
 import { PhotoView } from "./photo.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
-import { LastAuction } from "../last.tsx";
+import { PastHero } from "../past.tsx";
 import { WornInfo } from "../worn.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
@@ -918,9 +918,12 @@ function spanOf(ms: number): string {
 }
 
 /**
- * Пауза между торгами. Экран не должен выглядеть сломанным: сверху - что
- * будет дальше (вещь не объявлена, знак вопроса), ниже - как это пойдёт, и
- * последний закрытый торг с его логотипами.
+ * Пауза между торгами. Экран не должен выглядеть сломанным: каруселью - что
+ * будет дальше (вещь не объявлена, знак вопроса) и прошедший торг на самой
+ * вещи, ниже - как это пойдёт.
+ *
+ * Прошедший стоит слайдом, а не плашкой внизу: плашка показывала логотипы
+ * рядком сами по себе и читалась сноской под экраном.
  */
 function Between({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }) {
   const [title, setTitle] = useState<string | null>(null);
@@ -929,6 +932,18 @@ function Between({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }) {
     void loadNextHouseTitle().then(setTitle);
     void loadMarket().then((loaded) => setLast(loaded.held[0] ?? null));
   }, []);
+
+  // Слайды двигаем скроллом, а стрелки и точки только просят его переехать:
+  // иначе жест пальцем и кнопка разошлись бы в разные состояния.
+  const rail = useRef<HTMLDivElement | null>(null);
+  const [slide, setSlide] = useState(0);
+  function go(to: number) {
+    const el = rail.current;
+    if (!el) return;
+    el.scrollTo({ left: to * el.clientWidth, behavior: "smooth" });
+  }
+
+  const past = last && onOpenPast ? last : null;
   return (
     <section className="lot">
       <div className="lot-brandbar">
@@ -936,22 +951,90 @@ function Between({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }) {
           OXAR <span>Auction</span>
         </span>
       </div>
-      <header className="lot-top">
-        <div className="lot-title">
-          <p className="over">Next on OXAR</p>
-          <h1>{title ?? "Unknown item"}</h1>
-          <p className="lot-pot">Not announced yet - no auction is running right now.</p>
-        </div>
-        <div className="lot-side">
-          <div className="lot-cd">
-            <span className="lot-cd-cap">Opens</span>
-            <span className="lot-cd-num lot-cd-word">Will be soon</span>
+
+      <div className="hero-wrap">
+        <div
+          className="hero-rail"
+          ref={rail}
+          onScroll={(event) => {
+            const el = event.currentTarget;
+            setSlide(Math.round(el.scrollLeft / el.clientWidth));
+          }}
+        >
+          <div className="hero">
+            <div className="hero-photo in3d">
+              <div className="hero-stage between-scene">
+                <SoonHologram />
+              </div>
+              <span className="now-pill">
+                <span className="dot" />
+                NEXT THING
+              </span>
+            </div>
+            <div className="hero-card">
+              <div>
+                <h2 className="hero-name">{title ?? "Not announced yet"}</h2>
+                <p className="hero-who">
+                  The thing is not decided yet - information is coming soon. What it is, who
+                  wears or carries it, where and when: all of it shows up here before bidding
+                  opens.
+                </p>
+              </div>
+              <div className="hero-stat">
+                <span className="muted">Bidding opens</span>
+                <span className="hero-top word">Soon</span>
+              </div>
+              {/* Кнопка на второй слайд: стрелки на телефоне легко не заметить,
+                  а прошлый торг - единственное, что тут можно посмотреть. */}
+              {past && (
+                <button type="button" className="primary wide" onClick={() => go(1)}>
+                  See the last auction
+                </button>
+              )}
+            </div>
           </div>
+
+          {past && <PastHero held={past} onOpen={() => onOpenPast?.(past)} />}
         </div>
-      </header>
-      <div className="lot-scene between-scene">
-        <SoonHologram />
+
+        {/* Стрелки и точки стоят, только когда листать есть что. */}
+        {past && (
+          <>
+            <button
+              type="button"
+              className="hero-arrow prev"
+              aria-label="Previous"
+              disabled={slide === 0}
+              onClick={() => go(slide - 1)}
+            >
+              &larr;
+            </button>
+            <button
+              type="button"
+              className="hero-arrow next"
+              aria-label="Next"
+              disabled={slide === 1}
+              onClick={() => go(slide + 1)}
+            >
+              &rarr;
+            </button>
+          </>
+        )}
       </div>
+
+      {past && (
+        <div className="hero-pager">
+          {[0, 1].map((at) => (
+            <button
+              key={at}
+              type="button"
+              className={at === slide ? "on" : ""}
+              aria-label={at === 0 ? "Show the next thing" : "Show the last auction"}
+              onClick={() => go(at)}
+            />
+          ))}
+        </div>
+      )}
 
       <ol className="between-steps">
         <li>
@@ -967,8 +1050,6 @@ function Between({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }) {
           <span>Winning logos go on the thing, and photos of it in use show up here.</span>
         </li>
       </ol>
-
-      {last && onOpenPast && <LastAuction held={last} onOpen={() => onOpenPast(last)} />}
     </section>
   );
 }
