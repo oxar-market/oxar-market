@@ -10,6 +10,7 @@ import { Tabs, useTab } from "./tabs";
 import { ThemeRow, You } from "./you";
 import { PhoneCapture } from "./seller/flow.tsx";
 import { ListingAuction } from "./listing/listing.tsx";
+import { DEMO } from "@/lib/demo";
 
 /**
  * Приложение.
@@ -28,6 +29,10 @@ export default function Home() {
   // Вещь продавца, открытая с маркета или из кабинета. Пусто - на вкладке
   // торга наша футболка, как было.
   const [openThing, setOpenThing] = useState<string | null>(null);
+  // Плашка демо - после монтирования: в собранной заранее странице её нет,
+  // и сразу нарисованная она расходилась бы с ней при гидрации.
+  const [demo, setDemo] = useState(false);
+  useEffect(() => setDemo(DEMO), []);
   function openAuction(thingId?: string) {
     setOpenThing(thingId ?? null);
     setTab("auction");
@@ -73,6 +78,11 @@ export default function Home() {
   // ждёт только то, что без него бессмысленно, - вкладка You.
   return (
     <main className="app">
+      {demo && (
+        <p className="demo-banner">
+          <b>Demo</b> · a replay of a closed auction. Bidding is off.
+        </p>
+      )}
       {linked === "failed" && (
         <p className="bad banner">
           Could not reach the database. Bidding is off until it is back.
