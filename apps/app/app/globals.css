@@ -3303,147 +3303,244 @@ input:focus {
   color: #e0381c;
 }
 
-/* Итоги торга: логотип, место, бренд, ставка - одной строкой. */
-.results-row {
-  grid-template-columns: 40px 72px minmax(0, 1fr) auto;
-  align-items: center;
+/* ── Закрытый торг: шапка, вещь с логотипами, место и его ставки, все
+   места, что дальше. ── */
+
+/* Колонка текста: на широком экране сцена во всю ширину, а всё остальное -
+   столбцом посередине, как на борде. */
+.rs-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 36rem;
+  margin: 0 auto;
 }
 
-.results-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  object-fit: contain;
-  background: var(--photo);
+/* Закрытый торг: та же метка, что LIVE, но точка не красная - тут уже
+   ничего не идёт. */
+.live-badge.ended i {
+  background: var(--ink);
 }
 
-.results-spot {
+.rs-caption {
+  text-align: center;
+  font-size: 0.8125rem;
+}
+
+.rs-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line2);
+}
+
+.rs-stats dt {
   font-size: 0.8125rem;
   color: var(--mut);
 }
 
-.results-brand {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.results-sum {
+.rs-stats dd {
+  margin: 4px 0 0;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.results-timeline {
+.rs-card {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
+  gap: 0.875rem;
+  padding: 1.25rem;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--card);
 }
 
-/* Ползунок таймлайна. Родной range у каждого браузера свой и выглядит
-   дёшево - рисуем дорожку, засечки ставок и бегунок сами. */
-.results-scrub {
-  position: relative;
-  height: 32px;
-}
-
-.results-scrub input[type="range"] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  /* Общий стиль полей ввода даёт рамку и скругление - ползунку они не нужны. */
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  outline: none;
-  background: transparent;
-  -webkit-appearance: none;
-  appearance: none;
-  cursor: pointer;
-}
-
-.results-scrub input[type="range"]::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(to right, #e0381c var(--fill), var(--line) var(--fill));
-}
-
-.results-scrub input[type="range"]::-moz-range-track {
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(to right, #e0381c var(--fill), var(--line) var(--fill));
-}
-
-.results-scrub input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
-  margin-top: -9px;
-  border-radius: 50%;
-  border: 0;
-  background: radial-gradient(circle, #e0381c 0 4px, #fff 4.5px);
-  box-shadow: 0 2px 8px rgba(22, 24, 29, 0.25), 0 0 0 1px rgba(22, 24, 29, 0.06);
-  transition: transform 0.12s;
-}
-
-.results-scrub input[type="range"]::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 0;
-  background: radial-gradient(circle, #e0381c 0 4px, #fff 4.5px);
-  box-shadow: 0 2px 8px rgba(22, 24, 29, 0.25), 0 0 0 1px rgba(22, 24, 29, 0.06);
-}
-
-.results-scrub input[type="range"]:active::-webkit-slider-thumb {
-  transform: scale(1.12);
-}
-
-.results-scrub input[type="range"]:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(224, 56, 28, 0.35), 0 2px 8px rgba(22, 24, 29, 0.25);
-}
-
-/* Засечка на каждую ставку: видно, где торг был горячим. */
-.results-ticks {
-  position: absolute;
-  left: 11px;
-  right: 11px;
-  top: 50%;
-  height: 12px;
-  margin-top: 6px;
-  pointer-events: none;
-}
-
-.results-ticks i {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 6px;
-  margin-left: -1px;
-  border-radius: 1px;
-  background: var(--line3);
-}
-
-.results-ticks i.on {
-  background: var(--ink);
-  opacity: 0.55;
-}
-
-.results-time-head {
+.rs-head {
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  align-items: baseline;
   gap: 0.75rem;
 }
 
-.results-time-now {
+.rs-head h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.tagchip.ink {
+  color: var(--ink);
+}
+
+/* Победитель места: его логотип, ставка крупно, кошелёк. */
+.rs-win {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.rs-win img {
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: var(--soft);
+  border: 1px solid var(--line2);
+}
+
+.rs-win > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
+}
+
+.rs-win-cap,
+.rs-win-who {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.rs-win-sum {
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ставка на место: кошелёк со временем, исход, сумма. */
+.rs-bid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line2);
+  font-size: 0.9375rem;
+}
+
+.rs-bid em {
+  display: block;
+  font-style: normal;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.rs-bid-amt {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Строка места в общем списке: нажатие открывает его ставки карточкой выше. */
+.rs-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  width: calc(100% + 1rem);
+  margin: 0 -0.5rem;
+  padding: 0.75rem 0.5rem;
+  border: 0;
+  border-bottom: 1px solid var(--line2);
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rs-row.on {
+  background: var(--soft);
+  border-bottom-color: transparent;
+}
+
+.rs-row-who {
+  color: var(--mut);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 0.9375rem;
+}
+
+.rs-row-sum {
   font-variant-numeric: tabular-nums;
+}
+
+/* Что дальше: четыре шага точками. Пройденные - чёрной, текущий - красной,
+   будущий - пустой. */
+.rs-steps {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-steps li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 0.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line2);
+}
+
+.rs-steps li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.rs-steps li::before {
+  content: "";
+  grid-row: span 2;
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--faint);
+}
+
+.rs-steps li.done::before {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.rs-steps li.now::before {
+  background: #e0381c;
+  border-color: #e0381c;
+}
+
+.rs-steps b {
+  font-weight: 600;
+}
+
+.rs-steps span {
+  font-size: 0.875rem;
+  color: var(--mut);
+}
+
+/* Подпись разбора и ссылка в обозреватель: подвал карточки. */
+.rs-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--line2);
+  font-size: 0.8125rem;
+}
+
+.rs-foot .mono {
+  color: var(--mut);
+}
+
+.rs-foot a {
+  color: var(--ink);
+  text-underline-offset: 3px;
 }
 
 .results-photo {

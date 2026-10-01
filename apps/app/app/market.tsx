@@ -170,16 +170,7 @@ export function Market({
     setResult(openPast);
     onPastShown?.();
   }, [openPast, onPastShown]);
-  if (result) {
-    return (
-      <section className="screen">
-        <h1 className="mk-title">
-          OXAR <span>Market</span>
-        </h1>
-        <ResultsView held={result} onBack={() => setResult(null)} />
-      </section>
-    );
-  }
+  if (result) return <ResultsView held={result} onBack={() => setResult(null)} />;
   if (pilotOpen) {
     return (
       <section className="screen">

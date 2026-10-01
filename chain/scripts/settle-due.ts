@@ -192,7 +192,7 @@ async function main() {
           .rpc();
         await rest(`lots?id=eq.${row.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ status: "won" }),
+          body: JSON.stringify({ status: "won", settle_signature: signature }),
         });
         console.log(`${label}: выплачен, ${signature}`);
       } else {
@@ -211,7 +211,7 @@ async function main() {
           .rpc();
         await rest(`lots?id=eq.${row.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ status: "unsold" }),
+          body: JSON.stringify({ status: "unsold", settle_signature: signature }),
         });
         console.log(`${label}: закрыт без победителя, ${signature}`);
       }
