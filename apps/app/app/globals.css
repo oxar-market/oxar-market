@@ -2673,6 +2673,11 @@ input:focus {
   white-space: nowrap;
 }
 
+/* Между торгами вместо часов - слово: оно длиннее цифр и мельче их. */
+.lot-cd-word {
+  font-size: 1.75rem;
+}
+
 .lot-cd.soon .lot-cd-num {
   color: #e0381c;
 }

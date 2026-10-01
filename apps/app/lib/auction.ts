@@ -103,6 +103,22 @@ export async function loadThing(): Promise<{
   };
 }
 
+/**
+ * Следующая наша вещь - та, у которой ещё не было ни одного торга. Её имя
+ * экран торга показывает в паузе между аукционами.
+ */
+export async function loadNextHouseTitle(): Promise<string | null> {
+  if (!db) return null;
+  const { data } = await db
+    .from("things")
+    .select("title, lots(id)")
+    .eq("house", true)
+    .eq("active", true)
+    .order("created_at");
+  const next = (data ?? []).find((one) => ((one.lots as unknown[] | null) ?? []).length === 0);
+  return next?.title ?? null;
+}
+
 /** Ставки лота: от высокой к низкой, как их и читают. */
 export async function loadBids(lotId: string): Promise<Bid[]> {
   if (!db) return [];
