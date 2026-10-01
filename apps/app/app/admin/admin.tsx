@@ -14,7 +14,6 @@ import {
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
-import { WornInfo } from "../worn.tsx";
 
 /**
  * Админка по вещам продавцов. Вещь попадает на маркет, когда продавец
@@ -143,6 +142,9 @@ function AdminThingView({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
+  // «Кто, где, когда, особенность» правит и админ: продавец пишет это до
+  // публикации, а поправить после неё, когда торг уже идёт, можем только мы.
+  const [worn, setWorn] = useState(thing.worn);
   const [viewing, setViewing] = useState<number | null>(null);
   const [picked, setPicked] = useState(
     () => (thing.spots.find((spot) => !spot.geo) ?? thing.spots[0])?.code ?? null,
@@ -211,8 +213,49 @@ function AdminThingView({
         </button>
       </div>
 
-      {/* Пишет продавец перед публикацией: до неё здесь «To be announced». */}
-      <WornInfo thingId={thing.id} />
+      <div className="sl-card ad-card">
+        <h3>Who, where and when</h3>
+        {(["by", "where", "when"] as const).map((key) => (
+          <label className="sl-field" key={key}>
+            {key === "by" ? "Who has it" : key === "where" ? "Where" : "When"}
+            <span className="sl-input soft">
+              <input
+                value={worn[key]}
+                maxLength={120}
+                onChange={(event) => setWorn({ ...worn, [key]: event.target.value })}
+              />
+            </span>
+          </label>
+        ))}
+        <label className="sl-field ad-reason">
+          What makes it special
+          <textarea
+            value={worn.about}
+            maxLength={300}
+            rows={3}
+            onChange={(event) => setWorn({ ...worn, about: event.target.value })}
+          />
+        </label>
+        <button
+          type="button"
+          className="sl-btn light"
+          disabled={busy || JSON.stringify(worn) === JSON.stringify(thing.worn)}
+          onClick={() =>
+            run(
+              () =>
+                updateThing(thing.id, {
+                  worn_by: worn.by.trim() || null,
+                  worn_where: worn.where.trim() || null,
+                  worn_when: worn.when.trim() || null,
+                  worn_about: worn.about.trim() || null,
+                }),
+              "Could not save it.",
+            )
+          }
+        >
+          Save
+        </button>
+      </div>
 
       {/* Снимки открываются крупно - для 3D-модели их смотрят с разметкой и
           без, и сохраняют оригинал. */}

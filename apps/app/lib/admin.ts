@@ -25,6 +25,8 @@ export type AdminThing = {
   model: string | null;
   spots: ListedSpot[];
   createdAt: string;
+  /** Кто носит, где, когда и в чём особенность - как написал продавец. Пусто - не написано. */
+  worn: { by: string; where: string; when: string; about: string };
 };
 
 export async function amIAdmin(): Promise<boolean> {
@@ -38,7 +40,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, lots(status), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, worn_by, worn_where, worn_when, worn_about, lots(status), thing_spots(${SPOT_COLUMNS})`)
     .not("seller", "is", null)
     .eq("house", false)
     .order("created_at", { ascending: false });
@@ -53,12 +55,27 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     model: (row.model_url as string) || null,
     spots: listedSpots((row.thing_spots ?? []) as Parameters<typeof listedSpots>[0]),
     createdAt: row.created_at,
+    worn: {
+      by: (row.worn_by as string | null) ?? "",
+      where: (row.worn_where as string | null) ?? "",
+      when: (row.worn_when as string | null) ?? "",
+      about: (row.worn_about as string | null) ?? "",
+    },
   }));
 }
 
 export async function updateThing(
   id: string,
-  patch: Partial<{ title: string; tagline: string | null; active: boolean; model_url: string }>,
+  patch: Partial<{
+    title: string;
+    tagline: string | null;
+    active: boolean;
+    model_url: string;
+    worn_by: string | null;
+    worn_where: string | null;
+    worn_when: string | null;
+    worn_about: string | null;
+  }>,
 ): Promise<boolean> {
   if (!db) return false;
   const { error } = await db.from("things").update(patch).eq("id", id);
