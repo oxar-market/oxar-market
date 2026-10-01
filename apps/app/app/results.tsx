@@ -132,17 +132,32 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
                 : "Before the first bid"}
             </span>
           </div>
-          <input
-            type="range"
-            min={0}
-            max={events.length}
-            value={at}
-            aria-label="Auction timeline"
-            onChange={(event) => {
-              setPlaying(false);
-              setStep(Number(event.target.value));
-            }}
-          />
+          {/* Свой ползунок: засечка на каждую ставку, пройденное - красным. */}
+          <div
+            className="results-scrub"
+            style={{ "--fill": `${events.length ? (at / events.length) * 100 : 0}%` } as React.CSSProperties}
+          >
+            <div className="results-ticks" aria-hidden>
+              {events.map((one, i) => (
+                <i
+                  key={i}
+                  className={i < at ? "on" : ""}
+                  style={{ left: `${((i + 1) / events.length) * 100}%` }}
+                />
+              ))}
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={events.length}
+              value={at}
+              aria-label="Auction timeline"
+              onChange={(event) => {
+                setPlaying(false);
+                setStep(Number(event.target.value));
+              }}
+            />
+          </div>
           <span className="muted">
             {at} of {events.length} bids
           </span>
