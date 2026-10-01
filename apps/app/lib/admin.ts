@@ -29,6 +29,8 @@ export type AdminThing = {
   house: boolean;
   /** Пути фото пруфа в хранилище. */
   proof: string[];
+  /** Кто носит, где, когда и в чём особенность - как написал продавец. Пусто - не написано. */
+  worn: { by: string; where: string; when: string; about: string };
 };
 
 export async function amIAdmin(): Promise<boolean> {
@@ -45,7 +47,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, house, proof_photos, lots(status), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, house, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(status), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -60,12 +62,28 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     createdAt: row.created_at,
     house: row.house === true,
     proof: (row.proof_photos as string[] | null) ?? [],
+    worn: {
+      by: (row.worn_by as string | null) ?? "",
+      where: (row.worn_where as string | null) ?? "",
+      when: (row.worn_when as string | null) ?? "",
+      about: (row.worn_about as string | null) ?? "",
+    },
   }));
 }
 
 export async function updateThing(
   id: string,
-  patch: Partial<{ title: string; tagline: string | null; active: boolean; model_url: string; proof_photos: string[] }>,
+  patch: Partial<{
+    title: string;
+    tagline: string | null;
+    active: boolean;
+    model_url: string;
+    proof_photos: string[];
+    worn_by: string | null;
+    worn_where: string | null;
+    worn_when: string | null;
+    worn_about: string | null;
+  }>,
 ): Promise<boolean> {
   if (!db) return false;
   const { error } = await db.from("things").update(patch).eq("id", id);
