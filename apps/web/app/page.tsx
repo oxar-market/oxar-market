@@ -121,14 +121,22 @@ type Past = {
   closedAt: number;
   raisedCents: number;
   logos: { url: string; brand: string }[];
+  /** Логотипы победителей по местам: ими одевается сама вещь, как у живого торга. */
+  art: Record<string, string>;
   worn: { by: string | null; where: string | null; when: string | null };
 };
 
 async function loadPast(): Promise<Past | null> {
   const lots = (await rest(
-    "lots?status=eq.won&rehearsal=eq.false&select=id,closes_at,thing_id,things:thing_id(title,house,active)&order=closes_at.desc&limit=100",
+    "lots?status=eq.won&rehearsal=eq.false&select=id,closes_at,thing_id,thing_spots:spot_id(code),things:thing_id(title,house,active)&order=closes_at.desc&limit=100",
   )) as
-    | { id: string; closes_at: string; thing_id: string; things: { title: string; house: boolean; active: boolean } | null }[]
+    | {
+        id: string;
+        closes_at: string;
+        thing_id: string;
+        thing_spots: { code: string } | null;
+        things: { title: string; house: boolean; active: boolean } | null;
+      }[]
     | null;
   const ours = (lots ?? []).filter((one) => one.things?.house && one.things.active);
   const last = ours[0];
@@ -149,11 +157,21 @@ async function loadPast(): Promise<Past | null> {
     `things?id=eq.${last.thing_id}&select=worn_by,worn_where,worn_when`,
   )) as { worn_by: string | null; worn_where: string | null; worn_when: string | null }[] | null)?.[0];
 
+  // Победитель каждого места - тем же ключом, что у живого торга: так вещь
+  // одевается одним и тем же кодом, и прошлый торг видно на футболке, а не
+  // строчкой логотипов под ней.
+  const art: Record<string, string> = {};
+  for (const lot of same) {
+    const lead = top.get(lot.id);
+    if (lead && lot.thing_spots?.code) art[lot.thing_spots.code] = lead.media_url;
+  }
+
   return {
     title: last.things?.title ?? "",
     closedAt: Date.parse(last.closes_at),
     raisedCents: [...top.values()].reduce((sum, one) => sum + one.amount_cents, 0),
     logos: [...top.values()].map((one) => ({ url: one.media_url, brand: one.brand })),
+    art,
     worn: { by: worn?.worn_by ?? null, where: worn?.worn_where ?? null, when: worn?.worn_when ?? null },
   };
 }
@@ -203,6 +221,23 @@ export default function Home() {
   const [look, setLook] = useState<"photo" | "live">("photo");
   const stage = useRef<Stage | null>(null);
 
+  // У прошлого торга свой переключатель и своя сцена. Общие были бы хуже:
+  // включив 3D на одном слайде, человек получил бы вторую сцену на соседнем,
+  // которую не просил, - а это второй мегабайт и второй холст WebGL.
+  const [pastLook, setPastLook] = useState<"photo" | "live">("photo");
+  const pastStage = useRef<Stage | null>(null);
+
+  // Какой слайд открыт и чем его листают. Полоса прокрутки своя у каждого
+  // браузера, поэтому сами слайды двигаем скроллом, а стрелки и точки только
+  // просят его переехать.
+  const rail = useRef<HTMLDivElement | null>(null);
+  const [slide, setSlide] = useState(0);
+  function go(to: number) {
+    const el = rail.current;
+    if (!el) return;
+    el.scrollTo({ left: to * el.clientWidth, behavior: "smooth" });
+  }
+
   // Логотипы лидеров встают на модель теми же местами, что и в приложении.
   // Картинки из чужого домена просят crossOrigin, иначе канвас их не примет.
   function dress() {
@@ -211,6 +246,17 @@ export default function Home() {
       const image = new Image();
       image.crossOrigin = "anonymous";
       image.onload = () => stage.current?.show(code, image);
+      image.src = art;
+    }
+  }
+
+  /** То же для прошлого торга: на вещи стоят логотипы, которые победили. */
+  function dressPast() {
+    if (!past) return;
+    for (const [code, art] of Object.entries(past.art)) {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => pastStage.current?.show(code, image);
       image.src = art;
     }
   }
@@ -250,6 +296,20 @@ export default function Home() {
         {/* Карточка перестала быть одной ссылкой: в 3D вещь крутят, и жест
             вращения не должен уводить на другой сайт. Дверь - нижняя полоса
             и кнопка Find a spot. */}
+        {/* Карточка стала каруселью: следующая вещь (или идущий торг) первым
+            слайдом, прошлый торг вторым. Прежде прошлый висел отдельной
+            плашкой внизу страницы - списком логотипов под заголовком, - и
+            читался как сноска. Здесь он показан на самой вещи и той же
+            карточкой, что живой: тем же кадром, тем же 3D, теми же местами. */}
+        <div className="live-wrap">
+        <div
+          className="live-rail"
+          ref={rail}
+          onScroll={(event) => {
+            const el = event.currentTarget;
+            setSlide(Math.round(el.scrollLeft / el.clientWidth));
+          }}
+        >
         {between ? (
           <div className="live-card">
             <div className="live-photo in3d">
@@ -357,49 +417,124 @@ export default function Home() {
           </a>
         </div>
         )}
-      </div>
 
-      {/* Прошлый торг: что продали и на ком, где и когда будет вещь. */}
-      {past && (
-        <section className="past">
-          <h2>Last auction</h2>
-          <div className="past-card">
-            <div className="past-head">
-              <span className="past-name">{past.title}</span>
-              <span className="past-sub">
-                Closed {new Date(past.closedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ·{" "}
-                {usd(past.raisedCents)} raised · {past.logos.length}{" "}
-                {past.logos.length === 1 ? "logo" : "logos"} going on it
+        {/* Прошлый торг - второй слайд: та же вещь с логотипами победителей на
+            ней, той же карточкой, что живая. */}
+        {past && (
+          <div className="live-card">
+            <div className={pastLook === "live" ? "live-photo in3d" : "live-photo"}>
+              {pastLook === "live" ? (
+                <div className="live-stage">
+                  <ThingStage
+                    picked={null}
+                    onPick={() => {}}
+                    stage={pastStage}
+                    onReady={dressPast}
+                  />
+                </div>
+              ) : (
+                <div className="live-frame">
+                  <img className="live-shot" src="/TEMP-photo-front.webp" alt="" />
+                  <div className="live-grid" aria-hidden>
+                    {SPOTS.map((code, at) => {
+                      const art = past.art[code];
+                      const [left, top, width, height] = CELLS[at];
+                      return (
+                        <span
+                          key={code}
+                          className={art ? "cell" : "cell free"}
+                          style={{
+                            left: `${left}%`,
+                            top: `${top}%`,
+                            width: `${width}%`,
+                            height: `${height}%`,
+                          }}
+                        >
+                          <i /><i /><i /><i />
+                          {art ? <img src={art} alt="" loading="lazy" /> : <b>{at + 1}</b>}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <span className="now-pill done">SOLD</span>
+              <span className="look-flip">
+                {(["photo", "live"] as const).map((one) => (
+                  <button
+                    key={one}
+                    type="button"
+                    className={pastLook === one ? "look-pick on" : "look-pick"}
+                    onClick={() => setPastLook(one)}
+                  >
+                    {one === "photo" ? "Photo" : "3D"}
+                  </button>
+                ))}
               </span>
             </div>
-            <div className="past-logos">
-              {past.logos.map((one) => (
-                <img key={one.url} src={one.url} alt={one.brand} title={one.brand} loading="lazy" />
-              ))}
-            </div>
-            <dl className="past-worn">
-              {(
-                [
-                  ["Who wears it", past.worn.by],
-                  ["Where", past.worn.where],
-                  ["When", past.worn.when],
-                ] as const
-              ).map(([label, value]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd className={value ? "" : "tba"}>{value ?? "To be announced"}</dd>
-                </div>
-              ))}
-            </dl>
-            <a className="find" href={APP_URL}>
-              See the results
+            <a className="live-info" href={APP_URL}>
+              <span className="live-name">{past.title}</span>
+              <span className="live-cd">{usd(past.raisedCents)}</span>
+              <span className="live-sub">
+                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} printed
+                {past.worn.by ? ` \u00b7 ${past.worn.by}` : ""}
+                {past.worn.where ? ` \u00b7 ${past.worn.where}` : ""}
+                {past.worn.when ? ` \u00b7 ${past.worn.when}` : ""}
+              </span>
+              <span className="live-sub">
+                raised, closed{" "}
+                {new Date(past.closedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
             </a>
           </div>
-        </section>
-      )}
+        )}
+        </div>
+
+        {/* Стрелки и точки стоят, только когда листать есть что. Одни без
+            других читались бы хуже: стрелка говорит «можно вперёд», точки -
+            «сколько всего и где ты сейчас». */}
+        {past && (
+          <>
+            <button
+              type="button"
+              className="live-arrow back"
+              aria-label="Previous"
+              disabled={slide === 0}
+              onClick={() => go(slide - 1)}
+            >
+              &larr;
+            </button>
+            <button
+              type="button"
+              className="live-arrow next"
+              aria-label="Next"
+              disabled={slide === 1}
+              onClick={() => go(slide + 1)}
+            >
+              &rarr;
+            </button>
+            <div className="live-pager">
+              {[0, 1].map((at) => (
+                <button
+                  key={at}
+                  type="button"
+                  className={at === slide ? "on" : ""}
+                  aria-label={at === 0 ? "Show this auction" : "Show the last auction"}
+                  onClick={() => go(at)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+        </div>
+      </div>
     </main>
   );
 }
+
 
 /** Доллары из центов: «$172.80». */
 function usd(cents: number): string {
