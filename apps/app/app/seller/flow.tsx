@@ -279,7 +279,7 @@ export function SellerFlow({
             {view.thing.title}: what to put on each spot. Open a logo to save the
             file.
           </p>
-          <Winners thingId={view.thing.id} />
+          <Winners thingId={view.thing.id} title={view.thing.title} />
         </>,
       );
         default:

@@ -12,6 +12,7 @@ import {
 } from "@/lib/auction";
 import { Game } from "./game/game";
 import { CaseView } from "./case.tsx";
+import { ResultsView } from "./results.tsx";
 import { DELORA } from "@/lib/cases";
 import { PhotoView } from "./auction/photo.tsx";
 import { SellerLine } from "./reviews.tsx";
@@ -152,6 +153,18 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
   // Пилот открывается поверх маркета, как страница вещи: вернуться - одна
   // кнопка, торги под ним не пересобираются.
   const [pilotOpen, setPilotOpen] = useState(false);
+  // Итоги прошедшего торга открываются так же: поверх маркета, одной кнопкой назад.
+  const [result, setResult] = useState<HeldRow | null>(null);
+  if (result) {
+    return (
+      <section className="screen">
+        <h1 className="mk-title">
+          OXAR <span>Market</span>
+        </h1>
+        <ResultsView held={result} onBack={() => setResult(null)} />
+      </section>
+    );
+  }
   if (pilotOpen) {
     return (
       <section className="screen">
@@ -409,11 +422,16 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         <>
           <div className="held-list">
             {held.map((one) => (
-              <div className="held-row" key={one.closesAt + one.title}>
+              <button
+                type="button"
+                className="held-row held-pilot"
+                key={one.closesAt + one.title}
+                onClick={() => setResult(one)}
+              >
                 <span className="held-date">{day(one.closesAt)}</span>
                 <span className="held-name">{one.title}</span>
                 <span className="held-sum">{formatUsd(one.raisedCents)}</span>
-              </div>
+              </button>
             ))}
           </div>
         </>

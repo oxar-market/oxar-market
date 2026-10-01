@@ -3,11 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ThingStage, type Stage } from "@oxar/stage";
 import {
-  type HouseThing,
   awaitsReview,
   reviewThing,
   loadAdminThings,
-  loadHouseThings,
   saveSpotGeo,
   updateThing,
   uploadModel,
@@ -16,7 +14,6 @@ import {
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
-import { Winners } from "../winners.tsx";
 
 /**
  * Админка по вещам продавцов. Вещь попадает на маркет, когда продавец
@@ -90,8 +87,6 @@ export function Admin() {
   return (
     <>
       {sections}
-
-      <HouseLogos />
 
       <div className="sl-head">
         <h2>Seller things</h2>
@@ -482,57 +477,6 @@ function Applications({ onChanged }: { onChanged: () => void }) {
           </div>
         </div>
       ))}
-    </>
-  );
-}
-
-/**
- * Наши вещи: что печатать. Пока торг идёт - лидеры, после закрытия -
- * победители. Футболку печатаем мы, и логотипы нужны нам самим.
- */
-function HouseLogos() {
-  const [things, setThings] = useState<HouseThing[]>([]);
-  const [open, setOpen] = useState<string | null>(null);
-  useEffect(() => {
-    void loadHouseThings().then(setThings);
-  }, []);
-  if (things.length === 0) return null;
-  return (
-    <>
-      <div className="sl-head">
-        <h2>Our things - logos</h2>
-        <span>{things.length}</span>
-      </div>
-      {/* Строкой, свежие сверху: торгов станет десять и больше, и столбик
-          кнопок читался бы хуже списка. Логотипы раскрываются под строкой. */}
-      <div className="sl-card sl-things">
-        {things.map((one) => (
-          <div key={one.id}>
-            <button
-              type="button"
-              className="sl-thing"
-              aria-expanded={open === one.id}
-              onClick={() => setOpen(open === one.id ? null : one.id)}
-            >
-              <Thumb src={one.cover} />
-              <span className="sl-thing-name">{one.title}</span>
-              <span className={`sl-state ${one.open ? "live" : "idle"}`}>
-                <i />
-                {one.open ? "LIVE" : "ENDED"}
-              </span>
-              <span className="sl-thing-sub">
-                {one.open ? "Leaders now" : "Winners"} · closes{" "}
-                {new Date(one.closesAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </span>
-            </button>
-            {open === one.id && (
-              <div className="ad-house-logos">
-                <Winners thingId={one.id} />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
     </>
   );
 }

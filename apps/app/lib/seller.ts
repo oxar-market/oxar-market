@@ -591,10 +591,10 @@ export async function loadDealsToRate(
     const spot = (lot.thing_spots as unknown as { label: string } | null)?.label ?? "Spot";
     const ended = new Date(lot.closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
     const cover = thing.photos?.[0] ? photoUrl(thing.photos[0]) : null;
-    const price = `$${(top.amount_cents / 100).toFixed(2)}`;
-    if (side === "buyer" && top.bidder === me) {
-      out.push({ lotId: lot.id, title: `${spot} · ${thing.title}`, line: `Auction ended ${ended} · you paid ${price}`, cover, escrow: true });
-    }
+    // Покупатель оценивает продавца по пруфу печати, а не по закрытию торга:
+    // в день закрытия вещь ещё не напечатана и не надета, и вопрос «стояло ли
+    // место» не имеет ответа. Пруфов пока нет - вернётся вместе с ними
+    // (решение «Защита покупателя» в Notion, 30.09.2026).
     if (side === "seller" && thing.seller === me) {
       out.push({
         lotId: lot.id,

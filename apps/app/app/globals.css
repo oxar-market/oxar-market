@@ -3244,6 +3244,45 @@ input:focus {
   color: #e0381c;
 }
 
+/* Итоги торга: логотип, место, бренд, ставка - одной строкой. */
+.results-row {
+  grid-template-columns: 40px 72px minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.results-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: var(--photo);
+}
+
+.results-spot {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.results-brand {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.results-sum {
+  font-variant-numeric: tabular-nums;
+}
+
+.results-photo {
+  width: 100%;
+  border-radius: 20px;
+  background: var(--photo);
+}
+
+.win-zip {
+  margin-bottom: 0.75rem;
+}
+
 .case-note {
   width: 100%;
   margin: 0;

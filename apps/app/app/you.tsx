@@ -45,11 +45,14 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
       const owner = new PublicKey(wallet);
       const lamports = await connection.getBalance(owner);
       if (live) setSol(lamports / 1e9);
+      // Монету берём у последнего торга, а не у открытого: между торгами
+      // открытых нет, и баланс пропадал бы ровно тогда, когда человек
+      // смотрит, что ему вернулось или ушло.
       const { data } = await db!
         .from("lots")
         .select("mint")
-        .eq("status", "open")
         .not("mint", "is", null)
+        .order("closes_at", { ascending: false })
         .limit(1);
       const mint = data?.[0]?.mint;
       if (!mint) return;

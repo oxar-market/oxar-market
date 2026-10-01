@@ -1,6 +1,7 @@
 "use client";
 
 import { db } from "./session.ts";
+import { photoUrl } from "./seller.ts";
 
 /**
  * Что показывает экран торга: вещь, её места, открытые лоты и ставки.
@@ -276,9 +277,14 @@ export type UpcomingThing = {
 
 /** Строка «Held earlier»: чем кончился прошедший торг. */
 export type HeldRow = {
+  /** По нему итоги торга открываются с маркета. */
+  thingId: string;
   closesAt: string;
   title: string;
   raisedCents: number;
+  /** Наша вещь - у неё 3D-модель; у вещи продавца - снимок. */
+  house: boolean;
+  photo: string | null;
 };
 
 /**
@@ -380,7 +386,15 @@ export async function loadMarket(): Promise<{
       const key = `${lot.thing_id}:${lot.closes_at.slice(0, 10)}`;
       const row =
         heldBy.get(key) ??
-        ({ closesAt: lot.closes_at, title: info?.title ?? "", raisedCents: 0 } satisfies HeldRow);
+        ({
+          thingId: lot.thing_id,
+          closesAt: lot.closes_at,
+          title: info?.title ?? "",
+          raisedCents: 0,
+          house: info.house ?? false,
+          // Снимок нашей вещи лежит в самом приложении, путём от корня.
+          photo: info.photos?.[0] ? photoUrl(info.photos[0]) : null,
+        } satisfies HeldRow);
       if (lot.status === "won" && top) row.raisedCents += top.amount_cents;
       heldBy.set(key, row);
     }
