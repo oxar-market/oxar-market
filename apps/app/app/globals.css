@@ -2764,6 +2764,12 @@ input:focus {
   color: var(--mut);
 }
 
+/* На сценах маркета и экрана между торгами карточка наезжает на сцену снизу
+   на 6rem: знак поднимаем над ней, к середине подставки. */
+.hero-stage .stage-hint-turn {
+  bottom: 6.75rem;
+}
+
 .lot-cd.soon .lot-cd-num {
   color: #e0381c;
 }
