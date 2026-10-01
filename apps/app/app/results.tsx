@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
+import { WornInfo } from "./worn.tsx";
 import { loadBidTimeline, loadWinners, type BidEvent, type Winner } from "@/lib/winners";
 
 /**
@@ -98,6 +99,9 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
           Closed {day(held.closesAt)} · {formatUsd(held.raisedCents)} raised
         </p>
       </div>
+
+      {/* Покупатель места должен знать, на ком, где и когда будет вещь. */}
+      <WornInfo thingId={held.thingId} />
 
       {held.house ? (
         <div className="case-stage">

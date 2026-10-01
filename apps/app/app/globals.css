@@ -5280,6 +5280,43 @@ input:focus {
   align-items: center;
 }
 
+/* Кто носит вещь, где и когда: три строки, подпись слева, значение справа. */
+.worn {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+
+.worn div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line2);
+  font-size: 0.9375rem;
+}
+
+.worn div:last-child {
+  border-bottom: 0;
+}
+
+.worn dt {
+  color: var(--mut);
+}
+
+.worn dd {
+  margin: 0;
+  text-align: right;
+}
+
+.worn dd.tba {
+  color: var(--mut2);
+}
+
 /* Последний закрытый торг одной карточкой: на маркете и на вкладке Auction,
    пока живого торга нет. */
 .last-card {

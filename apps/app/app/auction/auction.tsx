@@ -26,6 +26,7 @@ import { PhotoView } from "./photo.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { LastAuction } from "../last.tsx";
+import { WornInfo } from "../worn.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
 import { TEMP_ANGLES, TEMP_FRONT_QUADS, TEMP_SHOTS } from "./temp-photo.ts";
@@ -728,6 +729,7 @@ export function Auction({ onOpenPast }: { onOpenPast?: (held: HeldRow) => void }
             area on it is a spot you can rent: the highest bid when the clock
             runs out is what gets printed, and the shirt is worn as printed.
           </p>
+          {thing && <WornInfo thingId={thing.id} />}
           {/* Расписание торга, в часах читателя: у каждого своё «в полдень».
               Числа берутся из самого торга, не из текста - следующий торг
               принесёт свои даты, и абзац не соврёт. Подавление предупреждения

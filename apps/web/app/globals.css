@@ -26,6 +26,11 @@
   --photo: #13171c;
 }
 
+/* Фон и за краем контента: короткая страница не должна кончаться белым. */
+html {
+  background: var(--bg);
+}
+
 body {
   margin: 0;
   /* Системный стек остаётся запасным: пока шрифт едет, страница уже читается. */
@@ -410,4 +415,98 @@ h1 {
   height: min(86cqw, 86cqh);
   background: #e9e8e2;
   border-radius: 14px;
+}
+
+/* Прошлый торг под первым экраном: что продали, чьи логотипы и на ком,
+   где и когда будет вещь. */
+.past {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 4rem;
+}
+
+.past h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.past-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.past-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.past-name {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.past-sub {
+  color: var(--mut);
+}
+
+.past-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.past-logos img {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: var(--photo);
+}
+
+.past-worn {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.past-worn div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.past-worn div:last-child {
+  border-bottom: 0;
+}
+
+.past-worn dt {
+  color: var(--mut);
+}
+
+.past-worn dd {
+  margin: 0;
+  text-align: right;
+}
+
+.past-worn dd.tba {
+  color: var(--mut);
+  opacity: 0.7;
+}
+
+.past-card .find {
+  align-self: flex-start;
 }
