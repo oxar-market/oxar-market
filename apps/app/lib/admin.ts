@@ -25,6 +25,10 @@ export type AdminThing = {
   model: string | null;
   spots: ListedSpot[];
   createdAt: string;
+  /** Наша вещь: её не одобряют и не отклоняют, но пруф к ней кладут здесь же. */
+  house: boolean;
+  /** Пути фото пруфа в хранилище. */
+  proof: string[];
   /** Кто носит, где, когда и в чём особенность - как написал продавец. Пусто - не написано. */
   worn: { by: string; where: string; when: string; about: string };
 };
@@ -35,14 +39,15 @@ export async function amIAdmin(): Promise<boolean> {
   return data === true;
 }
 
-/** Вещи продавцов, новые сверху. Наши вещи (house) заводятся миграциями, их тут нет. */
+/**
+ * Все вещи, новые сверху: продавцов - на проверку, наши - ради пруфа. Наши
+ * заводятся миграциями, но фото в деле к ним прикладывают отсюда.
+ */
 export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, worn_by, worn_where, worn_when, worn_about, lots(status), thing_spots(${SPOT_COLUMNS})`)
-    .not("seller", "is", null)
-    .eq("house", false)
+    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, house, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(status), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -55,6 +60,8 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     model: (row.model_url as string) || null,
     spots: listedSpots((row.thing_spots ?? []) as Parameters<typeof listedSpots>[0]),
     createdAt: row.created_at,
+    house: row.house === true,
+    proof: (row.proof_photos as string[] | null) ?? [],
     worn: {
       by: (row.worn_by as string | null) ?? "",
       where: (row.worn_where as string | null) ?? "",
@@ -71,6 +78,7 @@ export async function updateThing(
     tagline: string | null;
     active: boolean;
     model_url: string;
+    proof_photos: string[];
     worn_by: string | null;
     worn_where: string | null;
     worn_when: string | null;
@@ -107,6 +115,26 @@ export async function uploadModel(thingId: string, file: File): Promise<string |
   if (error) return null;
   const url = db.storage.from("models").getPublicUrl(path).data.publicUrl;
   return (await updateThing(thingId, { model_url: url })) ? url : null;
+}
+
+/**
+ * Фото пруфа: в хранилище things, папка proof/<вещь>/, и путь - в список у
+ * вещи. Грузим по одному: их несколько, и отказ на одном не должен терять
+ * остальные.
+ */
+export async function uploadProof(thingId: string, files: File[], had: string[]): Promise<boolean> {
+  if (!db) return false;
+  const paths = [...had];
+  for (const file of files) {
+    const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().slice(0, 5);
+    const path = `proof/${thingId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await db.storage
+      .from("things")
+      .upload(path, file, { contentType: file.type || "image/jpeg", upsert: false });
+    if (error) return false;
+    paths.push(path);
+  }
+  return updateThing(thingId, { proof_photos: paths });
 }
 
 export async function saveSpotGeo(spotId: string, geo: NonNullable<ListedSpot["geo"]>): Promise<boolean> {

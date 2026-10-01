@@ -9,8 +9,10 @@ import {
   saveSpotGeo,
   updateThing,
   uploadModel,
+  uploadProof,
   type AdminThing,
 } from "@/lib/admin";
+import { photoUrl } from "@/lib/seller";
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
@@ -89,7 +91,7 @@ export function Admin() {
       {sections}
 
       <div className="sl-head">
-        <h2>Seller things</h2>
+        <h2>Things</h2>
         <span>{things?.length ?? ""}</span>
       </div>
       {things?.length === 0 && <p className="muted">Nothing sent yet.</p>}
@@ -103,13 +105,15 @@ export function Admin() {
                 className={`sl-state ${one.active ? "live" : one.declinedReason ? "declined" : "preparing"}`}
               >
                 <i />
-                {one.active
-                  ? "ON MARKET"
-                  : one.declinedReason
-                    ? "DECLINED"
-                    : one.published
-                      ? "PUBLISHED - REVIEW"
-                      : "TO REVIEW"}
+                {one.house
+                  ? "OURS"
+                  : one.active
+                    ? "ON MARKET"
+                    : one.declinedReason
+                      ? "DECLINED"
+                      : one.published
+                        ? "PUBLISHED - REVIEW"
+                        : "TO REVIEW"}
               </span>
               <span className="sl-thing-sub">
                 {one.spots.length} spots · {one.model ? "3D" : "no 3D"}
@@ -385,6 +389,51 @@ function AdminThingView({
         )}
       </div>
 
+      {/* Пруф: фото вещи в деле. Пока их нет, итоги говорят «preparing». */}
+      <div className="sl-card ad-card">
+        <h3>Proof</h3>
+        {thing.proof.length > 0 ? (
+          <div className="ad-photos">
+            {thing.proof.map((path) => (
+              <span className="sl-photo ad-proof" key={path}>
+                <img src={photoUrl(path)} alt="" />
+                <button
+                  type="button"
+                  className="ghost small"
+                  disabled={busy}
+                  onClick={() =>
+                    run(
+                      () => updateThing(thing.id, { proof_photos: thing.proof.filter((one) => one !== path) }),
+                      "Could not remove it.",
+                    )
+                  }
+                >
+                  Remove
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">No photos yet. The results page says the thing is being prepared.</p>
+        )}
+        <label className="sl-btn light">
+          Add photos
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            disabled={busy}
+            onChange={(event) => {
+              const files = [...(event.target.files ?? [])];
+              event.target.value = "";
+              if (files.length) void run(() => uploadProof(thing.id, files, thing.proof), "Upload failed.");
+            }}
+          />
+        </label>
+      </div>
+
+      {!thing.house && (
       <div className="sl-card ad-card">
         <h3>Review</h3>
         {thing.active ? (
@@ -441,6 +490,7 @@ function AdminThingView({
           </>
         )}
       </div>
+      )}
 
       {error && <p className="bad">{error}</p>}
     </>
