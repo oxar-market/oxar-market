@@ -514,10 +514,8 @@ function PhotoViewer({
               </button>
             ))}
           </div>
-          <a className="sl-pill" href={thing.photos[at]} target="_blank" rel="noreferrer">
-            Original
-          </a>
-          <button type="button" className="case-back" onClick={onClose}>
+          {/* Оригинал и есть «Clean»: отдельная кнопка повторяла бы переключатель. */}
+          <button type="button" className="sl-pill" onClick={onClose}>
             Close
           </button>
         </div>

@@ -56,3 +56,14 @@
 .stage.dark .stage-hint {
   color: rgba(255, 255, 255, 0.45);
 }
+
+/* Знак «вещь можно вертеть» вместо фразы-подсказки. */
+.stage-turn {
+  width: 48px;
+  height: 32px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
