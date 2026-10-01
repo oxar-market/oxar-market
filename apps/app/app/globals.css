@@ -3432,29 +3432,15 @@ input:focus {
   font-variant-numeric: tabular-nums;
 }
 
-/* Что дальше у закрытого торга: карточка с четырьмя шагами. */
-.rs-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-  width: 100%;
-  padding: 1.25rem;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  background: var(--card);
-}
-
-.rs-head h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
-}
-
-/* Четыре шага точками. Пройденные - чёрной, текущий - красной,
-   будущий - пустой. */
+/* Что дальше у закрытого торга: четыре шага точками, той же строкой, что
+   и список победителей, - не карточкой. Карточка была единственной
+   коробкой на экране из строк и на широком экране стояла пустой на две
+   трети. Пройденные шаги - чёрной точкой, текущий - красной, будущий -
+   пустой. */
 .rs-steps {
   display: flex;
   flex-direction: column;
+  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -3502,9 +3488,10 @@ input:focus {
   color: var(--mut);
 }
 
-/* Подпись разбора и ссылка в обозреватель: подвал карточки. */
+/* Подпись разбора и ссылка в обозреватель: строка под шагами. */
 .rs-foot {
   display: flex;
+  width: 100%;
   justify-content: space-between;
   align-items: baseline;
   gap: 0.75rem;
