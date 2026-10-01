@@ -3278,6 +3278,32 @@ input:focus {
   font-weight: 600;
 }
 
+/* Фото пруфа: сетка квадратов, как снимки вещи в кабинете. */
+.proof-shots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 0.5rem;
+}
+
+.proof-shots img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* Снимок пруфа в админке: кнопка «убрать» поверх угла. */
+.ad-proof {
+  position: relative;
+}
+
+.ad-proof .ghost {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+}
+
 .case-row {
   display: grid;
   grid-template-columns: 96px minmax(0, 1fr);

@@ -130,6 +130,13 @@ export async function downloadLogos(title: string, list: Winner[]): Promise<bool
   return true;
 }
 
+/** Фото вещи в деле - адресами. Пусто - пруфа ещё нет. */
+export async function loadProof(thingId: string): Promise<string[]> {
+  if (!db) return [];
+  const { data } = await db.from("things").select("proof_photos").eq("id", thingId).maybeSingle();
+  return ((data?.proof_photos as string[] | null) ?? []).map(photoUrl);
+}
+
 /** Одна ставка в истории торга: кто, на какое место, когда и сколько. */
 export type BidEvent = {
   at: string;

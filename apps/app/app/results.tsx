@@ -5,7 +5,7 @@ import { formatUsd } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { loadWorn, WornInfo, type Worn } from "./worn.tsx";
-import { loadBidTimeline, loadWinners, type BidEvent, type Winner } from "@/lib/winners";
+import { loadBidTimeline, loadProof, loadWinners, type BidEvent, type Winner } from "@/lib/winners";
 
 /**
  * Итоги закрытого торга: кто что выиграл и за сколько.
@@ -21,15 +21,23 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
   const [picked, setPicked] = useState<string | null>(null);
   const [list, setList] = useState<Winner[] | null>(null);
   const [worn, setWorn] = useState<Worn | null>(null);
+  // Шаги «что дальше» - из данных. Разобран ли эскроу: статус лота ставит
+  // скрипт расчёта уже после выплаты в цепочке, так что лот не «open» -
+  // значит разобран. Пруф - фото вещи в деле, их кладёт админ.
+  const [settled, setSettled] = useState<boolean | null>(null);
+  const [proof, setProof] = useState<string[]>([]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
     void loadWorn(held.thingId).then(setWorn);
-    void loadWinners(held.thingId).then((all) =>
+    void loadProof(held.thingId).then(setProof);
+    void loadWinners(held.thingId).then((all) => {
       // Строка на маркете - один день закрытия; торги вещи в другие дни сюда
       // не подмешиваем.
-      setList(all.filter((one) => one.status === "won" && one.closesAt.slice(0, 10) === held.closesAt.slice(0, 10))),
-    );
+      const sameDay = all.filter((one) => one.closesAt.slice(0, 10) === held.closesAt.slice(0, 10));
+      setList(sameDay.filter((one) => one.status === "won"));
+      setSettled(sameDay.every((one) => one.status === "won"));
+    });
   }, [held]);
 
   // История торга: все ставки по времени. Ползунок стоит на числе уже
@@ -88,7 +96,8 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
     }
   }, [ready, events, at]);
   const current = at > 0 ? events[at - 1] : null;
-  const settled = list?.find((one) => one.code === picked)?.settleSignature ?? null;
+  const signature = list?.find((one) => one.code === picked)?.settleSignature ?? null;
+  const proven = proof.length > 0;
 
   return (
     <>
@@ -174,7 +183,15 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
 
       <div className="case-proof">
         <span className="case-proof-head">Proof</span>
-        <span className="muted">Photos of the printed thing will appear here after printing.</span>
+        {proven ? (
+          <div className="proof-shots">
+            {proof.map((url) => (
+              <img key={url} src={url} alt="" />
+            ))}
+          </div>
+        ) : (
+          <span className="muted">Photos of the thing in use will appear here.</span>
+        )}
       </div>
 
       <h2 className="mk-head">Winners</h2>
@@ -201,29 +218,29 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
           <b>Auction ended</b>
           <span>{clock(held.closesAt)}. The highest bid on each spot won.</span>
         </li>
-        <li className="done">
+        <li className={settled ? "done" : settled === false ? "now" : ""}>
           <b>Escrow settled</b>
           <span>Winning bids paid out. Every other bid refunded automatically.</span>
         </li>
-        <li className="now">
-          <b>Printing</b>
-          <span>Every artwork printed as uploaded.</span>
+        <li className={proven ? "done" : settled ? "now" : ""}>
+          <b>Preparing</b>
+          <span>Winning artwork goes on the thing as uploaded.</span>
         </li>
-        <li>
-          <b>Worn</b>
+        <li className={proven ? "done" : ""}>
+          <b>Proof</b>
           <span>
-            {worn?.when ? `From ${worn.when}` : "Date to be announced"}. Photos of the worn shirt appear
-            here.
+            {worn?.when ? `From ${worn.when}` : "Date to be announced"}. Photos of the thing in use
+            appear here.
           </span>
         </li>
       </ol>
       {/* Чем разобрали выбранное место: подпись и ссылка в обозреватель.
           Пусто без выбранного места и у торгов, разобранных до того, как
           подпись стали хранить. */}
-      {settled && (
+      {signature && (
         <div className="rs-foot">
-          <span className="mono">Settlement {short(settled)}</span>
-          <a href={`https://solscan.io/tx/${settled}`} target="_blank" rel="noreferrer">
+          <span className="mono">Settlement {short(signature)}</span>
+          <a href={`https://solscan.io/tx/${signature}`} target="_blank" rel="noreferrer">
             View on Solscan
           </a>
         </div>
