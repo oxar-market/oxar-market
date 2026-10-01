@@ -123,6 +123,17 @@ h1 {
   color: var(--red);
 }
 
+/* Кнопка-ссылка внутри строки ошибки: «повторить» тем же цветом и шрифтом. */
+.bad .link {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Экран упавшего рендера. Тесно посередине, текст ошибки читаемым моноширинным
    блоком - его читают и присылают, а не любуются им. */
 .crash {
