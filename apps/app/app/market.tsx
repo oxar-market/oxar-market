@@ -346,39 +346,37 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         </div>
       )}
 
-      {things.length > 0 && (
-        <div className="mk-strip">
-          {week.map((one) => {
-            const key = dayKey(one.getTime());
-            const kinds = marks.get(key);
-            const dot = kinds?.has("close") ? " close" : kinds?.has("open") ? " open" : "";
-            return (
-              <button
-                key={key}
-                type="button"
-                className={key === (dayOn ?? dayKey(now)) ? "mk-day on" : "mk-day"}
-                disabled={!byDay.has(key) && key !== dayKey(now)}
-                onClick={() => {
-                  setDayOn(key);
-                  // Сегодня без событий - точка возврата: к карусели наверху.
-                  const target = byDay.has(key)
-                    ? document.getElementById(`mk-day-${key}`)
-                    : rail.current;
-                  target?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-              >
-                <span className="mk-day-dow">
-                  {one.toLocaleDateString("en-US", { weekday: "short" })}
-                </span>
-                <span className="mk-day-date">{one.getDate()}</span>
-                <span className={`mk-day-dot${dot}`} />
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className="mk-strip">
+        {week.map((one) => {
+          const key = dayKey(one.getTime());
+          const kinds = marks.get(key);
+          const dot = kinds?.has("close") ? " close" : kinds?.has("open") ? " open" : "";
+          return (
+            <button
+              key={key}
+              type="button"
+              className={key === (dayOn ?? dayKey(now)) ? "mk-day on" : "mk-day"}
+              disabled={!byDay.has(key) && key !== dayKey(now)}
+              onClick={() => {
+                setDayOn(key);
+                // Сегодня без событий - точка возврата: к карусели наверху.
+                const target = byDay.has(key)
+                  ? document.getElementById(`mk-day-${key}`)
+                  : rail.current;
+                target?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              <span className="mk-day-dow">
+                {one.toLocaleDateString("en-US", { weekday: "short" })}
+              </span>
+              <span className="mk-day-date">{one.getDate()}</span>
+              <span className={`mk-day-dot${dot}`} />
+            </button>
+          );
+        })}
+      </div>
 
-      {things.length > 0 && groups.map(([key, group]) => (
+      {groups.map(([key, group]) => (
         <div key={key} className="mk-group">
           <h2 className="mk-head" id={`mk-day-${key}`}>
             {group.title}
