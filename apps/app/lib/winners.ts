@@ -130,6 +130,31 @@ export async function downloadLogos(title: string, list: Winner[]): Promise<bool
   return true;
 }
 
+/**
+ * Размещения без торга: место, бренд, логотип. На экране итогов - те же
+ * строки, что победители, только без суммы и подписи: ставок не было.
+ */
+export async function loadPlacements(thingId: string): Promise<Winner[]> {
+  if (!db) return [];
+  const { data } = await db
+    .from("placements")
+    .select("id, code, label, brand, media_url, sort")
+    .eq("thing_id", thingId)
+    .order("sort");
+  return (data ?? []).map((one) => ({
+    lotId: one.id,
+    spot: one.label,
+    code: one.code,
+    status: "won" as const,
+    brand: one.brand,
+    amountCents: 0,
+    mediaUrl: photoUrl(one.media_url),
+    wallet: "",
+    closesAt: "",
+    settleSignature: null,
+  }));
+}
+
 /** Фото вещи в деле - адресами. Пусто - пруфа ещё нет. */
 export async function loadProof(thingId: string): Promise<string[]> {
   if (!db) return [];

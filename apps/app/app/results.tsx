@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatUsd } from "@oxar/core";
-import { SUITCASE, SUITCASE_SPOTS, ThingStage, type Stage } from "@oxar/stage";
+import { SUITCASE, ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { loadWorn, WornInfo, type Worn } from "./worn.tsx";
-import { loadBidTimeline, loadProof, loadWinners, type BidEvent, type Winner } from "@/lib/winners";
+import { loadBidTimeline, loadPlacements, loadProof, loadWinners, type BidEvent, type Winner } from "@/lib/winners";
 
 /**
  * Итоги закрытого торга: кто что выиграл и за сколько.
@@ -31,28 +31,15 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
-    if (pilot) {
-      // Пилот: места и бренды из кода, ставок не было - и разбирать нечего.
-      setWorn(pilot.worn);
-      setSettled(true);
-      setList(
-        pilot.spots.map((spot) => ({
-          lotId: spot.code,
-          spot: SUITCASE_SPOTS.find((one) => one.code === spot.code)?.label ?? spot.code,
-          code: spot.code,
-          status: "won",
-          brand: spot.brand,
-          amountCents: 0,
-          mediaUrl: spot.logo,
-          wallet: "",
-          closesAt: pilot.date,
-          settleSignature: null,
-        })),
-      );
-      return;
-    }
+    // «Кто, где, когда» и пруф - из базы у всех, пилот там тоже есть.
     void loadWorn(held.thingId).then(setWorn);
     void loadProof(held.thingId).then(setProof);
+    if (pilot) {
+      // Пилот: размещения вместо ставок - и разбирать нечего.
+      setSettled(true);
+      void loadPlacements(held.thingId).then(setList);
+      return;
+    }
     void loadWinners(held.thingId).then((all) => {
       // Строка на маркете - один день закрытия; торги вещи в другие дни сюда
       // не подмешиваем.
@@ -145,9 +132,13 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
           {pilot ? (
             <>
               with{" "}
-              <a className="case-partner" href={pilot.partnerUrl} target="_blank" rel="noreferrer">
-                {pilot.partner}
-              </a>
+              {pilot.partnerUrl ? (
+                <a className="case-partner" href={pilot.partnerUrl} target="_blank" rel="noreferrer">
+                  {pilot.partner}
+                </a>
+              ) : (
+                pilot.partner
+              )}
             </>
           ) : (
             `${formatUsd(held.raisedCents)} raised`
@@ -156,12 +147,12 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
       </div>
 
       {/* Покупатель места должен знать, на ком, где и когда будет вещь. */}
-      <WornInfo thingId={held.thingId} given={pilot?.worn} />
+      <WornInfo thingId={held.thingId} />
 
       {held.house ? (
         <div className="case-stage">
           <ThingStage
-            shape={pilot ? SUITCASE : undefined}
+            shape={held.model?.includes("suitcase") ? SUITCASE : undefined}
             picked={picked}
             onPick={(code) => setPicked((was) => (was === code ? null : code))}
             stage={stage}
