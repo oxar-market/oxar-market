@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import type { HeldRow } from "@/lib/auction";
 import { loadWinners, type Winner } from "@/lib/winners";
+import { WornInfo } from "./worn.tsx";
 
 /**
  * Последний закрытый торг одной карточкой: что продавали, сколько собрали и
@@ -36,6 +37,7 @@ export function LastAuction({ held, onOpen }: { held: HeldRow; onOpen: () => voi
           ))}
         </div>
       )}
+      <WornInfo thingId={held.thingId} />
       <button type="button" className="primary wide" onClick={onOpen}>
         See results
       </button>
