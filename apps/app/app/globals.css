@@ -5460,39 +5460,66 @@ input:focus {
 
 /* Кто носит вещь, где и когда: три строки, подпись слева, значение справа. */
 .worn {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
   margin: 0;
   border-radius: 16px;
   border: 1px solid var(--line);
   background: var(--card);
+  overflow: hidden;
 }
 
+/* Три ячейки в ряд: подпись капителью сверху, значение крупно под ней.
+   На узком экране - столбиком, с чертой между. */
 .worn div {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--line2);
-  font-size: 0.9375rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.875rem 1rem;
+  border-left: 1px solid var(--line2);
 }
 
-.worn div:last-child {
-  border-bottom: 0;
+.worn div:first-child {
+  border-left: 0;
 }
 
 .worn dt {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--mut);
 }
 
 .worn dd {
   margin: 0;
-  text-align: right;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 .worn dd.tba {
+  font-weight: 500;
   color: var(--mut2);
+}
+
+@media (max-width: 30rem) {
+  .worn {
+    grid-template-columns: 1fr;
+  }
+
+  .worn div {
+    border-left: 0;
+    border-top: 1px solid var(--line2);
+  }
+
+  .worn div:first-child {
+    border-top: 0;
+  }
 }
 
 /* Что будет дальше: три шага, номером, без украшений. */
