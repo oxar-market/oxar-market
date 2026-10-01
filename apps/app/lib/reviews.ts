@@ -95,7 +95,12 @@ export async function loadReviews(seller: string): Promise<Review[]> {
  * Счёт одной строкой. Меньше трёх сделок - «New seller»: две пятёрки
  * подряд ещё не репутация (правило борда «Where scores live»).
  */
-export function scoreText(score: Score, side: "seller" | "buyer" = "seller"): string {
+export function scoreText(score: Score, side: "seller" | "buyer" = "seller", own = false): string {
+  // Чужим до трёх сделок - «новичок»: одна пятёрка не делает человека
+  // проверенным. Себе свою оценку показываем сразу, иначе она пропадает.
+  if (own && score.rating !== null) {
+    return `★ ${score.rating.toFixed(1)} · ${score.deals === 1 ? "1 deal" : `${score.deals} deals`}`;
+  }
   if (score.deals < 3) return `New ${side}`;
   if (score.rating === null) return `${score.deals} deals, no ratings yet`;
   return `★ ${score.rating.toFixed(1)} · ${score.deals} deals`;

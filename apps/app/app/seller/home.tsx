@@ -52,7 +52,8 @@ export function SellerHome({
         <div>
           <span className="sl-score-cap">Seller score</span>
           <span className="sl-score-num">
-            {score.deals < 3 || score.rating === null ? "New" : `★ ${score.rating.toFixed(1)}`}
+            {/* Свой счёт видно сразу; порог в три сделки - для чужих глаз. */}
+            {score.rating === null ? "New" : `★ ${score.rating.toFixed(1)}`}
           </span>
         </div>
         <div>
