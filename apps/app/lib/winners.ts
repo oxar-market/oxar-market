@@ -126,3 +126,46 @@ export async function downloadLogos(title: string, list: Winner[]): Promise<bool
   setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
   return true;
 }
+
+/** Одна ставка в истории торга: кто, на какое место, когда и сколько. */
+export type BidEvent = {
+  at: string;
+  code: string;
+  spot: string;
+  brand: string;
+  amountCents: number;
+  mediaUrl: string;
+};
+
+/**
+ * Все ставки вещи за один торг, по времени. Из них экран итогов
+ * проматывает, как менялись логотипы на местах. Торг - это день закрытия:
+ * у вещи их бывает несколько, и чужие сюда не подмешиваем.
+ */
+export async function loadBidTimeline(thingId: string, closesOn: string): Promise<BidEvent[]> {
+  if (!db) return [];
+  const { data } = await db
+    .from("lots")
+    .select("closes_at, thing_spots(label, code), lot_bids(created_at, amount_cents, brand, media_url)")
+    .eq("thing_id", thingId)
+    .in("status", ["won", "unsold"])
+    .eq("rehearsal", false);
+  const out: BidEvent[] = [];
+  for (const lot of data ?? []) {
+    if (lot.closes_at.slice(0, 10) !== closesOn.slice(0, 10)) continue;
+    const spot = lot.thing_spots as unknown as { label: string; code: string } | null;
+    for (const bid of (lot.lot_bids as unknown as {
+      created_at: string; amount_cents: number; brand: string; media_url: string;
+    }[] | null) ?? []) {
+      out.push({
+        at: bid.created_at,
+        code: spot?.code ?? "",
+        spot: spot?.label ?? "Spot",
+        brand: bid.brand,
+        amountCents: bid.amount_cents,
+        mediaUrl: bid.media_url,
+      });
+    }
+  }
+  return out.sort((a, b) => a.at.localeCompare(b.at));
+}

@@ -3278,6 +3278,33 @@ input:focus {
   font-variant-numeric: tabular-nums;
 }
 
+.results-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.results-timeline input[type="range"] {
+  width: 100%;
+  accent-color: #e0381c;
+}
+
+.results-time-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.results-time-now {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .results-photo {
   width: 100%;
   border-radius: 20px;
