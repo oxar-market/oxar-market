@@ -5,6 +5,7 @@ import type { DealToRate, Score, SellerRequest, SellerThing } from "@/lib/seller
 import { loadMyHandle, saveMyHandle } from "@/lib/reviews";
 import { BUILD } from "@/lib/build";
 import { Thumb, clock, shortDay, usd } from "./parts.tsx";
+import { HouseLogos } from "../winners.tsx";
 
 /**
  * Кабинет продавца по борду «Seller - home and add a thing»: счёт, заявка,
@@ -138,6 +139,10 @@ export function SellerHome({
       <button type="button" className="sl-btn dark" onClick={onAdd}>
         Add a thing
       </button>
+
+      {/* Наши вещи, которые печатаем мы: логотипы победителей - здесь, у
+          того, на кого вещь записана, а не в админке. */}
+      <HouseLogos />
 
       <p className="sl-foot">
         <span className="build">Build {BUILD}</span>
