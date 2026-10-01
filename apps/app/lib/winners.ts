@@ -22,13 +22,15 @@ export type Winner = {
   mediaUrl: string;
   wallet: string;
   closesAt: string;
+  /** Чем торг разобрали в цепочке. Пусто у разобранных до того, как её стали хранить. */
+  settleSignature: string | null;
 };
 
 export async function loadWinners(thingId: string): Promise<Winner[]> {
   if (!db) return [];
   const { data } = await db
     .from("lots")
-    .select("id, status, closes_at, thing_spots(label, sort, code), lot_bids(amount_cents, created_at, brand, media_url, bidder_wallet)")
+    .select("id, status, closes_at, settle_signature, thing_spots(label, sort, code), lot_bids(amount_cents, created_at, brand, media_url, bidder_wallet)")
     .eq("thing_id", thingId)
     .in("status", ["open", "won"])
     .eq("rehearsal", false);
@@ -53,6 +55,7 @@ export async function loadWinners(thingId: string): Promise<Winner[]> {
       mediaUrl: top.media_url,
       wallet: top.bidder_wallet,
       closesAt: lot.closes_at,
+      settleSignature: lot.settle_signature ?? null,
     });
   }
   return out.sort((a, b) => a.sort - b.sort);
@@ -127,67 +130,45 @@ export async function downloadLogos(title: string, list: Winner[]): Promise<bool
   return true;
 }
 
-/** Одна ставка на место: кто, когда и сколько. */
-export type SpotBid = {
-  wallet: string;
+/** Одна ставка в истории торга: кто, на какое место, когда и сколько. */
+export type BidEvent = {
   at: string;
+  code: string;
+  spot: string;
   brand: string;
   amountCents: number;
   mediaUrl: string;
 };
 
-/** Место закрытого торга со всеми его ставками, от верхней к нижней. */
-export type SpotReport = {
-  lotId: string;
-  spot: string;
-  /** Код места: по нему логотип встаёт на модель. */
-  code: string;
-  status: "won" | "unsold";
-  /** Чем торг разобрали в цепочке. Пусто у разобранных до того, как её стали хранить. */
-  settleSignature: string | null;
-  bids: SpotBid[];
-};
-
 /**
- * Весь закрытый торг вещи: каждое место и его ставки. Из этого экран итогов
- * считает всё, что показывает: победителей, число ставок, собранное и
- * историю каждого места. Торг - это день закрытия: у вещи их бывает
- * несколько, и чужие сюда не подмешиваем.
+ * Все ставки вещи за один торг, по времени. Из них экран итогов
+ * проматывает, как менялись логотипы на местах. Торг - это день закрытия:
+ * у вещи их бывает несколько, и чужие сюда не подмешиваем.
  */
-export async function loadAuctionReport(thingId: string, closesOn: string): Promise<SpotReport[]> {
+export async function loadBidTimeline(thingId: string, closesOn: string): Promise<BidEvent[]> {
   if (!db) return [];
   const { data } = await db
     .from("lots")
-    .select(
-      "id, status, closes_at, settle_signature, thing_spots(label, sort, code), lot_bids(created_at, amount_cents, brand, media_url, bidder_wallet)",
-    )
+    .select("closes_at, thing_spots(label, code), lot_bids(created_at, amount_cents, brand, media_url)")
     .eq("thing_id", thingId)
     .in("status", ["won", "unsold"])
     .eq("rehearsal", false);
-  const out: (SpotReport & { sort: number })[] = [];
+  const out: BidEvent[] = [];
   for (const lot of data ?? []) {
     if (lot.closes_at.slice(0, 10) !== closesOn.slice(0, 10)) continue;
-    const spot = lot.thing_spots as unknown as { label: string; sort: number; code: string } | null;
-    const bids = ((lot.lot_bids as unknown as {
-      created_at: string; amount_cents: number; brand: string; media_url: string; bidder_wallet: string;
-    }[] | null) ?? [])
-      .sort((a, b) => b.amount_cents - a.amount_cents || a.created_at.localeCompare(b.created_at))
-      .map((bid) => ({
-        wallet: bid.bidder_wallet,
+    const spot = lot.thing_spots as unknown as { label: string; code: string } | null;
+    for (const bid of (lot.lot_bids as unknown as {
+      created_at: string; amount_cents: number; brand: string; media_url: string;
+    }[] | null) ?? []) {
+      out.push({
         at: bid.created_at,
+        code: spot?.code ?? "",
+        spot: spot?.label ?? "Spot",
         brand: bid.brand,
         amountCents: bid.amount_cents,
         mediaUrl: bid.media_url,
-      }));
-    out.push({
-      lotId: lot.id,
-      spot: spot?.label ?? "Spot",
-      code: spot?.code ?? "",
-      sort: spot?.sort ?? 0,
-      status: lot.status === "won" ? "won" : "unsold",
-      settleSignature: lot.settle_signature ?? null,
-      bids,
-    });
+      });
+    }
   }
-  return out.sort((a, b) => a.sort - b.sort);
+  return out.sort((a, b) => a.at.localeCompare(b.at));
 }
