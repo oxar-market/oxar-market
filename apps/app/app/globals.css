@@ -2673,6 +2673,16 @@ input:focus {
   white-space: nowrap;
 }
 
+/* Между торгами знак вопроса стоит на фоне страницы, как в анонсе на
+   маркете: тёмная подложка голограммы в светлой теме читалась пятном. */
+.between-scene .stage.dark {
+  background: transparent;
+}
+
+.between-scene .stage.dark .stage-hint {
+  color: var(--mut);
+}
+
 /* Между торгами вместо часов - слово: оно длиннее цифр и мельче их. */
 .lot-cd-word {
   font-size: 1.75rem;
@@ -3285,9 +3295,96 @@ input:focus {
   width: 100%;
 }
 
-.results-timeline input[type="range"] {
+/* Ползунок таймлайна. Родной range у каждого браузера свой и выглядит
+   дёшево - рисуем дорожку, засечки ставок и бегунок сами. */
+.results-scrub {
+  position: relative;
+  height: 32px;
+}
+
+.results-scrub input[type="range"] {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  accent-color: #e0381c;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  /* Общий стиль полей ввода даёт рамку и скругление - ползунку они не нужны. */
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.results-scrub input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #e0381c var(--fill), var(--line) var(--fill));
+}
+
+.results-scrub input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #e0381c var(--fill), var(--line) var(--fill));
+}
+
+.results-scrub input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border-radius: 50%;
+  border: 0;
+  background: radial-gradient(circle, #e0381c 0 4px, #fff 4.5px);
+  box-shadow: 0 2px 8px rgba(22, 24, 29, 0.25), 0 0 0 1px rgba(22, 24, 29, 0.06);
+  transition: transform 0.12s;
+}
+
+.results-scrub input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  background: radial-gradient(circle, #e0381c 0 4px, #fff 4.5px);
+  box-shadow: 0 2px 8px rgba(22, 24, 29, 0.25), 0 0 0 1px rgba(22, 24, 29, 0.06);
+}
+
+.results-scrub input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+.results-scrub input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(224, 56, 28, 0.35), 0 2px 8px rgba(22, 24, 29, 0.25);
+}
+
+/* Засечка на каждую ставку: видно, где торг был горячим. */
+.results-ticks {
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  top: 50%;
+  height: 12px;
+  margin-top: 6px;
+  pointer-events: none;
+}
+
+.results-ticks i {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 6px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--line3);
+}
+
+.results-ticks i.on {
+  background: var(--ink);
+  opacity: 0.55;
 }
 
 .results-time-head {
