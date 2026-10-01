@@ -9,8 +9,10 @@ alter table things
   add column worn_where text check (worn_where is null or length(worn_where) <= 120),
   add column worn_when text check (worn_when is null or length(worn_when) <= 120);
 
--- Что известно о первой футболке: носит один из лидов Superteam Ukraine.
--- Где и когда - допишем, когда будет известно.
+-- Первая футболка: её носит один из лидов Superteam Ukraine на Demo Day в
+-- Киеве 10 октября (сказал Даниил 1 октября 2026).
 update things
-set worn_by = 'One of the Superteam Ukraine leads'
+set worn_by = 'One of the Superteam Ukraine leads',
+    worn_where = 'Demo Day, Kyiv',
+    worn_when = 'October 10'
 where slug = 'superteam-ua-tee';
