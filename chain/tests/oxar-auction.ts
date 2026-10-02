@@ -944,4 +944,31 @@ describe("oxar-escrow: торг", () => {
     assert.isNull(await connection.getAccountInfo(vault), "хранилище не закрылось");
     assert.isNull(await connection.getAccountInfo(lot), "лот не закрылся");
   });
+
+  it("срок пруфа переносит только арбитр, только позже и только до пруфа", async () => {
+    const { sale } = await openSale(5);
+    const me = (provider.wallet as anchor.Wallet).payer;
+    const deadline = (await program.account.sale.fetch(sale)).proofDeadline.toNumber();
+    const move = (who: Keypair, to: number) =>
+      program.methods
+        .arbiterMovesProof(new anchor.BN(to))
+        .accountsPartial({ arbiter: who.publicKey, sale })
+        .signers([who])
+        .rpc();
+
+    await fails(move(seller, deadline + 86_400), "NotTheAdmin", "продавец сам отодвинул себе срок");
+    await fails(move(me, deadline - 1), "ProofDeadlineFixed", "срок пруфа сдвинули раньше");
+
+    // Ивент перенесли на сорок дней - срок уезжает вместе с ним.
+    await move(me, deadline + 40 * 86_400);
+    assert.equal(
+      (await program.account.sale.fetch(sale)).proofDeadline.toNumber(),
+      deadline + 40 * 86_400,
+      "новый срок не записался",
+    );
+
+    await sleep(6500);
+    await prove(sale);
+    await fails(move(me, deadline + 50 * 86_400), "ProofDeadlineFixed", "срок двигают после пруфа");
+  });
 });

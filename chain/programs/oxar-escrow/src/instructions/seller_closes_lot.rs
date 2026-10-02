@@ -100,8 +100,10 @@ pub fn close_lot(ctx: Context<SellerClosesLot>) -> Result<()> {
     // было бы отобрать у победителя уже выигранное место. Одно исключение:
     // продавец не прислал пруф к сроку - сделка не выполнена, и ставка
     // возвращается победителю тем же путём, что и ставка ниже резерва.
+    // Второе исключение: место оспорили, а арбитр молчит тридцать дней -
+    // спор не решён, и ставка тоже уходит победителю.
     require!(
-        !lot.has_winner() || ctx.accounts.sale.proof_missed(now),
+        !lot.has_winner() || ctx.accounts.sale.proof_missed(now) || lot.dispute_lapsed(now),
         EscrowError::LotHasWinner
     );
 

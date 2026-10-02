@@ -70,4 +70,7 @@ pub enum EscrowError {
 
     #[msg("This spot is not disputed")]
     LotNotDisputed,
+
+    #[msg("The proof deadline can only move later, before it passes and before the proof")]
+    ProofDeadlineFixed,
 }

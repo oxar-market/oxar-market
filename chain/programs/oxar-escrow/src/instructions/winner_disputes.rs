@@ -12,7 +12,8 @@ use crate::{
 /// продавцу, вернуть победителю или поделить. Спор касается только этого
 /// места: остальные места вещи платятся как обычно.
 ///
-/// Оспорить может только победитель и только в окно после пруфа.
+/// Оспорить может только победитель и только в окно после пруфа. Если
+/// арбитр молчит тридцать дней, место закрывается в пользу победителя.
 #[derive(Accounts)]
 pub struct WinnerDisputes<'info> {
     pub winner: Signer<'info>,
@@ -41,5 +42,6 @@ pub fn dispute(ctx: Context<WinnerDisputes>) -> Result<()> {
     require!(!lot.disputed, EscrowError::LotDisputed);
 
     lot.disputed = true;
+    lot.disputed_at = now;
     Ok(())
 }

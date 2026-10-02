@@ -149,6 +149,13 @@ impl Sale {
         !self.legacy() && self.proved_at == 0 && !self.is_open(now) && now > self.proof_deadline
     }
 
+    /// Можно ли арбитру перенести срок пруфа на `new_deadline`: только позже,
+    /// только пока пруфа нет и срок не вышел. Вышедший срок уже дал
+    /// победителям право на возврат - отнимать его переносом нельзя.
+    pub fn moves_proof(&self, now: i64, new_deadline: i64) -> bool {
+        !self.legacy() && self.proved_at == 0 && now <= self.proof_deadline && new_deadline > self.proof_deadline
+    }
+
     /// Можно ли сейчас оспорить пруф.
     pub fn appeal_open(&self, now: i64) -> bool {
         !self.legacy() && self.proved_at > 0 && now < self.proved_at.saturating_add(APPEAL_SECONDS)
@@ -325,5 +332,24 @@ mod tests {
         assert!(!one.proof_missed(10_000_000), "старый торг ушёл в возврат");
         assert!(!one.appeal_open(150), "старый торг можно оспорить");
         assert!(!one.takes_proof(150), "старый торг принимает пруф");
+    }
+
+    #[test]
+    fn срок_пруфа_арбитр_только_отодвигает_и_только_пока_он_не_вышел() {
+        // Ивент перенесли - срок пруфа уезжает вместе с ним.
+        let one = sale(100, 30);
+        assert!(one.moves_proof(500, 5_000), "отодвинуть до срока можно");
+        assert!(one.moves_proof(1_100, 5_000), "в саму секунду срока ещё можно");
+        assert!(!one.moves_proof(500, 1_100), "тот же срок - не перенос");
+        assert!(!one.moves_proof(500, 900), "раньше срок не двигается: победители на него рассчитывали");
+        assert!(!one.moves_proof(1_101, 5_000), "срок вышел - победителям уже положен возврат");
+
+        let mut proved = sale(100, 30);
+        proved.proved_at = 500;
+        assert!(!proved.moves_proof(600, 5_000), "пруф уже пришёл - двигать нечего");
+
+        let mut legacy = sale(100, 30);
+        legacy.proof_deadline = 0;
+        assert!(!legacy.moves_proof(50, 5_000), "у старого торга срока пруфа нет");
     }
 }

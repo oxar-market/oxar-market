@@ -107,7 +107,8 @@ pub fn open_lot(
     lot.bump = ctx.bumps.lot;
     lot.vault_bump = ctx.bumps.vault;
     lot.disputed = false;
-    lot.reserved = [0u8; 31];
+    lot.disputed_at = 0;
+    lot.reserved = [0u8; 23];
 
     Ok(())
 }

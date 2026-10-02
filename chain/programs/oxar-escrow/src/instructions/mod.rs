@@ -1,5 +1,6 @@
 pub mod admin_sets_terms;
 pub mod arbiter_decides;
+pub mod arbiter_moves_proof;
 pub mod bidder_places_bid;
 pub mod lot_pays_seller;
 pub mod seller_closes_lot;
@@ -13,6 +14,7 @@ pub mod winner_disputes;
 // имена, а не общий `handler` - иначе glob делает имя неоднозначным.
 pub use admin_sets_terms::*;
 pub use arbiter_decides::*;
+pub use arbiter_moves_proof::*;
 pub use bidder_places_bid::*;
 pub use lot_pays_seller::*;
 pub use seller_closes_lot::*;
