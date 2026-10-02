@@ -3288,6 +3288,28 @@ input:focus {
   width: 100%;
 }
 
+/* Собранная сумма: самая крупная цифра экрана, тем же кеглем, что верхняя
+   ставка на маркете. */
+.results-raised {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0;
+}
+
+.results-raised b {
+  font-size: 2.75rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.results-raised span {
+  font-size: 0.9375rem;
+  color: var(--mut);
+}
+
 .case-pill {
   align-self: flex-start;
   padding: 5px 9px;
