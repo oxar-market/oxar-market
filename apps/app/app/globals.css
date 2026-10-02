@@ -3599,6 +3599,16 @@ input:focus {
   margin-bottom: 0.75rem;
 }
 
+/* Под строкой вещи кнопка архива стояла впритык к ней. */
+.ad-house-logos .win-zip {
+  margin-top: 0.75rem;
+}
+
+/* «Open logo» - ссылка в виде пилюли, без подчёркивания ссылки. */
+a.sl-pill {
+  text-decoration: none;
+}
+
 .case-note {
   width: 100%;
   margin: 0;
