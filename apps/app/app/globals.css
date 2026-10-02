@@ -3581,6 +3581,48 @@ input:focus {
   border-color: #e0381c;
 }
 
+/* Текущий шаг пульсирует: от точки расходятся кольца. Так видно, что
+   стадия идёт сейчас, а не просто помечена цветом. */
+.rs-steps li {
+  position: relative;
+}
+
+.rs-steps li.now::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: calc(0.75rem + 7px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid #e0381c;
+  pointer-events: none;
+  animation: rs-pulse 1.8s ease-out infinite;
+}
+
+.rs-steps li:first-child.now::after {
+  top: 7px;
+}
+
+@keyframes rs-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-steps li.now::after {
+    animation: none;
+    display: none;
+  }
+}
+
 .rs-steps b {
   font-weight: 600;
 }
