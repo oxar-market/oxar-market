@@ -105,15 +105,8 @@ export function Admin() {
                 className={`sl-state ${one.active ? "live" : one.declinedReason ? "declined" : "preparing"}`}
               >
                 <i />
-                {one.house
-                  ? "OURS"
-                  : one.active
-                    ? "ON MARKET"
-                    : one.declinedReason
-                      ? "DECLINED"
-                      : one.published
-                        ? "PUBLISHED - REVIEW"
-                        : "TO REVIEW"}
+                {/* Три слова на все вещи, наши тоже: ждёт, одобрена, отклонена. */}
+                {one.active ? "APPROVED" : one.declinedReason ? "DECLINED" : "AWAITING APPROVAL"}
               </span>
               <span className="sl-thing-sub">
                 {one.spots.length} spots · {one.model ? "3D" : "no 3D"}
