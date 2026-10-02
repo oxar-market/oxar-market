@@ -50,7 +50,7 @@ pub enum EscrowError {
     #[msg("The share cannot be more than the whole bid")]
     ShareTooHigh,
 
-    #[msg("The proof deadline must come after the sale closes")]
+    #[msg("The proof deadline must come after the latest possible close of the sale")]
     ProofBeforeClose,
 
     #[msg("This sale does not take a proof now")]
