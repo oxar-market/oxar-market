@@ -8,6 +8,11 @@ import {
   minNextCents,
   minNextUnits,
   openSaleData,
+  proofData,
+  disputeData,
+  payData,
+  decideData,
+  moveProofData,
   saleAddress,
 } from "./chain.ts";
 
@@ -182,4 +187,16 @@ test("открытие торга кодируется байт в байт ка
     Buffer.from(data).toString("base64"),
     "HPEFWULdUmN8nmZ5dCVA3pRL4H/B+Qrnng25agAAAAAsAQAAAAAAAJ6a4GoAAAAA",
   );
+});
+
+test("инструкции защиты покупателя кодируются байт в байт как у Anchor", () => {
+  // Образцы сняты BorshInstructionCoder по IDL с пруфом и спором.
+  const b64 = (data: Uint8Array) => Buffer.from(data).toString("base64");
+  const hash = Uint8Array.from({ length: 32 }, (_, i) => i);
+  assert.equal(b64(proofData(hash)), "OKuBp/nSf9oAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHw==");
+  assert.equal(b64(disputeData()), "ZFBlsLsOWns=");
+  assert.equal(b64(payData()), "JKnKKxbpk74=");
+  assert.equal(b64(decideData(3000)), "fZh7Oec58Vm4Cw==");
+  assert.equal(b64(moveProofData(1_795_000_000_000)), "M6wELc68K8DAhv1qAAAAAA==");
+  assert.throws(() => proofData(new Uint8Array(31)), "хеш не из тридцати двух байт");
 });

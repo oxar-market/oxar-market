@@ -53,3 +53,5 @@ export {
   type ProofSpot,
   type SpotStage,
 } from "./proof.ts";
+
+export { proofPayload, type ProofParts } from "./proof-payload.ts";

@@ -175,7 +175,12 @@ export async function publishAuctions(
       for (const lot of done) {
         const { error } = await db
           .from("lots")
-          .update({ status: "open", chain_lot: lotAddress(lot.id).toBase58(), mint: coin.mint.toBase58() })
+          .update({
+            status: "open",
+            chain_lot: lotAddress(lot.id).toBase58(),
+            chain_sale: saleAddress(saleId).toBase58(),
+            mint: coin.mint.toBase58(),
+          })
           .eq("id", lot.id);
         if (error) return null;
         opened += 1;
