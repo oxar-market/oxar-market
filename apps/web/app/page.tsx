@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { SOON, ThingStage, type Stage } from "@oxar/stage";
 
+/** Зазор между карточками карусели, px. Тот же, что в CSS у .live-rail. */
+const RAIL_GAP = 12;
+
 /**
  * Лендинг на oxar.app по дизайн-борду: один экран, слева манифест и одна
  * дверь «Find a spot», справа живая афиша самого горячего торга - фото вещи,
@@ -236,7 +239,7 @@ export default function Home() {
   function go(to: number) {
     const el = rail.current;
     if (!el) return;
-    el.scrollTo({ left: to * el.clientWidth, behavior: "smooth" });
+    el.scrollTo({ left: to * (el.clientWidth + RAIL_GAP), behavior: "smooth" });
   }
 
   // Логотипы лидеров встают на модель теми же местами, что и в приложении.
@@ -308,11 +311,14 @@ export default function Home() {
           ref={rail}
           onScroll={(event) => {
             const el = event.currentTarget;
-            setSlide(Math.round(el.scrollLeft / el.clientWidth));
+            setSlide(Math.round(el.scrollLeft / (el.clientWidth + RAIL_GAP)));
           }}
         >
+        {/* Ключи разные: обе карточки стоят в одной позиции дерева, и без
+            ключа React оставлял сцену от первой, с футболкой, а знак вопроса
+            так и не появлялся - сцена не меняет модель на лету. */}
         {between ? (
-          <div className="live-card">
+          <div className="live-card" key="soon">
             <div className="live-photo in3d">
               <div className="live-stage">
                 <ThingStage
@@ -337,7 +343,7 @@ export default function Home() {
             </a>
           </div>
         ) : (
-        <div className="live-card">
+        <div className="live-card" key="live">
           <div className={look === "live" ? "live-photo in3d" : "live-photo"}>
             {look === "live" ? (
               <div className="live-stage">
@@ -484,13 +490,26 @@ export default function Home() {
                 })}
               </span>
               <span className="live-sub">raised</span>
-              {/* Кто, где и когда - одной фразой через запятые, во всю ширину
-                  полосы: список через точки рвался на телефоне на четыре
-                  строки и читался как мусор. */}
+              {/* Кто, где и когда - каждое своей строкой, как в табличке на
+                  странице торга: одной фразой на телефоне «Demo Day» рвалось
+                  на две строки. */}
               {past.worn.by && (
-                <span className="live-sub live-worn">
-                  {[past.worn.by, past.worn.where, past.worn.when].filter(Boolean).join(", ")}
-                </span>
+                <dl className="live-worn">
+                  {(
+                    [
+                      ["Who has it", past.worn.by],
+                      ["Where", past.worn.where],
+                      ["When", past.worn.when],
+                    ] as [string, string | null][]
+                  ).map(([label, value]) =>
+                    value ? (
+                      <div key={label}>
+                        <dt>{label}</dt>
+                        <dd>{value}</dd>
+                      </div>
+                    ) : null,
+                  )}
+                </dl>
               )}
             </a>
           </div>

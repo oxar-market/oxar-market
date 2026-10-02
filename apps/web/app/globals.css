@@ -266,9 +266,36 @@ h1 {
   color: var(--mut);
 }
 
+/* Кто, где, когда - строками: подпись слева, значение справа. */
 .live-worn {
   grid-column: 1 / -1;
-  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  margin: 0.25rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.live-worn div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9375rem;
+}
+
+.live-worn div:last-child {
+  border-bottom: 0;
+}
+
+.live-worn dt {
+  flex: 0 0 auto;
+  color: var(--mut);
+}
+
+.live-worn dd {
+  margin: 0;
+  text-align: right;
 }
 
 /* Телефон: колонка, афиша занимает остаток экрана, разметка мельче. */
@@ -449,6 +476,9 @@ h1 {
 
 .live-rail {
   display: flex;
+  /* Зазор виден, пока листаешь: карточки не слипаются. Число повторено в
+     RAIL_GAP на странице - прокрутка считает шаг по нему. */
+  gap: 12px;
   height: 100%;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -468,12 +498,18 @@ h1 {
   scroll-snap-align: start;
 }
 
-/* Полоса под кадром одной высоты на всех слайдах: иначе кадр у слайда с
-   длинной подписью получался ниже, и карточки в карусели были разными. */
+/* Кадр одной высоты на всех слайдах, полоса под ним берёт остаток: иначе
+   кадр у слайда с длинной подписью получался ниже, и карточки в карусели
+   были разными. На широком экране карточку держит сетка страницы. */
 .live-rail > .live-card > .live-info {
-  flex: 0 0 auto;
-  min-height: 9.75rem;
+  flex: 1 0 auto;
   align-content: start;
+}
+
+@media (max-width: 56rem) {
+  .live-rail > .live-card > .live-photo {
+    flex: 0 0 22rem;
+  }
 }
 
 /* Стрелки - поверх кадра, по его краям. Отключённая не исчезает, а гаснет:
