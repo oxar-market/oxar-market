@@ -45,7 +45,12 @@ pub struct Lot {
 
     /// Запас под поля, которых ещё нет. Без него добавить поле означает сломать
     /// чтение уже открытых лотов.
-    pub reserved: [u8; 32],
+    /// Победитель оспорил пруф: деньги места заморожены до решения арбитра.
+    /// Лёг на первый байт прежнего запаса - у старых лотов там ноль, то есть
+    /// «спора нет».
+    pub disputed: bool,
+
+    pub reserved: [u8; 31],
 }
 
 impl Lot {
@@ -98,6 +103,25 @@ impl Lot {
 
         Ok((fee, to_seller))
     }
+
+    /// Решение арбитра по спорному месту: `seller_bps` - доля ставки продавцу
+    /// в сотых процента, остальное победителю. Комиссия берётся только с доли
+    /// продавца: возврат победителю не облагается.
+    ///
+    /// Возвращает (продавцу, комиссия, победителю); в сумме ровно ставка.
+    pub fn arbiter_split(&self, seller_bps: u16, fee_bps: u16) -> Result<(u64, u64, u64)> {
+        require!(seller_bps <= 10_000, EscrowError::ShareTooHigh);
+        let seller_part = (self.top_bid as u128)
+            .checked_mul(seller_bps as u128)
+            .and_then(|v| v.checked_div(10_000))
+            .ok_or(EscrowError::MathOverflow)? as u64;
+        let to_winner = self
+            .top_bid
+            .checked_sub(seller_part)
+            .ok_or(EscrowError::MathOverflow)?;
+        let (fee, to_seller) = self.split(seller_part, fee_bps)?;
+        Ok((to_seller, fee, to_winner))
+    }
 }
 
 #[cfg(test)]
@@ -116,7 +140,8 @@ mod tests {
             auction: [0u8; 16],
             bump: 0,
             vault_bump: 0,
-            reserved: [0u8; 32],
+            disputed: false,
+            reserved: [0u8; 31],
         }
     }
 
@@ -189,5 +214,43 @@ mod tests {
         one.min_step = 3;
         // 5% от 10 это 0 после деления целых, поэтому берётся min_step.
         assert_eq!(one.min_next_bid().unwrap(), 13, "на мелких суммах шаг держит min_step");
+    }
+
+    #[test]
+    fn арбитр_делит_ставку_и_ничего_не_теряется() {
+        let one = lot(1_000);
+        // Половина продавцу: с неё 10% площадке, вторая половина победителю.
+        let (to_seller, fee, to_winner) = one.arbiter_split(5_000, 1_000).unwrap();
+        assert_eq!(fee, 50);
+        assert_eq!(to_seller, 450);
+        assert_eq!(to_winner, 500);
+        assert_eq!(to_seller + fee + to_winner, 1_000, "в хранилище не должно остаться ни единицы");
+    }
+
+    #[test]
+    fn арбитр_отдал_всё_победителю_площадка_не_берёт_ничего() {
+        // Комиссия только с того, что ушло продавцу: возврат не облагается.
+        let one = lot(1_000);
+        assert_eq!(one.arbiter_split(0, 1_000).unwrap(), (0, 0, 1_000));
+    }
+
+    #[test]
+    fn арбитр_отдал_всё_продавцу_это_обычная_выплата() {
+        let one = lot(1_000);
+        let (fee, to_seller) = one.split(1_000, 1_000).unwrap();
+        assert_eq!(one.arbiter_split(10_000, 1_000).unwrap(), (to_seller, fee, 0));
+    }
+
+    #[test]
+    fn арбитр_не_отдаст_продавцу_больше_всей_ставки() {
+        let one = lot(1_000);
+        assert!(one.arbiter_split(10_001, 1_000).is_err(), "доля больше ста процентов прошла");
+    }
+
+    #[test]
+    fn нечётная_ставка_делится_без_остатка_в_хранилище() {
+        let one = lot(999);
+        let (to_seller, fee, to_winner) = one.arbiter_split(3_333, 1_000).unwrap();
+        assert_eq!(to_seller + fee + to_winner, 999);
     }
 }
