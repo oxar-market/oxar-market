@@ -307,6 +307,19 @@ function Note({
   );
 }
 
+/**
+ * Поле даты невидимо и лежит поверх подписи. Телефон по касанию открывает
+ * календарь сам, а десктопный браузер - только по своей иконке справа,
+ * которой не видно. Поэтому календарь открываем клику по любому месту поля.
+ */
+function openPicker(event: React.MouseEvent<HTMLInputElement>) {
+  try {
+    event.currentTarget.showPicker();
+  } catch {
+    // Старый браузер без showPicker: остаётся его собственное поведение.
+  }
+}
+
 /** День из календаря: подпись словами, под ней невидимое поле даты. */
 function Day({
   label,
@@ -334,6 +347,7 @@ function Day({
           value={value}
           min={min}
           disabled={disabled}
+          onClick={openPicker}
           onChange={(event) => onChange(event.target.value)}
         />
       </span>
@@ -375,6 +389,7 @@ function When({
           className="sl-pick"
           type="datetime-local"
           value={value}
+          onClick={openPicker}
           onChange={(event) => onChange(event.target.value)}
         />
       </span>
