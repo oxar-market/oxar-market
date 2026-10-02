@@ -128,10 +128,10 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
         <span className="case-pill">ENDED</span>
         <h2 className="hero-name">{held.title}</h2>
         <p className="hero-who">
-          Closed {day(held.closesAt)} ·{" "}
-          {pilot ? (
+          Closed {day(held.closesAt)}
+          {pilot && (
             <>
-              with{" "}
+              {" "}· with{" "}
               {pilot.partnerUrl ? (
                 <a className="case-partner" href={pilot.partnerUrl} target="_blank" rel="noreferrer">
                   {pilot.partner}
@@ -140,10 +140,15 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
                 pilot.partner
               )}
             </>
-          ) : (
-            `${formatUsd(held.raisedCents)} raised`
           )}
         </p>
+        {/* Сколько собрали - главная цифра итогов, крупно, как ставка на маркете. */}
+        {!pilot && (
+          <p className="results-raised">
+            <b>{formatUsd(held.raisedCents)}</b>
+            <span>raised</span>
+          </p>
+        )}
       </div>
 
       {/* Покупатель места должен знать, на ком, где и когда будет вещь. */}
