@@ -9,12 +9,25 @@ import { Thumb } from "./seller/parts.tsx";
  * Логотипы, которые печатать: по месту - бренд, сумма и сам файл. Открыть
  * файл - в новой вкладке; все разом - архивом, для типографии.
  */
-export function Winners({ thingId, title }: { thingId: string; title: string }) {
+export function Winners({
+  thingId,
+  title,
+  closesAt,
+}: {
+  thingId: string;
+  title: string;
+  /** Какой торг: день закрытия. Пусто - все торги вещи. */
+  closesAt?: string;
+}) {
   const [list, setList] = useState<Winner[] | null>(null);
   const [zipping, setZipping] = useState<"idle" | "busy" | "failed">("idle");
   useEffect(() => {
-    void loadWinners(thingId).then(setList);
-  }, [thingId]);
+    void loadWinners(thingId).then((all) =>
+      // Печатать - победителей одного торга, а не всех торгов вещи за всё
+      // время: у футболки были и прошлые закрытия, их логотипы уже не нужны.
+      setList(closesAt ? all.filter((one) => one.closesAt.slice(0, 10) === closesAt.slice(0, 10)) : all),
+    );
+  }, [thingId, closesAt]);
 
   if (list === null) return null;
   if (list.length === 0) return <p className="muted">No winning bids on this thing.</p>;
@@ -97,7 +110,7 @@ export function HouseLogos() {
             </button>
             {open === one.id && (
               <div className="ad-house-logos">
-                <Winners thingId={one.id} title={one.title} />
+                <Winners thingId={one.id} title={one.title} closesAt={one.closesAt} />
               </div>
             )}
           </div>
