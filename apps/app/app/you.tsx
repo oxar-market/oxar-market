@@ -13,6 +13,7 @@ import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
 import { amIAdmin } from "@/lib/admin";
 import { Admin } from "./admin/admin.tsx";
 import { SellerApply } from "./seller/apply.tsx";
+import { YourWins } from "./wins.tsx";
 import { loadScoreOf, scoreText } from "@/lib/reviews";
 import type { Score } from "@/lib/seller";
 
@@ -367,6 +368,8 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
           <span className="go">Rate</span>
         </button>
       )}
+
+      <YourWins stands={stands} />
 
       <div className="bids-head">
         <span className="hist-title">History</span>
