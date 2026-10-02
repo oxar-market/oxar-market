@@ -7,6 +7,29 @@ import { SOON, ThingStage, type Stage } from "@oxar/stage";
 const RAIL_GAP = 12;
 
 /**
+ * Кто, где, когда - три строки под полосой карточки, подпись над значением,
+ * как в табличке на торге. Пусто - «Unknown»: у неназванной вещи строки
+ * стоят те же, чтобы карточка не была пустой и обе читались одинаково.
+ */
+function WornRows({ worn }: { worn: { by: string | null; where: string | null; when: string | null } | null }) {
+  const rows: [string, string | null][] = [
+    ["Who has it", worn?.by ?? null],
+    ["Where", worn?.where ?? null],
+    ["When", worn?.when ?? null],
+  ];
+  return (
+    <dl className="live-worn">
+      {rows.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd className={value ? "" : "unknown"}>{value ?? "Unknown"}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
  * Лендинг на oxar.app по дизайн-борду: один экран, слева манифест и одна
  * дверь «Find a spot», справа живая афиша самого горячего торга - фото вещи,
  * в занятых местах настоящие логотипы лидеров, свободные стоят контуром.
@@ -340,6 +363,7 @@ export default function Home() {
               <span className="live-sub">
                 What it is, who has it, where and when - we say all of it before bidding opens.
               </span>
+              <WornRows worn={null} />
             </a>
           </div>
         ) : (
@@ -493,24 +517,7 @@ export default function Home() {
               {/* Кто, где и когда - каждое своей строкой, как в табличке на
                   странице торга: одной фразой на телефоне «Demo Day» рвалось
                   на две строки. */}
-              {past.worn.by && (
-                <dl className="live-worn">
-                  {(
-                    [
-                      ["Who has it", past.worn.by],
-                      ["Where", past.worn.where],
-                      ["When", past.worn.when],
-                    ] as [string, string | null][]
-                  ).map(([label, value]) =>
-                    value ? (
-                      <div key={label}>
-                        <dt>{label}</dt>
-                        <dd>{value}</dd>
-                      </div>
-                    ) : null,
-                  )}
-                </dl>
-              )}
+              <WornRows worn={past.worn} />
             </a>
           </div>
         )}

@@ -266,7 +266,9 @@ h1 {
   color: var(--mut);
 }
 
-/* Кто, где, когда - строками: подпись слева, значение справа. */
+/* Кто, где, когда - строками: подпись капителью над значением, всё по
+   левому краю, черта между строками. Как табличка на торге, но в столбик:
+   карточка узкая. */
 .live-worn {
   grid-column: 1 / -1;
   display: flex;
@@ -277,25 +279,35 @@ h1 {
 
 .live-worn div {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 2px;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--line);
-  font-size: 0.9375rem;
 }
 
 .live-worn div:last-child {
   border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .live-worn dt {
-  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--mut);
 }
 
 .live-worn dd {
   margin: 0;
-  text-align: right;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.live-worn dd.unknown {
+  font-weight: 500;
+  color: var(--mut);
 }
 
 /* Телефон: колонка, афиша занимает остаток экрана, разметка мельче. */
