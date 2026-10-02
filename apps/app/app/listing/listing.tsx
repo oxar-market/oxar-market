@@ -9,6 +9,7 @@ import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
+import { WornInfo } from "../worn.tsx";
 
 /**
  * Торг вещи продавца.
@@ -278,6 +279,11 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           ))}
         </div>
       )}
+
+      {/* Кто носит вещь, где, когда и срок пруфа - до выбора места: деньги
+          победителя держит программа до пруфа, и этот срок покупатель видит
+          прежде, чем ставит. */}
+      <WornInfo thingId={thingId} />
 
       {lots.length > 0 && (
         <>
