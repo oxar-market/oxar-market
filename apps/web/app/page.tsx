@@ -359,10 +359,12 @@ export default function Home() {
             </div>
             <a className="live-info" href={APP_URL}>
               <span className="live-name">Not announced yet</span>
-              <span className="live-cd" />
-              <span className="live-sub">
-                What it is, who has it, where and when - we say all of it before bidding opens.
-              </span>
+              {/* Та же сетка, что у прошлого торга: имя и слово справа, строка
+                  под ними, три строки таблички. Так обе карточки одной высоты,
+                  и под последней строкой нет пустоты. */}
+              <span className="live-cd">Soon</span>
+              <span className="live-sub">Bidding opens</span>
+              <span className="live-sub" />
               <WornRows worn={null} />
             </a>
           </div>

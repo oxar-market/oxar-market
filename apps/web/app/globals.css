@@ -303,6 +303,12 @@ h1 {
   font-size: 0.9375rem;
   font-weight: 600;
   line-height: 1.3;
+  /* Строка - одна: длинное значение режется многоточием, а не переносится.
+     Так у обеих карточек полоса одной высоты, и под последней строкой нет
+     пустоты. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .live-worn dd.unknown {
