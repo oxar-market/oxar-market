@@ -91,7 +91,7 @@ pub fn open_sale(
     sale.bump = ctx.bumps.sale;
     sale.proof_deadline = proof_deadline;
     sale.proved_at = 0;
-    sale.reserved = [0u8; 8];
+    sale.first_proof_deadline = proof_deadline;
 
     Ok(())
 }

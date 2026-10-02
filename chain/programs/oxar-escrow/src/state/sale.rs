@@ -34,6 +34,11 @@ pub const MAX_SALE_SECONDS: i64 = 30 * 24 * 60 * 60;
 /// Подтвердил сам - выплата сразу, ждать незачем.
 pub const APPEAL_SECONDS: i64 = 72 * 60 * 60;
 
+/// Насколько арбитр может отодвинуть срок пруфа от того, под который ставили.
+/// Девяносто дней - ивент переносят на недели, а не на годы. Потолок от
+/// первого срока, а не от текущего: переносы по частям его не обойдут.
+pub const MAX_PROOF_MOVE_SECONDS: i64 = 90 * 24 * 60 * 60;
+
 /// Торг вещи целиком.
 ///
 /// Продаётся не место по отдельности, а вся футболка разом: пятнадцать мест
@@ -101,9 +106,9 @@ pub struct Sale {
     /// ушёл событием в транзакцию: в запас аккаунта он не помещается.
     pub proved_at: i64,
 
-    /// Запас под поля, которых ещё нет. Без него добавить поле означает
-    /// сломать чтение уже открытых торгов.
-    pub reserved: [u8; 8],
+    /// Срок пруфа, под который ставили, - при открытии торга. От него
+    /// считается потолок переносов. Лёг на последние байты прежнего запаса.
+    pub first_proof_deadline: i64,
 }
 
 impl Sale {
@@ -150,10 +155,15 @@ impl Sale {
     }
 
     /// Можно ли арбитру перенести срок пруфа на `new_deadline`: только позже,
-    /// только пока пруфа нет и срок не вышел. Вышедший срок уже дал
+    /// не дальше девяноста дней от первого срока, только пока пруфа нет и
+    /// срок не вышел. Вышедший срок уже дал
     /// победителям право на возврат - отнимать его переносом нельзя.
     pub fn moves_proof(&self, now: i64, new_deadline: i64) -> bool {
-        !self.legacy() && self.proved_at == 0 && now <= self.proof_deadline && new_deadline > self.proof_deadline
+        !self.legacy()
+            && self.proved_at == 0
+            && now <= self.proof_deadline
+            && new_deadline > self.proof_deadline
+            && new_deadline <= self.first_proof_deadline.saturating_add(MAX_PROOF_MOVE_SECONDS)
     }
 
     /// Можно ли сейчас оспорить пруф.
@@ -190,7 +200,7 @@ mod tests {
             hard_closes_at: closes_at + TOTAL_EXTEND_SECONDS,
             proof_deadline: closes_at + 1_000,
             proved_at: 0,
-            reserved: [0u8; 8],
+            first_proof_deadline: closes_at + 1_000,
         }
     }
 
@@ -351,5 +361,19 @@ mod tests {
         let mut legacy = sale(100, 30);
         legacy.proof_deadline = 0;
         assert!(!legacy.moves_proof(50, 5_000), "у старого торга срока пруфа нет");
+    }
+
+    #[test]
+    fn перенос_срока_не_дальше_девяноста_дней_от_первого() {
+        // Срок, под который ставили, плюс девяносто дней - и всё. Иначе арбитр
+        // (или украденный ключ) держал бы деньги победителей сколько угодно.
+        let mut one = sale(100, 30);
+        let first = one.proof_deadline;
+        assert!(one.moves_proof(500, first + MAX_PROOF_MOVE_SECONDS), "ровно девяносто дней можно");
+        assert!(!one.moves_proof(500, first + MAX_PROOF_MOVE_SECONDS + 1), "дальше - нет");
+        // Несколько переносов подряд не складываются: потолок от первого срока.
+        one.proof_deadline = first + 60 * 24 * 60 * 60;
+        assert!(!one.moves_proof(500, first + MAX_PROOF_MOVE_SECONDS + 1), "переносы по частям обошли потолок");
+        assert!(!one.moves_proof(500, i64::MAX), "срок на бесконечность");
     }
 }

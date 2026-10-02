@@ -961,6 +961,8 @@ describe("oxar-escrow: торг", () => {
 
     // Ивент перенесли на сорок дней - срок уезжает вместе с ним.
     await move(me, deadline + 40 * 86_400);
+    // Дальше девяноста дней от первого срока - нет, даже по частям.
+    await fails(move(me, deadline + 91 * 86_400), "ProofDeadlineFixed", "срок увезли дальше девяноста дней");
     assert.equal(
       (await program.account.sale.fetch(sale)).proofDeadline.toNumber(),
       deadline + 40 * 86_400,
