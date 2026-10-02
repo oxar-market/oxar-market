@@ -190,7 +190,7 @@ export function MarkSpots({
       </label>
 
       {failed && (
-        <p className="bad">Could not send the thing. Check the connection and try again.</p>
+        <p className="bad">Could not save the thing. Check the connection and try again.</p>
       )}
 
       <button
@@ -199,7 +199,7 @@ export function MarkSpots({
         disabled={spots.length === 0 || !title.trim() || sending}
         onClick={() => onSend(spots, title.trim())}
       >
-        {sending ? "Sending…" : "Send to OXAR"}
+        {sending ? "Saving…" : "Next: set prices"}
       </button>
     </>
   );

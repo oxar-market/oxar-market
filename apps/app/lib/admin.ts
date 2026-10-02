@@ -19,6 +19,8 @@ export type AdminThing = {
   active: boolean;
   /** Продавец открыл торг в цепочке: есть лот не в черновике. */
   published: boolean;
+  /** Цены идущего торга по местам - их проверяем до одобрения. */
+  prices: { spotId: string; reserveCents: number; stepCents: number; opensAt: string | null; closesAt: string }[];
   /** Отклонена админом - и почему. */
   declinedReason: string | null;
   photos: string[];
@@ -47,7 +49,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, house, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(status), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, house, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -55,6 +57,19 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     tagline: row.tagline,
     active: row.active,
     published: ((row.lots ?? []) as { status: string }[]).some((lot) => lot.status !== "draft"),
+    // Черновики админу не видны (политика лотов), а закрытые - прошлые торги.
+    prices: ((row.lots ?? []) as {
+      status: string; spot_id: string; reserve_cents: number; min_step_cents: number;
+      opens_at: string | null; closes_at: string;
+    }[])
+      .filter((lot) => lot.status === "open")
+      .map((lot) => ({
+        spotId: lot.spot_id,
+        reserveCents: lot.reserve_cents,
+        stepCents: lot.min_step_cents,
+        opensAt: lot.opens_at,
+        closesAt: lot.closes_at,
+      })),
     declinedReason: (row.declined_reason as string | null) ?? null,
     photos: ((row.photos as string[] | null) ?? []).map(photoUrl),
     model: (row.model_url as string) || null,

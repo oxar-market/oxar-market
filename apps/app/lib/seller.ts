@@ -200,10 +200,11 @@ export async function sendThing(
   wallet: string | null,
   /** Название вещи - его даёт продавец. */
   title: string,
-): Promise<boolean> {
-  if (!db || photos.length === 0 || spots.length === 0) return false;
+): Promise<string | null> {
+  // Возвращает id вещи: дальше продавец сразу ставит цены.
+  if (!db || photos.length === 0 || spots.length === 0) return null;
   const { data: auth } = await db.auth.getUser();
-  if (!auth.user) return false;
+  if (!auth.user) return null;
   const owner = auth.user.id;
 
   const { count } = await db
@@ -224,7 +225,7 @@ export async function sendThing(
     const { error } = await db.storage
       .from("things")
       .upload(path, photo, { contentType: photo.type || "image/jpeg", upsert: false });
-    if (error) return false;
+    if (error) return null;
     paths.push(path);
   }
 
@@ -241,7 +242,7 @@ export async function sendThing(
     seller_wallet: wallet,
     photos: paths,
   });
-  if (thingError) return false;
+  if (thingError) return null;
 
   const { error: spotError } = await db.from("thing_spots").insert(
     spots.map(({ photo, outline, ...rect }, at) => ({
@@ -254,7 +255,7 @@ export async function sendThing(
       ...rect,
     })),
   );
-  return !spotError;
+  return spotError ? null : id;
 }
 
 /** Вещь с местами для экрана цен. */
