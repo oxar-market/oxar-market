@@ -147,7 +147,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
     const spots = (one.thing_spots as { id: string }[] | null) ?? [];
     const lots = (one.lots as { id: string; status: string; closes_at: string }[] | null) ?? [];
     const open = lots.filter((lot) => lot.status === "open");
-    const closed = lots.filter((lot) => lot.status === "won" || lot.status === "unsold");
+    const closed = lots.filter((lot) => lot.status === "won" || lot.status === "unsold" || lot.status === "refunded");
     const mine = new Set(spots.map((spot) => spot.id));
     const rented = (rents ?? []).filter((rent) => mine.has(rent.spot_id));
     const photos = (one.photos as string[] | null) ?? [];

@@ -49,7 +49,7 @@ export async function loadThingSales(thingId: string): Promise<SaleView[]> {
     .select("id, status, chain_lot, chain_sale")
     .eq("thing_id", thingId)
     .not("chain_sale", "is", null)
-    .in("status", ["open", "won", "unsold"]);
+    .in("status", ["open", "won", "unsold", "refunded"]);
   if (!lots || lots.length === 0) return [];
 
   const sales = [...new Set(lots.map((lot) => lot.chain_sale as string))];

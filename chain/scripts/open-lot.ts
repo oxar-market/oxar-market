@@ -143,6 +143,9 @@ async function main() {
     Number(saleAccount.data.readBigInt64LE(8 + 16 + 32 + 32)) * 1000,
   );
   const extendSeconds = Number(saleAccount.data.readBigInt64LE(8 + 16 + 32 + 32 + 8));
+  // Срок пруфа - за продлением, комиссией (2), bump (1) и жёстким концом (8).
+  // Ноль - торг до защиты покупателя.
+  const proofDeadline = Number(saleAccount.data.readBigInt64LE(8 + 16 + 32 + 32 + 8 + 8 + 2 + 1 + 8));
 
   // Монета одна на всю площадку и живёт в её настройках. Своего ключа здесь
   // нет намеренно: руками сюда попал бы однажды девнетный USDC вместо боевого.
@@ -181,6 +184,9 @@ async function main() {
       closes_at: closesAt.toISOString(),
       opens_at: opensAt ? opensAt.toISOString() : null,
       extend_seconds: extendSeconds,
+      // Срок пруфа - из торга в цепочке: покупатель видит его до ставки. Ноль -
+      // торг до защиты покупателя, срока нет.
+      proof_by: proofDeadline > 0 ? new Date(proofDeadline * 1000).toISOString() : null,
     }),
   });
 
@@ -211,6 +217,8 @@ async function main() {
     body: JSON.stringify({
       status: "open",
       chain_lot: lotPda.toBase58(),
+      // Аккаунт места после выплаты закрывается - а пруф и спор живут торгом.
+      chain_sale: salePda.toBase58(),
       mint: mint.toBase58(),
     }),
   });

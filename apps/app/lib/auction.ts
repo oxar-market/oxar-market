@@ -361,7 +361,7 @@ export async function loadMarket(): Promise<{
     .select(
       "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, photos, model_url)",
     )
-    .in("status", ["open", "won", "unsold"])
+    .in("status", ["open", "won", "unsold", "refunded"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
     .limit(400);
   if (!data || data.length === 0) return { things: [], upcoming, held: [], pilots };

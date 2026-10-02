@@ -183,7 +183,7 @@ export async function loadBidTimeline(thingId: string, closesOn: string): Promis
     .from("lots")
     .select("closes_at, thing_spots(label, code), lot_bids(created_at, amount_cents, brand, media_url)")
     .eq("thing_id", thingId)
-    .in("status", ["won", "unsold"])
+    .in("status", ["won", "unsold", "refunded"])
     .eq("rehearsal", false);
   const out: BidEvent[] = [];
   for (const lot of data ?? []) {

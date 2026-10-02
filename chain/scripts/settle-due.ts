@@ -32,7 +32,9 @@ import {
 } from "@solana/spl-token";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { fetchConfig, fetchLot, fetchSale } from "./lot";
+import { fetchConfig, fetchLot, fetchSale, type ChainLot, type ChainSale } from "./lot";
+// Правила защиты покупателя - те же, что у приложения.
+import { disputeLapsed, pays, proofMissed } from "../../packages/core/src/proof";
 
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 
@@ -126,24 +128,73 @@ async function main() {
     );
   }
 
-  const due = await rest(
-    `lots?status=eq.open&closes_at=lt.${new Date().toISOString()}&select=id`,
-  );
-  if (!due.length) {
-    console.log("разбирать нечего");
-    await sweepProceeds();
-    return;
-  }
+  // Правила защиты покупателя - те же, что у приложения: одно место на оба.
+  const now = () => Math.floor(Date.now() / 1000);
+  const asSale = (sale: ChainSale) => ({
+    closesAt: Number(sale.closesAt.toString()),
+    proofDeadline: Number(sale.proofDeadline.toString()),
+    provedAt: Number(sale.provedAt.toString()),
+  });
+  const asSpot = (lot: ChainLot) => ({ disputed: lot.disputed, disputedAt: Number(lot.disputedAt.toString()) });
 
+  const lotPdaOf = (id: string) =>
+    PublicKey.findProgramAddressSync(
+      [Buffer.from("lot"), Buffer.from(id.replace(/-/g, ""), "hex")],
+      program.programId,
+    )[0];
+
+  // Программа платит на готовый счёт продавца в монете торга и сама его не
+  // заводит. Заводим его сами, если нет; если есть - инструкция пустая.
+  const sellerAccount = (lot: ChainLot, sale: ChainSale) =>
+    createAssociatedTokenAccountIdempotentInstruction(
+      crank.publicKey,
+      getAssociatedTokenAddressSync(lot.mint, sale.seller),
+      sale.seller,
+      lot.mint,
+    );
+
+  const pay = (lotPda: PublicKey, lot: ChainLot, sale: ChainSale) =>
+    program.methods
+      .lotPaysSeller()
+      .accounts({
+        crank: crank.publicKey,
+        sale: lot.sale,
+        lot: lotPda,
+        seller: sale.seller,
+        platform: sale.platform,
+        mint: lot.mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .preInstructions([sellerAccount(lot, sale)])
+      .rpc();
+
+  // Закрыть место: без победителя - вернуть ставку ниже резерва, с
+  // победителем - вернуть ставку, если пруф пропущен или арбитр молчал.
+  const close = (lotPda: PublicKey, lot: ChainLot, sale: ChainSale) =>
+    program.methods
+      .sellerClosesLot()
+      .accounts({
+        crank: crank.publicKey,
+        sale: lot.sale,
+        lot: lotPda,
+        seller: sale.seller,
+        lastBidder: (lot.topBidder as PublicKey | null) ?? sale.seller,
+        mint: lot.mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .preInstructions([sellerAccount(lot, sale)])
+      .rpc();
+
+  const mark = (id: string, patch: Record<string, unknown>) =>
+    rest(`lots?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+
+  // Проход 1: торг закрылся по часам базы. Решают часы цепи - ставка могла
+  // продлить торг.
+  const due = await rest(`lots?status=eq.open&closes_at=lt.${new Date().toISOString()}&select=id`);
   for (const row of due) {
     const label = row.id.slice(0, 8);
     try {
-      const auction = Array.from(Buffer.from(row.id.replace(/-/g, ""), "hex"));
-      const [lotPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("lot"), Buffer.from(auction)],
-        program.programId,
-      );
-
+      const lotPda = lotPdaOf(row.id);
       if (!(await connection.getAccountInfo(lotPda))) {
         // Строка есть, аккаунта нет: лот другой программы или закрыт мимо
         // базы. Чинить руками, а не автоматом: молча сменить статус значит
@@ -151,72 +202,78 @@ async function main() {
         console.log(`${label}: в цепи нет аккаунта - пропуск, нужен взгляд`);
         continue;
       }
-
       const lot = await fetchLot(program, lotPda);
       const sale = await fetchSale(program, lot.sale);
-
-      const now = Math.floor(Date.now() / 1000);
-      if (now < Number(sale.closesAt.toString())) {
+      if (now() < Number(sale.closesAt.toString())) {
         console.log(`${label}: цепь продлила торг, ещё идёт`);
         continue;
       }
+      const won = lot.topBidder !== null && BigInt(lot.topBid.toString()) >= BigInt(lot.reserve.toString());
 
-      const won =
-        lot.topBidder !== null &&
-        BigInt(lot.topBid.toString()) >= BigInt(lot.reserve.toString());
-
-      // Программа платит на готовый счёт продавца в монете торга и сама его
-      // не заводит. У свежего кошелька (Privy или внешнего, которым продавец
-      // только подписал открытие) такого счёта может не быть, и выплата
-      // падала бы. Заводим его сами, если нет; если есть - инструкция пустая.
-      const sellerTokens = createAssociatedTokenAccountIdempotentInstruction(
-        crank.publicKey,
-        getAssociatedTokenAddressSync(lot.mint, sale.seller),
-        sale.seller,
-        lot.mint,
-      );
-
-      if (won) {
-        const signature = await program.methods
-          .lotPaysSeller()
-          .accounts({
-            crank: crank.publicKey,
-            sale: lot.sale,
-            lot: lotPda,
-            seller: sale.seller,
-            platform: sale.platform,
-            mint: lot.mint,
-            tokenProgram: TOKEN_PROGRAM_ID,
-          })
-          .preInstructions([sellerTokens])
-          .rpc();
-        await rest(`lots?id=eq.${row.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ status: "won", settle_signature: signature }),
-        });
-        console.log(`${label}: выплачен, ${signature}`);
-      } else {
-        const signature = await program.methods
-          .sellerClosesLot()
-          .accounts({
-            crank: crank.publicKey,
-            sale: lot.sale,
-            lot: lotPda,
-            seller: sale.seller,
-            lastBidder: (lot.topBidder as PublicKey | null) ?? sale.seller,
-            mint: lot.mint,
-            tokenProgram: TOKEN_PROGRAM_ID,
-          })
-          .preInstructions([sellerTokens])
-          .rpc();
-        await rest(`lots?id=eq.${row.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ status: "unsold", settle_signature: signature }),
-        });
+      if (!won) {
+        const signature = await close(lotPda, lot, sale);
+        await mark(row.id, { status: "unsold", settle_signature: signature });
         console.log(`${label}: закрыт без победителя, ${signature}`);
+      } else if (Number(sale.proofDeadline.toString()) === 0) {
+        // Торг до защиты покупателя: платит сразу, как раньше.
+        const signature = await pay(lotPda, lot, sale);
+        await mark(row.id, { status: "won", settle_signature: signature });
+        console.log(`${label}: выплачен (старый торг), ${signature}`);
+      } else {
+        // Выигран, деньги ждут пруфа. Счёт продавца заводим сразу: выплату
+        // может позвать и победитель из приложения, и арбитр.
+        await provider.sendAndConfirm(new Transaction().add(sellerAccount(lot, sale)));
+        await mark(row.id, { status: "won" });
+        console.log(`${label}: выигран, ждёт пруфа до ${new Date(Number(sale.proofDeadline.toString()) * 1000).toISOString()}`);
       }
     } catch (error) {
       // Один упавший лот не должен запирать остальные: у каждого своя судьба.
+      console.error(`${label}: не разобран -`, error);
+      process.exitCode = 1;
+    }
+  }
+
+  // Проход 2: выигранные места с защитой покупателя, ещё не рассчитанные.
+  const waiting = await rest(
+    "lots?status=eq.won&settle_signature=is.null&chain_sale=not.is.null&select=id",
+  );
+  for (const row of waiting) {
+    const label = row.id.slice(0, 8);
+    try {
+      const lotPda = lotPdaOf(row.id);
+      if (!(await connection.getAccountInfo(lotPda))) {
+        // Место закрыли мимо расчёта: победитель подтвердил в приложении,
+        // решил арбитр или кто-то позвал возврат. Итог - по той транзакции.
+        const [last] = await connection.getSignaturesForAddress(lotPda, { limit: 1 });
+        const tx = last ? await connection.getTransaction(last.signature, { maxSupportedTransactionVersion: 0 }) : null;
+        const logs = (tx?.meta?.logMessages ?? []).join("\n");
+        const refunded =
+          logs.includes("Instruction: SellerClosesLot") ||
+          (logs.includes("Instruction: ArbiterDecides") &&
+            (await rest(`disputes?lot_id=eq.${row.id}&select=seller_bps`))[0]?.seller_bps === 0);
+        await mark(row.id, { status: refunded ? "refunded" : "won", settle_signature: last?.signature ?? "closed" });
+        console.log(`${label}: закрыт в приложении - ${refunded ? "возврат" : "выплата"}`);
+        continue;
+      }
+      const lot = await fetchLot(program, lotPda);
+      const sale = await fetchSale(program, lot.sale);
+      const t = now();
+      if (disputeLapsed(asSpot(lot), t)) {
+        const signature = await close(lotPda, lot, sale);
+        await mark(row.id, { status: "refunded", settle_signature: signature });
+        console.log(`${label}: арбитр молчал 30 дней - ставка победителю, ${signature}`);
+      } else if (lot.disputed) {
+        console.log(`${label}: спор, ждёт арбитра`);
+      } else if (proofMissed(asSale(sale), t)) {
+        const signature = await close(lotPda, lot, sale);
+        await mark(row.id, { status: "refunded", settle_signature: signature });
+        console.log(`${label}: пруфа нет к сроку - ставка победителю, ${signature}`);
+      } else if (pays(asSale(sale), t, false)) {
+        const signature = await pay(lotPda, lot, sale);
+        await mark(row.id, { settle_signature: signature });
+        console.log(`${label}: окно прошло - выплачен, ${signature}`);
+      }
+    } catch (error) {
       console.error(`${label}: не разобран -`, error);
       process.exitCode = 1;
     }
