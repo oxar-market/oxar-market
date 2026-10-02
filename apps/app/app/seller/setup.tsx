@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { publishCost, type PublishCost } from "@oxar/core";
 import type { PricingThing, SpotPlan, Worn } from "@/lib/seller";
 import { spotsPerSale } from "@/lib/publish";
+import { rentPerByte } from "@/lib/chain";
 import { Bar, SpotMark } from "./parts.tsx";
 
 /** Значения по умолчанию: те же, что у первой футболки. */
@@ -78,6 +79,12 @@ export function SetUpSpots({
   }
   const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0) && !early;
   const valid = plans.every((one) => one.plan !== null);
+  // Ставка залога - из сети: пока не пришла, стоимость не пишем, чтобы не
+  // показать устаревшую.
+  const [rate, setRate] = useState<number | null>(null);
+  useEffect(() => {
+    void rentPerByte().then(setRate, () => setRate(null));
+  }, []);
 
   return (
     <>
@@ -192,10 +199,10 @@ export function SetUpSpots({
       {failed && <p className="bad">Could not save the prices. Try again.</p>}
       {problem && <p className="bad">{problem}</p>}
 
-      {valid && (
+      {valid && rate !== null && (
         <p className="sl-plan-note">
           {costLine(
-            publishCost(spotsPerSale(plans.map((one) => (one.plan as { closesAt: string }).closesAt))),
+            publishCost(spotsPerSale(plans.map((one) => (one.plan as { closesAt: string }).closesAt)), rate),
           )}
         </p>
       )}
