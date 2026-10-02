@@ -289,7 +289,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         <>
           <div className="pick-head">
             <span className="pick-title">Pick a spot</span>
-            <span className="muted small">{thing.spots.length} spots</span>
+            <span className="muted small">{thing.spots.length === 1 ? "1 spot" : `${thing.spots.length} spots`}</span>
           </div>
           <div className="pick-grid" role="group" aria-label="Spots with prices">
             {thing.spots.map((spot) => {
