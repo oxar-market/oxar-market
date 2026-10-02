@@ -477,18 +477,21 @@ export default function Home() {
               <span className="live-name">{past.title}</span>
               <span className="live-cd">{usd(past.raisedCents)}</span>
               <span className="live-sub">
-                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} placed
-                {past.worn.by ? ` \u00b7 ${past.worn.by}` : ""}
-                {past.worn.where ? ` \u00b7 ${past.worn.where}` : ""}
-                {past.worn.when ? ` \u00b7 ${past.worn.when}` : ""}
-              </span>
-              <span className="live-sub">
-                raised, closed{" "}
+                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} placed, closed{" "}
                 {new Date(past.closedAt).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}
               </span>
+              <span className="live-sub">raised</span>
+              {/* Кто, где и когда - одной фразой через запятые, во всю ширину
+                  полосы: список через точки рвался на телефоне на четыре
+                  строки и читался как мусор. */}
+              {past.worn.by && (
+                <span className="live-sub live-worn">
+                  {[past.worn.by, past.worn.where, past.worn.when].filter(Boolean).join(", ")}
+                </span>
+              )}
             </a>
           </div>
         )}
