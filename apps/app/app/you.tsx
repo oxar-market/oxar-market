@@ -437,6 +437,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
 
       <p className="you-foot">
         <span className="build">build {BUILD}</span>
+        <a href="/how">how it works</a>
         <a href="/terms">terms</a>
       </p>
     </section>

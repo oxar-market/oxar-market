@@ -101,7 +101,7 @@ export default function Terms() {
         </ul>
 
         <p className="muted">
-          Questions: <a href="mailto:support@oxar.app">support@oxar.app</a>
+          Step by step: <a href="/how">how it works</a>. Questions: <a href="mailto:support@oxar.app">support@oxar.app</a>
         </p>
 
         <a className="ghost" href="/">
