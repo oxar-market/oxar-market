@@ -345,6 +345,8 @@ export type SpotPlan =
       stepCents: number;
       opensAt: string;
       closesAt: string;
+      /** До когда продавец покажет пруф: уходит в программу при открытии торга. */
+      proofBy?: string;
     }
   | {
       kind: "rent";
@@ -378,6 +380,7 @@ export async function savePlans(
         min_step_cents: plan.stepCents,
         opens_at: plan.opensAt,
         closes_at: plan.closesAt,
+        proof_by: plan.proofBy ?? null,
       });
       if (error) return false;
     } else {

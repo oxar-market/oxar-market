@@ -128,6 +128,39 @@ export type ChainSale = {
   provedAt: number;
 };
 
+/** `seller_opens_sale` из IDL. */
+const OPEN_SALE = new Uint8Array([28, 241, 5, 89, 66, 221, 82, 99]);
+/** Продление ставкой под конец - как у первой футболки. */
+export const EXTEND_SECONDS = 300;
+
+function i64(value: bigint): Uint8Array {
+  const out = new Uint8Array(8);
+  new DataView(out.buffer).setBigInt64(0, value, true);
+  return out;
+}
+
+/**
+ * Данные инструкции открытия торга: id, срок закрытия, продление, срок пруфа.
+ * Время на входе - миллисекунды, в программу уходят секунды. Порядок полей -
+ * как в IDL; тест сверяет байты с кодировщиком Anchor.
+ */
+export function openSaleData(saleId: string, closesAtMs: number, proofByMs: number): Uint8Array {
+  const parts = [
+    OPEN_SALE,
+    auctionBytes(saleId),
+    i64(BigInt(Math.floor(closesAtMs / 1000))),
+    i64(BigInt(EXTEND_SECONDS)),
+    i64(BigInt(Math.floor(proofByMs / 1000))),
+  ];
+  const out = new Uint8Array(parts.reduce((sum, one) => sum + one.length, 0));
+  let at = 0;
+  for (const part of parts) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
+}
+
 /** uuid лота в шестнадцать байт: ровно то, что программа кладёт в сиды. */
 export function auctionBytes(lotId: string): Uint8Array {
   const hex = lotId.replace(/-/g, "");

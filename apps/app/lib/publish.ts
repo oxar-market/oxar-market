@@ -10,7 +10,8 @@ import {
 } from "@solana/web3.js";
 import { Buffer } from "buffer";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { auctionBytes, connection, lotAddress, saleAddress, sendSigned, settled } from "./chain.ts";
+import { minProofDeadline } from "@oxar/core";
+import { auctionBytes, connection, lotAddress, openSaleData, saleAddress, sendSigned, settled } from "./chain.ts";
 import { db } from "./session.ts";
 
 /**
@@ -27,11 +28,8 @@ import { db } from "./session.ts";
  */
 
 const PROGRAM_ID = new PublicKey("4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe");
-/** `seller_opens_sale` и `seller_opens_lot` из IDL. */
-const OPEN_SALE = new Uint8Array([28, 241, 5, 89, 66, 221, 82, 99]);
+/** `seller_opens_lot` из IDL. */
 const OPEN_LOT = new Uint8Array([219, 91, 199, 189, 78, 98, 42, 205]);
-/** Продление ставкой под конец - как у первой футболки. */
-const EXTEND_SECONDS = 300;
 /**
  * Сколько мест в одной транзакции. Каждое место - два новых аккаунта (лот и
  * хранилище); больше трёх упирается в лимит вычислений и размер пакета.
@@ -56,23 +54,11 @@ function u64(value: bigint): Uint8Array {
   return out;
 }
 
-function i64(value: bigint): Uint8Array {
-  const out = new Uint8Array(8);
-  new DataView(out.buffer).setBigInt64(0, value, true);
-  return out;
-}
-
-function openSale(seller: PublicKey, saleId: string, closesAt: number): TransactionInstruction {
+function openSale(seller: PublicKey, saleId: string, closesAt: number, proofBy: number): TransactionInstruction {
   const [config] = PublicKey.findProgramAddressSync([Buffer.from("config")], PROGRAM_ID);
-  const data = Buffer.concat([
-    OPEN_SALE,
-    auctionBytes(saleId),
-    i64(BigInt(Math.floor(closesAt / 1000))),
-    i64(BigInt(EXTEND_SECONDS)),
-  ]);
   return new TransactionInstruction({
     programId: PROGRAM_ID,
-    data,
+    data: Buffer.from(openSaleData(saleId, closesAt, proofBy)),
     keys: [
       { pubkey: seller, isSigner: true, isWritable: true },
       { pubkey: saleAddress(saleId), isSigner: false, isWritable: true },
@@ -139,7 +125,7 @@ export async function publishAuctions(
   if (!db) return null;
   const { data: drafts } = await db
     .from("lots")
-    .select("id, reserve_cents, min_step_cents, closes_at")
+    .select("id, reserve_cents, min_step_cents, closes_at, proof_by")
     .eq("thing_id", thingId)
     .eq("status", "draft");
   if (!drafts || drafts.length === 0) return 0;
@@ -165,8 +151,13 @@ export async function publishAuctions(
     for (let at = 0; at < lotIxs.length; at += LOTS_PER_TX) {
       batches.push(lotIxs.slice(at, at + LOTS_PER_TX));
     }
+    // Срок пруфа - один на торг: самый поздний из его мест. Программа не
+    // примет срок раньше жёсткого конца торга (закрытие плюс час продления),
+    // и экран цен раньше его не даёт; без срока торг не открываем вовсе.
+    const proofBy = Math.max(...lots.map((lot) => (lot.proof_by ? Date.parse(lot.proof_by as string) : 0)));
+    if (proofBy / 1000 < minProofDeadline(Date.parse(closesAt) / 1000)) return null;
     // Торг открывается первой транзакцией вместе с первыми местами.
-    batches[0]!.unshift(openSale(seller, saleId, Date.parse(closesAt)));
+    batches[0]!.unshift(openSale(seller, saleId, Date.parse(closesAt), proofBy));
 
     for (const [index, instructions] of batches.entries()) {
       const { blockhash } = await connection.getLatestBlockhash();

@@ -7,6 +7,7 @@ import {
   lotAddress,
   minNextCents,
   minNextUnits,
+  openSaleData,
   saleAddress,
 } from "./chain.ts";
 
@@ -171,4 +172,14 @@ test("минимум в центах округляется вверх, а не 
 
   assert.equal(minNextUnits(led), 52_510_500n);
   assert.equal(minNextCents(led), 5252);
+});
+
+test("открытие торга кодируется байт в байт как у Anchor: срок, продление, срок пруфа", () => {
+  // Образец снят BorshInstructionCoder по IDL с пруфом: торг 7c9e6679-…,
+  // закрытие 1790512542, продление 300, срок пруфа 1793104542.
+  const data = openSaleData(SALE_ID, 1_790_512_542_000, 1_793_104_542_000);
+  assert.equal(
+    Buffer.from(data).toString("base64"),
+    "HPEFWULdUmN8nmZ5dCVA3pRL4H/B+Qrnng25agAAAAAsAQAAAAAAAJ6a4GoAAAAA",
+  );
 });
