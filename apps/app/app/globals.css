@@ -4648,6 +4648,21 @@ a.sl-pill {
   padding: 12px 14px;
 }
 
+/* Обводка фокуса - у обёртки, а не у поля внутри неё: иначе браузер
+   рисует свою рамку внутри пилюли. */
+.sl-input:focus-within {
+  border-color: var(--ink);
+}
+
+.sl-input input:focus,
+.sl-input textarea:focus {
+  outline: none;
+}
+
+.sl-input.soft.empty {
+  color: var(--mut);
+}
+
 .sl-input textarea {
   flex: 1;
   min-width: 0;

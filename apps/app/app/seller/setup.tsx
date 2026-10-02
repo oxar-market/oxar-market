@@ -64,7 +64,19 @@ export function SetUpSpots({
   // Кто носит вещь, где и когда: без этого покупатель места не знает,
   // кто увидит его логотип, и публиковать нельзя.
   const [worn, setWorn] = useState<Worn>(thing.worn);
-  const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0);
+  // «Когда» выбирают в календаре: первый день и, если вещь носят несколько
+  // дней, последний. В базу уходит текстом, как его читают покупатели.
+  // Носить вещь с логотипами можно только после торга: раньше дня закрытия
+  // календарь дней не даёт.
+  const [days, setDays] = useState({ from: "", to: "" });
+  const closesOn = drafts.map((one) => one.closes.slice(0, 10)).sort().at(-1) ?? "";
+  const early = days.from !== "" && days.from < closesOn;
+  function pickDays(next: { from: string; to: string }) {
+    const to = next.to && next.to > next.from ? next.to : "";
+    setDays({ from: next.from, to });
+    setWorn({ ...worn, when: next.from ? dayRange(next.from, to) : thing.worn.when });
+  }
+  const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0) && !early;
   const valid = plans.every((one) => one.plan !== null);
 
   return (
@@ -152,7 +164,22 @@ export function SetUpSpots({
         </div>
         <Text label="Who has it" value={worn.by} example="Our founder" onChange={(by) => setWorn({ ...worn, by })} />
         <Text label="Where" value={worn.where} example="Demo Day, Kyiv" onChange={(where) => setWorn({ ...worn, where })} />
-        <Text label="When" value={worn.when} example="October 10" onChange={(when) => setWorn({ ...worn, when })} />
+        <Day
+          label="When"
+          value={days.from}
+          shown={days.from ? dayRange(days.from, "") : worn.when || "Pick a day"}
+          min={closesOn}
+          onChange={(from) => pickDays({ from, to: days.to })}
+        />
+        <Day
+          label="Last day (optional)"
+          value={days.to}
+          shown={days.to ? dayRange(days.to, "") : "One day"}
+          min={days.from || closesOn}
+          disabled={!days.from}
+          onChange={(to) => pickDays({ from: days.from, to })}
+        />
+        {early && <p className="bad sl-plan-note">Pick a day after the auction closes - the logos are printed after it.</p>}
         <Note
           label="What makes it special (optional)"
           value={worn.about}
@@ -278,6 +305,56 @@ function Note({
       </span>
     </label>
   );
+}
+
+/** День из календаря: подпись словами, под ней невидимое поле даты. */
+function Day({
+  label,
+  value,
+  shown,
+  min,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  shown: string;
+  min: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="sl-field">
+      {label}
+      <span className={value ? "sl-input soft sl-when" : "sl-input soft sl-when empty"}>
+        {shown}
+        <input
+          className="sl-pick"
+          type="date"
+          value={value}
+          min={min}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </span>
+    </label>
+  );
+}
+
+/**
+ * «October 10», «October 12 - 14», «October 30 - November 2». Год - только
+ * если не текущий: событие через месяц читается без него.
+ */
+function dayRange(from: string, to: string): string {
+  const a = new Date(`${from}T12:00`);
+  const b = to ? new Date(`${to}T12:00`) : null;
+  const year = (b ?? a).getFullYear() === new Date().getFullYear() ? "" : `, ${(b ?? a).getFullYear()}`;
+  const month = (at: Date) => at.toLocaleDateString("en-US", { month: "long" });
+  if (!b) return `${month(a)} ${a.getDate()}${year}`;
+  if (b.getMonth() === a.getMonth() && b.getFullYear() === a.getFullYear()) {
+    return `${month(a)} ${a.getDate()} - ${b.getDate()}${year}`;
+  }
+  return `${month(a)} ${a.getDate()} - ${month(b)} ${b.getDate()}${year}`;
 }
 
 function When({
