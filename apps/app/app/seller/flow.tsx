@@ -38,7 +38,6 @@ import { MarkSpots } from "./mark.tsx";
 import { Bar } from "./parts.tsx";
 import { RateBuyer, RateSeller } from "./rate.tsx";
 import { RequestView } from "./request.tsx";
-import { Sent } from "./sent.tsx";
 import { SetUpSpots } from "./setup.tsx";
 import { db } from "@/lib/session";
 import { Reviews } from "../reviews.tsx";
@@ -49,7 +48,6 @@ type View =
   | { name: "camera" }
   | { name: "desktop" }
   | { name: "mark"; photos: (Blob | string)[]; previews: string[] }
-  | { name: "sent"; photos: number; spots: number }
   | { name: "setup"; thing: PricingThing }
   | { name: "request"; request: SellerRequest }
   | { name: "rate"; deal: DealToRate }
@@ -148,15 +146,19 @@ export function SellerFlow({
           failed={failed}
           onSend={async (spots, title) => {
             setBusy(true);
-            const ok = await sendThing(view.photos, spots, wallet?.address ?? null, title);
-            setBusy(false);
-            if (ok) go({ name: "sent", photos: view.photos.length, spots: spots.length });
-            else setFailed(true);
+            // Вещь сохраняется черновиком, и продавец сразу ставит цены и
+            // пишет «кто, где, когда»: на ревью она уходит только публикацией.
+            const id = await sendThing(view.photos, spots, wallet?.address ?? null, title);
+            const thing = id ? await loadPricingThing(id) : null;
+            if (thing) go({ name: "setup", thing });
+            else if (id) home();
+            else {
+              setBusy(false);
+              setFailed(true);
+            }
           }}
         />
       );
-    case "sent":
-      return column(<Sent photos={view.photos} spots={view.spots} onBack={home} />);
     case "setup":
       return column(
         <SetUpSpots

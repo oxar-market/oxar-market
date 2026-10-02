@@ -4320,81 +4320,6 @@ a.sl-pill {
   cursor: pointer;
 }
 
-/* ── Отправлено: голограмма листинга и шаги. ── */
-
-.sl-holo {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  width: 100%;
-  height: 200px;
-  border: 1px solid rgba(63, 209, 168, 0.35);
-  border-radius: 20px;
-  background: radial-gradient(70% 90% at 50% 40%, #102520 0%, #0a1311 100%);
-}
-
-.sl-holo div {
-  width: 168px;
-  height: 128px;
-  border: 1px solid rgba(63, 209, 168, 0.55);
-  border-radius: 12px;
-  background: repeating-linear-gradient(135deg, rgba(63, 209, 168, 0.18) 0 12px, rgba(63, 209, 168, 0.04) 12px 24px);
-  box-shadow: 0 0 36px rgba(63, 209, 168, 0.25);
-}
-
-.sl-holo span {
-  font-size: 0.8125rem;
-  color: #6fe0bf;
-}
-
-.sl-steps {
-  padding: 4px 18px;
-}
-
-.sl-step {
-  display: grid;
-  grid-template-columns: 8px 1fr;
-  gap: 2px 20px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--line2);
-}
-
-.sl-step:last-child {
-  border-bottom: 0;
-}
-
-.sl-step i {
-  grid-row: 1 / 3;
-  align-self: start;
-  margin-top: 7px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ink);
-}
-
-.sl-step i.now {
-  background: #3fd1a8;
-}
-
-.sl-step i.later {
-  background: transparent;
-  border: 1.5px solid var(--mut);
-}
-
-.sl-step b {
-  font-size: 0.9375rem;
-  font-weight: 400;
-}
-
-.sl-step small {
-  font-size: 0.8125rem;
-  color: var(--mut);
-}
-
 /* ── Десктоп: QR ведёт на камеру телефона. ── */
 
 .sl-desk {
@@ -5110,6 +5035,33 @@ a.sl-pill {
 .ad-card label.sl-btn {
   cursor: pointer;
   text-align: center;
+}
+
+/* Цены продавца по местам: место, резерв и шаг, ниже сроки. */
+.ad-prices {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ad-prices li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line2);
+  font-size: 0.875rem;
+}
+
+.ad-prices li:last-child {
+  border-bottom: 0;
+}
+
+.ad-prices small {
+  grid-column: 1 / 3;
+  color: var(--mut);
 }
 
 .ad-photos {

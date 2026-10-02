@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { formatUsd } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import {
   awaitsReview,
@@ -101,13 +102,22 @@ export function Admin() {
             <button type="button" key={one.id} className="sl-thing" onClick={() => setOpen(one.id)}>
               <Thumb src={one.photos[0] ?? null} />
               <span className="sl-thing-name">{one.title}</span>
-              <span
-                className={`sl-state ${one.active ? "live" : one.declinedReason ? "declined" : "preparing"}`}
-              >
-                <i />
-                {/* Три слова на все вещи, наши тоже: ждёт, одобрена, отклонена. */}
-                {one.active ? "APPROVED" : one.declinedReason ? "DECLINED" : "AWAITING APPROVAL"}
-              </span>
+              {/* Черновик - продавец ещё не поставил цены и не опубликовал:
+                  ждать его одобрения не надо. */}
+              {!one.active && !one.declinedReason && !one.published && !one.house ? (
+                <span className="sl-state idle">
+                  <i />
+                  DRAFT
+                </span>
+              ) : (
+                <span
+                  className={`sl-state ${one.active ? "live" : one.declinedReason ? "declined" : "preparing"}`}
+                >
+                  <i />
+                  {/* Три слова на все вещи, наши тоже: ждёт, одобрена, отклонена. */}
+                  {one.active ? "APPROVED" : one.declinedReason ? "DECLINED" : "AWAITING APPROVAL"}
+                </span>
+              )}
               <span className="sl-thing-sub">
                 {one.spots.length} spots · {one.model ? "3D" : "no 3D"}
               </span>
@@ -431,6 +441,31 @@ function AdminThingView({
         </label>
       </div>
 
+      {/* Цены продавца: резерв, шаг и сроки проверяем до одобрения. */}
+      {!thing.house && thing.prices.length > 0 && (
+        <div className="sl-card ad-card">
+          <h3>Prices</h3>
+          <ul className="ad-prices">
+            {thing.spots.map((spot) => {
+              const price = thing.prices.find((one) => one.spotId === spot.id);
+              if (!price) return null;
+              return (
+                <li key={spot.id}>
+                  <b>{spot.label}</b>
+                  <span>
+                    {formatUsd(price.reserveCents)} reserve · {formatUsd(price.stepCents)} step
+                  </span>
+                  <small>
+                    {price.opensAt ? `${moment(price.opensAt)} - ` : "Until "}
+                    {moment(price.closesAt)}
+                  </small>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {!thing.house && (
       <div className="sl-card ad-card">
         <h3>Review</h3>
@@ -441,12 +476,13 @@ function AdminThingView({
         ) : (
           <p className="muted">
             {thing.published
-              ? "The seller published the auction. Approve it to show it on the Market."
-              : "Not published yet. Approve now and it shows on the Market once the seller publishes."}
+              ? "The seller published the auction. Check the prices and approve it to show it on the Market."
+              : "Draft. The seller has not set prices and published yet - approve once they do."}
           </p>
         )}
-        {/* Отклонённую не одобряют: продавцу остаётся только удалить её. */}
-        {!thing.active && !thing.declinedReason && (
+        {/* Отклонённую не одобряют: продавцу остаётся только удалить её.
+            Черновик тоже: без цен и «кто, где, когда» одобрять нечего. */}
+        {!thing.active && !thing.declinedReason && thing.published && (
           <button
             type="button"
             className="sl-btn dark"
@@ -640,4 +676,9 @@ function PhotoViewer({
       </div>
     </div>
   );
+}
+
+/** «Oct 2, 12:00» - время торга в часах админа. */
+function moment(at: string): string {
+  return new Date(at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 }

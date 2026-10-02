@@ -69,7 +69,7 @@ export function SetUpSpots({
 
   return (
     <>
-      <Bar title="Set up spots" onBack={onBack} />
+      <Bar title="Set up spots" onBack={onBack} step="3 of 3" />
 
       <div className="sl-card sl-thing-card">
         <div>
@@ -175,7 +175,7 @@ export function SetUpSpots({
 
       <div className="sl-card sl-publish">
         <b>{drafts.length === 1 ? "1 by auction" : `${drafts.length} by auction`}</b>
-        <span>You can edit until a spot opens</span>
+        <span>Then we review it and put it on the Market, usually within a day</span>
         <button
           type="button"
           className="sl-btn dark"

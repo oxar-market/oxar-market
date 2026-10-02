@@ -179,7 +179,7 @@ function line(one: SellerThing, now: number): string {
         one.rentedUntil ? `, until ${shortDay(one.rentedUntil)}` : ""
       }`;
     case "idle":
-      return "Spots not priced yet. Set up spots";
+      return "Draft. Set prices and publish to send it for review";
     case "preparing":
       return "We build the 3D listing, usually within a day";
   }
