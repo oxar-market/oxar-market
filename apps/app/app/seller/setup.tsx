@@ -85,6 +85,10 @@ export function SetUpSpots({
   useEffect(() => {
     void rentPerByte().then(setRate, () => setRate(null));
   }, []);
+  const cost =
+    valid && rate !== null
+      ? publishCost(spotsPerSale(plans.map((one) => (one.plan as { closesAt: string }).closesAt)), rate)
+      : null;
 
   return (
     <>
@@ -199,11 +203,11 @@ export function SetUpSpots({
       {failed && <p className="bad">Could not save the prices. Try again.</p>}
       {problem && <p className="bad">{problem}</p>}
 
-      {valid && rate !== null && (
+      {/* Сколько нужно на кошельке - на самой кнопке; здесь - что из этого вернётся. */}
+      {cost && (
         <p className="sl-plan-note">
-          {costLine(
-            publishCost(spotsPerSale(plans.map((one) => (one.plan as { closesAt: string }).closesAt)), rate),
-          )}
+          Most of it comes back: {sol(cost.backLamports)} SOL is a deposit that returns to your
+          wallet when the auction ends. Only {sol(cost.keptLamports)} SOL pays the network.
         </p>
       )}
 
@@ -216,7 +220,7 @@ export function SetUpSpots({
           disabled={!valid || !described || publishing}
           onClick={() => onPublish(plans as { spotId: string; plan: SpotPlan }[], worn)}
         >
-          {publishing ? "Publishing…" : "Publish"}
+          {publishing ? "Publishing…" : cost ? `Publish · ${sol(cost.totalLamports)} SOL` : "Publish"}
         </button>
       </div>
 
@@ -459,7 +463,8 @@ function toPlan(one: Draft): SpotPlan | null {
   };
 }
 
-const sol = (lamports: number) => (lamports / 1e9).toFixed(3);
+// Четыре знака: с тремя части не складывались в сумму на кнопке.
+const sol = (lamports: number) => (lamports / 1e9).toFixed(4);
 
 /**
  * Во что обойдётся публикация - честно: залог за места вернётся после
