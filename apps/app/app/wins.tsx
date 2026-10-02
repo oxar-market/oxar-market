@@ -7,7 +7,7 @@ import { APPEAL_SECONDS, ARBITER_SECONDS, formatUsd, spotStage } from "@oxar/cor
 import { WALLET_CHAIN } from "@/lib/chain";
 import { photoUrl } from "@/lib/seller";
 import { confirmWin, disputeWin, loadMyWins, type Win } from "@/lib/wins";
-import type { MyStand } from "@/lib/auction";
+import { spotName, type MyStand } from "@/lib/auction";
 
 /**
  * Выигранные места под защитой покупателя. Деньги держит программа, пока
@@ -46,9 +46,6 @@ export function YourWins({ stands }: { stands: MyStand[] }) {
     </>
   );
 }
-
-/** Подпись места: у нашей футболки «01», у вещи продавца уже «Spot 1». */
-const spotName = (label: string) => (/^spot\b/i.test(label) ? label : `Spot ${label}`);
 
 function WinCard({
   win,

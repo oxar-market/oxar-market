@@ -6,7 +6,7 @@ import { PublicKey } from "@solana/web3.js";
 import { avatarLetter, formatUsd } from "@oxar/core";
 import { BUILD } from "@/lib/build";
 import { connection, walletUnits } from "@/lib/chain";
-import { loadMyStands, type MyStand } from "@/lib/auction";
+import { loadMyStands, spotName, type MyStand } from "@/lib/auction";
 import { db } from "@/lib/session";
 import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
@@ -311,7 +311,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
             <span className="outbid-when">closes in {left(one.closesAt, now)}</span>
           </div>
           <span className="outbid-title">
-            Spot {one.spot} · {one.thing}
+            {spotName(one.spot)} · {one.thing}
           </span>
           <div className="outbid-grid">
             <div>
@@ -348,7 +348,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
           {leading.map((one) => (
             <div className="leading-row" key={one.lotId}>
               <div className="leading-what">
-                <span>Spot {one.spot}</span>
+                <span>{spotName(one.spot)}</span>
                 <span className="muted small">{one.thing}</span>
               </div>
               <span className="tagchip">LEADING</span>
@@ -389,7 +389,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
               <div className="hist-row" key={one.lotId}>
                 <span className="hist-date">{day(one.closesAt)}</span>
                 <span className="hist-what">
-                  Spot {one.spot} · {one.thing}
+                  {spotName(one.spot)} · {one.thing}
                 </span>
                 <span
                   className="tagchip"

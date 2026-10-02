@@ -158,6 +158,11 @@ export async function loadTopBids(
   return top;
 }
 
+/** Подпись места для человека: у нашей футболки «01», у вещи продавца уже «Spot 1». */
+export function spotName(label: string): string {
+  return /^spot\b/i.test(label) ? label : `Spot ${label}`;
+}
+
 /** Где я стою на лоте: живая ставка или строка истории. */
 export type MyStand = {
   lotId: string;

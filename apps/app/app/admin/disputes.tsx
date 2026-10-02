@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { arbiterSplit, formatUsd } from "@oxar/core";
 import { decideDispute, loadAwaitingProof, loadDisputes, moveProof, type AwaitingProof, type Dispute } from "@/lib/arbiter";
 import { photoUrl } from "@/lib/seller";
+import { spotName } from "@/lib/auction";
 
 /**
  * Арбитр: споры по местам и сроки пруфа. Подпись - Phantom с ключом админа
@@ -73,7 +74,7 @@ function DisputeCard({ dispute, onDone }: { dispute: Dispute; onDone: () => void
   return (
     <div className="sl-card ad-card">
       <h3>
-        {/^spot\b/i.test(dispute.spot) ? dispute.spot : `Spot ${dispute.spot}`} · {dispute.thing}
+        {spotName(dispute.spot)} · {dispute.thing}
       </h3>
       <p className="muted">
         Bid {formatUsd(dispute.cents)} · disputed {new Date(dispute.createdAt).toLocaleString("en-US")}
