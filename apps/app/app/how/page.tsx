@@ -43,7 +43,7 @@ export default function How() {
           </li>
           <li>
             <strong>Proof.</strong> The seller shows the thing in use with your logo by the proof
-            day. You get a notification and 72 hours to check it.
+            day. If notifications are on, you get one. You have 72 hours to check it.
           </li>
           <li>
             <strong>Release or dispute.</strong> If it looks right, release the payment and the

@@ -565,6 +565,10 @@ h1 {
 .win-link {
   font-size: 0.875rem;
   word-break: break-all;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: #c9c9c4;
+  text-underline-offset: 0.2em;
 }
 
 .win-actions {
