@@ -68,6 +68,8 @@ export type Dispute = {
   thing: string;
   reason: string;
   createdAt: string;
+  /** Ставка победителя в центах - из базы: аккаунт места после решения закрыт. */
+  cents: number;
   sellerBps: number | null;
   saleAddress: PublicKey;
   lotAddress: PublicKey;
@@ -92,12 +94,15 @@ export async function loadDisputes(): Promise<Dispute[]> {
     things: { title?: string } | null;
   });
   const sales = [...new Set(lots.map((one) => one.chain_sale))];
-  const [{ data: proofs }, accounts, chainSales] = await Promise.all([
+  const [{ data: proofs }, accounts, chainSales, { data: bids }] = await Promise.all([
     db.from("proofs").select("sale, photos, links, note, hash, signature, proved_at").in("sale", sales),
     connection.getMultipleAccountsInfo(lots.map((one) => new PublicKey(one.chain_lot))).catch(() => null),
     Promise.all(sales.map(async (sale) => [sale, await readSale(new PublicKey(sale)).catch(() => null)] as const)),
+    db.from("lot_bids").select("lot_id, amount_cents").in("lot_id", rows.map((row) => row.lot_id)),
   ]);
   const saleMap = new Map(chainSales);
+  const topCents = (lotId: string) =>
+    Math.max(0, ...(bids ?? []).filter((one) => one.lot_id === lotId).map((one) => one.amount_cents as number));
   const list = rows.map((row, at) => {
     const lot = lots[at]!;
     const proof = (proofs ?? []).find((one) => one.sale === lot.chain_sale);
@@ -107,6 +112,7 @@ export async function loadDisputes(): Promise<Dispute[]> {
       thing: lot.things?.title ?? "",
       reason: row.reason as string,
       createdAt: row.created_at as string,
+      cents: topCents(row.lot_id as string),
       sellerBps: (row.seller_bps as number | null) ?? null,
       saleAddress: new PublicKey(lot.chain_sale),
       lotAddress: new PublicKey(lot.chain_lot),

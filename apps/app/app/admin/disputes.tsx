@@ -73,10 +73,10 @@ function DisputeCard({ dispute, onDone }: { dispute: Dispute; onDone: () => void
   return (
     <div className="sl-card ad-card">
       <h3>
-        Spot {dispute.spot} · {dispute.thing}
+        {/^spot\b/i.test(dispute.spot) ? dispute.spot : `Spot ${dispute.spot}`} · {dispute.thing}
       </h3>
       <p className="muted">
-        Bid {usd(top)} · disputed {new Date(dispute.createdAt).toLocaleString("en-US")}
+        Bid {formatUsd(dispute.cents)} · disputed {new Date(dispute.createdAt).toLocaleString("en-US")}
       </p>
       <p>
         <b>Winner says:</b> {dispute.reason}

@@ -47,6 +47,9 @@ export function YourWins({ stands }: { stands: MyStand[] }) {
   );
 }
 
+/** Подпись места: у нашей футболки «01», у вещи продавца уже «Spot 1». */
+const spotName = (label: string) => (/^spot\b/i.test(label) ? label : `Spot ${label}`);
+
 function WinCard({
   win,
   winner,
@@ -68,7 +71,7 @@ function WinCard({
   const now = Math.floor(Date.now() / 1000);
   const head = (
     <span className="win-what">
-      Spot {win.spot} · {win.thing} · {formatUsd(win.cents)}
+      {spotName(win.spot)} · {win.thing} · {formatUsd(win.cents)}
     </span>
   );
 
