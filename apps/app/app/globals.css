@@ -5375,23 +5375,6 @@ a.sl-pill {
   height: 100%;
 }
 
-/* Контур, который ведут прямо сейчас: линия поверх снимка. */
-.sl-draft {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.sl-draft polyline {
-  fill: color-mix(in srgb, #e0381c 10%, transparent);
-  stroke: #e0381c;
-  stroke-width: 2.5px;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
 
 /* Выбранное обведённое место: подсвечивается сама фигура, а не рамка. */
 .sl-spot.ls-spot.shaped.on {

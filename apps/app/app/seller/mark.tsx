@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { outlineBox, simplifyOutline, type Point } from "@oxar/core";
-import type { Marked } from "@/lib/seller";
+import type { Marked, Rect } from "@/lib/seller";
 import { Bar, SpotMark } from "./parts.tsx";
 
 /** Меньше этого место не считается: случайное касание, а не разметка. */
 const MIN_SIDE = 0.04;
 
 /**
- * Разметка мест: обводишь пальцем или мышью - появляется место. Доли кадра, а не
+ * Разметка мест: тянешь по снимку - появляется прямоугольное место. Обводка
+ * от руки давала кривые фигуры там, где печатают ровную нашивку. Доли кадра, а не
  * пиксели: снимок показывают разного размера, а место обязано остаться на
  * той же части вещи.
  *
@@ -33,9 +33,9 @@ export function MarkSpots({
   const [spots, setSpots] = useState<Marked[]>([]);
   const [shown, setShown] = useState(0);
   const [title, setTitle] = useState("");
-  // Контур, который сейчас ведут пальцем: точки в долях кадра.
-  const [draft, setDraft] = useState<Point[] | null>(null);
-  const path = useRef<Point[] | null>(null);
+  // Рамка, которую сейчас тянут: от точки касания до пальца.
+  const [draft, setDraft] = useState<Rect | null>(null);
+  const from = useRef<{ x: number; y: number } | null>(null);
 
   // Рамку тянут пальцем, часто от левого края - а там же живёт жест
   // «назад» браузера (Safari, встроенные браузеры кошельков). touch-action
@@ -55,20 +55,29 @@ export function MarkSpots({
     };
   }, []);
 
-  function at(event: React.PointerEvent): Point {
+  function at(event: React.PointerEvent): { x: number; y: number } {
     const frame = box.current!.getBoundingClientRect();
-    return [
-      Math.min(1, Math.max(0, (event.clientX - frame.left) / frame.width)),
-      Math.min(1, Math.max(0, (event.clientY - frame.top) / frame.height)),
-    ];
+    return {
+      x: Math.min(1, Math.max(0, (event.clientX - frame.left) / frame.width)),
+      y: Math.min(1, Math.max(0, (event.clientY - frame.top) / frame.height)),
+    };
+  }
+
+  function rectOf(a: { x: number; y: number }, b: { x: number; y: number }): Rect {
+    return {
+      x: Math.min(a.x, b.x),
+      y: Math.min(a.y, b.y),
+      w: Math.abs(a.x - b.x),
+      h: Math.abs(a.y - b.y),
+    };
   }
 
   return (
     <>
       <Bar title="Mark the spots" onBack={onBack} step="2 of 3" />
       <p className="sl-lead">
-        Draw around each spot you want to sell - with a finger or the mouse.
-        Mark flat areas that stay visible when you use the thing.
+        Drag on the photo to mark each spot you want to sell - with a finger
+        or the mouse. Mark flat areas that stay visible when you use the thing.
       </p>
 
       {photos.length > 1 && (
@@ -96,30 +105,18 @@ export function MarkSpots({
         ref={box}
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
-          path.current = [at(event)];
-          setDraft(path.current);
+          from.current = at(event);
+          setDraft(null);
         }}
         onPointerMove={(event) => {
-          const points = path.current;
-          if (!points) return;
-          // Точки гуще полупроцента кадра - это дрожь, а не форма.
-          const next = at(event);
-          const last = points[points.length - 1]!;
-          if (Math.hypot(next[0] - last[0], next[1] - last[1]) < 0.005) return;
-          path.current = [...points, next];
-          setDraft(path.current);
+          if (from.current) setDraft(rectOf(from.current, at(event)));
         }}
-        onPointerUp={() => {
-          const points = path.current;
-          path.current = null;
+        onPointerUp={(event) => {
+          if (!from.current) return;
+          const rect = rectOf(from.current, at(event));
+          from.current = null;
           setDraft(null);
-          if (!points || points.length < 3) return;
-          // Контур замыкается сам: отпустил палец - фигура готова.
-          const outline = simplifyOutline(points, 0.004);
-          const rect = outlineBox(outline);
-          if (rect.w >= MIN_SIDE && rect.h >= MIN_SIDE) {
-            setSpots((was) => [...was, { ...rect, photo: shown, outline }]);
-          }
+          if (rect.w >= MIN_SIDE && rect.h >= MIN_SIDE) setSpots((was) => [...was, { ...rect, photo: shown }]);
         }}
       >
         {photos[shown] ? <img src={photos[shown]} alt="" /> : <span className="sl-photo-cap">Your photo</span>}
@@ -128,11 +125,7 @@ export function MarkSpots({
             <SpotMark key={index} rect={spot} outline={spot.outline} number={index + 1} />
           ) : null,
         )}
-        {draft && (
-          <svg className="sl-draft" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-            <polyline points={draft.map(([x, y]) => `${x * 100},${y * 100}`).join(" ")} />
-          </svg>
-        )}
+        {draft && <SpotMark rect={draft} number={spots.length + 1} />}
       </div>
 
       <div className="sl-marked">
