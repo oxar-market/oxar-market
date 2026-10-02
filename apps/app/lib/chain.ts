@@ -13,6 +13,7 @@ import { Buffer } from "buffer";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import { USDC_DECIMALS, toUsdcBaseUnits } from "@oxar/core";
@@ -126,6 +127,8 @@ export type ChainSale = {
   proofDeadline: number;
   /** Когда пришёл пруф; ноль - ещё нет. */
   provedAt: number;
+  /** Срок пруфа при открытии торга: от него потолок переносов. */
+  firstProofDeadline: number;
 };
 
 /** `seller_opens_sale` из IDL. */
@@ -282,8 +285,9 @@ export function decodeSale(data: Uint8Array): ChainSale {
   const hardClosesAt = Number(view.getBigInt64(at, true));
   const proofDeadline = Number(view.getBigInt64(at + 8, true));
   const provedAt = Number(view.getBigInt64(at + 16, true));
+  const firstProofDeadline = Number(view.getBigInt64(at + 24, true));
 
-  return { seller, platform, closesAt, extendSeconds, feeBps, hardClosesAt, proofDeadline, provedAt };
+  return { seller, platform, closesAt, extendSeconds, feeBps, hardClosesAt, proofDeadline, provedAt, firstProofDeadline };
 }
 
 export async function readLot(lotId: string): Promise<ChainLot | null> {
@@ -473,6 +477,16 @@ const CONFIG = PublicKey.findProgramAddressSync([new TextEncoder().encode("confi
 
 function vaultOf(lot: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync([new TextEncoder().encode("lot_vault"), lot.toBytes()], PROGRAM_ID)[0];
+}
+
+/**
+ * Завести счёт монеты получателю, если его нет; есть - инструкция пустая.
+ * Программа платит только на готовый счёт, а закрыть свой счёт может любой -
+ * например, победитель, чтобы застопорить решение арбитра. Создать счёт за
+ * другого может кто угодно, поэтому перед каждой выплатой мы заводим его сами.
+ */
+export function ensureAccount(payer: PublicKey, mint: PublicKey, owner: PublicKey): TransactionInstruction {
+  return createAssociatedTokenAccountIdempotentInstruction(payer, ata(mint, owner), owner, mint);
 }
 
 /** Продавец присылает пруф торга: подпись продавца, торг меняется. */

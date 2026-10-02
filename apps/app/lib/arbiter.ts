@@ -4,6 +4,7 @@ import { ComputeBudgetProgram, PublicKey, TransactionMessage, VersionedTransacti
 import {
   connection,
   decideInstruction,
+  ensureAccount,
   decodeLot,
   moveProofInstruction,
   readSale,
@@ -36,7 +37,7 @@ function phantom(): Phantom | null {
 
 /** Подписать в Phantom после холостого прогона. Возвращает подпись или текст ошибки. */
 async function signInPhantom(
-  build: (arbiter: PublicKey) => ReturnType<typeof decideInstruction>,
+  build: (arbiter: PublicKey) => ReturnType<typeof decideInstruction>[],
 ): Promise<{ ok: true; signature: string } | { ok: false; why: string }> {
   const wallet = phantom();
   if (!wallet) return { ok: false, why: "Phantom is not in this browser." };
@@ -46,7 +47,7 @@ async function signInPhantom(
     new TransactionMessage({
       payerKey: arbiter,
       recentBlockhash: blockhash,
-      instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }), build(arbiter)],
+      instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: 250_000 }), ...build(arbiter)],
     }).compileToV0Message(),
   );
   const sim = await connection.simulateTransaction(transaction, { sigVerify: false });
@@ -136,9 +137,15 @@ export async function loadDisputes(): Promise<Dispute[]> {
 
 export async function decideDispute(dispute: Dispute, sellerBps: number) {
   if (!db || !dispute.sale || !dispute.lot) return { ok: false as const, why: "This spot is already settled." };
-  const result = await signInPhantom((arbiter) =>
-    decideInstruction(arbiter, dispute.saleAddress, dispute.sale!, dispute.lotAddress, dispute.lot!, sellerBps),
-  );
+  const { sale, lot } = dispute;
+  // Все три счёта-получателя заводим, если их нет: победитель мог закрыть
+  // свой, чтобы решение не прошло.
+  const result = await signInPhantom((arbiter) => [
+    ensureAccount(arbiter, lot.mint, sale.seller),
+    ensureAccount(arbiter, lot.mint, sale.platform),
+    ensureAccount(arbiter, lot.mint, lot.topBidder!),
+    decideInstruction(arbiter, dispute.saleAddress, sale, dispute.lotAddress, lot, sellerBps),
+  ]);
   if (result.ok) {
     await db
       .from("disputes")
@@ -174,7 +181,7 @@ export async function loadAwaitingProof(): Promise<AwaitingProof[]> {
 
 export async function moveProof(sale: PublicKey, newDeadlineMs: number) {
   if (!db) return { ok: false as const, why: "No connection." };
-  const result = await signInPhantom((arbiter) => moveProofInstruction(arbiter, sale, newDeadlineMs));
+  const result = await signInPhantom((arbiter) => [moveProofInstruction(arbiter, sale, newDeadlineMs)]);
   if (result.ok) {
     await db.rpc("admin_moves_proof_by", { sale: sale.toBase58(), proof_by: new Date(newDeadlineMs).toISOString() });
   }

@@ -170,6 +170,8 @@ async function main() {
 
   // Закрыть место: без победителя - вернуть ставку ниже резерва, с
   // победителем - вернуть ставку, если пруф пропущен или арбитр молчал.
+  // Счёт участника заводим, если его нет: закрыв свой счёт, он застопорил
+  // бы возврат самому себе - и закрытие места вместе с ним.
   const close = (lotPda: PublicKey, lot: ChainLot, sale: ChainSale) =>
     program.methods
       .sellerClosesLot()
@@ -182,7 +184,19 @@ async function main() {
         mint: lot.mint,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
-      .preInstructions([sellerAccount(lot, sale)])
+      .preInstructions([
+        sellerAccount(lot, sale),
+        ...(lot.topBidder
+          ? [
+              createAssociatedTokenAccountIdempotentInstruction(
+                crank.publicKey,
+                getAssociatedTokenAddressSync(lot.mint, lot.topBidder as PublicKey),
+                lot.topBidder as PublicKey,
+                lot.mint,
+              ),
+            ]
+          : []),
+      ])
       .rpc();
 
   const mark = (id: string, patch: Record<string, unknown>) =>

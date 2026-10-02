@@ -41,6 +41,7 @@ export { publishCost, type PublishCost } from "./publish.ts";
 export {
   APPEAL_SECONDS,
   ARBITER_SECONDS,
+  MAX_PROOF_MOVE_SECONDS,
   TOTAL_EXTEND_SECONDS,
   appealOpen,
   arbiterSplit,

@@ -44,7 +44,7 @@ const LED =
  * кодировщиком по IDL с пруфом и спором.
  */
 const SALE_PROVED =
-  "ykDoq7KsIrd8nmZ5dCVA3pRL4H/B+Qrn2+g6gbKOOebbyHtHcKOslUh48W55LOY181WGSOgomm70l+g6ibB+eagqctazkiXrKLkJPDjePdFaa+2ksZRolZ4NuWoAAAAALAEAAAAAAADoA/+uG7lqAAAAAJ6a4GoAAAAAAMDPagAAAAAAAAAAAAAAAA==";
+  "ykDoq7KsIrd8nmZ5dCVA3pRL4H/B+Qrn2+g6gbKOOebbyHtHcKOslUh48W55LOY181WGSOgomm70l+g6ibB+eagqctazkiXrKLkJPDjePdFaa+2ksZRolZ4NuWoAAAAALAEAAAAAAADoA/+uG7lqAAAAAJ6a4GoAAAAAAMDPagAAAAAgYddqAAAAAA==";
 
 /** Место со ставкой, которое победитель оспорил: флаг и время спора - в прежнем запасе. */
 const LOT_DISPUTED =
@@ -110,6 +110,8 @@ test("торг с пруфом читается целиком: жёсткий �
   assert.equal(sale.hardClosesAt, 1_790_516_142);
   assert.equal(sale.proofDeadline, 1_793_104_542);
   assert.equal(sale.provedAt, 1_792_000_000);
+  // Срок при открытии - от него потолок переносов; в образце перенос уже был.
+  assert.equal(sale.firstProofDeadline, 1_792_500_000);
 });
 
 test("оспоренное место читается с флагом и временем спора", () => {

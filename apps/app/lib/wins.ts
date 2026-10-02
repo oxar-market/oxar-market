@@ -4,6 +4,7 @@ import { ComputeBudgetProgram, PublicKey, TransactionMessage, VersionedTransacti
 import {
   connection,
   decodeLot,
+  ensureAccount,
   disputeInstruction,
   payInstruction,
   readSale,
@@ -90,13 +91,13 @@ export async function loadMyWins(
   });
 }
 
-async function send(payer: PublicKey, sign: Signer, instruction: ReturnType<typeof payInstruction>): Promise<string | null> {
+async function send(payer: PublicKey, sign: Signer, ...instructions: ReturnType<typeof payInstruction>[]): Promise<string | null> {
   const { blockhash } = await connection.getLatestBlockhash();
   const transaction = new VersionedTransaction(
     new TransactionMessage({
       payerKey: payer,
       recentBlockhash: blockhash,
-      instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: 100_000 }), instruction],
+      instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: 150_000 }), ...instructions],
     }).compileToV0Message(),
   );
   try {
@@ -110,7 +111,16 @@ async function send(payer: PublicKey, sign: Signer, instruction: ReturnType<type
 /** «Looks good»: победитель сам выплачивает своё место продавцу, не дожидаясь окна. */
 export async function confirmWin(win: Win, winner: PublicKey, sign: Signer): Promise<boolean> {
   if (!win.sale || !win.lot) return false;
-  return (await send(winner, sign, payInstruction(winner, win.saleAddress, win.sale, win.lotAddress, win.lot))) !== null;
+  // Счета продавца и площадки - заводим, если их нет: иначе выплата упадёт.
+  return (
+    (await send(
+      winner,
+      sign,
+      ensureAccount(winner, win.lot.mint, win.sale.seller),
+      ensureAccount(winner, win.lot.mint, win.sale.platform),
+      payInstruction(winner, win.saleAddress, win.sale, win.lotAddress, win.lot),
+    )) !== null
+  );
 }
 
 /** «Dispute»: место замораживается в программе, причина - в базу для арбитра. */

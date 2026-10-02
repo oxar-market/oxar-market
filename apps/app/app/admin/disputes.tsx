@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { arbiterSplit, formatUsd } from "@oxar/core";
+import { MAX_PROOF_MOVE_SECONDS, arbiterSplit, formatUsd } from "@oxar/core";
 import { decideDispute, loadAwaitingProof, loadDisputes, moveProof, type AwaitingProof, type Dispute } from "@/lib/arbiter";
 import { photoUrl } from "@/lib/seller";
 import { spotName } from "@/lib/auction";
@@ -137,13 +137,16 @@ function MoveCard({ sale, onDone }: { sale: AwaitingProof; onDone: () => void })
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const next = day ? Date.parse(`${day}T23:59`) : NaN;
-  const later = Number.isFinite(next) && next / 1000 > sale.chain.proofDeadline;
+  // Программа не даст увезти срок дальше девяноста дней от первого.
+  const limit = sale.chain.firstProofDeadline + MAX_PROOF_MOVE_SECONDS;
+  const later = Number.isFinite(next) && next / 1000 > sale.chain.proofDeadline && next / 1000 <= limit;
 
   return (
     <div className="sl-card ad-card">
       <h3>{sale.thing}</h3>
       <p className="muted">
-        Proof due {current.toLocaleString("en-US")}. Move it later if the event moved; never earlier.
+        Proof due {current.toLocaleString("en-US")}. Move it later if the event moved; never earlier,
+        and not past {new Date(limit * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.
       </p>
       <label className="sl-field">
         New proof day

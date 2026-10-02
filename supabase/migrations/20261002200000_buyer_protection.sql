@@ -32,7 +32,10 @@ create table proofs (
   note text check (note is null or length(note) <= 1000),
   hash text not null check (hash ~ '^[0-9a-f]{64}$'),
   signature text,
-  proved_at timestamptz not null default now()
+  proved_at timestamptz not null default now(),
+  -- Когда ушёл пуш победителям. Функцию можно позвать снаружи - анонимный
+  -- ключ публичен; отметка делает пуш одним на торг, сколько её ни зови.
+  pushed_at timestamptz
 );
 
 alter table proofs enable row level security;

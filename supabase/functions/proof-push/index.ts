@@ -24,8 +24,16 @@ Deno.serve(async (request) => {
   const sale = body?.record?.sale;
   if (typeof sale !== "string") return new Response("нет торга", { status: 400 });
 
-  const { data: proof } = await db.from("proofs").select("sale, thing_id").eq("sale", sale).single();
-  if (!proof) return new Response("пруфа нет", { status: 404 });
+  // Пуш - один на торг. Функцию можно позвать снаружи: анонимный ключ
+  // публичен. Поэтому сначала атомарно ставим отметку, и только тот вызов,
+  // что её поставил, рассылает - остальные уходят ни с чем.
+  const { data: claimed } = await db
+    .from("proofs")
+    .update({ pushed_at: new Date().toISOString() })
+    .eq("sale", sale)
+    .is("pushed_at", null)
+    .select("sale, thing_id");
+  if (!claimed?.length) return new Response("пруфа нет или пуш уже ушёл", { status: 200 });
 
   // Места этого торга с победителем и их верхние ставки.
   const { data: lots } = await db

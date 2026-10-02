@@ -25,6 +25,8 @@ export const TOTAL_EXTEND_SECONDS = 3_600;
 export const APPEAL_SECONDS = 72 * 60 * 60;
 /** Сколько арбитр может молчать по спору. */
 export const ARBITER_SECONDS = 30 * 24 * 60 * 60;
+/** Насколько арбитр может отодвинуть срок пруфа от первого срока. */
+export const MAX_PROOF_MOVE_SECONDS = 90 * 24 * 60 * 60;
 
 export type ProofSale = {
   closesAt: number;
