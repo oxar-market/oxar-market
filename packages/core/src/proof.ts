@@ -84,3 +84,19 @@ export function spotStage(sale: ProofSale, spot: ProofSpot, now: number): SpotSt
   if (proofMissed(sale, now)) return "proof_missed";
   return "awaiting_proof";
 }
+
+/**
+ * Решение арбитра по спорному месту: доля продавцу в сотых процента, остальное
+ * победителю. Комиссия - только с доли продавца. Целые базовые единицы,
+ * деление вниз - как в программе; в сумме ровно ставка.
+ */
+export function arbiterSplit(
+  topBid: bigint,
+  sellerBps: number,
+  feeBps: number,
+): { toSeller: bigint; fee: bigint; toWinner: bigint } {
+  if (sellerBps < 0 || sellerBps > 10_000) throw new Error("доля продавца - от 0 до 10000");
+  const sellerPart = (topBid * BigInt(sellerBps)) / 10_000n;
+  const fee = (sellerPart * BigInt(feeBps)) / 10_000n;
+  return { toSeller: sellerPart - fee, fee, toWinner: topBid - sellerPart };
+}

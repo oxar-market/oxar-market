@@ -43,6 +43,7 @@ export {
   ARBITER_SECONDS,
   TOTAL_EXTEND_SECONDS,
   appealOpen,
+  arbiterSplit,
   disputeLapsed,
   minProofDeadline,
   pays,

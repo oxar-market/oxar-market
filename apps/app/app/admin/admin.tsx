@@ -17,6 +17,8 @@ import { photoUrl } from "@/lib/seller";
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
+import { Disputes } from "./disputes.tsx";
+import { loadDisputes } from "@/lib/arbiter";
 
 /**
  * Админка по вещам продавцов. Вещь попадает на маркет, когда продавец
@@ -27,13 +29,16 @@ export function Admin() {
   const [things, setThings] = useState<AdminThing[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   // Люди и вещи - разные очереди: заявки в продавцы не тонут среди вещей.
-  const [section, setSection] = useState<"people" | "things">("things");
+  const [section, setSection] = useState<"people" | "things" | "disputes">("things");
   // Сколько ждут решения - число на вкладке, чтобы было видно, есть ли дело.
   const [people, setPeople] = useState(0);
+  // Нерешённые споры: деньги мест заморожены, пока арбитр не решит.
+  const [disputes, setDisputes] = useState(0);
 
   function reload() {
     void loadAdminThings().then(setThings);
     void loadApplications().then((list) => setPeople(list.length));
+    void loadDisputes().then((list) => setDisputes(list.filter((one) => one.lot && one.sellerBps === null).length));
   }
   useEffect(reload, []);
   const toReview = (things ?? []).filter(awaitsReview).length;
@@ -62,21 +67,31 @@ export function Admin() {
 
   const sections = (
     <div className="role-toggle slim">
-      {(["things", "people"] as const).map((one) => (
-        <button
-          key={one}
-          type="button"
-          className={section === one ? "role-tab on" : "role-tab"}
-          onClick={() => setSection(one)}
-        >
-          {one === "things" ? "Things" : "People"}
-          {(one === "things" ? toReview : people) > 0 && (
-            <span className="ad-count">{one === "things" ? toReview : people}</span>
-          )}
-        </button>
-      ))}
+      {(["things", "people", "disputes"] as const).map((one) => {
+        const count = one === "things" ? toReview : one === "people" ? people : disputes;
+        return (
+          <button
+            key={one}
+            type="button"
+            className={section === one ? "role-tab on" : "role-tab"}
+            onClick={() => setSection(one)}
+          >
+            {one === "things" ? "Things" : one === "people" ? "People" : "Disputes"}
+            {count > 0 && <span className="ad-count">{count}</span>}
+          </button>
+        );
+      })}
     </div>
   );
+
+  if (section === "disputes") {
+    return (
+      <>
+        {sections}
+        <Disputes onCount={setDisputes} />
+      </>
+    );
+  }
 
   if (section === "people") {
     return (

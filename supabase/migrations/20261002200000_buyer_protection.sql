@@ -118,3 +118,23 @@ $$;
 create trigger proofs_push after insert on proofs
   for each row execute function push_proof();
 
+
+-- Арбитр перенёс срок пруфа в программе - копия у мест торга догоняет её.
+-- Только срок и только админ: общая правка лотов админу не нужна.
+create function admin_moves_proof_by(sale text, proof_by timestamptz)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin() then
+    return false;
+  end if;
+  update lots set proof_by = admin_moves_proof_by.proof_by where chain_sale = admin_moves_proof_by.sale;
+  return true;
+end;
+$$;
+
+revoke all on function admin_moves_proof_by(text, timestamptz) from public;
+grant execute on function admin_moves_proof_by(text, timestamptz) to authenticated;

@@ -5,6 +5,7 @@ import {
   ARBITER_SECONDS,
   TOTAL_EXTEND_SECONDS,
   appealOpen,
+  arbiterSplit,
   disputeLapsed,
   minProofDeadline,
   pays,
@@ -92,4 +93,13 @@ test("стадия выигранного места - то, что увидят
     "dispute_lapsed",
   );
   assert.equal(spotStage(sale({ proofDeadline: 0 }), spot, 500), "payable", "старый торг платит сразу");
+});
+
+test("арбитр делит ставку: комиссия только с доли продавца, ничего не теряется", () => {
+  assert.deepEqual(arbiterSplit(1_000n, 5_000, 1_000), { toSeller: 450n, fee: 50n, toWinner: 500n });
+  assert.deepEqual(arbiterSplit(1_000n, 0, 1_000), { toSeller: 0n, fee: 0n, toWinner: 1_000n });
+  assert.deepEqual(arbiterSplit(1_000n, 10_000, 1_000), { toSeller: 900n, fee: 100n, toWinner: 0n });
+  const odd = arbiterSplit(999n, 3_333, 1_000);
+  assert.equal(odd.toSeller + odd.fee + odd.toWinner, 999n);
+  assert.throws(() => arbiterSplit(1_000n, 10_001, 1_000));
 });
