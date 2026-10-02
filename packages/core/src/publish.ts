@@ -1,8 +1,10 @@
 /**
  * Сколько SOL стоит продавцу открыть торг, и сколько из этого вернётся.
  *
- * Solana держит за каждым аккаунтом залог (rent): (128 + байты) * 6960
- * лампортов - это цена двух лет хранения, после которой аккаунт вечный.
+ * Solana держит за каждым аккаунтом залог (rent): (128 + байты) * ставка.
+ * Ставку сеть меняет: SIMD-0437 снижает её по шагам с 6960 до 696
+ * лампортов за байт. Поэтому её не держим числом, а передаём снаружи -
+ * приложение спрашивает её у сети.
  * Программа при публикации создаёт:
  *
  * - торг (Sale, 139 байт) - один на срок закрытия; программа его не
@@ -15,7 +17,6 @@
  * chain/programs/oxar-escrow/src/state; поменяются там - поменяются и здесь.
  */
 
-const RENT_PER_BYTE = 6960;
 const ACCOUNT_OVERHEAD = 128;
 const SALE_BYTES = 139;
 const LOT_BYTES = 179;
@@ -23,7 +24,6 @@ const VAULT_BYTES = 165;
 const SIGNATURE_LAMPORTS = 5000;
 const LOTS_PER_TX = 3;
 
-const rent = (bytes: number) => (ACCOUNT_OVERHEAD + bytes) * RENT_PER_BYTE;
 
 export type PublishCost = {
   /** Залог за лоты и хранилища: вернётся продавцу после расчёта мест. */
@@ -33,8 +33,12 @@ export type PublishCost = {
   totalLamports: number;
 };
 
-/** Стоимость публикации; на входе - сколько мест в каждом торге. */
-export function publishCost(spotsPerSale: number[]): PublishCost {
+/**
+ * Стоимость публикации; на входе - сколько мест в каждом торге и ставка
+ * залога сети в лампортах за байт.
+ */
+export function publishCost(spotsPerSale: number[], rentPerByte: number): PublishCost {
+  const rent = (bytes: number) => (ACCOUNT_OVERHEAD + bytes) * rentPerByte;
   let back = 0;
   let kept = 0;
   for (const spots of spotsPerSale) {

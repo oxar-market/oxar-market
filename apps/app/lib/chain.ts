@@ -88,6 +88,15 @@ export const SOLANA_WS_URL =
  */
 export const connection = new Connection(SOLANA_RPC_URL, "confirmed");
 
+/**
+ * Ставка залога сети в лампортах за байт. Сеть её снижает по шагам
+ * (SIMD-0437), поэтому спрашиваем, а не помним: залог пустого аккаунта -
+ * это 128 байт служебных данных по ставке.
+ */
+export async function rentPerByte(): Promise<number> {
+  return (await connection.getMinimumBalanceForRentExemption(0)) / 128;
+}
+
 export type ChainLot = {
   /** Торг вещи, которому место принадлежит. Срок живёт там, а не здесь. */
   sale: PublicKey;

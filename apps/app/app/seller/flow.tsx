@@ -6,7 +6,7 @@ import {
   useStandardSignTransaction,
 } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
-import { WALLET_CHAIN, connection } from "@/lib/chain";
+import { WALLET_CHAIN, connection, rentPerByte } from "@/lib/chain";
 import { publishAuctions, spotsPerSale } from "@/lib/publish";
 import { publishCost } from "@oxar/core";
 import { costLine } from "./setup.tsx";
@@ -200,6 +200,7 @@ export function SellerFlow({
                 spotsPerSale(
                   plans.flatMap((one) => (one.plan.kind === "auction" ? [one.plan.closesAt] : [])),
                 ),
+                await rentPerByte(),
               );
               const sol = (await connection.getBalance(owner)) / 1e9;
               if (sol * 1e9 < cost.totalLamports) {
