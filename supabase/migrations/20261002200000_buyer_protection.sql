@@ -92,3 +92,29 @@ create policy "победитель открывает спор" on disputes for
 create policy "арбитр записывает решение" on disputes for update to authenticated
   using (is_admin())
   with check (is_admin());
+
+-- Новый пруф будит пуш победителям этого торга: окно на спор короткое, и
+-- молчание в нём - «да». Звонок как у пуша о перебитой ставке: в запросе
+-- только адрес торга, функция перечитывает всё сама серверным ключом.
+create function push_proof()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform net.http_post(
+    url := 'https://islmypspqjxuhplcibam.supabase.co/functions/v1/proof-push',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzbG15cHNwcWp4dWhwbGNpYmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxNDYwMDQsImV4cCI6MjEwNDcyMjAwNH0.kSrGHN_9J_nVdH66vBfy5Ni7It2kp3BEL0wcFE8OKbo'
+    ),
+    body := jsonb_build_object('record', jsonb_build_object('sale', new.sale))
+  );
+  return new;
+end;
+$$;
+
+create trigger proofs_push after insert on proofs
+  for each row execute function push_proof();
+

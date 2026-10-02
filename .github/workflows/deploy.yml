@@ -186,7 +186,7 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: >-
-          supabase functions deploy privy-session outbid-push
+          supabase functions deploy privy-session outbid-push proof-push
           --project-ref islmypspqjxuhplcibam
 
       # Проверка после выкатки, а не «должно работать»: функция обязана
