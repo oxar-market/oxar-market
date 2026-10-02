@@ -106,6 +106,10 @@ export type ChainLot = {
   topBid: bigint;
   reserve: bigint;
   minStep: bigint;
+  /** Победитель оспорил пруф: деньги места ждут арбитра. */
+  disputed: boolean;
+  /** Когда оспорили, секунды epoch; ноль - спора не было. */
+  disputedAt: number;
 };
 
 /** Торг вещи целиком: срок один на все её места. */
@@ -116,6 +120,12 @@ export type ChainSale = {
   closesAt: number;
   extendSeconds: number;
   feeBps: number;
+  /** Дальше этого ставки торг не продлят; ноль - торг открыт до потолка. */
+  hardClosesAt: number;
+  /** До когда продавец обязан прислать пруф; ноль - торг до защиты покупателя. */
+  proofDeadline: number;
+  /** Когда пришёл пруф; ноль - ещё нет. */
+  provedAt: number;
 };
 
 /** uuid лота в шестнадцать байт: ровно то, что программа кладёт в сиды. */
@@ -172,8 +182,14 @@ export function decodeLot(data: Uint8Array): ChainLot {
   const topBid = view.getBigUint64(at, true);
   const reserve = view.getBigUint64(at + 8, true);
   const minStep = view.getBigUint64(at + 16, true);
+  at += 24;
 
-  return { sale, mint, topBidder, topBid, reserve, minStep };
+  // Шестнадцать байт uuid и два bump, дальше спор - в прежнем запасе.
+  at += 16 + 2;
+  const disputed = data[at] === 1;
+  const disputedAt = Number(view.getBigInt64(at + 1, true));
+
+  return { sale, mint, topBidder, topBid, reserve, minStep, disputed, disputedAt };
 }
 
 /** Прочитать торг вещи: срок, продление и комиссия - общие на все места. */
@@ -190,8 +206,13 @@ export function decodeSale(data: Uint8Array): ChainSale {
   const closesAt = Number(view.getBigInt64(at, true));
   const extendSeconds = Number(view.getBigInt64(at + 8, true));
   const feeBps = view.getUint16(at + 16, true);
+  // Комиссия (2) и bump (1), дальше поля, легшие в прежний запас.
+  at += 16 + 2 + 1;
+  const hardClosesAt = Number(view.getBigInt64(at, true));
+  const proofDeadline = Number(view.getBigInt64(at + 8, true));
+  const provedAt = Number(view.getBigInt64(at + 16, true));
 
-  return { seller, platform, closesAt, extendSeconds, feeBps };
+  return { seller, platform, closesAt, extendSeconds, feeBps, hardClosesAt, proofDeadline, provedAt };
 }
 
 export async function readLot(lotId: string): Promise<ChainLot | null> {

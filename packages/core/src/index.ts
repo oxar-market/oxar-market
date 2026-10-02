@@ -37,3 +37,19 @@ export {
 } from "./outline.ts";
 
 export { publishCost, type PublishCost } from "./publish.ts";
+
+export {
+  APPEAL_SECONDS,
+  ARBITER_SECONDS,
+  TOTAL_EXTEND_SECONDS,
+  appealOpen,
+  disputeLapsed,
+  minProofDeadline,
+  pays,
+  proofMissed,
+  spotStage,
+  takesProof,
+  type ProofSale,
+  type ProofSpot,
+  type SpotStage,
+} from "./proof.ts";
