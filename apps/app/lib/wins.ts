@@ -35,14 +35,17 @@ export type Win = {
   lot: ChainLot | null;
   proof: ProofRow | null;
   dispute: { reason: string; sellerBps: number | null } | null;
+  /** Расчёт вернул ставку: пруфа не было или арбитр молчал тридцать дней. */
+  refunded: boolean;
 };
 
 /** Победы с защитой покупателя: места, открытые с адресом торга. */
 export async function loadMyWins(
-  stands: { lotId: string; spot: string; thing: string; mineCents: number; won: boolean }[],
+  stands: { lotId: string; spot: string; thing: string; mineCents: number; won: boolean; refunded: boolean }[],
 ): Promise<Win[]> {
   if (!db) return [];
-  const won = stands.filter((one) => one.won);
+  // Вернувшаяся ставка - тоже победа: человек должен видеть, что деньги пришли назад.
+  const won = stands.filter((one) => one.won || one.refunded);
   if (won.length === 0) return [];
   const { data: lots } = await db
     .from("lots")
@@ -87,6 +90,7 @@ export async function loadMyWins(
           }
         : null,
       dispute: dispute ? { reason: dispute.reason, sellerBps: dispute.seller_bps } : null,
+      refunded: stand.refunded,
     };
   });
 }

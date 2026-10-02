@@ -77,7 +77,7 @@ function WinCard({
     const share = win.dispute?.sellerBps;
     const text =
       share === null || share === undefined
-        ? win.proof
+        ? win.proof && !win.refunded
           ? "Paid to the seller. Done."
           : "Settled. Your bid came back to your wallet."
         : share === 10_000

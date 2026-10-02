@@ -393,9 +393,9 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
                 </span>
                 <span
                   className="tagchip"
-                  style={{ color: one.won ? "#16181d" : undefined }}
+                  style={{ color: one.won || one.refunded ? "#16181d" : undefined }}
                 >
-                  {one.won ? "WON" : "LOST"}
+                  {one.won ? "WON" : one.refunded ? "REFUNDED" : "LOST"}
                 </span>
                 <span className="hist-amt">{formatUsd(one.mineCents)}</span>
               </div>

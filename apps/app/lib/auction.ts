@@ -182,6 +182,8 @@ export type MyStand = {
   leaderBrand: string;
   leading: boolean;
   won: boolean;
+  /** Выиграл, но ставка вернулась: пруфа не было, арбитр решил в его пользу или молчал. */
+  refunded: boolean;
 };
 
 /**
@@ -238,6 +240,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       leaderBrand: top?.brand ?? "",
       leading,
       won: !open && lot.status === "won" && leading,
+      refunded: !open && lot.status === "refunded" && leading,
     };
   }).filter((one) => one.open || Date.parse(one.closesAt) >= PUBLIC_OPENING);
 }
