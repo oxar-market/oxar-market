@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatSol, minProofDeadline, parseUsd, publishCost, spotsPerSale, validSaleWindow, type PublishCost } from "@oxar/core";
+import { PROOF_DAY_END, earliestProofDay, formatSol, parseUsd, publishCost, spotsPerSale, validSaleWindow, type PublishCost } from "@oxar/core";
 import type { PricingThing, SpotPlan, Worn } from "@/lib/seller";
 import { rentPerByte } from "@/lib/chain";
 import { Bar, SpotMark } from "./parts.tsx";
@@ -60,13 +60,7 @@ export function SetUpSpots({
     setDrafts((was) => was.map((one, at) => (at === index ? { ...one, ...change } : one)));
   }
 
-  // Срок пруфа - день, до конца которого продавец покажет вещь в деле. Не
-  // раньше, чем примет программа: закрытие торга плюс час продления. Пока
-  // продавец сам не выбрал - неделя после последнего дня, когда вещь носят,
-  // а без него - две недели после закрытия.
   const [proofDay, setProofDay] = useState("");
-  const lastClose = Math.max(...drafts.map((one) => Date.parse(one.closes)).filter(Number.isFinite), 0);
-  const proofMin = local(new Date(minProofDeadline(lastClose / 1000) * 1000)).slice(0, 10);
   // Кто носит вещь, где и когда: без этого покупатель места не знает,
   // кто увидит его логотип, и публиковать нельзя.
   const [worn, setWorn] = useState<Worn>(thing.worn);
@@ -83,16 +77,29 @@ export function SetUpSpots({
     setWorn({ ...worn, when: next.from ? dayRange(next.from, to) : thing.worn.when });
   }
   const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0) && !early;
-  const suggested = shiftDay(days.to || days.from || local(new Date(lastClose)).slice(0, 10), days.from ? 7 : 14);
-  // Выбранный день, который стал раньше допустимого (закрытие сдвинули
-  // позже), не держим: иначе кнопка гаснет без видимой причины.
-  const proofBy = proofDay && proofDay >= proofMin ? proofDay : suggested > proofMin ? suggested : proofMin;
+  // Срок пруфа - день, до конца которого продавец покажет вещь в деле: не
+  // раньше последнего дня, когда её носят, и не раньше, чем примет программа
+  // (правило в core). Пока продавец сам не выбрал - неделя после последнего
+  // дня носки, а без него две недели после закрытия.
+  const lastCloses = drafts.map((one) => one.closes).filter((one) => Number.isFinite(Date.parse(one))).sort().at(-1) ?? local(new Date());
+  const lastWorn = days.to || days.from;
+  const proofMin = earliestProofDay(lastCloses, lastWorn);
+  const suggested = shiftDay(lastWorn || lastCloses.slice(0, 10), lastWorn ? 7 : 14);
+  // Выбранный день не подменяем молча: один и тот же день и в подписи, и в
+  // календаре, и в торге. Ставший слишком ранним (закрытие или «когда»
+  // сдвинули) - причина словами, а не другой день.
+  const proofBy = proofDay || (suggested > proofMin ? suggested : proofMin);
   const proofOk = proofBy >= proofMin;
+  const proofProblem = proofOk
+    ? null
+    : lastWorn && proofBy < lastWorn
+      ? `Proof shows the thing in use with the logos, so it cannot be before the last day it is worn. Pick ${dayRange(proofMin, "")} or later.`
+      : `The auction can run an hour past its close, and proof comes after that. Pick ${dayRange(proofMin, "")} or later.`;
   const plans = drafts.map((one, index) => {
     const plan = toPlan(one);
     return {
       spotId: thing.spots[index]!.id,
-      plan: plan && plan.kind === "auction" ? { ...plan, proofBy: new Date(`${proofBy}T23:59`).toISOString() } : plan,
+      plan: plan && plan.kind === "auction" ? { ...plan, proofBy: new Date(`${proofBy}T${PROOF_DAY_END}`).toISOString() } : plan,
     };
   });
   const valid = plans.every((one) => one.plan !== null);
@@ -224,8 +231,8 @@ export function SetUpSpots({
         <div className="sl-plan-head">
           <h3>Proof</h3>
         </div>
-        <Day label="Show proof by" value={proofDay} shown={dayRange(proofBy, "")} min={proofMin} onChange={setProofDay} />
-        {!proofOk && <p className="bad sl-plan-note">Pick a day after the auction closes.</p>}
+        <Day label="Show proof by" value={proofBy} shown={dayRange(proofBy, "")} min={proofMin} onChange={setProofDay} />
+        {proofProblem && <p className="bad sl-plan-note">{proofProblem}</p>}
         <p className="sl-plan-note">
           After the auction, show the thing in use with the logos on it. Winners get 72 hours to
           check it, then you are paid. No proof by this day, and the bids go back to the winners.
@@ -263,7 +270,7 @@ export function SetUpSpots({
                 ? "When must be on or after the day the auction closes."
                 : !described
                   ? "Fill in who has it, where and when."
-                  : "Pick a proof day after the auction closes."}
+                  : "Pick a later proof day: see Proof above."}
           </p>
         )}
       </div>

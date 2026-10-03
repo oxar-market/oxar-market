@@ -4,10 +4,12 @@ import {
   APPEAL_SECONDS,
   ARBITER_SECONDS,
   MAX_PROOF_MOVE_SECONDS,
+  PROOF_DAY_END,
   TOTAL_EXTEND_SECONDS,
   appealOpen,
   arbiterSplit,
   disputeLapsed,
+  earliestProofDay,
   hasBuyerProtection,
   minProofDeadline,
   movesProof,
@@ -140,4 +142,34 @@ test("чем кончилось место: решение арбитра важ
   assert.equal(settledOutcome({ sellerBps: 10_000, proved: true, refunded: false }), "paid");
   assert.equal(settledOutcome({ sellerBps: 0, proved: true, refunded: false }), "refunded");
   assert.equal(settledOutcome({ sellerBps: 5_000, proved: true, refunded: false }), "split");
+});
+
+test("день пруфа - не раньше, чем примет программа: закрытие плюс час", () => {
+  // Торг 3 октября: закрылся в 22:50 - час продления кончается в 23:50, день
+  // пруфа может быть тем же.
+  assert.equal(earliestProofDay("2026-10-03T22:50", ""), "2026-10-03");
+  assert.equal(earliestProofDay("2026-10-03T22:58", ""), "2026-10-03");
+  // В 22:59 конец дня (23:59) уже на секунду раньше минимума программы.
+  assert.equal(earliestProofDay("2026-10-03T22:59", ""), "2026-10-04");
+  assert.equal(earliestProofDay("2026-10-03T23:30", ""), "2026-10-04");
+  assert.equal(earliestProofDay("2026-10-31T23:30", ""), "2026-11-01", "через границу месяца");
+});
+
+test("день пруфа - не раньше последнего дня, когда вещь носят", () => {
+  // Пруф - вещь в деле с логотипами: до дня, когда её надели, его нет.
+  assert.equal(earliestProofDay("2026-10-03T22:50", "2026-10-06"), "2026-10-06");
+  assert.equal(earliestProofDay("2026-10-03T22:59", "2026-10-04"), "2026-10-04");
+  // День носки раньше закрытия правит закрытие.
+  assert.equal(earliestProofDay("2026-10-10T12:00", "2026-10-06"), "2026-10-10");
+});
+
+test("конец самого раннего дня программа принимает, конец предыдущего - нет", () => {
+  for (const closes of ["2026-10-03T00:00", "2026-10-03T12:00", "2026-10-03T22:58", "2026-10-03T22:59", "2026-10-03T23:59"]) {
+    const min = minProofDeadline(Date.parse(`${closes}Z`) / 1000);
+    const day = earliestProofDay(closes, "");
+    const end = (one: string) => Date.parse(`${one}T${PROOF_DAY_END}Z`) / 1000;
+    assert.ok(end(day) >= min, closes);
+    const before = new Date(Date.parse(`${day}T12:00Z`) - 86_400_000).toISOString().slice(0, 10);
+    assert.ok(end(before) < min, closes);
+  }
 });

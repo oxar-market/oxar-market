@@ -114,12 +114,13 @@ export function SellerHome({
               key={one.id}
               className="sl-thing"
               // Цены ставятся, когда листинг готов; идущий торг открывается
-              // той же страницей, что у покупателей.
+              // той же страницей, что у покупателей. Ждущий пруфа - экран
+              // логотипов, где пруф первым.
               disabled={one.state === "preparing" || one.state === "rented"}
               onClick={() =>
-                one.state === "live"
+                one.state === "live" || one.state === "reviewing"
                   ? onOpen(one.id)
-                  : one.state === "ended"
+                  : one.state === "ended" || one.state === "proof"
                     ? onWinners(one)
                     : one.state === "declined"
                       ? onDeclined(one)
@@ -158,6 +159,8 @@ export function SellerHome({
 const LABEL = {
   declined: "DECLINED",
   live: "LIVE AUCTION",
+  reviewing: "IN REVIEW",
+  proof: "PROOF DUE",
   ended: "ENDED",
   rented: "RENTED",
   idle: "IDLE",
@@ -167,9 +170,11 @@ const LABEL = {
 function line(one: SellerThing, now: number): string {
   switch (one.state) {
     case "live":
-      return one.onMarket
-        ? `Closes in ${clock(Date.parse(one.closesAt ?? "") - now)} · ${one.bidSpots} of ${one.spots} spots bid`
-        : "Published. Waiting for our approval to show on the Market";
+      return `Closes in ${clock(Date.parse(one.closesAt ?? "") - now)} · ${one.bidSpots} of ${one.spots} spots bid`;
+    case "reviewing":
+      return "Published. Waiting for our approval to show on the Market";
+    case "proof":
+      return `Send proof by ${shortDay(one.proofBy ?? "")}, ${new Date(one.proofBy ?? "").toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} · ${one.wonSpots} of ${one.spots} spots won`;
     case "declined":
       return `Not approved: ${one.declinedReason ?? ""}`;
     case "ended":

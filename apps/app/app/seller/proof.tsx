@@ -143,6 +143,12 @@ function SaleProof({
             </span>
           </label>
           {problem && <p className="bad sl-plan-note">{problem}</p>}
+          {/* Phantom перед подписью пишет «No balance changes found» - без
+              этой строки это читается как подвох. */}
+          <p className="sl-plan-note">
+            Your wallet will show no balance changes: the proof only records a fingerprint of these
+            photos on chain.
+          </p>
           <button
             type="button"
             className="sl-btn dark sl-plan-note"
