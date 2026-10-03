@@ -383,7 +383,7 @@ function openPicker(event: React.MouseEvent<HTMLInputElement>) {
 }
 
 /** День из календаря: подпись словами, под ней невидимое поле даты. */
-function Day({
+export function Day({
   label,
   value,
   shown,
@@ -421,7 +421,7 @@ function Day({
  * «October 10», «October 12 - 14», «October 30 - November 2». Год - только
  * если не текущий: событие через месяц читается без него.
  */
-function dayRange(from: string, to: string): string {
+export function dayRange(from: string, to: string): string {
   const a = new Date(`${from}T12:00`);
   const b = to ? new Date(`${to}T12:00`) : null;
   const year = (b ?? a).getFullYear() === new Date().getFullYear() ? "" : `, ${(b ?? a).getFullYear()}`;

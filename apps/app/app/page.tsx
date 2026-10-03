@@ -22,7 +22,7 @@ import { ListingAuction } from "./listing/listing.tsx";
  * часа, а сессия Supabase обновляется сама.
  */
 export default function Home() {
-  const { ready, authenticated, getAccessToken } = usePrivy();
+  const { ready, authenticated, user, getAccessToken } = usePrivy();
   const { login } = useLogin();
   const [tab, setTab] = useTab();
   // Вещь продавца, открытая с маркета или из кабинета. Пусто - на вкладке
@@ -53,8 +53,17 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Вышел из Privy - выходит и из базы. Раньше сессия Supabase переживала
+  // выход: следующий вошедший до конца обмена читал базу от имени прежнего,
+  // и у чужого кошелька оставалась вкладка Admin. Только эта вкладка
+  // (scope local): глобальный выход выкинул бы человека и с телефона.
   useEffect(() => {
-    if (!ready || !authenticated || !db) return;
+    if (!ready || !db) return;
+    if (!authenticated) {
+      setLinked("idle");
+      void db.auth.signOut({ scope: "local" });
+      return;
+    }
 
     let live = true;
     (async () => {
@@ -68,7 +77,7 @@ export default function Home() {
     return () => {
       live = false;
     };
-  }, [ready, authenticated, getAccessToken]);
+  }, [ready, authenticated, user?.id, getAccessToken]);
 
   // Почта для писем: identity-токен меняется при входе и при привязке почты,
   // тогда и сообщаем серверу. Строку настроек заводит обмен, поэтому - после него.
@@ -124,7 +133,7 @@ export default function Home() {
         (!ready ? (
           <section className="screen" />
         ) : authenticated ? (
-          <You onOpenAuction={openAuction} />
+          <You onOpenAuction={openAuction} linked={linked === "ready"} />
         ) : (
           <Guest onSignIn={login} />
         ))}

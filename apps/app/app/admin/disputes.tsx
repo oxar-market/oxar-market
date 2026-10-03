@@ -106,22 +106,32 @@ function DisputeCard({ dispute, onDone }: { dispute: Dispute; onDone: () => void
         </p>
       ) : (
         <>
-          <button type="button" className="sl-btn dark" disabled={busy} onClick={() => decide(10_000)}>
-            All to seller · {preview(10_000)}
-          </button>
-          <button type="button" className="sl-btn light" disabled={busy} onClick={() => decide(0)}>
-            All to winner · {preview(0)}
-          </button>
+          {/* Кнопка - коротко, разбивка денег - тихой строкой под ней: в одну
+              строку на телефоне она переносилась в три. */}
+          <div className="ad-choice">
+            <button type="button" className="sl-btn dark" disabled={busy} onClick={() => decide(10_000)}>
+              All to seller
+            </button>
+            <p className="muted small">{preview(10_000)}</p>
+          </div>
+          <div className="ad-choice">
+            <button type="button" className="sl-btn light" disabled={busy} onClick={() => decide(0)}>
+              All to winner
+            </button>
+            <p className="muted small">{preview(0)}</p>
+          </div>
           <label className="sl-field">
             Or split: percent to the seller
             <span className="sl-input">
               <input inputMode="decimal" value={percent} onChange={(event) => setPercent(event.target.value.replace(/[^\d.]/g, ""))} />
             </span>
           </label>
-          {valid && <p className="muted">{preview(bps)}</p>}
-          <button type="button" className="sl-btn light" disabled={busy || !valid} onClick={() => decide(bps)}>
-            Split {valid ? `${bps / 100}% / ${100 - bps / 100}%` : ""}
-          </button>
+          <div className="ad-choice">
+            <button type="button" className="sl-btn light" disabled={busy || !valid} onClick={() => decide(bps)}>
+              Split {valid ? `${bps / 100}%` : ""}
+            </button>
+            {valid && <p className="muted small">{preview(bps)}</p>}
+          </div>
           <p className="muted">Signed in Phantom with the program admin key.</p>
         </>
       )}
