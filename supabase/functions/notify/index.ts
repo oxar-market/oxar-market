@@ -82,7 +82,80 @@ async function message(event: Event): Promise<{ title: string; body: string; url
       url: APP,
     };
   }
+
+  // Остальное - про место на вещи: «Spot 1 on Test Tee».
+  const where = [spot, thing].filter(Boolean).join(" on ") || "Your spot";
+  const What = where.charAt(0).toUpperCase() + where.slice(1);
+  switch (event.kind) {
+    case "ending":
+      return {
+        title: "Bidding ends in an hour",
+        body: `${thing || "The auction"} closes at ${when(event.data.closes_at)}. A late bid moves the close by five minutes.`,
+        url: APP,
+      };
+    case "won":
+      return {
+        title: `You won ${spot || "a spot"}`,
+        body: `${What}: your logo goes on it.${
+          event.data.proof_by
+            ? ` The seller has until ${when(event.data.proof_by)} to show it in use; your payment waits for that proof.`
+            : ""
+        }`,
+        url: APP,
+      };
+    case "appeal_last_day":
+      return {
+        title: "Last day to check the proof",
+        body: `${What}: if you do nothing, the payment goes to the seller at ${when(event.data.until)}. Not what you paid for? Dispute it in the app.`,
+        url: APP,
+      };
+    case "refunded":
+      return { title: "Your bid came back", body: `${What}: the bid was returned to your wallet.`, url: APP };
+    case "decided": {
+      const bps = Number(event.data.seller_bps);
+      const split =
+        bps === 10_000
+          ? "the payment goes to the seller"
+          : bps === 0
+            ? "the bid goes back to the winner"
+            : `${bps / 100}% goes to the seller, the rest back to the winner`;
+      return { title: "The dispute is decided", body: `${What}: OXAR reviewed it, ${split}.`, url: APP };
+    }
+    case "sold":
+      return {
+        title: "Your auction ended",
+        body: `${thing || "Your thing"}: the results and the logos to print are in your seller cabinet.${
+          event.data.proof_by ? ` Show it in use with the logos by ${when(event.data.proof_by)}.` : ""
+        }`,
+        url: APP,
+      };
+    case "proof_due": {
+      const days = Number(event.data.days);
+      return {
+        title: `Proof due in ${days === 1 ? "a day" : `${days} days`}`,
+        body: `${thing || "Your thing"}: show it in use with the logos by ${when(event.data.proof_by)}, or the winners get their bids back.`,
+        url: APP,
+      };
+    }
+    case "paid":
+      return { title: "Payment received", body: `${What}: the winning bid, minus the fee, is in your wallet.`, url: APP };
+    case "disputed":
+      return {
+        title: "A winner disputed the proof",
+        body: `${What}: OXAR reviews it and decides. The payment for this spot waits until then.`,
+        url: APP,
+      };
+    case "dispute_admin":
+      return { title: "New dispute", body: `${What}: review it in You > Admin > Disputes.`, url: APP };
+  }
   return null;
+}
+
+/** Время для текста: по UTC, люди читают из разных зон. */
+function when(at: unknown): string {
+  const date = new Date(String(at));
+  if (Number.isNaN(date.getTime())) return "the deadline";
+  return `${date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC`;
 }
 
 Deno.serve(async (request) => {

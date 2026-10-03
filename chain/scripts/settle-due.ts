@@ -236,13 +236,16 @@ async function main() {
       } else if (!hasBuyerProtection({ proofDeadline: Number(sale.proofDeadline.toString()) })) {
         // Торг до защиты покупателя: платит сразу, как раньше.
         const signature = await pay(lotPda, lot, sale);
-        await mark(row.id, { status: "won", settle_signature: signature });
+        await mark(row.id, { status: "won", settle_signature: signature, chain_sale: lot.sale.toBase58() });
         console.log(`${label}: выплачен (старый торг), ${signature}`);
       } else {
         // Выигран, деньги ждут пруфа. Счёт продавца заводим сразу: выплату
         // может позвать и победитель из приложения, и арбитр.
         await provider.sendAndConfirm(new Transaction().add(sellerAccount(lot, sale)));
-        await mark(row.id, { status: "won" });
+        // Адрес торга - из цепочки, а не тот, что вписал продавец при
+        // публикации: по нему принимается пруф, и чужой адрес здесь позволил
+        // бы занять пруф чужого торга.
+        await mark(row.id, { status: "won", chain_sale: lot.sale.toBase58() });
         console.log(`${label}: выигран, ждёт пруфа до ${new Date(Number(sale.proofDeadline.toString()) * 1000).toISOString()}`);
       }
     } catch (error) {
@@ -254,7 +257,7 @@ async function main() {
 
   // Проход 2: выигранные места с защитой покупателя, ещё не рассчитанные.
   const waiting = await rest(
-    "lots?status=eq.won&settle_signature=is.null&chain_sale=not.is.null&select=id",
+    "lots?status=eq.won&settle_signature=is.null&chain_sale=not.is.null&select=id,chain_sale",
   );
   for (const row of waiting) {
     const label = row.id.slice(0, 8);
@@ -275,6 +278,13 @@ async function main() {
         continue;
       }
       const lot = await fetchLot(program, lotPda);
+      // Адрес торга у выигранного места - из цепочки: по нему принимается
+      // пруф. Место, отмеченное won до этого правила, несёт адрес, вписанный
+      // продавцом, - чиним на первом же проходе.
+      if (row.chain_sale !== lot.sale.toBase58()) {
+        await mark(row.id, { chain_sale: lot.sale.toBase58() });
+        console.log(`${label}: адрес торга исправлен по цепочке`);
+      }
       const sale = await fetchSale(program, lot.sale);
       const t = now();
       if (disputeLapsed(asSpot(lot), t)) {
@@ -299,6 +309,16 @@ async function main() {
   }
 
   await sweepProceeds();
+
+  // Напоминания по времени - в очередь уведомлений: конец торга через час,
+  // последние сутки на проверку пруфа, срок пруфа у продавца. Упало - расчёт
+  // от этого не страдает, следующий проход положит их снова.
+  try {
+    const added = await rest("rpc/queue_reminders", { method: "POST", body: "{}" });
+    if (added) console.log(`напоминаний в очередь: ${added}`);
+  } catch (error) {
+    console.error("напоминания не поставлены -", error);
+  }
 }
 
 main().catch((error) => {
