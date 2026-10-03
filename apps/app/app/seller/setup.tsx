@@ -84,7 +84,9 @@ export function SetUpSpots({
   }
   const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0) && !early;
   const suggested = shiftDay(days.to || days.from || local(new Date(lastClose)).slice(0, 10), days.from ? 7 : 14);
-  const proofBy = proofDay || (suggested > proofMin ? suggested : proofMin);
+  // Выбранный день, который стал раньше допустимого (закрытие сдвинули
+  // позже), не держим: иначе кнопка гаснет без видимой причины.
+  const proofBy = proofDay && proofDay >= proofMin ? proofDay : suggested > proofMin ? suggested : proofMin;
   const proofOk = proofBy >= proofMin;
   const plans = drafts.map((one, index) => {
     const plan = toPlan(one);
@@ -171,6 +173,7 @@ export function SetUpSpots({
             Runs {runDays(one)} days. Highest bid at the close wins the spot,
             no approval step.
           </p>
+          {planProblem(one) && <p className="bad sl-plan-note">{planProblem(one)}</p>}
         </div>
       ))}
 
@@ -251,6 +254,18 @@ export function SetUpSpots({
         >
           {publishing ? "Publishing…" : cost ? `Publish · ${formatSol(cost.totalLamports)}` : "Publish"}
         </button>
+        {/* Серая кнопка без причины - тупик: человек не знает, что чинить. */}
+        {!publishing && (!valid || !described || !proofOk) && (
+          <p className="bad sl-plan-note">
+            {!valid
+              ? "Fix the spot above: its price or dates are not right yet."
+              : early
+                ? "When must be on or after the day the auction closes."
+                : !described
+                  ? "Fill in who has it, where and when."
+                  : "Pick a proof day after the auction closes."}
+          </p>
+        )}
       </div>
 
       {/* Где потом брать то, что печатать: продавцу это нужно знать заранее. */}
@@ -474,6 +489,19 @@ function whenLabel(value: string): string {
 
 function runDays(one: Draft): number {
   return Math.max(0, Math.round((Date.parse(one.closes) - Date.parse(one.opens)) / 86_400_000));
+}
+
+/** Что не так с местом - словами, а не серой кнопкой. Те же проверки, что в toPlan. */
+function planProblem(one: Draft): string | null {
+  if (!parseUsd(one.reserve)) return "Reserve must be an amount, like 10 or 10.50.";
+  if (!parseUsd(one.step)) return "Min step must be an amount, like 1 or 5.";
+  const opens = Date.parse(one.opens);
+  const closes = Date.parse(one.closes);
+  if (!Number.isFinite(opens) || !Number.isFinite(closes)) return "Pick when it opens and when it closes.";
+  if (closes <= opens) return "It closes before it opens. Move Opens earlier or Closes later.";
+  if (closes <= Date.now()) return "Closes is already in the past. Check AM and PM in the time picker.";
+  if (!validSaleWindow(opens, closes, Date.now())) return "An auction can close at most 30 days from today.";
+  return null;
 }
 
 function toPlan(one: Draft): SpotPlan | null {
