@@ -17,6 +17,8 @@ import { photoUrl } from "@/lib/seller";
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
+import { Day, dayRange } from "../seller/setup.tsx";
+import { reviewState } from "@/lib/thing-review";
 import { Disputes } from "./disputes.tsx";
 import { loadDisputes } from "@/lib/arbiter";
 
@@ -118,21 +120,12 @@ export function Admin() {
               <Thumb src={one.photos[0] ?? null} />
               <span className="sl-thing-name">{one.title}</span>
               {/* Черновик - продавец ещё не поставил цены и не опубликовал:
-                  ждать его одобрения не надо. */}
-              {!one.active && !one.declinedReason && !one.published && !one.house ? (
-                <span className="sl-state idle">
-                  <i />
-                  DRAFT
-                </span>
-              ) : (
-                <span
-                  className={`sl-state ${one.active ? "live" : one.declinedReason ? "declined" : "preparing"}`}
-                >
-                  <i />
-                  {/* Три слова на все вещи, наши тоже: ждёт, одобрена, отклонена. */}
-                  {one.active ? "APPROVED" : one.declinedReason ? "DECLINED" : "AWAITING APPROVAL"}
-                </span>
-              )}
+                  ждать его одобрения не надо. Спрятанная - одобрена, но
+                  снята с маркета; заново её не одобряют. */}
+              <span className={`sl-state ${STATE_CLASS[reviewState(one)]}`}>
+                <i />
+                {STATE_LABEL[reviewState(one)]}
+              </span>
               <span className="sl-thing-sub">
                 {one.spots.length} spots · {one.model ? "3D" : "no 3D"}
               </span>
@@ -143,6 +136,22 @@ export function Admin() {
     </>
   );
 }
+
+const STATE_LABEL = {
+  draft: "DRAFT",
+  awaiting: "AWAITING APPROVAL",
+  approved: "APPROVED",
+  hidden: "HIDDEN",
+  declined: "DECLINED",
+} as const;
+
+const STATE_CLASS = {
+  draft: "idle",
+  awaiting: "preparing",
+  approved: "live",
+  hidden: "idle",
+  declined: "declined",
+} as const;
 
 /** Размер места на модели по умолчанию - в единицах сцены, вещь в ней ~0.62. */
 const SIZE = 0.1;
@@ -167,6 +176,18 @@ function AdminThingView({
   // «Кто, где, когда, особенность» правит и админ: продавец пишет это до
   // публикации, а поправить после неё, когда торг уже идёт, можем только мы.
   const [worn, setWorn] = useState(thing.worn);
+  // «Когда» - тем же календарём, что у продавца: первый день и, если носят
+  // несколько дней, последний. В базу уходит тем же текстом, что пишет он.
+  const [days, setDays] = useState({ from: "", to: "" });
+  function pickDays(next: { from: string; to: string }) {
+    const to = next.to && next.to > next.from ? next.to : "";
+    setDays({ from: next.from, to });
+    setWorn({ ...worn, when: next.from ? dayRange(next.from, to) : thing.worn.when });
+  }
+  // Спрятать вещь с идущим торгом - с подтверждением: торг в цепочке не
+  // останавливается, и админ должен это прочитать до нажатия.
+  const [confirmHide, setConfirmHide] = useState(false);
+  const state = reviewState(thing);
   const [viewing, setViewing] = useState<number | null>(null);
   const [picked, setPicked] = useState(
     () => (thing.spots.find((spot) => !spot.geo) ?? thing.spots[0])?.code ?? null,
@@ -237,9 +258,9 @@ function AdminThingView({
 
       <div className="sl-card ad-card">
         <h3>Who, where and when</h3>
-        {(["by", "where", "when"] as const).map((key) => (
+        {(["by", "where"] as const).map((key) => (
           <label className="sl-field" key={key}>
-            {key === "by" ? "Who has it" : key === "where" ? "Where" : "When"}
+            {key === "by" ? "Who has it" : "Where"}
             <span className="sl-input soft">
               <input
                 value={worn[key]}
@@ -249,6 +270,21 @@ function AdminThingView({
             </span>
           </label>
         ))}
+        <Day
+          label="When it's worn"
+          value={days.from}
+          shown={days.from ? dayRange(days.from, "") : worn.when || "Pick a day"}
+          min=""
+          onChange={(from) => pickDays({ from, to: days.to })}
+        />
+        <Day
+          label="Last day (optional)"
+          value={days.to}
+          shown={days.to ? dayRange(days.to, "") : "One day"}
+          min={days.from}
+          disabled={!days.from}
+          onChange={(to) => pickDays({ from: days.from, to })}
+        />
         <label className="sl-field ad-reason">
           What makes it special (optional)
           <textarea
@@ -412,9 +448,14 @@ function AdminThingView({
 
       )}
 
-      {/* Пруф: фото вещи в деле. Пока их нет, итоги говорят «preparing». */}
+      {/* Фото итогов: вещь в деле для страницы итогов. Пока их нет, итоги
+          говорят «preparing». Это не пруф защиты покупателя - тот шлёт
+          продавец из кабинета в программу, и только он отпускает деньги. */}
       <div className="sl-card ad-card">
-        <h3>Proof</h3>
+        <h3>Results photos</h3>
+        <p className="muted">
+          Shown on the results page. The proof that releases payment is sent by the seller from their cabinet.
+        </p>
         {thing.proof.length > 0 ? (
           <div className="ad-photos">
             {thing.proof.map((path) => (
@@ -484,8 +525,10 @@ function AdminThingView({
       {!thing.house && (
       <div className="sl-card ad-card">
         <h3>Review</h3>
-        {thing.active ? (
+        {state === "approved" ? (
           <p className="muted">Approved. It shows on the Market while its auction is open.</p>
+        ) : state === "hidden" ? (
+          <p className="muted">Approved, hidden from the Market. Bidding continues on chain.</p>
         ) : thing.declinedReason ? (
           <p className="muted">Declined: {thing.declinedReason}</p>
         ) : (
@@ -497,7 +540,7 @@ function AdminThingView({
         )}
         {/* Отклонённую не одобряют: продавцу остаётся только удалить её.
             Черновик тоже: без цен и «кто, где, когда» одобрять нечего. */}
-        {!thing.active && !thing.declinedReason && thing.published && (
+        {state === "awaiting" && thing.published && (
           <button
             type="button"
             className="sl-btn dark"
@@ -507,17 +550,59 @@ function AdminThingView({
             Approve
           </button>
         )}
-        {thing.active && (
+        {state === "approved" && !confirmHide && (
           <button
             type="button"
             className="sl-btn light"
             disabled={busy}
-            onClick={() => run(() => updateThing(thing.id, { active: false }), "Could not hide it.")}
+            onClick={() =>
+              thing.prices.length > 0
+                ? setConfirmHide(true)
+                : run(() => updateThing(thing.id, { active: false, hidden: true }), "Could not hide it.")
+            }
           >
             Hide from market
           </button>
         )}
-        {!thing.declinedReason && (
+        {state === "approved" && confirmHide && (
+          <>
+            <p className="muted">
+              Bidding continues on chain; the current leader keeps the spot. You can show it on the Market
+              again any time.
+            </p>
+            <div className="ad-decide">
+              <button type="button" className="sl-btn light" disabled={busy} onClick={() => setConfirmHide(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="sl-btn dark"
+                disabled={busy}
+                onClick={() => {
+                  setConfirmHide(false);
+                  void run(() => updateThing(thing.id, { active: false, hidden: true }), "Could not hide it.");
+                }}
+              >
+                Hide it
+              </button>
+            </div>
+          </>
+        )}
+        {state === "hidden" && (
+          <button
+            type="button"
+            className="sl-btn dark"
+            disabled={busy}
+            onClick={() =>
+              run(() => updateThing(thing.id, { active: true, hidden: false }), "Could not show it.")
+            }
+          >
+            Show on Market
+          </button>
+        )}
+        {/* Отклонить можно только до одобрения: после него торг уже идёт
+            или прошёл, и отказ продавцу ничего бы не значил. */}
+        {(state === "draft" || state === "awaiting") && (
           <>
             <label className="sl-field ad-reason">
               Reason to decline - the seller sees it

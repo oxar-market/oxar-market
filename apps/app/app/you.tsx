@@ -16,6 +16,7 @@ import { SellerApply } from "./seller/apply.tsx";
 import { YourWins } from "./wins.tsx";
 import { Notifications } from "./notify.tsx";
 import { loadScoreOf } from "@/lib/reviews";
+import { signedInWith } from "@/lib/identity";
 
 /**
  * Страница человека, собранная по дизайн-борду «OXAR Auction design
@@ -27,10 +28,22 @@ import { loadScoreOf } from "@/lib/reviews";
  * Путаница здесь стоила бы доверия, поэтому подпись говорит это прямо.
  */
 
-export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => void }) {
+export function You({
+  onOpenAuction,
+  linked,
+}: {
+  onOpenAuction: (thingId?: string) => void;
+  /**
+   * Сессия базы выписана на этого человека. До того в ней может сидеть
+   * прежний вошедший, и всё, что читается от его имени - роль админа,
+   * продавца, оценки, - ждёт этого флага.
+   */
+  linked: boolean;
+}) {
   const { user, logout } = usePrivy();
   const wallet = user?.wallet?.address;
-  const email = user?.email?.address;
+  // В шапке - чем вошёл, а не какая почта привязана для писем.
+  const signIn = signedInWith(user);
   // Privy помечает свой встроенный кошелёк; всё прочее - внешний, и его
   // хозяину не нужны наши объяснения про пополнение.
   const embedded = user?.wallet?.walletClientType === "privy";
@@ -122,15 +135,26 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
 
   // Продавцу роль выдаём мы после звонка. У него переключатель встаёт наверх
   // и Seller открывает кабинет; остальным Seller - по-прежнему разговор.
+  //
+  // Роли спрашиваем заново, как только сессия выписана на этого человека.
+  // Раньше спрашивали один раз при открытии: после смены аккаунта вопрос
+  // уходил ещё со старой сессией админа, и вкладка Admin держалась у чужого
+  // кошелька до перезагрузки (нашли на живом торге 3 октября 2026).
   const [seller, setSeller] = useState(false);
-  useEffect(() => {
-    void amISeller().then(setSeller);
-  }, []);
   // Админ - это мы: третья вкладка переключателя, остальным её нет.
   const [admin, setAdmin] = useState(false);
   useEffect(() => {
-    void amIAdmin().then(setAdmin);
-  }, []);
+    setSeller(false);
+    setAdmin(false);
+    setRole("buyer");
+    if (!linked) return;
+    let live = true;
+    void amISeller().then((yes) => live && setSeller(yes));
+    void amIAdmin().then((yes) => live && setAdmin(yes));
+    return () => {
+      live = false;
+    };
+  }, [linked]);
   // Шаги кабинета со своей шапкой прячут шапку экрана и переключатель.
   const [sellerView, setSellerView] = useState("home");
 
@@ -140,14 +164,14 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
     void db?.auth.getUser().then(({ data }) => {
       if (data.user) void loadScoreOf(data.user.id, "buyer").then(setBuyerScore);
     });
-  }, []);
+  }, [linked]);
 
   // Оценка сделки покупателем: вход отсюда, из режима Buyer.
   const [toRate, setToRate] = useState<DealToRate[]>([]);
   const [rating, setRating] = useState<DealToRate | null>(null);
   useEffect(() => {
     void loadDealsToRate("buyer").then(setToRate);
-  }, [rating]);
+  }, [rating, linked]);
 
   const outbid = stands.filter((one) => one.open && !one.leading);
   const leading = stands.filter((one) => one.open && one.leading);
@@ -223,13 +247,13 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
 
       <div className="you-card">
         <span className="you-face" aria-hidden>
-          {avatarLetter(email ?? wallet ?? "?")}
+          {avatarLetter(signIn?.by === "email" ? signIn.email : signIn?.wallet ?? "?")}
         </span>
         <div className="you-id">
-          {email ? <p className="you-mail">{email}</p> : null}
-          {wallet && !email ? <p className="you-mail mono">{shortWallet(wallet)}</p> : null}
+          {signIn?.by === "email" && <p className="you-mail">{signIn.email}</p>}
+          {signIn?.by === "wallet" && <p className="you-mail mono">{shortWallet(signIn.wallet)}</p>}
           <p className="you-sub">
-            {email ? "Signed in with email" : "Signed in with a wallet"}
+            {signIn?.by === "email" ? "Signed in with email" : "Signed in with a wallet"}
           </p>
           {buyerScore && <p className="you-sub">Buyer score · {scoreText(buyerScore, "buyer", true)}</p>}
         </div>

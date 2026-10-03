@@ -771,6 +771,17 @@ input:focus {
   border-color: var(--ink);
 }
 
+/* Окно Privy «Update your email»: конверт в поле почты рисовался во всю
+   ширину поля поверх ввода. Наши правила тут ни при чём - Privy 2.25 кладёт
+   иконку без размера (на входе почтой она в обёртке 32px, здесь голая), а
+   svg без размера при position: absolute растягивается на ширину label.
+   Даём ей размер, как у той же иконки на входе. Селектор держится за
+   id поля Privy, поэтому наши svg не задевает. */
+#privy-modal-content label:has(> #email-input) > svg:first-child {
+  width: 18px;
+  height: 18px;
+}
+
 .join {
   display: flex;
   flex-wrap: wrap;
@@ -5277,6 +5288,13 @@ a.sl-pill {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+/* Решение арбитра: кнопка и под ней разбивка денег, вплотную - одна пара. */
+.ad-choice {
+  display: grid;
+  gap: 4px;
+  text-align: center;
 }
 
 /* Разметка: переключатель снимков над кадром, у каждого - число мест. */

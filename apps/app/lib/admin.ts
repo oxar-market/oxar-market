@@ -3,6 +3,7 @@
 import { db } from "./session.ts";
 import { listedSpots, SPOT_COLUMNS, type ListedSpot } from "./listing.ts";
 import { photoUrl } from "./seller.ts";
+import { reviewState } from "./thing-review.ts";
 
 /**
  * Админка: мы сами. Проверяем присланные вещи, даём им имя, прикладываем
@@ -17,6 +18,8 @@ export type AdminThing = {
   title: string;
   tagline: string | null;
   active: boolean;
+  /** Спрятана с маркета после одобрения: торг в цепочке идёт дальше. */
+  hidden: boolean;
   /** Продавец открыл торг в цепочке: есть лот не в черновике. */
   published: boolean;
   /** Цены идущего торга по местам - их проверяем до одобрения. */
@@ -29,7 +32,10 @@ export type AdminThing = {
   createdAt: string;
   /** Наша вещь: её не одобряют и не отклоняют, но пруф к ней кладут здесь же. */
   house: boolean;
-  /** Пути фото пруфа в хранилище. */
+  /**
+   * Пути фото итогов в хранилище (колонка proof_photos). Это не пруф защиты
+   * покупателя: тот шлёт продавец из кабинета, и деньги отпускает он.
+   */
   proof: string[];
   /** Кто носит, где, когда и в чём особенность - как написал продавец. Пусто - не написано. */
   worn: { by: string; where: string; when: string; about: string };
@@ -49,13 +55,14 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, declined_reason, photos, model_url, created_at, house, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
     title: row.title,
     tagline: row.tagline,
     active: row.active,
+    hidden: row.hidden === true,
     published: ((row.lots ?? []) as { status: string }[]).some((lot) => lot.status !== "draft"),
     // Черновики админу не видны (политика лотов), а закрытые - прошлые торги.
     prices: ((row.lots ?? []) as {
@@ -92,6 +99,7 @@ export async function updateThing(
     title: string;
     tagline: string | null;
     active: boolean;
+    hidden: boolean;
     model_url: string;
     proof_photos: string[];
     worn_by: string | null;
@@ -115,9 +123,10 @@ export async function reviewThing(id: string, approve: boolean, reason?: string)
   return !error && data === true;
 }
 
-/** Ждёт решения: не одобрена и не отклонена. */
+/** Ждёт решения: не одобрена, не спрятана после одобрения и не отклонена. */
 export function awaitsReview(thing: AdminThing): boolean {
-  return !thing.active && !thing.declinedReason;
+  const state = reviewState(thing);
+  return state === "draft" || state === "awaiting";
 }
 
 /** Модель уезжает в публичное хранилище models; в вещь пишется её адрес. */
@@ -133,8 +142,8 @@ export async function uploadModel(thingId: string, file: File): Promise<string |
 }
 
 /**
- * Фото пруфа: в хранилище things, папка proof/<вещь>/, и путь - в список у
- * вещи. Грузим по одному: их несколько, и отказ на одном не должен терять
+ * Фото итогов (колонка по старой памяти зовётся proof_photos): в хранилище
+ * things, папка proof/<вещь>/, и путь - в список у вещи. Грузим по одному: их несколько, и отказ на одном не должен терять
  * остальные.
  */
 export async function uploadProof(thingId: string, files: File[], had: string[]): Promise<boolean> {
