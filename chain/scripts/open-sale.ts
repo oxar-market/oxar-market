@@ -14,7 +14,11 @@
  *   cd chain
  *   pnpm exec ts-node --compilerOptions '{"module":"commonjs"}' \
  *     scripts/open-sale.ts --thing=superteam-ua-tee --hours=24 \
- *       [--start=2026-09-24T09:00:00Z]
+ *       --proof-by=2026-10-20T21:00:00Z [--start=2026-09-24T09:00:00Z]
+ *
+ * --proof-by - до когда покажем вещь в деле с логотипами. Деньги победителей
+ * программа держит до пруфа; не показали к сроку - ставки вернутся им. Срок
+ * обязан быть позже закрытия плюс час продления: раньше программа не примет.
  *
  * --start назначает открытие в будущем: часы считаются от него, а не от
  * запуска. До этого момента витрина держит голограмму, а ставки не принимает
@@ -112,6 +116,14 @@ async function main() {
 
   const id = randomUUID();
   const closesAt = new Date((opensAt?.getTime() ?? Date.now()) + hours * 3_600_000);
+  const proofArg = arg("proof-by");
+  const proofBy = proofArg ? new Date(proofArg) : null;
+  if (!proofBy || Number.isNaN(proofBy.getTime())) {
+    throw new Error("нужен --proof-by: до когда покажем вещь в деле, например 2026-10-20T21:00:00Z");
+  }
+  if (proofBy.getTime() <= closesAt.getTime() + 3_600_000) {
+    throw new Error("--proof-by должен быть позже закрытия плюс час продления");
+  }
   const saleBytes = Array.from(Buffer.from(id.replace(/-/g, ""), "hex"));
   const [salePda] = PublicKey.findProgramAddressSync(
     [Buffer.from("sale"), Buffer.from(saleBytes)],
@@ -123,6 +135,7 @@ async function main() {
       saleBytes,
       new anchor.BN(Math.floor(closesAt.getTime() / 1000)),
       new anchor.BN(EXTEND_SECONDS),
+      new anchor.BN(Math.floor(proofBy.getTime() / 1000)),
     )
     .accounts({
       seller: seller.publicKey,

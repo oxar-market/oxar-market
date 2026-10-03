@@ -6,13 +6,14 @@ import { PublicKey } from "@solana/web3.js";
 import { avatarLetter, formatUsd } from "@oxar/core";
 import { BUILD } from "@/lib/build";
 import { connection, walletUnits } from "@/lib/chain";
-import { loadMyStands, type MyStand } from "@/lib/auction";
+import { loadMyStands, spotName, type MyStand } from "@/lib/auction";
 import { db } from "@/lib/session";
 import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
 import { amIAdmin } from "@/lib/admin";
 import { Admin } from "./admin/admin.tsx";
 import { SellerApply } from "./seller/apply.tsx";
+import { YourWins } from "./wins.tsx";
 import { loadScoreOf, scoreText } from "@/lib/reviews";
 import type { Score } from "@/lib/seller";
 
@@ -310,7 +311,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
             <span className="outbid-when">closes in {left(one.closesAt, now)}</span>
           </div>
           <span className="outbid-title">
-            Spot {one.spot} · {one.thing}
+            {spotName(one.spot)} · {one.thing}
           </span>
           <div className="outbid-grid">
             <div>
@@ -347,7 +348,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
           {leading.map((one) => (
             <div className="leading-row" key={one.lotId}>
               <div className="leading-what">
-                <span>Spot {one.spot}</span>
+                <span>{spotName(one.spot)}</span>
                 <span className="muted small">{one.thing}</span>
               </div>
               <span className="tagchip">LEADING</span>
@@ -368,6 +369,8 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
         </button>
       )}
 
+      <YourWins stands={stands} />
+
       <div className="bids-head">
         <span className="hist-title">History</span>
       </div>
@@ -386,13 +389,13 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
               <div className="hist-row" key={one.lotId}>
                 <span className="hist-date">{day(one.closesAt)}</span>
                 <span className="hist-what">
-                  Spot {one.spot} · {one.thing}
+                  {spotName(one.spot)} · {one.thing}
                 </span>
                 <span
                   className="tagchip"
-                  style={{ color: one.won ? "#16181d" : undefined }}
+                  style={{ color: one.won || one.refunded ? "#16181d" : undefined }}
                 >
-                  {one.won ? "WON" : "LOST"}
+                  {one.won ? "WON" : one.refunded ? "REFUNDED" : "LOST"}
                 </span>
                 <span className="hist-amt">{formatUsd(one.mineCents)}</span>
               </div>
@@ -434,6 +437,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
 
       <p className="you-foot">
         <span className="build">build {BUILD}</span>
+        <a href="/how">how it works</a>
         <a href="/terms">terms</a>
       </p>
     </section>

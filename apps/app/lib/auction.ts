@@ -158,6 +158,11 @@ export async function loadTopBids(
   return top;
 }
 
+/** Подпись места для человека: у нашей футболки «01», у вещи продавца уже «Spot 1». */
+export function spotName(label: string): string {
+  return /^spot\b/i.test(label) ? label : `Spot ${label}`;
+}
+
 /** Где я стою на лоте: живая ставка или строка истории. */
 export type MyStand = {
   lotId: string;
@@ -177,6 +182,8 @@ export type MyStand = {
   leaderBrand: string;
   leading: boolean;
   won: boolean;
+  /** Выиграл, но ставка вернулась: пруфа не было, арбитр решил в его пользу или молчал. */
+  refunded: boolean;
 };
 
 /**
@@ -233,6 +240,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       leaderBrand: top?.brand ?? "",
       leading,
       won: !open && lot.status === "won" && leading,
+      refunded: !open && lot.status === "refunded" && leading,
     };
   }).filter((one) => one.open || Date.parse(one.closesAt) >= PUBLIC_OPENING);
 }
@@ -361,7 +369,7 @@ export async function loadMarket(): Promise<{
     .select(
       "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, photos, model_url)",
     )
-    .in("status", ["open", "won", "unsold"])
+    .in("status", ["open", "won", "unsold", "refunded"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
     .limit(400);
   if (!data || data.length === 0) return { things: [], upcoming, held: [], pilots };

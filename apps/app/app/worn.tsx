@@ -9,22 +9,37 @@ import { db } from "@/lib/session";
  * поле - «To be announced», а не пропуск: молчание читалось бы как «неважно».
  * «В чём особенность» - абзац над таблицей, и его может не быть.
  */
-export type Worn = { by: string | null; where: string | null; when: string | null; about: string | null };
+export type Worn = {
+  by: string | null;
+  where: string | null;
+  when: string | null;
+  about: string | null;
+  /** До когда продавец покажет пруф - с последнего торга вещи. Нет - торг до защиты покупателя. */
+  proofBy: string | null;
+};
 
 /** Ошибка (например, поля ещё не доехали) - те же «To be announced». */
 export async function loadWorn(thingId: string): Promise<Worn> {
-  const empty = { by: null, where: null, when: null, about: null };
+  const empty = { by: null, where: null, when: null, about: null, proofBy: null };
   if (!db) return empty;
-  const { data } = await db
-    .from("things")
-    .select("worn_by, worn_where, worn_when, worn_about")
-    .eq("id", thingId)
-    .maybeSingle();
+  const [{ data }, { data: lot }] = await Promise.all([
+    db.from("things").select("worn_by, worn_where, worn_when, worn_about").eq("id", thingId).maybeSingle(),
+    // Срок пруфа покупатель видит до ставки: он же решает, когда уйдут деньги.
+    db
+      .from("lots")
+      .select("proof_by")
+      .eq("thing_id", thingId)
+      .not("proof_by", "is", null)
+      .order("closes_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
   return {
     by: data?.worn_by ?? null,
     where: data?.worn_where ?? null,
     when: data?.worn_when ?? null,
     about: data?.worn_about ?? null,
+    proofBy: (lot?.proof_by as string | null | undefined) ?? null,
   };
 }
 
@@ -49,7 +64,19 @@ export function WornInfo({ thingId }: { thingId: string }) {
             <dd className={value ? "" : "tba"}>{value ?? "To be announced"}</dd>
           </div>
         ))}
+        {worn.proofBy && (
+          <div>
+            <dt>Proof by</dt>
+            <dd>{new Date(worn.proofBy).toLocaleDateString("en-US", { month: "long", day: "numeric" })}</dd>
+          </div>
+        )}
       </dl>
+      {worn.proofBy && (
+        <p className="muted">
+          Your money stays in escrow until the seller shows the thing in use. You get 72 hours to
+          check it. No proof by this day, and your bid comes back.
+        </p>
+      )}
     </>
   );
 }

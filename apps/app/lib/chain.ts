@@ -13,6 +13,7 @@ import { Buffer } from "buffer";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import { USDC_DECIMALS, toUsdcBaseUnits } from "@oxar/core";
@@ -106,6 +107,10 @@ export type ChainLot = {
   topBid: bigint;
   reserve: bigint;
   minStep: bigint;
+  /** Победитель оспорил пруф: деньги места ждут арбитра. */
+  disputed: boolean;
+  /** Когда оспорили, секунды epoch; ноль - спора не было. */
+  disputedAt: number;
 };
 
 /** Торг вещи целиком: срок один на все её места. */
@@ -116,7 +121,86 @@ export type ChainSale = {
   closesAt: number;
   extendSeconds: number;
   feeBps: number;
+  /** Дальше этого ставки торг не продлят; ноль - торг открыт до потолка. */
+  hardClosesAt: number;
+  /** До когда продавец обязан прислать пруф; ноль - торг до защиты покупателя. */
+  proofDeadline: number;
+  /** Когда пришёл пруф; ноль - ещё нет. */
+  provedAt: number;
+  /** Срок пруфа при открытии торга: от него потолок переносов. */
+  firstProofDeadline: number;
 };
+
+/** `seller_opens_sale` из IDL. */
+const OPEN_SALE = new Uint8Array([28, 241, 5, 89, 66, 221, 82, 99]);
+/** Продление ставкой под конец - как у первой футболки. */
+export const EXTEND_SECONDS = 300;
+
+function i64(value: bigint): Uint8Array {
+  const out = new Uint8Array(8);
+  new DataView(out.buffer).setBigInt64(0, value, true);
+  return out;
+}
+
+/** Дискриминаторы инструкций защиты покупателя - из IDL. */
+const SUBMIT_PROOF = new Uint8Array([56, 171, 129, 167, 249, 210, 127, 218]);
+const DISPUTE = new Uint8Array([100, 80, 101, 176, 187, 14, 90, 123]);
+const PAY = new Uint8Array([36, 169, 202, 43, 22, 233, 147, 190]);
+const DECIDE = new Uint8Array([125, 152, 123, 57, 231, 57, 241, 89]);
+const MOVE_PROOF = new Uint8Array([51, 172, 4, 45, 206, 188, 43, 192]);
+
+function join(...parts: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(parts.reduce((sum, one) => sum + one.length, 0));
+  let at = 0;
+  for (const part of parts) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
+}
+
+/** Пруф продавца: в программу уходит только sha256 записи пруфа. */
+export function proofData(hash: Uint8Array): Uint8Array {
+  if (hash.length !== 32) throw new Error("хеш пруфа - тридцать два байта");
+  return join(SUBMIT_PROOF, hash);
+}
+
+/** Спор победителя: аргументов нет. */
+export function disputeData(): Uint8Array {
+  return DISPUTE.slice();
+}
+
+/** Выплата места: её зовёт победитель («Looks good») или расчёт после окна. */
+export function payData(): Uint8Array {
+  return PAY.slice();
+}
+
+/** Решение арбитра: доля продавцу в сотых процента, u16. */
+export function decideData(sellerBps: number): Uint8Array {
+  const bps = new Uint8Array(2);
+  new DataView(bps.buffer).setUint16(0, sellerBps, true);
+  return join(DECIDE, bps);
+}
+
+/** Перенос срока пруфа: новое время - миллисекунды на входе, секунды в программу. */
+export function moveProofData(newDeadlineMs: number): Uint8Array {
+  return join(MOVE_PROOF, i64(BigInt(Math.floor(newDeadlineMs / 1000))));
+}
+
+/**
+ * Данные инструкции открытия торга: id, срок закрытия, продление, срок пруфа.
+ * Время на входе - миллисекунды, в программу уходят секунды. Порядок полей -
+ * как в IDL; тест сверяет байты с кодировщиком Anchor.
+ */
+export function openSaleData(saleId: string, closesAtMs: number, proofByMs: number): Uint8Array {
+  return join(
+    OPEN_SALE,
+    auctionBytes(saleId),
+    i64(BigInt(Math.floor(closesAtMs / 1000))),
+    i64(BigInt(EXTEND_SECONDS)),
+    i64(BigInt(Math.floor(proofByMs / 1000))),
+  );
+}
 
 /** uuid лота в шестнадцать байт: ровно то, что программа кладёт в сиды. */
 export function auctionBytes(lotId: string): Uint8Array {
@@ -172,8 +256,14 @@ export function decodeLot(data: Uint8Array): ChainLot {
   const topBid = view.getBigUint64(at, true);
   const reserve = view.getBigUint64(at + 8, true);
   const minStep = view.getBigUint64(at + 16, true);
+  at += 24;
 
-  return { sale, mint, topBidder, topBid, reserve, minStep };
+  // Шестнадцать байт uuid и два bump, дальше спор - в прежнем запасе.
+  at += 16 + 2;
+  const disputed = data[at] === 1;
+  const disputedAt = Number(view.getBigInt64(at + 1, true));
+
+  return { sale, mint, topBidder, topBid, reserve, minStep, disputed, disputedAt };
 }
 
 /** Прочитать торг вещи: срок, продление и комиссия - общие на все места. */
@@ -190,8 +280,14 @@ export function decodeSale(data: Uint8Array): ChainSale {
   const closesAt = Number(view.getBigInt64(at, true));
   const extendSeconds = Number(view.getBigInt64(at + 8, true));
   const feeBps = view.getUint16(at + 16, true);
+  // Комиссия (2) и bump (1), дальше поля, легшие в прежний запас.
+  at += 16 + 2 + 1;
+  const hardClosesAt = Number(view.getBigInt64(at, true));
+  const proofDeadline = Number(view.getBigInt64(at + 8, true));
+  const provedAt = Number(view.getBigInt64(at + 16, true));
+  const firstProofDeadline = Number(view.getBigInt64(at + 24, true));
 
-  return { seller, platform, closesAt, extendSeconds, feeBps };
+  return { seller, platform, closesAt, extendSeconds, feeBps, hardClosesAt, proofDeadline, provedAt, firstProofDeadline };
 }
 
 export async function readLot(lotId: string): Promise<ChainLot | null> {
@@ -372,4 +468,121 @@ export async function settled(
 /** Счёт монеты у владельца. Токен-программа одна - та, на которой живёт USDC. */
 function ata(mint: PublicKey, owner: PublicKey): PublicKey {
   return getAssociatedTokenAddressSync(mint, owner, true);
+}
+
+// ---------------------------------------------------------------------------
+// Защита покупателя: инструкции. Порядок аккаунтов - как в IDL.
+
+const CONFIG = PublicKey.findProgramAddressSync([new TextEncoder().encode("config")], PROGRAM_ID)[0];
+
+function vaultOf(lot: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync([new TextEncoder().encode("lot_vault"), lot.toBytes()], PROGRAM_ID)[0];
+}
+
+/**
+ * Завести счёт монеты получателю, если его нет; есть - инструкция пустая.
+ * Программа платит только на готовый счёт, а закрыть свой счёт может любой -
+ * например, победитель, чтобы застопорить решение арбитра. Создать счёт за
+ * другого может кто угодно, поэтому перед каждой выплатой мы заводим его сами.
+ */
+export function ensureAccount(payer: PublicKey, mint: PublicKey, owner: PublicKey): TransactionInstruction {
+  return createAssociatedTokenAccountIdempotentInstruction(payer, ata(mint, owner), owner, mint);
+}
+
+/** Продавец присылает пруф торга: подпись продавца, торг меняется. */
+export function proofInstruction(seller: PublicKey, sale: PublicKey, hash: Uint8Array): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(proofData(hash)),
+    keys: [
+      { pubkey: seller, isSigner: true, isWritable: false },
+      { pubkey: sale, isSigner: false, isWritable: true },
+    ],
+  });
+}
+
+/** Победитель оспаривает пруф: место замораживается. */
+export function disputeInstruction(winner: PublicKey, sale: PublicKey, lot: PublicKey): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(disputeData()),
+    keys: [
+      { pubkey: winner, isSigner: true, isWritable: false },
+      { pubkey: sale, isSigner: false, isWritable: false },
+      { pubkey: lot, isSigner: false, isWritable: true },
+    ],
+  });
+}
+
+/**
+ * Выплата места продавцу: 90% ему, 10% площадке, аренда аккаунтов - ему же.
+ * Зовёт победитель («Looks good») или расчёт после окна спора.
+ */
+export function payInstruction(
+  crank: PublicKey,
+  saleAddress: PublicKey,
+  sale: ChainSale,
+  lotAddress: PublicKey,
+  lot: ChainLot,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(payData()),
+    keys: [
+      { pubkey: crank, isSigner: true, isWritable: false },
+      { pubkey: saleAddress, isSigner: false, isWritable: false },
+      { pubkey: lotAddress, isSigner: false, isWritable: true },
+      { pubkey: vaultOf(lotAddress), isSigner: false, isWritable: true },
+      { pubkey: sale.seller, isSigner: false, isWritable: true },
+      { pubkey: ata(lot.mint, sale.seller), isSigner: false, isWritable: true },
+      { pubkey: sale.platform, isSigner: false, isWritable: false },
+      { pubkey: ata(lot.mint, sale.platform), isSigner: false, isWritable: true },
+      { pubkey: lot.mint, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+  });
+}
+
+/** Арбитр делит ставку оспоренного места: доля продавцу в сотых процента. */
+export function decideInstruction(
+  arbiter: PublicKey,
+  saleAddress: PublicKey,
+  sale: ChainSale,
+  lotAddress: PublicKey,
+  lot: ChainLot,
+  sellerBps: number,
+): TransactionInstruction {
+  if (!lot.topBidder) throw new Error("у места нет победителя");
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(decideData(sellerBps)),
+    keys: [
+      { pubkey: arbiter, isSigner: true, isWritable: false },
+      { pubkey: CONFIG, isSigner: false, isWritable: false },
+      { pubkey: saleAddress, isSigner: false, isWritable: false },
+      { pubkey: lotAddress, isSigner: false, isWritable: true },
+      { pubkey: vaultOf(lotAddress), isSigner: false, isWritable: true },
+      { pubkey: sale.seller, isSigner: false, isWritable: true },
+      { pubkey: ata(lot.mint, sale.seller), isSigner: false, isWritable: true },
+      { pubkey: sale.platform, isSigner: false, isWritable: false },
+      { pubkey: ata(lot.mint, sale.platform), isSigner: false, isWritable: true },
+      { pubkey: lot.topBidder, isSigner: false, isWritable: false },
+      { pubkey: ata(lot.mint, lot.topBidder), isSigner: false, isWritable: true },
+      { pubkey: lot.mint, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+  });
+}
+
+/** Арбитр отодвигает срок пруфа торга. */
+export function moveProofInstruction(arbiter: PublicKey, saleAddress: PublicKey, newDeadlineMs: number): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(moveProofData(newDeadlineMs)),
+    keys: [
+      { pubkey: arbiter, isSigner: true, isWritable: false },
+      { pubkey: CONFIG, isSigner: false, isWritable: false },
+      { pubkey: saleAddress, isSigner: false, isWritable: true },
+    ],
+  });
 }

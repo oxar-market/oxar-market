@@ -147,6 +147,7 @@ export function SellerHome({
 
       <p className="sl-foot">
         <span className="build">Build {BUILD}</span>
+        <a href="/how">How it works</a>
         <a href="/terms">Terms</a>
       </p>
     </>

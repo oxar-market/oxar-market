@@ -42,6 +42,7 @@ import { SetUpSpots } from "./setup.tsx";
 import { db } from "@/lib/session";
 import { Reviews } from "../reviews.tsx";
 import { Winners } from "../winners.tsx";
+import { ProofPanel } from "./proof.tsx";
 
 type View =
   | { name: "home" }
@@ -295,6 +296,18 @@ export function SellerFlow({
             file.
           </p>
           <Winners thingId={view.thing.id} title={view.thing.title} />
+          <ProofPanel
+            thingId={view.thing.id}
+            seller={wallet ? new PublicKey(wallet.address) : null}
+            sign={async (transaction) => {
+              const { signedTransaction } = await signTransaction({
+                transaction: transaction.serialize(),
+                wallet,
+                chain: WALLET_CHAIN,
+              });
+              return signedTransaction;
+            }}
+          />
         </>,
       );
         default:

@@ -7,6 +7,12 @@ import {
   lotAddress,
   minNextCents,
   minNextUnits,
+  openSaleData,
+  proofData,
+  disputeData,
+  payData,
+  decideData,
+  moveProofData,
   saleAddress,
 } from "./chain.ts";
 
@@ -31,6 +37,18 @@ const FRESH =
 /** То же место после ставок: ведёт GuFdc1…, в хранилище $60. */
 const LED =
   "AsZdmc0fZfy0oj2utMftfVs6KmoSte+fOyuz/GlqblSI65B5H+FJDuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AexCDKWsw18bFB+YFpnUTF3MMTF/IDEy72OhWh6N3oxVAIeTAwAAAACA8PoCAAAAAEBCDwAAAAAAMK56I87USjmMIpQFGT2T+/79AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+/**
+ * Торг после защиты покупателя: срок пруфа и время пруфа легли в прежний
+ * запас аккаунта. Получатель комиссии - HTnp…, как в mainnet. Снят тем же
+ * кодировщиком по IDL с пруфом и спором.
+ */
+const SALE_PROVED =
+  "ykDoq7KsIrd8nmZ5dCVA3pRL4H/B+Qrn2+g6gbKOOebbyHtHcKOslUh48W55LOY181WGSOgomm70l+g6ibB+eagqctazkiXrKLkJPDjePdFaa+2ksZRolZ4NuWoAAAAALAEAAAAAAADoA/+uG7lqAAAAAJ6a4GoAAAAAAMDPagAAAAAgYddqAAAAAA==";
+
+/** Место со ставкой, которое победитель оспорил: флаг и время спора - в прежнем запасе. */
+const LOT_DISPUTED =
+  "AsZdmc0fZfy0oj2utMftfVs6KmoSte+fOyuz/GlqblSI65B5H+FJDuM+3lgF9mb23VaCtJFbkai7FBk+ZVQjoU1ra2xgRaI4AexCDKWsw18bFB+YFpnUTF3MMTF/IDEy72OhWh6N3oxVAIeTAwAAAACA8PoCAAAAAEBCDwAAAAAAMK56I87USjmMIpQFGT2T+/79AaBG0WoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 const LOT_ID = "30ae7a23-ced4-4a39-8c22-9405193d93fb";
 const SALE_ID = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
@@ -75,6 +93,37 @@ test("торг вещи читается целиком: срок, продле�
   assert.equal(sale.closesAt, 1_790_512_542);
   assert.equal(sale.extendSeconds, 300);
   assert.equal(sale.feeBps, 1000);
+});
+
+test("торг, открытый до защиты покупателя, читается без срока пруфа", () => {
+  // В старом аккаунте на этих байтах лежал запас из нулей. Ноль в сроке -
+  // признак старого торга: он платит сразу после закрытия.
+  const sale = decodeSale(bytes(SALE));
+  assert.equal(sale.proofDeadline, 0);
+  assert.equal(sale.provedAt, 0);
+});
+
+test("торг с пруфом читается целиком: жёсткий конец, срок пруфа, время пруфа", () => {
+  const sale = decodeSale(bytes(SALE_PROVED));
+  assert.equal(sale.platform.toBase58(), "HTnptfEEkqjr7ZiQs7E39a7a4cuo7tX9JNRych2sRJPv");
+  assert.equal(sale.closesAt, 1_790_512_542);
+  assert.equal(sale.hardClosesAt, 1_790_516_142);
+  assert.equal(sale.proofDeadline, 1_793_104_542);
+  assert.equal(sale.provedAt, 1_792_000_000);
+  // Срок при открытии - от него потолок переносов; в образце перенос уже был.
+  assert.equal(sale.firstProofDeadline, 1_792_500_000);
+});
+
+test("оспоренное место читается с флагом и временем спора", () => {
+  const lot = decodeLot(bytes(LOT_DISPUTED));
+  assert.equal(lot.topBid, 60_000_000n);
+  assert.equal(lot.disputed, true);
+  assert.equal(lot.disputedAt, 1_792_100_000);
+
+  // У места до защиты покупателя здесь нули - спора нет.
+  const old = decodeLot(bytes(LED));
+  assert.equal(old.disputed, false);
+  assert.equal(old.disputedAt, 0);
 });
 
 test("место без ставок читается целиком", () => {
@@ -130,4 +179,26 @@ test("минимум в центах округляется вверх, а не 
 
   assert.equal(minNextUnits(led), 52_510_500n);
   assert.equal(minNextCents(led), 5252);
+});
+
+test("открытие торга кодируется байт в байт как у Anchor: срок, продление, срок пруфа", () => {
+  // Образец снят BorshInstructionCoder по IDL с пруфом: торг 7c9e6679-…,
+  // закрытие 1790512542, продление 300, срок пруфа 1793104542.
+  const data = openSaleData(SALE_ID, 1_790_512_542_000, 1_793_104_542_000);
+  assert.equal(
+    Buffer.from(data).toString("base64"),
+    "HPEFWULdUmN8nmZ5dCVA3pRL4H/B+Qrnng25agAAAAAsAQAAAAAAAJ6a4GoAAAAA",
+  );
+});
+
+test("инструкции защиты покупателя кодируются байт в байт как у Anchor", () => {
+  // Образцы сняты BorshInstructionCoder по IDL с пруфом и спором.
+  const b64 = (data: Uint8Array) => Buffer.from(data).toString("base64");
+  const hash = Uint8Array.from({ length: 32 }, (_, i) => i);
+  assert.equal(b64(proofData(hash)), "OKuBp/nSf9oAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHw==");
+  assert.equal(b64(disputeData()), "ZFBlsLsOWns=");
+  assert.equal(b64(payData()), "JKnKKxbpk74=");
+  assert.equal(b64(decideData(3000)), "fZh7Oec58Vm4Cw==");
+  assert.equal(b64(moveProofData(1_795_000_000_000)), "M6wELc68K8DAhv1qAAAAAA==");
+  assert.throws(() => proofData(new Uint8Array(31)), "хеш не из тридцати двух байт");
 });

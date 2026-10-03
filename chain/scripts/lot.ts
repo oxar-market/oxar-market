@@ -18,6 +18,9 @@ export type ChainLot = {
   topBidder: PublicKey | null;
   topBid: { toString(): string };
   reserve: { toString(): string };
+  /** Победитель оспорил пруф: деньги ждут арбитра. */
+  disputed: boolean;
+  disputedAt: { toString(): string };
 };
 
 /** Торг вещи целиком: срок и комиссия общие на все её места. */
@@ -27,6 +30,10 @@ export type ChainSale = {
   closesAt: { toString(): string };
   extendSeconds: { toString(): string };
   feeBps: number;
+  /** До когда продавец обязан прислать пруф; ноль - торг до защиты покупателя. */
+  proofDeadline: { toString(): string };
+  /** Когда пришёл пруф; ноль - ещё нет. */
+  provedAt: { toString(): string };
 };
 
 export async function fetchLot(

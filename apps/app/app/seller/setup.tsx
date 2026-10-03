@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { publishCost, type PublishCost } from "@oxar/core";
+import { minProofDeadline, publishCost, type PublishCost } from "@oxar/core";
 import type { PricingThing, SpotPlan, Worn } from "@/lib/seller";
 import { spotsPerSale } from "@/lib/publish";
 import { rentPerByte } from "@/lib/chain";
@@ -61,7 +61,13 @@ export function SetUpSpots({
     setDrafts((was) => was.map((one, at) => (at === index ? { ...one, ...change } : one)));
   }
 
-  const plans = drafts.map((one, index) => ({ spotId: thing.spots[index]!.id, plan: toPlan(one) }));
+  // Срок пруфа - день, до конца которого продавец покажет вещь в деле. Не
+  // раньше, чем примет программа: закрытие торга плюс час продления. Пока
+  // продавец сам не выбрал - неделя после последнего дня, когда вещь носят,
+  // а без него - две недели после закрытия.
+  const [proofDay, setProofDay] = useState("");
+  const lastClose = Math.max(...drafts.map((one) => Date.parse(one.closes)).filter(Number.isFinite), 0);
+  const proofMin = local(new Date(minProofDeadline(lastClose / 1000) * 1000)).slice(0, 10);
   // Кто носит вещь, где и когда: без этого покупатель места не знает,
   // кто увидит его логотип, и публиковать нельзя.
   const [worn, setWorn] = useState<Worn>(thing.worn);
@@ -78,6 +84,16 @@ export function SetUpSpots({
     setWorn({ ...worn, when: next.from ? dayRange(next.from, to) : thing.worn.when });
   }
   const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0) && !early;
+  const suggested = shiftDay(days.to || days.from || local(new Date(lastClose)).slice(0, 10), days.from ? 7 : 14);
+  const proofBy = proofDay || (suggested > proofMin ? suggested : proofMin);
+  const proofOk = proofBy >= proofMin;
+  const plans = drafts.map((one, index) => {
+    const plan = toPlan(one);
+    return {
+      spotId: thing.spots[index]!.id,
+      plan: plan && plan.kind === "auction" ? { ...plan, proofBy: new Date(`${proofBy}T23:59`).toISOString() } : plan,
+    };
+  });
   const valid = plans.every((one) => one.plan !== null);
   // Ставка залога - из сети: пока не пришла, стоимость не пишем, чтобы не
   // показать устаревшую.
@@ -200,6 +216,20 @@ export function SetUpSpots({
         <p className="sl-plan-note">Bidders see this before they bid. Who, where and when are needed to publish.</p>
       </div>
 
+      {/* Деньги победителей уходят продавцу только после пруфа - и этот срок
+          видят покупатели до ставки. */}
+      <div className="sl-card sl-plan">
+        <div className="sl-plan-head">
+          <h3>Proof</h3>
+        </div>
+        <Day label="Show proof by" value={proofDay} shown={dayRange(proofBy, "")} min={proofMin} onChange={setProofDay} />
+        {!proofOk && <p className="bad sl-plan-note">Pick a day after the auction closes.</p>}
+        <p className="sl-plan-note">
+          After the auction, show the thing in use with the logos on it. Winners get 72 hours to
+          check it, then you are paid. No proof by this day, and the bids go back to the winners.
+        </p>
+      </div>
+
       {failed && <p className="bad">Could not save the prices. Try again.</p>}
       {problem && <p className="bad">{problem}</p>}
 
@@ -217,7 +247,7 @@ export function SetUpSpots({
         <button
           type="button"
           className="sl-btn dark"
-          disabled={!valid || !described || publishing}
+          disabled={!valid || !described || !proofOk || publishing}
           onClick={() => onPublish(plans as { spotId: string; plan: SpotPlan }[], worn)}
         >
           {publishing ? "Publishing…" : cost ? `Publish · ${sol(cost.totalLamports)} SOL` : "Publish"}
@@ -419,6 +449,13 @@ function fresh(): Draft {
     opens: local(noon),
     closes: local(closes),
   };
+}
+
+/** День «ГГГГ-ММ-ДД» плюс столько-то дней, в часах человека. */
+function shiftDay(day: string, by: number): string {
+  const at = new Date(`${day}T12:00`);
+  at.setDate(at.getDate() + by);
+  return local(at).slice(0, 10);
 }
 
 /** Время для поля datetime-local: в часах человека, без зоны. */

@@ -9,6 +9,7 @@ import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
+import { WornInfo } from "../worn.tsx";
 
 /**
  * Торг вещи продавца.
@@ -279,11 +280,16 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         </div>
       )}
 
+      {/* Кто носит вещь, где, когда и срок пруфа - до выбора места: деньги
+          победителя держит программа до пруфа, и этот срок покупатель видит
+          прежде, чем ставит. */}
+      <WornInfo thingId={thingId} />
+
       {lots.length > 0 && (
         <>
           <div className="pick-head">
             <span className="pick-title">Pick a spot</span>
-            <span className="muted small">{thing.spots.length} spots</span>
+            <span className="muted small">{thing.spots.length === 1 ? "1 spot" : `${thing.spots.length} spots`}</span>
           </div>
           <div className="pick-grid" role="group" aria-label="Spots with prices">
             {thing.spots.map((spot) => {
