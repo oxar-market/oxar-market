@@ -36,6 +36,22 @@ const APP = "https://app.oxar.app/";
 // номер клетки футболки, у вещи продавца оно уже есть («Spot 1»).
 const spotName = (label: string) => (/^\d+$/.test(label) ? `spot ${label}` : label);
 
+/**
+ * Название вещи и подпись места задаёт продавец, а уходят они в пуш и в
+ * письмо от нашего адреса. Поэтому - одной строкой, без ссылок и не длиннее
+ * шестидесяти знаков: письмо OXAR не должно нести чужую ссылку или перенос
+ * строки в теме.
+ */
+function clean(text: string): string {
+  return text
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\b(?:https?:\/\/|www\.)\S*/gi, "")
+    .replace(/\b[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}(?:\/\S*)?/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+}
+
 type Event = { id: number; user_id: string; kind: string; data: Record<string, unknown> };
 
 /** Место и вещь лота - для текста. */
@@ -44,8 +60,8 @@ async function spotOf(lotId: unknown): Promise<{ spot: string; thing: string }> 
   const { data } = await db.from("lots").select("thing_spots(label), things:thing_id(title)").eq("id", lotId).maybeSingle();
   const label = (data?.thing_spots as { label?: string } | null)?.label ?? "";
   return {
-    spot: label ? spotName(label) : "",
-    thing: (data?.things as { title?: string } | null)?.title ?? "",
+    spot: label ? spotName(clean(label)) : "",
+    thing: clean((data?.things as { title?: string } | null)?.title ?? ""),
   };
 }
 
