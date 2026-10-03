@@ -257,7 +257,7 @@ async function main() {
 
   // Проход 2: выигранные места с защитой покупателя, ещё не рассчитанные.
   const waiting = await rest(
-    "lots?status=eq.won&settle_signature=is.null&chain_sale=not.is.null&select=id",
+    "lots?status=eq.won&settle_signature=is.null&chain_sale=not.is.null&select=id,chain_sale",
   );
   for (const row of waiting) {
     const label = row.id.slice(0, 8);
@@ -278,6 +278,13 @@ async function main() {
         continue;
       }
       const lot = await fetchLot(program, lotPda);
+      // Адрес торга у выигранного места - из цепочки: по нему принимается
+      // пруф. Место, отмеченное won до этого правила, несёт адрес, вписанный
+      // продавцом, - чиним на первом же проходе.
+      if (row.chain_sale !== lot.sale.toBase58()) {
+        await mark(row.id, { chain_sale: lot.sale.toBase58() });
+        console.log(`${label}: адрес торга исправлен по цепочке`);
+      }
       const sale = await fetchSale(program, lot.sale);
       const t = now();
       if (disputeLapsed(asSpot(lot), t)) {
