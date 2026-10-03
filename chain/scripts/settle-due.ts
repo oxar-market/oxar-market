@@ -236,13 +236,16 @@ async function main() {
       } else if (!hasBuyerProtection({ proofDeadline: Number(sale.proofDeadline.toString()) })) {
         // Торг до защиты покупателя: платит сразу, как раньше.
         const signature = await pay(lotPda, lot, sale);
-        await mark(row.id, { status: "won", settle_signature: signature });
+        await mark(row.id, { status: "won", settle_signature: signature, chain_sale: lot.sale.toBase58() });
         console.log(`${label}: выплачен (старый торг), ${signature}`);
       } else {
         // Выигран, деньги ждут пруфа. Счёт продавца заводим сразу: выплату
         // может позвать и победитель из приложения, и арбитр.
         await provider.sendAndConfirm(new Transaction().add(sellerAccount(lot, sale)));
-        await mark(row.id, { status: "won" });
+        // Адрес торга - из цепочки, а не тот, что вписал продавец при
+        // публикации: по нему принимается пруф, и чужой адрес здесь позволил
+        // бы занять пруф чужого торга.
+        await mark(row.id, { status: "won", chain_sale: lot.sale.toBase58() });
         console.log(`${label}: выигран, ждёт пруфа до ${new Date(Number(sale.proofDeadline.toString()) * 1000).toISOString()}`);
       }
     } catch (error) {

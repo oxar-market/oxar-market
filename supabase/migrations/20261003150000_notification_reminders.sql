@@ -210,13 +210,20 @@ grant execute on function queue_reminders() to service_role;
 -- адрес торга - её: продавец мог положить «пруф» с чужим адресом. Тогда
 -- победители чужого торга получили бы ложное «Proof is in», а настоящий пруф
 -- того торга уже не лёг бы - адрес торга здесь первичный ключ.
+--
+-- Сверяем с выигранным местом: адрес торга у черновика и открытого лота
+-- вписывает сам продавец при публикации, а у выигранного его переписывает
+-- расчёт из цепочки (settle-due). Статус «won» продавцу не поставить.
 drop policy "продавец кладёт пруф своей вещи" on proofs;
 create policy "продавец кладёт пруф своей вещи" on proofs for insert to authenticated
   with check (
-    exists (select 1 from lots l where l.chain_sale = sale and l.thing_id = proofs.thing_id)
+    exists (
+      select 1 from lots l
+      where l.chain_sale = proofs.sale and l.thing_id = proofs.thing_id and l.status = 'won'
+    )
     and (
       is_admin()
-      or exists (select 1 from things t where t.id = thing_id and t.seller = auth.uid())
+      or exists (select 1 from things t where t.id = proofs.thing_id and t.seller = auth.uid())
     )
   );
 
