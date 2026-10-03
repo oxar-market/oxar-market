@@ -94,6 +94,44 @@ export function hasOpened(opensAt: number | null, now: number): boolean {
   return opensAt === null || now >= opensAt;
 }
 
+/** Лот глазами вкладки торга: чья вещь и когда он идёт. Миллисекунды. */
+export type LotWindow = { thingId: string; opensAt: number | null; closesAt: number };
+
+/** Торг вещи на вкладке: идёт (`live`) или назначен. */
+export type OnAir = LotWindow & { live: boolean };
+
+/**
+ * Какие торги показывает вкладка Auction и в каком порядке.
+ *
+ * Лоты одной вещи - один торг: открытие по самому раннему лоту, а хоть один
+ * лот без срока - торг уже идёт (так же считают экраны торга); закрытие по
+ * самому позднему. Закрывшиеся лоты не в счёт.
+ *
+ * Идущие торги стоят раньше назначенных: на вкладку приходят ставить, а не
+ * ждать. Идущие - от ближайшего закрытия, там решается торг; назначенные - от
+ * ближайшего открытия.
+ */
+export function onAir(lots: LotWindow[], now: number): OnAir[] {
+  const byThing = new Map<string, LotWindow>();
+  for (const lot of lots) {
+    if (!isOpen(lot.closesAt, now)) continue;
+    const known = byThing.get(lot.thingId);
+    if (!known) {
+      byThing.set(lot.thingId, { ...lot });
+      continue;
+    }
+    known.opensAt =
+      known.opensAt === null || lot.opensAt === null ? null : Math.min(known.opensAt, lot.opensAt);
+    known.closesAt = Math.max(known.closesAt, lot.closesAt);
+  }
+  const all = [...byThing.values()].map((one) => ({ ...one, live: hasOpened(one.opensAt, now) }));
+  const live = all.filter((one) => one.live).sort((a, b) => a.closesAt - b.closesAt);
+  const next = all
+    .filter((one) => !one.live)
+    .sort((a, b) => (a.opensAt as number) - (b.opensAt as number));
+  return [...live, ...next];
+}
+
 /**
  * Имя стартапа при ставке - то, чьё это лого.
  *

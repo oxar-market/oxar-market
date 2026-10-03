@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
 import { db, exchange, syncContact } from "@/lib/session";
 import { BUILD } from "@/lib/build";
-import { Auction } from "./auction/auction";
 import { Market } from "./market";
 import { Tabs, useTab } from "./tabs";
 import { ThemeRow, You } from "./you";
 import { PhoneCapture } from "./seller/flow.tsx";
 import { ListingAuction } from "./listing/listing.tsx";
+import { AuctionTab } from "./auction/on-air.tsx";
 
 /**
  * Приложение.
@@ -26,10 +26,13 @@ export default function Home() {
   const { login } = useLogin();
   const [tab, setTab] = useTab();
   // Вещь продавца, открытая с маркета или из кабинета. Пусто - на вкладке
-  // торга наша футболка, как было.
+  // торга идущие и назначенные торги каруселью.
   const [openThing, setOpenThing] = useState<string | null>(null);
+  // Открыли нашу вещь - карусель встаёт на неё, а не на первый торг.
+  const [toHouse, setToHouse] = useState(false);
   function openAuction(thingId?: string) {
     setOpenThing(thingId ?? null);
+    setToHouse(!thingId);
     setTab("auction");
   }
   const [linked, setLinked] = useState<"idle" | "linking" | "ready" | "failed">(
@@ -115,7 +118,7 @@ export default function Home() {
             }}
           />
         ) : (
-          <Auction />
+          <AuctionTab house={toHouse} onBack={() => setTab("market")} />
         ))}
       {tab === "you" && capture ? (
         <section className="screen">
@@ -141,7 +144,10 @@ export default function Home() {
       <Tabs
         tab={tab}
         onPick={(next) => {
-          if (next === "auction") setOpenThing(null);
+          if (next === "auction") {
+            setOpenThing(null);
+            setToHouse(false);
+          }
           setTab(next);
         }}
       />
