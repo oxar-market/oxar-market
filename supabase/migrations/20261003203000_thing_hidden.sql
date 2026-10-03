@@ -15,13 +15,15 @@ alter table things
 -- спрятанной, и «Show on Market» вывел бы её на маркет без одобрения. А
 -- active по умолчанию true с самого начала, так что продавец мог миновать
 -- проверку и прямой вставкой. Новая вещь рождается неодобренной и
--- неспрятанной - приложение и так вставляет active = false.
+-- неспрятанной - приложение и так вставляет active = false. И не «нашей»:
+-- house = true у вещи продавца выглядел бы в админке как наша вещь.
 drop policy if exists "одобренный продавец заводит вещь" on things;
 create policy "одобренный продавец заводит вещь" on things for insert
   with check (
     seller = auth.uid()
     and not active
     and not hidden
+    and not house
     and exists (
       select 1 from profiles p where p.user_id = auth.uid() and p.is_seller
     )
