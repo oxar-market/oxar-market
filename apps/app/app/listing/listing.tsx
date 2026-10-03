@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUsd, hasOpened, isOpen, minBidCents } from "@oxar/core";
+import { formatUsd, hasOpened, isOpen, minBidCents, shortWallet } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import { loadBids, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
@@ -393,7 +393,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               <span className="bid-row-who">
                 <span>{bid.brand}</span>
                 <em>
-                  <span className="mono">{`${bid.bidder_wallet.slice(0, 4)}..${bid.bidder_wallet.slice(-4)}`}</span>
+                  <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
                   {" · "}
                   {ago(bid.created_at, now)}
                 </em>

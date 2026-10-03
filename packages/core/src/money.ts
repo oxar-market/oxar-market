@@ -9,48 +9,53 @@
  * Прежний расчёт живёт в истории git, если когда-нибудь вернётся аренда.
  */
 
-/** Комиссия платформы: 10% с продавца, с покупателя ноль. */
-export const FEE_RATE = 0.1;
-
-export type Split = {
-  /** сколько заплатил покупатель */
-  grossCents: number;
-  /** комиссия платформы */
-  feeCents: number;
-  /** сколько получит продавец */
-  netCents: number;
-};
-
-/** Как делится сумма сделки, которая прошла полностью. */
-export function splitPayout(grossCents: number): Split {
-  assertWholeNonNegative(grossCents, "grossCents");
-  const feeCents = Math.round(grossCents * FEE_RATE);
-  return { grossCents, feeCents, netCents: grossCents - feeCents };
-}
-
-/**
- * Комиссия в сотых долях процента - в таком виде её держит наша программа на
- * Solana (поле `fee_bps` у лота). Здесь, чтобы обе стороны считали одно и то
- * же число: расходись они, сумма на экране не сошлась бы с суммой в цепочке.
- */
-export const FEE_BPS = Math.round(FEE_RATE * 10_000);
-
 /** Знаков после запятой у USDC. */
 export const USDC_DECIMALS = 6;
 
-const UNITS_PER_CENT = 10 ** (USDC_DECIMALS - 2);
-
-export function toUsdcBaseUnits(cents: number): number {
+/**
+ * Центы в базовые единицы монеты. Знаков у монеты бывает не шесть (тестовая
+ * монета devnet), поэтому их передают; по умолчанию - USDC.
+ */
+export function centsToUnits(cents: number, decimals: number = USDC_DECIMALS): bigint {
   assertWholeNonNegative(cents, "cents");
-  return cents * UNITS_PER_CENT;
+  if (decimals < 2) throw new Error("a coin with fewer than 2 decimals cannot hold cents");
+  return BigInt(cents) * 10n ** BigInt(decimals - 2);
 }
 
-export function fromUsdcBaseUnits(units: number): number {
-  assertWholeNonNegative(units, "units");
-  if (units % UNITS_PER_CENT !== 0) {
-    throw new Error("units do not add up to a whole number of cents");
-  }
-  return units / UNITS_PER_CENT;
+/**
+ * Базовые единицы в центы. Остаток меньше цента реален: на кошельке он бывает
+ * всегда, а минимум ставки программа считает в единицах. Поэтому - явно, в
+ * какую сторону: баланс показываем вниз (столько точно есть), минимум ставки
+ * - вверх (меньше программа не примет).
+ */
+export function unitsToCents(units: bigint, mode: "floor" | "ceil" = "floor", decimals: number = USDC_DECIMALS): number {
+  if (units < 0n) throw new Error("units must not be negative");
+  if (decimals < 2) throw new Error("a coin with fewer than 2 decimals cannot hold cents");
+  const per = 10n ** BigInt(decimals - 2);
+  return Number(mode === "ceil" ? (units + per - 1n) / per : units / per);
+}
+
+/**
+ * Как программа делит выигравшую ставку (`Lot::split`): комиссия - вниз в
+ * базовых единицах, остаток продавцу. В сумме ровно ставка.
+ */
+export function payoutSplit(winning: bigint, feeBps: number): { fee: bigint; toSeller: bigint } {
+  if (winning < 0n) throw new Error("winning bid must not be negative");
+  if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 10_000) throw new Error("fee_bps must be 0..10000");
+  const fee = (winning * BigInt(feeBps)) / 10_000n;
+  return { fee, toSeller: winning - fee };
+}
+
+/** SOL из лампортов: столько знаков, сколько нужно для цены публикации. */
+export function formatSol(lamports: bigint | number, digits = 4): string {
+  return `${(Number(lamports) / 1e9).toFixed(digits)} SOL`;
+}
+
+/** Проценты, набранные человеком, в сотые доли процента; не число - null. */
+export function percentToBps(text: string): number | null {
+  const value = Number(text.trim());
+  if (text.trim() === "" || !Number.isFinite(value) || value < 0 || value > 100) return null;
+  return Math.round(value * 100);
 }
 
 /**

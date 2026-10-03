@@ -16,7 +16,7 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
-import { USDC_DECIMALS, toUsdcBaseUnits } from "@oxar/core";
+import { ACCOUNT_OVERHEAD, EXTEND_SECONDS, centsToUnits } from "@oxar/core";
 
 /**
  * Разговор со своей программой на Solana.
@@ -95,7 +95,7 @@ export const connection = new Connection(SOLANA_RPC_URL, "confirmed");
  * это 128 байт служебных данных по ставке.
  */
 export async function rentPerByte(): Promise<number> {
-  return (await connection.getMinimumBalanceForRentExemption(0)) / 128;
+  return (await connection.getMinimumBalanceForRentExemption(0)) / ACCOUNT_OVERHEAD;
 }
 
 export type ChainLot = {
@@ -133,9 +133,6 @@ export type ChainSale = {
 
 /** `seller_opens_sale` из IDL. */
 const OPEN_SALE = new Uint8Array([28, 241, 5, 89, 66, 221, 82, 99]);
-/** Продление ставкой под конец - как у первой футболки. */
-export const EXTEND_SECONDS = 300;
-
 function i64(value: bigint): Uint8Array {
   const out = new Uint8Array(8);
   new DataView(out.buffer).setBigInt64(0, value, true);
@@ -334,30 +331,6 @@ export async function walletUnits(
 }
 
 /**
- * Наименьшая ставка, которую примет программа. Считается её же арифметикой.
- *
- * То же правило живёт в `packages/core` для экрана и в триггере базы как
- * последний барьер. Здесь оно повторено третий раз не от небрежности: те двое
- * считают в центах и округляют, а программа делит целые базовые единицы и
- * отбрасывает остаток. На круглых долларах числа совпадают до единицы, но
- * стоит верхней ставке оказаться, скажем, $50.01 - и округлённый центами
- * минимум окажется на полцента ниже того, что примет программа.
- */
-export function minNextUnits(lot: ChainLot): bigint {
-  if (!lot.topBidder) return lot.reserve;
-  const step = (lot.topBid * 5n) / 100n;
-  return lot.topBid + (step > lot.minStep ? step : lot.minStep);
-}
-
-const UNITS_PER_CENT = BigInt(10 ** (USDC_DECIMALS - 2));
-
-/** Тот же минимум в центах, вверх до целого: ставку набирают центами. */
-export function minNextCents(lot: ChainLot): number {
-  const units = minNextUnits(lot);
-  return Number((units + UNITS_PER_CENT - 1n) / UNITS_PER_CENT);
-}
-
-/**
  * Транзакция ставки.
  *
  * Прежний лидер стоит в ней отдельным счётом, потому что ему той же
@@ -379,11 +352,7 @@ export async function bidTransaction(
 
   const data = new Uint8Array(16);
   data.set(PLACE_BID, 0);
-  new DataView(data.buffer).setBigUint64(
-    8,
-    BigInt(toUsdcBaseUnits(amountCents)),
-    true,
-  );
+  new DataView(data.buffer).setBigUint64(8, centsToUnits(amountCents), true);
 
   const instruction = new TransactionInstruction({
     programId: PROGRAM_ID,

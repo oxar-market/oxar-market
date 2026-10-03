@@ -7,8 +7,8 @@ import {
 } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
 import { WALLET_CHAIN, connection, rentPerByte } from "@/lib/chain";
-import { publishAuctions, spotsPerSale } from "@/lib/publish";
-import { publishCost } from "@oxar/core";
+import { publishAuctions } from "@/lib/publish";
+import { formatSol, publishCost, spotsPerSale } from "@oxar/core";
 import { costLine } from "./setup.tsx";
 import {
   answerRequest,
@@ -203,11 +203,11 @@ export function SellerFlow({
                 ),
                 await rentPerByte(),
               );
-              const sol = (await connection.getBalance(owner)) / 1e9;
-              if (sol * 1e9 < cost.totalLamports) {
+              const lamports = await connection.getBalance(owner);
+              if (lamports < cost.totalLamports) {
                 setBusy(false);
                 return setProblem(
-                  `${costLine(cost)} You have ${sol.toFixed(3)} SOL - top up the wallet and publish again.`,
+                  `${costLine(cost)} You have ${formatSol(lamports, 3)} - top up the wallet and publish again.`,
                 );
               }
               const opened = await publishAuctions(view.thing.id, owner, async (transaction) => {

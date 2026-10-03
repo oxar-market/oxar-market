@@ -1,6 +1,7 @@
 "use client";
 
 import { ComputeBudgetProgram, PublicKey, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
+import { hasBuyerProtection } from "@oxar/core";
 import {
   connection,
   decideInstruction,
@@ -174,7 +175,7 @@ export async function loadAwaitingProof(): Promise<AwaitingProof[]> {
   for (const [sale, thing] of bySale) {
     if (proved.has(sale)) continue;
     const chain = await readSale(new PublicKey(sale)).catch(() => null);
-    if (chain && chain.proofDeadline > 0 && chain.provedAt === 0) out.push({ sale: new PublicKey(sale), thing, chain });
+    if (chain && hasBuyerProtection(chain) && chain.provedAt === 0) out.push({ sale: new PublicKey(sale), thing, chain });
   }
   return out;
 }

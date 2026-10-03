@@ -3,13 +3,17 @@ import assert from "node:assert/strict";
 import {
   APPEAL_SECONDS,
   ARBITER_SECONDS,
+  MAX_PROOF_MOVE_SECONDS,
   TOTAL_EXTEND_SECONDS,
   appealOpen,
   arbiterSplit,
   disputeLapsed,
+  hasBuyerProtection,
   minProofDeadline,
+  movesProof,
   pays,
   proofMissed,
+  settledOutcome,
   spotStage,
   takesProof,
   type ProofSale,
@@ -102,4 +106,38 @@ test("арбитр делит ставку: комиссия только с д�
   const odd = arbiterSplit(999n, 3_333, 1_000);
   assert.equal(odd.toSeller + odd.fee + odd.toWinner, 999n);
   assert.throws(() => arbiterSplit(1_000n, 10_001, 1_000));
+});
+
+test("защита покупателя - у торгов со сроком пруфа", () => {
+  assert.equal(hasBuyerProtection(sale()), true);
+  assert.equal(hasBuyerProtection(sale({ proofDeadline: 0 })), false);
+});
+
+test("арбитр двигает срок пруфа только позже и не дальше девяноста дней", () => {
+  assert.equal(MAX_PROOF_MOVE_SECONDS, 90 * 24 * 60 * 60);
+  const moved = { ...sale(), firstProofDeadline: 1_100 };
+  const limit = 1_100 + MAX_PROOF_MOVE_SECONDS;
+  assert.equal(movesProof(moved, 500, 2_000), true);
+  assert.equal(movesProof(moved, 500, limit), true, "ровно девяносто дней можно");
+  assert.equal(movesProof(moved, 500, limit + 1), false);
+  assert.equal(movesProof(moved, 500, 1_100), false, "не раньше и не на тот же срок");
+  assert.equal(movesProof(moved, 1_101, 2_000), false, "срок уже вышел");
+  assert.equal(movesProof({ ...moved, provedAt: 600 }, 700, 2_000), false, "пруф уже есть");
+  assert.equal(movesProof({ ...moved, proofDeadline: 0 }, 500, 2_000), false, "старый торг");
+  // Второй перенос считается от первого срока, а не от текущего.
+  const twice = { ...moved, proofDeadline: limit - 10 };
+  assert.equal(movesProof(twice, 500, limit + 5), false);
+});
+
+test("чем кончилось место: решение арбитра важнее отметки расчёта", () => {
+  assert.equal(settledOutcome({ sellerBps: null, proved: true, refunded: false }), "paid");
+  assert.equal(settledOutcome({ sellerBps: null, proved: true, refunded: true }), "refunded", "арбитр молчал");
+  assert.equal(
+    settledOutcome({ sellerBps: null, proved: false, refunded: false }),
+    "refunded",
+    "без пруфа - только назад, даже если расчёт ещё не отметил",
+  );
+  assert.equal(settledOutcome({ sellerBps: 10_000, proved: true, refunded: false }), "paid");
+  assert.equal(settledOutcome({ sellerBps: 0, proved: true, refunded: false }), "refunded");
+  assert.equal(settledOutcome({ sellerBps: 5_000, proved: true, refunded: false }), "split");
 });

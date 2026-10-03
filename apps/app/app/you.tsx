@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { PublicKey } from "@solana/web3.js";
-import { avatarLetter, formatUsd } from "@oxar/core";
+import { avatarLetter, formatUsd, scoreText, shortWallet, spotName, unitsToCents, type Score } from "@oxar/core";
 import { BUILD } from "@/lib/build";
 import { connection, walletUnits } from "@/lib/chain";
-import { loadMyStands, spotName, type MyStand } from "@/lib/auction";
+import { loadMyStands, type MyStand } from "@/lib/auction";
 import { db } from "@/lib/session";
 import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
@@ -14,8 +14,7 @@ import { amIAdmin } from "@/lib/admin";
 import { Admin } from "./admin/admin.tsx";
 import { SellerApply } from "./seller/apply.tsx";
 import { YourWins } from "./wins.tsx";
-import { loadScoreOf, scoreText } from "@/lib/reviews";
-import type { Score } from "@/lib/seller";
+import { loadScoreOf } from "@/lib/reviews";
 
 /**
  * Страница человека, собранная по дизайн-борду «OXAR Auction design
@@ -79,7 +78,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
       const mint = data?.[0]?.mint;
       if (!mint) return;
       const units = await walletUnits(new PublicKey(mint), owner);
-      if (live) setUsdc(Number(units / 10_000n) / 100);
+      if (live) setUsdc(unitsToCents(units) / 100);
     })().catch(() => {
       if (live) setFailed(true);
     });
@@ -227,7 +226,7 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
         </span>
         <div className="you-id">
           {email ? <p className="you-mail">{email}</p> : null}
-          {wallet && !email ? <p className="you-mail mono">{shorten(wallet)}</p> : null}
+          {wallet && !email ? <p className="you-mail mono">{shortWallet(wallet)}</p> : null}
           <p className="you-sub">
             {email ? "Signed in with email" : "Signed in with a wallet"}
           </p>
@@ -480,11 +479,6 @@ export function ThemeRow() {
       </div>
     </div>
   );
-}
-
-/** Адрес в шапке: края, по которым свой кошелёк узнают. */
-function shorten(at: string): string {
-  return `${at.slice(0, 4)}…${at.slice(-4)}`;
 }
 
 /** День для истории: коротко, в часах читателя. */

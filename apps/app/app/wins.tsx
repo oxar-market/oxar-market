@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useConnectedStandardWallets, useStandardSignTransaction } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
-import { APPEAL_SECONDS, ARBITER_SECONDS, formatUsd, spotStage } from "@oxar/core";
+import { APPEAL_SECONDS, ARBITER_SECONDS, formatUsd, settledOutcome, spotName, spotStage } from "@oxar/core";
 import { WALLET_CHAIN } from "@/lib/chain";
 import { photoUrl } from "@/lib/seller";
 import { confirmWin, disputeWin, loadMyWins, type Win } from "@/lib/wins";
-import { spotName, type MyStand } from "@/lib/auction";
+import type { MyStand } from "@/lib/auction";
 
 /**
  * Выигранные места под защитой покупателя. Деньги держит программа, пока
@@ -74,15 +74,16 @@ function WinCard({
 
   // Аккаунт места закрыт - деньги ушли: продавцу или назад победителю.
   if (!win.lot || !win.sale) {
-    const share = win.dispute?.sellerBps;
+    const share = win.dispute?.sellerBps ?? null;
+    const outcome = settledOutcome({ sellerBps: share, proved: win.proof !== null, refunded: win.refunded });
     const text =
-      share === null || share === undefined
-        ? win.proof && !win.refunded
+      share === null
+        ? outcome === "paid"
           ? "Paid to the seller. Done."
           : "Settled. Your bid came back to your wallet."
-        : share === 10_000
+        : outcome === "paid"
           ? "OXAR reviewed it: paid to the seller."
-          : share === 0
+          : outcome === "refunded"
             ? "OXAR reviewed it: your bid came back to your wallet."
             : `OXAR reviewed it: ${share / 100}% to the seller, the rest came back to your wallet.`;
     return (

@@ -29,6 +29,9 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { fetchConfig } from "./lot";
+// Правила - из packages/core прямым путём: пакетом ts-node его не возьмёт.
+import { MIN_STEP_CENTS } from "../../packages/core/src/lot";
+import { centsToUnits, parseUsd } from "../../packages/core/src/money";
 
 /**
  * Сеть, в которой открываем торг. По умолчанию девнет: боевые деньги
@@ -38,9 +41,6 @@ import { fetchConfig } from "./lot";
  */
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 const THING_SLUG = "superteam-ua-tee";
-/** Наименьшая прибавка к ставке по умолчанию. Задаётся ключом --step:
- * долларовый шаг на дорогих местах выглядит копеечным. */
-const MIN_STEP_CENTS = 100;
 
 function arg(name: string): string | undefined {
   const found = process.argv.find((one) => one.startsWith(`--${name}=`));
@@ -95,8 +95,11 @@ async function main() {
     throw new Error("нужны --sale, --spot и --reserve");
   }
 
-  const stepCents = Math.round(Number(arg("step") ?? MIN_STEP_CENTS / 100) * 100);
-  if (!Number.isFinite(stepCents) || stepCents <= 0) {
+  // Шаг по умолчанию - доллар; ключом --step его поднимают: долларовый шаг
+  // на дорогих местах выглядит копеечным.
+  const stepArg = arg("step");
+  const stepCents = stepArg === undefined ? MIN_STEP_CENTS : parseUsd(stepArg);
+  if (!stepCents) {
     throw new Error(`шаг «${arg("step")}» не похож на сумму`);
   }
 
@@ -109,8 +112,8 @@ async function main() {
   // Резерв приходит долларами, а живёт в двух видах: центы для показа и
   // базовые единицы монеты для программы. Считаем из центов, а не из доллара:
   // дробь в долларах разошлась бы с выплатой на доли цента.
-  const reserveCents = Math.round(Number(reserve) * 100);
-  if (!Number.isFinite(reserveCents) || reserveCents <= 0) {
+  const reserveCents = parseUsd(reserve);
+  if (!reserveCents) {
     throw new Error(`резерв «${reserve}» не похож на сумму`);
   }
 
@@ -161,7 +164,6 @@ async function main() {
 
   const { decimals } = await getMint(connection, mint);
   if (decimals < 2) throw new Error(`у монеты ${decimals} знаков, центы в неё не лягут`);
-  const units = (cents: number) => cents * Math.pow(10, decimals - 2);
 
   const [thing] = await rest(`things?slug=eq.${thingSlug}&select=id,title`);
   if (!thing) throw new Error(`вещи ${thingSlug} нет в каталоге`);
@@ -200,8 +202,8 @@ async function main() {
   const signature = await program.methods
     .sellerOpensLot(
       auction,
-      new anchor.BN(units(reserveCents).toString()),
-      new anchor.BN(units(stepCents).toString()),
+      new anchor.BN(centsToUnits(reserveCents, decimals).toString()),
+      new anchor.BN(centsToUnits(stepCents, decimals).toString()),
     )
     .accounts({
       seller: seller.publicKey,

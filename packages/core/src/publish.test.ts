@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { publishCost } from "./publish.ts";
+import { ACCOUNT_OVERHEAD, LOTS_PER_TX, publishCost, spotsPerSale } from "./publish.ts";
 
 // Ставка mainnet на 2 октября 2026 (SIMD-0437, шаг 2).
 const RATE = 5080;
@@ -37,4 +37,16 @@ test("больше трёх мест в торге - ещё транзакция
 
 test("разные сроки закрытия - отдельные торги, за каждый свой аккаунт", () => {
   assert.equal(publishCost([2, 1], RATE).keptLamports, publishCost([1], RATE).keptLamports * 2);
+});
+
+test("служебные байты аккаунта и мест на транзакцию - те, что в расчёте выше", () => {
+  assert.equal(ACCOUNT_OVERHEAD, 128);
+  assert.equal(LOTS_PER_TX, 3);
+});
+
+test("места делятся на торги по сроку закрытия", () => {
+  const a = "2026-10-05T18:00:00Z";
+  const b = "2026-10-06T18:00:00Z";
+  assert.deepEqual(spotsPerSale([a, b, a]), [2, 1]);
+  assert.deepEqual(spotsPerSale([]), []);
 });

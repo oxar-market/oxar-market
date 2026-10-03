@@ -1,64 +1,68 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
-  FEE_BPS,
-  FEE_RATE,
   USDC_DECIMALS,
+  centsToUnits,
+  formatSol,
   formatUsd,
-  fromUsdcBaseUnits,
   parseUsd,
-  splitPayout,
-  toUsdcBaseUnits,
+  payoutSplit,
+  percentToBps,
+  unitsToCents,
 } from "./money.ts";
-
-test("комиссия берётся с продавца, покупатель платит ровно свою ставку", () => {
-  const split = splitPayout(50_000);
-  assert.equal(split.grossCents, 50_000);
-  assert.equal(split.feeCents, 5_000);
-  assert.equal(split.netCents, 45_000);
-});
-
-test("комиссия и остаток всегда складываются в полную сумму", () => {
-  // Округление комиссии не должно создавать и не должно терять центы.
-  for (const gross of [1, 7, 99, 333, 1_001, 12_345, 999_999]) {
-    const { feeCents, netCents } = splitPayout(gross);
-    assert.equal(feeCents + netCents, gross, `не сошлось на ${gross}`);
-  }
-});
-
-test("нулевая сделка не даёт комиссии", () => {
-  assert.deepEqual(splitPayout(0), { grossCents: 0, feeCents: 0, netCents: 0 });
-});
-
-test("дробные и отрицательные центы отклоняются", () => {
-  for (const bad of [1.5, -1, NaN, Infinity]) {
-    assert.throws(() => splitPayout(bad), `должно быть отклонено: ${bad}`);
-  }
-});
-
-test("комиссия в сотых долях процента совпадает с долей", () => {
-  // Одно и то же число по обе стороны: здесь и в поле fee_bps у лота в
-  // программе. Разойдутся - сумма на экране не сойдётся с цепочкой.
-  assert.equal(FEE_BPS, 1_000);
-  assert.equal(FEE_BPS / 10_000, FEE_RATE);
-});
 
 test("центы переводятся в базовые единицы USDC и обратно", () => {
   assert.equal(USDC_DECIMALS, 6);
-  assert.equal(toUsdcBaseUnits(1), 10_000);
-  assert.equal(toUsdcBaseUnits(50_000), 500_000_000);
-  assert.equal(fromUsdcBaseUnits(500_000_000), 50_000);
-});
-
-test("перевод туда и обратно возвращает исходное", () => {
+  assert.equal(centsToUnits(1), 10_000n);
+  assert.equal(centsToUnits(50_000), 500_000_000n);
+  assert.equal(unitsToCents(500_000_000n), 50_000);
   for (const cents of [0, 1, 99, 100, 12_345]) {
-    assert.equal(fromUsdcBaseUnits(toUsdcBaseUnits(cents)), cents);
+    assert.equal(unitsToCents(centsToUnits(cents)), cents);
   }
 });
 
-test("единицы, не складывающиеся в целый цент, отклоняются", () => {
-  // Иначе половина цента молча потерялась бы при округлении.
-  assert.throws(() => fromUsdcBaseUnits(5_000));
+test("у тестовой монеты свои знаки", () => {
+  assert.equal(centsToUnits(150, 9), 1_500_000_000n);
+  assert.equal(unitsToCents(1_500_000_000n, "floor", 9), 150);
+});
+
+test("остаток меньше цента: баланс - вниз, минимум ставки - вверх", () => {
+  assert.equal(unitsToCents(52_510_500n), 5_251, "на кошельке точно есть $52.51");
+  assert.equal(unitsToCents(52_510_500n, "ceil"), 5_252, "меньше $52.52 программа не примет");
+  assert.equal(unitsToCents(52_510_000n, "ceil"), 5_251, "ровный цент не округляется");
+});
+
+test("дробные и отрицательные суммы отклоняются", () => {
+  for (const bad of [1.5, -1, NaN, Infinity]) {
+    assert.throws(() => centsToUnits(bad), `должно быть отклонено: ${bad}`);
+  }
+  assert.throws(() => unitsToCents(-1n));
+});
+
+test("выплата делится как в программе: комиссия вниз, остаток продавцу", () => {
+  assert.deepEqual(payoutSplit(500_000_000n, 1_000), { fee: 50_000_000n, toSeller: 450_000_000n });
+  assert.deepEqual(payoutSplit(999n, 1_000), { fee: 99n, toSeller: 900n });
+  for (const winning of [0n, 1n, 7n, 333n, 12_345_678n]) {
+    const { fee, toSeller } = payoutSplit(winning, 1_000);
+    assert.equal(fee + toSeller, winning, `не сошлось на ${winning}`);
+  }
+  assert.throws(() => payoutSplit(1n, 10_001));
+});
+
+test("SOL показываются с четырьмя знаками", () => {
+  assert.equal(formatSol(3_123_456n), "0.0031 SOL");
+  assert.equal(formatSol(1_000_000_000), "1.0000 SOL");
+  assert.equal(formatSol(1_500_000_000n, 1), "1.5 SOL");
+});
+
+test("проценты из поля - в сотые доли процента", () => {
+  assert.equal(percentToBps("50"), 5_000);
+  assert.equal(percentToBps(" 33.33 "), 3_333);
+  assert.equal(percentToBps("0"), 0);
+  assert.equal(percentToBps("100"), 10_000);
+  for (const bad of ["", " ", "abc", "-1", "100.01", "Infinity"]) {
+    assert.equal(percentToBps(bad), null, `«${bad}» должно отклоняться`);
+  }
 });
 
 test("суммы показываются без лишних нулей, но с центами, если они есть", () => {

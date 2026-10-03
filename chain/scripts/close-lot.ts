@@ -22,6 +22,8 @@ import { getAssociatedTokenAddressSync, getMint, TOKEN_PROGRAM_ID } from "@solan
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { fetchLot, fetchSale } from "./lot";
+// Правила - из packages/core прямым путём: пакетом ts-node его не возьмёт.
+import { hasWinner } from "../../packages/core/src/lot";
 
 /** Та же сеть, что у открытия лота: девнет, пока не сказано иное. */
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
@@ -91,7 +93,7 @@ async function main() {
   // То же правило, что у программы: ставка есть и она не ниже резерва. Если
   // торг состоялся, звать надо выплату, а не это - программа откажет сама, но
   // сказать об этом лучше до транзакции, чем после её отказа.
-  if (lot.topBidder && topBid >= reserve) {
+  if (hasWinner({ topBid, reserve, hasBid: lot.topBidder !== null })) {
     throw new Error("торг состоялся - это pay-lot.ts, а не close-lot.ts");
   }
 

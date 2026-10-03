@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { closeDay, isOpen, nextClose } from "@oxar/core";
 import { SOON, ThingStage, type Stage } from "@oxar/stage";
 
 /** Зазор между карточками карусели, px. Тот же, что в CSS у .live-rail. */
@@ -135,7 +136,7 @@ async function loadLive(): Promise<Live | null> {
 
   return {
     title: featured[0].things?.title ?? "Shirt No. 1",
-    closesAt: Math.min(...featured.map((one) => Date.parse(one.closes_at))),
+    closesAt: nextClose(featured.map((one) => Date.parse(one.closes_at)), Date.now()) ?? 0,
     art,
     spots: featured.length,
   };
@@ -168,8 +169,8 @@ async function loadPast(): Promise<Past | null> {
   const last = ours[0];
   if (!last) return null;
   // Торг - это вещь и день закрытия: у вещи их бывает несколько.
-  const day = last.closes_at.slice(0, 10);
-  const same = ours.filter((one) => one.thing_id === last.thing_id && one.closes_at.slice(0, 10) === day);
+  const day = closeDay(last.closes_at);
+  const same = ours.filter((one) => one.thing_id === last.thing_id && closeDay(one.closes_at) === day);
 
   const bids = (await rest(
     `lot_bids?lot_id=in.(${same.map((one) => one.id).join(",")})&select=lot_id,amount_cents,media_url,brand,created_at&order=amount_cents.desc,created_at.asc`,
@@ -236,7 +237,7 @@ export default function Home() {
     return () => clearInterval(tick);
   }, []);
 
-  const running = live !== null && live.closesAt > now;
+  const running = live !== null && isOpen(live.closesAt, now);
   // Между торгами афиша не показывает прошлую вещь как будто живую: вместо
   // неё знак вопроса и прямые слова, что следующая вещь ещё не объявлена.
   const between = loaded && live === null;

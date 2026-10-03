@@ -101,11 +101,6 @@ export function Thumb({ src, holo }: { src?: string | null; holo?: boolean }) {
   return src ? <img className="sl-thumb" src={src} alt="" /> : <span className="sl-thumb" />;
 }
 
-/** Адрес покороче: края, по которым кошелёк узнают. */
-export function shortWallet(at: string): string {
-  return `${at.slice(0, 4)}..${at.slice(-4)}`;
-}
-
 /** Деньги в центах - как на борде, всегда с копейками. */
 export function usd(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", {

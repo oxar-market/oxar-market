@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatUsd } from "@oxar/core";
+import { closeDay, formatUsd, shortWallet } from "@oxar/core";
 import { downloadLogos, loadHouseThings, loadWinners, type HouseThing, type Winner } from "@/lib/winners";
 import { Thumb } from "./seller/parts.tsx";
 
@@ -25,7 +25,7 @@ export function Winners({
     void loadWinners(thingId).then((all) =>
       // Печатать - победителей одного торга, а не всех торгов вещи за всё
       // время: у футболки были и прошлые закрытия, их логотипы уже не нужны.
-      setList(closesAt ? all.filter((one) => one.closesAt.slice(0, 10) === closesAt.slice(0, 10)) : all),
+      setList(closesAt ? all.filter((one) => closeDay(one.closesAt) === closeDay(closesAt)) : all),
     );
   }, [thingId, closesAt]);
 
@@ -56,7 +56,7 @@ export function Winners({
               </b>
               <small className="muted">
                 {one.status === "won" ? "Won" : "Leading now"} · {formatUsd(one.amountCents)} ·{" "}
-                {one.wallet.slice(0, 4)}…{one.wallet.slice(-4)}
+                {shortWallet(one.wallet)}
               </small>
             </div>
             <a className="sl-pill" href={one.mediaUrl} target="_blank" rel="noreferrer" download>

@@ -5,8 +5,6 @@ import {
   decodeLot,
   decodeSale,
   lotAddress,
-  minNextCents,
-  minNextUnits,
   openSaleData,
   proofData,
   disputeData,
@@ -153,32 +151,6 @@ test("место со ставкой читается со сдвигом на �
   assert.equal(lot.topBid, 60_000_000n);
   assert.equal(lot.reserve, 50_000_000n);
   assert.equal(lot.minStep, 1_000_000n);
-});
-
-test("первая ставка равна резерву", () => {
-  const lot = decodeLot(bytes(FRESH));
-  assert.equal(minNextUnits(lot), 50_000_000n);
-  assert.equal(minNextCents(lot), 5000);
-});
-
-test("дальше шаг: пять процентов, но не мельче своего минимума", () => {
-  const lot = decodeLot(bytes(FRESH));
-  const led = { ...lot, topBidder: lot.mint, topBid: 100_000_000n };
-
-  // Пять процентов от $100 - это $5, и они крупнее шага в доллар.
-  assert.equal(minNextUnits(led), 105_000_000n);
-  // А от $10 - полдоллара, и тогда выигрывает сам шаг.
-  assert.equal(minNextUnits({ ...led, topBid: 10_000_000n }), 11_000_000n);
-});
-
-test("минимум в центах округляется вверх, а не вниз", () => {
-  const lot = decodeLot(bytes(FRESH));
-  // $50.01 сверху: пять процентов от неё - $2.5005, и центами это не делится.
-  // Вниз округлить нельзя - программа такую ставку не примет.
-  const led = { ...lot, topBidder: lot.mint, topBid: 50_010_000n };
-
-  assert.equal(minNextUnits(led), 52_510_500n);
-  assert.equal(minNextCents(led), 5252);
 });
 
 test("открытие торга кодируется байт в байт как у Anchor: срок, продление, срок пруфа", () => {

@@ -44,6 +44,45 @@ export function minProofDeadline(closesAt: number): number {
 }
 
 const legacy = (sale: ProofSale) => sale.proofDeadline === 0;
+
+/** Торг открыт с защитой покупателя (у старых торгов срока пруфа нет). */
+export function hasBuyerProtection(sale: { proofDeadline: number }): boolean {
+  return sale.proofDeadline !== 0;
+}
+
+/**
+ * Можно ли арбитру перенести срок пруфа (`Sale::moves_proof`): только позже,
+ * не дальше девяноста дней от первого срока, пока пруфа нет и срок не вышел.
+ */
+export function movesProof(
+  sale: ProofSale & { firstProofDeadline: number },
+  now: number,
+  newDeadline: number,
+): boolean {
+  return (
+    !legacy(sale) &&
+    sale.provedAt === 0 &&
+    now <= sale.proofDeadline &&
+    newDeadline > sale.proofDeadline &&
+    newDeadline <= sale.firstProofDeadline + MAX_PROOF_MOVE_SECONDS
+  );
+}
+
+export type SettledOutcome = "paid" | "refunded" | "split";
+
+/**
+ * Чем кончилось закрытое место: выплачено продавцу, ставка вернулась или
+ * арбитр поделил. Доля арбитра - если спор решён. Без неё продавцу ушло
+ * только место с пруфом, которое расчёт не отметил возвратом (молчание
+ * арбитра): без пруфа программа платит только назад.
+ */
+export function settledOutcome(closed: { sellerBps: number | null; proved: boolean; refunded: boolean }): SettledOutcome {
+  if (closed.sellerBps !== null) {
+    return closed.sellerBps === 10_000 ? "paid" : closed.sellerBps === 0 ? "refunded" : "split";
+  }
+  return closed.proved && !closed.refunded ? "paid" : "refunded";
+}
+
 const isOpen = (sale: ProofSale, now: number) => now < sale.closesAt;
 
 export function takesProof(sale: ProofSale, now: number): boolean {

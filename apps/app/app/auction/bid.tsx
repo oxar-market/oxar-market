@@ -7,11 +7,10 @@ import {
   useStandardSignTransaction,
 } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
-import { BRAND_MAX, cleanBrand, formatUsd, parseUsd } from "@oxar/core";
+import { BRAND_MAX, cleanBrand, formatUsd, minNextUnits, parseUsd, spotName, unitsToCents } from "@oxar/core";
 import {
   WALLET_CHAIN,
   bidTransaction,
-  minNextCents,
   readLot,
   sendSigned,
   settled,
@@ -102,7 +101,7 @@ export function BidForm({
       const chainLot = await readLot(lot.id);
       if (!chainLot || !live) return;
       const units = await walletUnits(chainLot.mint, new PublicKey(wallet.address));
-      if (live) setBalance(Number(units / 10_000n));
+      if (live) setBalance(unitsToCents(units));
     })().catch(() => {});
     return () => {
       live = false;
@@ -139,7 +138,8 @@ export function BidForm({
       if (!chainLot) {
         return setError("This spot is not open on chain yet. Nothing to bid on.");
       }
-      const least = Math.max(need, minNextCents(chainLot));
+      const chainMin = minNextUnits({ ...chainLot, hasBid: chainLot.topBidder !== null });
+      const least = Math.max(need, unitsToCents(chainMin, "ceil"));
       if (cents < least) {
         return setError(`The bid has to be at least ${formatUsd(least)} now.`);
       }
@@ -218,7 +218,7 @@ export function BidForm({
         {/* Форма называет место и цену, которую бьём: человек пришёл сюда
             кнопкой или сеткой, и заголовок подтверждает, куда он попал. */}
         <div className="bid-head">
-          <span className="bid-head-title">Bid on spot {spotLabel}</span>
+          <span className="bid-head-title">Bid on {spotName(spotLabel)}</span>
           <span className="muted small">
             {topCents === null
               ? `reserve ${formatUsd(need)}`

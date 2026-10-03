@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Score } from "@/lib/seller";
-import { loadReviews, loadScoreOf, loadSellerName, scoreText, type Review } from "@/lib/reviews";
+import { scoreText, type Score } from "@oxar/core";
+import { loadReviews, loadScoreOf, loadSellerName, type Review } from "@/lib/reviews";
 
 /**
  * Кто продаёт и его счёт - строкой под именем вещи. Тап открывает отзывы.

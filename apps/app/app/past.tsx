@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUsd } from "@oxar/core";
+import { closeDay, formatUsd } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { loadWinners } from "@/lib/winners";
@@ -27,7 +27,7 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
       const won: Record<string, string> = {};
       for (const one of all) {
         if (one.status !== "won") continue;
-        if (one.closesAt.slice(0, 10) !== held.closesAt.slice(0, 10)) continue;
+        if (closeDay(one.closesAt) !== closeDay(held.closesAt)) continue;
         won[one.code] = one.mediaUrl;
       }
       setArt(won);

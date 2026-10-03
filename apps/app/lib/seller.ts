@@ -1,6 +1,9 @@
 "use client";
 
+import { shortWallet, spotName, thingState, type Score, type ThingState } from "@oxar/core";
 import { db } from "./session.ts";
+
+export type { Score, ThingState };
 
 /**
  * Кабинет продавца: его вещи, места на фото, цены, заявки и оценки.
@@ -16,8 +19,6 @@ export type Rect = { x: number; y: number; w: number; h: number };
 
 /** Место, размеченное на снимке: номер снимка, описанная рамка и контур. */
 export type Marked = Rect & { photo: number; outline?: [number, number][] };
-
-export type ThingState = "declined" | "live" | "ended" | "rented" | "idle" | "preparing";
 
 export type SellerThing = {
   id: string;
@@ -57,8 +58,6 @@ export type SellerRequest = {
   pricePerDayCents: number;
   answerBy: string;
 };
-
-export type Score = { rating: number | null; deals: number };
 
 /** Публичный адрес снимка в хранилище. */
 export function photoUrl(path: string): string {
@@ -151,18 +150,11 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
     const mine = new Set(spots.map((spot) => spot.id));
     const rented = (rents ?? []).filter((rent) => mine.has(rent.spot_id));
     const photos = (one.photos as string[] | null) ?? [];
-    const state: ThingState =
-      one.declined_reason
-        ? "declined"
-        : one.stage === "preparing"
-        ? "preparing"
-        : open.length > 0
-          ? "live"
-          : closed.length > 0
-            ? "ended"
-            : rented.length > 0
-            ? "rented"
-            : "idle";
+    const state = thingState(
+      { declined: Boolean(one.declined_reason), preparing: one.stage === "preparing", rented: rented.length > 0 },
+      lots.map((lot) => ({ status: lot.status, closesAt: Date.parse(lot.closes_at) })),
+      Date.now(),
+    );
     return {
       id: one.id,
       title: one.title,
@@ -622,7 +614,7 @@ export async function loadDealsToRate(
     const top = bids[0];
     // Наши вещи, как футболка, не оцениваются: оценка - это счёт продавца.
     if (!top || !thing?.seller) continue;
-    const spot = (lot.thing_spots as unknown as { label: string } | null)?.label ?? "Spot";
+    const spot = spotName((lot.thing_spots as unknown as { label: string } | null)?.label ?? "Spot");
     const ended = new Date(lot.closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
     const cover = thing.photos?.[0] ? photoUrl(thing.photos[0]) : null;
     // Покупатель оценивает продавца по пруфу печати, а не по закрытию торга:
@@ -633,7 +625,7 @@ export async function loadDealsToRate(
       out.push({
         lotId: lot.id,
         title: `${spot} · ${thing.title}`,
-        line: `Auction ended ${ended} · ${top.bidder_wallet.slice(0, 4)}..${top.bidder_wallet.slice(-4)}`,
+        line: `Auction ended ${ended} · ${shortWallet(top.bidder_wallet)}`,
         cover,
         escrow: true,
       });
@@ -658,8 +650,8 @@ export async function loadDealsToRate(
     const span = `${new Date(rent.starts_on).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${new Date(rent.ends_on).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
     out.push({
       requestId: rent.id,
-      title: `${spot.label} · ${spot.things.title}`,
-      line: `Rented ${span} · ${rent.buyer_wallet.slice(0, 4)}..${rent.buyer_wallet.slice(-4)}`,
+      title: `${spotName(spot.label)} · ${spot.things.title}`,
+      line: `Rented ${span} · ${shortWallet(rent.buyer_wallet)}`,
       cover: spot.things.photos?.[0] ? photoUrl(spot.things.photos[0]) : null,
       escrow: false,
     });

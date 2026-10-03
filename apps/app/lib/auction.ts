@@ -1,5 +1,6 @@
 "use client";
 
+import { closeDay, isOpen } from "@oxar/core";
 import { db } from "./session.ts";
 import { photoUrl } from "./seller.ts";
 
@@ -158,10 +159,6 @@ export async function loadTopBids(
   return top;
 }
 
-/** Подпись места для человека: у нашей футболки «01», у вещи продавца уже «Spot 1». */
-export function spotName(label: string): string {
-  return /^spot\b/i.test(label) ? label : `Spot ${label}`;
-}
 
 /** Где я стою на лоте: живая ставка или строка истории. */
 export type MyStand = {
@@ -225,7 +222,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       things: { id?: string; title?: string; house?: boolean } | null;
     };
     const top = tops[row.lot_id];
-    const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
+    const open = lot.status === "open" && isOpen(Date.parse(lot.closes_at), now);
     const leading = top?.bidder_wallet === wallet;
     return {
       lotId: row.lot_id,
@@ -394,7 +391,7 @@ export async function loadMarket(): Promise<{
     // если он уже открыл на неё аукцион.
     if (!info || info.active === false) continue;
     const top = tops[lot.id];
-    const open = lot.status === "open" && Date.parse(lot.closes_at) > now;
+    const open = lot.status === "open" && isOpen(Date.parse(lot.closes_at), now);
     if (open) {
       const known: MarketThing =
         things.get(lot.thing_id) ??
@@ -427,7 +424,7 @@ export async function loadMarket(): Promise<{
       things.set(lot.thing_id, known);
     } else {
       // Прошедший торг сворачивается в одну строку на вещь и день закрытия.
-      const key = `${lot.thing_id}:${lot.closes_at.slice(0, 10)}`;
+      const key = `${lot.thing_id}:${closeDay(lot.closes_at)}`;
       const row =
         heldBy.get(key) ??
         ({
@@ -563,7 +560,7 @@ export async function loadTimeline(): Promise<PastOrPlanned[]> {
         spots: 0,
         rented: 0,
         state:
-          Date.parse(lot.closes_at) <= now
+          !isOpen(Date.parse(lot.closes_at), now)
             ? "ended"
             : lot.opens_at && Date.parse(lot.opens_at) > now
               ? "upcoming"

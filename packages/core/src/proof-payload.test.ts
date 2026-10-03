@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { proofPayload } from "./proof-payload.ts";
+import { normalizeProof, proofPayload } from "./proof-payload.ts";
 
 test("запись пруфа не зависит от порядка фото и пробелов по краям", () => {
   const one = proofPayload({ photos: ["b.jpg", "a.jpg"], links: [" https://x.com/p/1 "], note: " On stage " });
@@ -18,4 +18,11 @@ test("другое фото - другая запись", () => {
     proofPayload({ photos: ["a.jpg"], links: [], note: "" }),
     proofPayload({ photos: ["c.jpg"], links: [], note: "" }),
   );
+});
+
+test("хранится ровно то, что хешируется", () => {
+  const parts = { photos: ["b.jpg", "a.jpg"], links: [" https://x.com/p/1 ", ""], note: " On stage " };
+  const clean = normalizeProof(parts);
+  assert.deepEqual(clean, { photos: ["a.jpg", "b.jpg"], links: ["https://x.com/p/1"], note: "On stage" });
+  assert.equal(proofPayload(clean), proofPayload(parts));
 });

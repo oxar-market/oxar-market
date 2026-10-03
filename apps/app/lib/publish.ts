@@ -10,7 +10,7 @@ import {
 } from "@solana/web3.js";
 import { Buffer } from "buffer";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { minProofDeadline } from "@oxar/core";
+import { LOTS_PER_TX, centsToUnits, minProofDeadline } from "@oxar/core";
 import { auctionBytes, connection, lotAddress, openSaleData, saleAddress, sendSigned, settled } from "./chain.ts";
 import { db } from "./session.ts";
 
@@ -30,12 +30,6 @@ import { db } from "./session.ts";
 const PROGRAM_ID = new PublicKey("4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe");
 /** `seller_opens_lot` из IDL. */
 const OPEN_LOT = new Uint8Array([219, 91, 199, 189, 78, 98, 42, 205]);
-/**
- * Сколько мест в одной транзакции. Каждое место - два новых аккаунта (лот и
- * хранилище); больше трёх упирается в лимит вычислений и размер пакета.
- */
-const LOTS_PER_TX = 3;
-
 /** Настройки площадки: монета лежит после admin, platform, fee_bps и bump. */
 async function platformMint(): Promise<{ mint: PublicKey; decimals: number } | null> {
   const [config] = PublicKey.findProgramAddressSync([Buffer.from("config")], PROGRAM_ID);
@@ -101,16 +95,6 @@ function openLot(
 export type Signer = (transaction: VersionedTransaction) => Promise<Uint8Array>;
 
 /**
- * Сколько мест в каждом торге: места с одним сроком закрытия идут одним
- * торгом, с разными - разными (как их и открывает publishAuctions).
- */
-export function spotsPerSale(closesAt: string[]): number[] {
-  const bySale = new Map<string, number>();
-  for (const at of closesAt) bySale.set(at, (bySale.get(at) ?? 0) + 1);
-  return [...bySale.values()];
-}
-
-/**
  * Открыть в цепочке все черновики лотов вещи и отметить их открытыми.
  *
  * Возвращает, сколько мест открыто, или null при сбое. Лот, открытый в
@@ -132,7 +116,6 @@ export async function publishAuctions(
 
   const coin = await platformMint();
   if (!coin || coin.decimals < 2) return null;
-  const units = (cents: number) => BigInt(cents) * 10n ** BigInt(coin.decimals - 2);
 
   // Один торг на каждый срок закрытия.
   const bySale = new Map<string, typeof drafts>();
@@ -146,7 +129,7 @@ export async function publishAuctions(
     const saleId = crypto.randomUUID();
     const batches: TransactionInstruction[][] = [];
     const lotIxs = lots.map((lot) =>
-      openLot(seller, saleId, lot.id, coin.mint, units(lot.reserve_cents), units(lot.min_step_cents)),
+      openLot(seller, saleId, lot.id, coin.mint, centsToUnits(lot.reserve_cents, coin.decimals), centsToUnits(lot.min_step_cents, coin.decimals)),
     );
     for (let at = 0; at < lotIxs.length; at += LOTS_PER_TX) {
       batches.push(lotIxs.slice(at, at + LOTS_PER_TX));
