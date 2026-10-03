@@ -97,13 +97,20 @@ describe("oxar-escrow: торг", () => {
    * закрытие шёл бы пять минут, потому что ставка сама двигает срок. Само
    * продление проверяется отдельно, с боевым значением.
    */
-  async function openSale(closesInSeconds: number, extendSeconds = 1) {
+  // Срок пруфа обязан быть позже жёсткого конца - заявленного закрытия плюс
+  // час продления. По умолчанию - ещё десять минут сверху.
+  async function openSale(closesInSeconds: number, extendSeconds = 1, proofAfterSeconds = 4_200) {
     const saleId = auctionId();
     const sale = salePda(saleId);
     const closesAt = (await now()) + closesInSeconds;
 
     await program.methods
-      .sellerOpensSale(saleId, new anchor.BN(closesAt), new anchor.BN(extendSeconds))
+      .sellerOpensSale(
+        saleId,
+        new anchor.BN(closesAt),
+        new anchor.BN(extendSeconds),
+        new anchor.BN(closesAt + proofAfterSeconds),
+      )
       .accounts({ seller: seller.publicKey })
       .signers([seller])
       .rpc();
@@ -132,10 +139,54 @@ describe("oxar-escrow: торг", () => {
   }
 
   /** Торг с одним местом: самый частый случай в этих проверках. */
-  async function openLot(closesInSeconds: number, extendSeconds = 1, reserve = RESERVE) {
-    const { sale, closesAt } = await openSale(closesInSeconds, extendSeconds);
+  async function openLot(
+    closesInSeconds: number,
+    extendSeconds = 1,
+    reserve = RESERVE,
+    proofAfterSeconds = 4_200,
+  ) {
+    const { sale, closesAt } = await openSale(closesInSeconds, extendSeconds, proofAfterSeconds);
     const { id, lot, vault } = await addLot(sale, reserve);
     return { id, lot, vault, sale, closesAt };
+  }
+
+  /** Продавец присылает пруф: в программу уходит только хеш. */
+  const PROOF_HASH = Array(32).fill(7);
+  async function prove(sale: PublicKey, who = seller) {
+    await program.methods
+      .sellerSubmitsProof(PROOF_HASH)
+      .accountsPartial({ seller: who.publicKey, sale })
+      .signers([who])
+      .rpc();
+  }
+
+  /** Выплата места: кто зовёт и кто записан получателем комиссии. */
+  async function pay(lot: PublicKey, crank: Keypair, fee = platform.publicKey) {
+    await program.methods
+      .lotPaysSeller()
+      .accountsPartial({
+        crank: crank.publicKey,
+        sale: (await program.account.lot.fetch(lot)).sale,
+        lot,
+        seller: seller.publicKey,
+        platform: fee,
+        mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([crank])
+      .rpc();
+  }
+
+  /** Ошибка программы обязана быть именно этой. */
+  async function fails(call: Promise<unknown>, code: string, why: string) {
+    try {
+      await call;
+      assert.fail(why);
+    } catch (error) {
+      // В сообщении симуляции код ошибки обрезан - он лежит в логах программы.
+      const logs = ((error as { transactionLogs?: string[] }).transactionLogs ?? []).join("\n");
+      assert.include(`${String(error)}\n${logs}`, code, why);
+    }
   }
 
   /**
@@ -347,7 +398,12 @@ describe("oxar-escrow: торг", () => {
 
     try {
       await program.methods
-        .sellerOpensSale(saleId, new anchor.BN((await now()) + month + 60), new anchor.BN(1))
+        .sellerOpensSale(
+          saleId,
+          new anchor.BN((await now()) + month + 60),
+          new anchor.BN(1),
+          new anchor.BN((await now()) + month + 4_200),
+        )
         .accounts({ seller: seller.publicKey })
         .signers([seller])
         .rpc();
@@ -358,7 +414,12 @@ describe("oxar-escrow: торг", () => {
 
     // Месяц без минуты - ещё можно.
     await program.methods
-      .sellerOpensSale(auctionId(), new anchor.BN((await now()) + month - 60), new anchor.BN(1))
+      .sellerOpensSale(
+        auctionId(),
+        new anchor.BN((await now()) + month - 60),
+        new anchor.BN(1),
+        new anchor.BN((await now()) + month + 4_200),
+      )
       .accounts({ seller: seller.publicKey })
       .signers([seller])
       .rpc();
@@ -561,9 +622,10 @@ describe("oxar-escrow: торг", () => {
   it("выигранная ставка делится между продавцом и площадкой", async () => {
     // Срок с запасом: открыть торг, повесить место и поставить - это три
     // транзакции, и в две секунды они на холодном валидаторе не всегда влезают.
-    const { lot, vault } = await openLot(5);
+    const { lot, vault, sale } = await openLot(5);
     await bid(lot, alice, RESERVE);
     await sleep(6500);
+    await prove(sale);
 
     const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
     const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
@@ -572,19 +634,9 @@ describe("oxar-escrow: торг", () => {
     const platformBefore = await balance(platformTokens);
     const aliceBefore = await balance(aliceTokens);
 
-    await program.methods
-      .lotPaysSeller()
-      .accountsPartial({
-        crank: seller.publicKey,
-        sale: (await program.account.lot.fetch(lot)).sale,
-        lot,
-        seller: seller.publicKey,
-        platform: platform.publicKey,
-        mint,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .signers([seller])
-      .rpc();
+    // Окно спора семьдесят два часа; победитель сам говорит «да» - и выплата
+    // идёт сразу. Сам переход окна проверяют юнит-тесты программы.
+    await pay(lot, alice);
 
     const fee = BigInt(RESERVE) / 10n; // FEE_BPS = 1000, то есть 10%
     assert.equal(
@@ -612,29 +664,18 @@ describe("oxar-escrow: торг", () => {
     // цента. Закрыть токен-счёт с ненулевым остатком SPL не даёт, поэтому
     // выплата обязана выгребать хранилище дочиста, иначе ставка победителя и
     // выручка продавца заперты в нём навсегда.
-    const { lot, vault } = await openLot(5);
+    const { lot, vault, sale } = await openLot(5);
     await bid(lot, alice, RESERVE);
     await transfer(connection, bob, bobTokens, vault, bob, 1);
     await sleep(6500);
+    await prove(sale);
 
     const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
     const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
     const sellerBefore = await balance(sellerTokens);
     const platformBefore = await balance(platformTokens);
 
-    await program.methods
-      .lotPaysSeller()
-      .accountsPartial({
-        crank: seller.publicKey,
-        sale: (await program.account.lot.fetch(lot)).sale,
-        lot,
-        seller: seller.publicKey,
-        platform: platform.publicKey,
-        mint,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .signers([seller])
-      .rpc();
+    await pay(lot, alice);
 
     const fee = BigInt(RESERVE) / 10n;
     assert.equal(
@@ -683,50 +724,25 @@ describe("oxar-escrow: торг", () => {
     assert.isNull(await connection.getAccountInfo(lot), "лот не закрылся");
   });
 
-  it("выплату зовёт кто угодно, но комиссия идёт только тому, кто записан в лоте", async () => {
+  it("пока идёт окно спора, выплату зовёт только победитель, и комиссия идёт только записанному", async () => {
     // Срок с запасом по той же причине, что и выше: три транзакции до ставки в
     // две секунды не всегда укладываются, и тест падал не по делу.
-    const { lot } = await openLot(5);
+    const { lot, sale } = await openLot(5);
     await bid(lot, alice, RESERVE);
     await sleep(6500);
+    await prove(sale);
 
-    // Боб не продавец и не площадка. Позвать выплату он вправе - иначе она
-    // зависела бы от того, откроет ли кто-то вкладку. А вот подставить себя
-    // получателем комиссии не может: адрес сверяется с записанным в лоте.
-    try {
-      await program.methods
-        .lotPaysSeller()
-        .accountsPartial({
-          crank: bob.publicKey,
-          sale: (await program.account.lot.fetch(lot)).sale,
-          lot,
-          seller: seller.publicKey,
-          platform: bob.publicKey,
-          mint,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([bob])
-        .rpc();
-      assert.fail("комиссию увели на чужой кошелёк");
-    } catch (error) {
-      assert.include(String(error), "ConstraintHasOne");
-    }
+    // Боб не продавец, не площадка и не победитель. После окна позвать выплату
+    // он вправе - иначе она зависела бы от того, откроет ли кто-то вкладку. Но
+    // окно ещё идёт: у Алисы есть время оспорить, и платить рано.
+    await fails(pay(lot, bob), "NotPayableYet", "выплатили, пока победитель может оспорить");
 
-    // А с правильным получателем та же выплата от того же Боба проходит.
-    await program.methods
-      .lotPaysSeller()
-      .accountsPartial({
-        crank: bob.publicKey,
-        sale: (await program.account.lot.fetch(lot)).sale,
-        lot,
-        seller: seller.publicKey,
-        platform: platform.publicKey,
-        mint,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .signers([bob])
-      .rpc();
+    // Подставить себя получателем комиссии нельзя никому, даже победителю:
+    // адрес сверяется с записанным в торге.
+    await fails(pay(lot, alice, bob.publicKey), "ConstraintHasOne", "комиссию увели на чужой кошелёк");
 
+    // Победитель с правильным получателем - выплата проходит.
+    await pay(lot, alice);
     assert.isNull(await connection.getAccountInfo(lot), "лот не закрылся");
   });
 
@@ -827,5 +843,134 @@ describe("oxar-escrow: торг", () => {
     } catch (error) {
       assert.include(String(error), "LotStillOpen");
     }
+  });
+
+  it("срок пруфа раньше закрытия торга не поставить, и внутри часа продления тоже", async () => {
+    await fails(openSale(60, 1, 0), "ProofBeforeClose", "пруф требуют до того, как вещь продана");
+    // Ставки под конец двигают закрытие на час: срок внутри этого часа мог
+    // оказаться раньше настоящего конца, и пруф стало бы не принять вовсе.
+    await fails(openSale(60, 1, 1_800), "ProofBeforeClose", "срок пруфа внутри часа продления");
+    await fails(openSale(60, 1, 3_600), "ProofBeforeClose", "срок пруфа ровно в жёсткий конец");
+  });
+
+  it("пруф присылает только продавец, только после закрытия и только один раз", async () => {
+    const { lot, sale } = await openLot(5);
+    await bid(lot, alice, RESERVE);
+
+    await fails(prove(sale), "ProofNotTaken", "пруф приняли, пока идёт торг");
+    await sleep(6500);
+    await fails(prove(sale, bob), "ConstraintHasOne", "пруф прислал не продавец");
+    await fails(pay(lot, alice), "NotPayableYet", "выплатили без пруфа");
+
+    await prove(sale);
+    const after = await program.account.sale.fetch(sale);
+    assert.isAbove(after.provedAt.toNumber(), 0, "время пруфа не записалось");
+    await fails(prove(sale), "ProofNotTaken", "пруф приняли второй раз");
+  });
+
+  // Возврат победителю без пруфа здесь не проверить: срок пруфа не раньше
+  // чем через час после закрытия, а тест час не ждёт. Условие возврата
+  // проверяют юнит-тесты программы (`proof_missed`), сам путь - прогон на
+  // devnet.
+
+  it("оспорить можно только после пруфа и только победителю", async () => {
+    const { lot, sale } = await openLot(5);
+    await bid(lot, alice, RESERVE);
+    await sleep(6500);
+
+    const dispute = (who: Keypair) =>
+      program.methods
+        .winnerDisputes()
+        .accountsPartial({ winner: who.publicKey, sale, lot })
+        .signers([who])
+        .rpc();
+
+    await fails(dispute(alice), "AppealClosed", "оспорили пруф, которого нет");
+    await prove(sale);
+    await fails(dispute(bob), "NotTheWinner", "оспорил не победитель");
+    await dispute(alice);
+    await fails(dispute(alice), "LotDisputed", "оспорили дважды");
+    assert.isTrue((await program.account.lot.fetch(lot)).disputed, "спор не записался");
+  });
+
+  it("оспоренное место не выплатить: решает арбитр, и делит, как решил", async () => {
+    const { lot, vault, sale } = await openLot(5);
+    await bid(lot, alice, RESERVE);
+    await sleep(6500);
+    await prove(sale);
+
+    const me = (provider.wallet as anchor.Wallet).payer;
+    const decide = (who: Keypair, sellerBps: number) =>
+      program.methods
+        .arbiterDecides(sellerBps)
+        .accountsPartial({
+          arbiter: who.publicKey,
+          sale,
+          lot,
+          seller: seller.publicKey,
+          platform: platform.publicKey,
+          winner: alice.publicKey,
+          mint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([who])
+        .rpc();
+
+    await fails(decide(me, 5_000), "LotNotDisputed", "арбитр решил место, которое никто не оспаривал");
+
+    await program.methods
+      .winnerDisputes()
+      .accountsPartial({ winner: alice.publicKey, sale, lot })
+      .signers([alice])
+      .rpc();
+
+    await fails(pay(lot, alice), "LotDisputed", "оспоренное место выплатили в обход арбитра");
+    await fails(decide(bob, 10_000), "NotTheAdmin", "решил не арбитр");
+    await fails(decide(me, 10_001), "ShareTooHigh", "продавцу отдали больше всей ставки");
+
+    const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
+    const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
+    const sellerBefore = await balance(sellerTokens);
+    const platformBefore = await balance(platformTokens);
+    const aliceBefore = await balance(aliceTokens);
+
+    // Пополам: половина продавцу, с неё 10% площадке, половина - Алисе.
+    await decide(me, 5_000);
+
+    const half = BigInt(RESERVE) / 2n;
+    assert.equal((await balance(platformTokens)) - platformBefore, half / 10n, "комиссия не с доли продавца");
+    assert.equal((await balance(sellerTokens)) - sellerBefore, half - half / 10n, "продавец получил не свою долю");
+    assert.equal((await balance(aliceTokens)) - aliceBefore, half, "победителю вернули не свою долю");
+    assert.isNull(await connection.getAccountInfo(vault), "хранилище не закрылось");
+    assert.isNull(await connection.getAccountInfo(lot), "лот не закрылся");
+  });
+
+  it("срок пруфа переносит только арбитр, только позже и только до пруфа", async () => {
+    const { sale } = await openSale(5);
+    const me = (provider.wallet as anchor.Wallet).payer;
+    const deadline = (await program.account.sale.fetch(sale)).proofDeadline.toNumber();
+    const move = (who: Keypair, to: number) =>
+      program.methods
+        .arbiterMovesProof(new anchor.BN(to))
+        .accountsPartial({ arbiter: who.publicKey, sale })
+        .signers([who])
+        .rpc();
+
+    await fails(move(seller, deadline + 86_400), "NotTheAdmin", "продавец сам отодвинул себе срок");
+    await fails(move(me, deadline - 1), "ProofDeadlineFixed", "срок пруфа сдвинули раньше");
+
+    // Ивент перенесли на сорок дней - срок уезжает вместе с ним.
+    await move(me, deadline + 40 * 86_400);
+    // Дальше девяноста дней от первого срока - нет, даже по частям.
+    await fails(move(me, deadline + 91 * 86_400), "ProofDeadlineFixed", "срок увезли дальше девяноста дней");
+    assert.equal(
+      (await program.account.sale.fetch(sale)).proofDeadline.toNumber(),
+      deadline + 40 * 86_400,
+      "новый срок не записался",
+    );
+
+    await sleep(6500);
+    await prove(sale);
+    await fails(move(me, deadline + 50 * 86_400), "ProofDeadlineFixed", "срок двигают после пруфа");
   });
 });

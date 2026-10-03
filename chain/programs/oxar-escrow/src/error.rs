@@ -46,4 +46,31 @@ pub enum EscrowError {
 
     #[msg("Only the seller can pull a lot before the sale ends")]
     NotTheSeller,
+
+    #[msg("The share cannot be more than the whole bid")]
+    ShareTooHigh,
+
+    #[msg("The proof deadline must come after the latest possible close of the sale")]
+    ProofBeforeClose,
+
+    #[msg("This sale does not take a proof now")]
+    ProofNotTaken,
+
+    #[msg("No proof yet, or the appeal window is still open")]
+    NotPayableYet,
+
+    #[msg("The proof can no longer be disputed")]
+    AppealClosed,
+
+    #[msg("Only the winner of this spot can do this")]
+    NotTheWinner,
+
+    #[msg("This spot is disputed and waits for the arbiter")]
+    LotDisputed,
+
+    #[msg("This spot is not disputed")]
+    LotNotDisputed,
+
+    #[msg("The proof deadline can only move later, before it passes and before the proof")]
+    ProofDeadlineFixed,
 }

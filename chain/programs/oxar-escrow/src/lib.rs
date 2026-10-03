@@ -26,6 +26,15 @@ declare_id!("4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe");
 /// - последняя ставка возвращается хозяину. В обоих случаях аккаунты места
 /// закрываются и аренда идёт обратно продавцу.
 ///
+/// Выплата продавцу ждёт пруфа. Срок на пруф продавец ставит при открытии
+/// торга. Прислал - у каждого победителя семьдесят два часа оспорить; не
+/// оспорил - выплата, оспорил - деньги места заморожены, и решает арбитр (админ
+/// настроек): продавцу, победителю или поровну по его доле; молчит тридцать
+/// дней - ставка уходит победителю. Не прислал к сроку - выигравшие ставки
+/// возвращаются победителям. Перенесли ивент - арбитр может отодвинуть срок
+/// пруфа, но только позже и только пока срок не вышел. Торги, открытые до этого
+/// правила (срок пруфа ноль), платят по-старому - сразу после закрытия.
+///
 /// Шестая стоит в стороне от этого пути: условия площадки - комиссия и тот,
 /// кому она идёт, - живут в отдельных настройках, и менять их может только
 /// админ. Продавец их не задаёт и не видит в своих параметрах вовсе: торг
@@ -63,8 +72,9 @@ pub mod oxar_escrow {
         sale_id: [u8; 16],
         closes_at: i64,
         extend_seconds: i64,
+        proof_deadline: i64,
     ) -> Result<()> {
-        seller_opens_sale::open_sale(ctx, sale_id, closes_at, extend_seconds)
+        seller_opens_sale::open_sale(ctx, sale_id, closes_at, extend_seconds, proof_deadline)
     }
 
     /// Продавец открывает место на вещи. Денег в хранилище ещё нет.
@@ -92,5 +102,26 @@ pub mod oxar_escrow {
     /// закрываются.
     pub fn seller_closes_lot(ctx: Context<SellerClosesLot>) -> Result<()> {
         seller_closes_lot::close_lot(ctx)
+    }
+
+    /// Продавец показывает вещь в деле: хеш пруфа - в событие, время - в торг.
+    pub fn seller_submits_proof(ctx: Context<SellerSubmitsProof>, proof_hash: [u8; 32]) -> Result<()> {
+        seller_submits_proof::submit_proof(ctx, proof_hash)
+    }
+
+    /// Победитель оспаривает пруф: деньги места замораживаются до арбитра.
+    pub fn winner_disputes(ctx: Context<WinnerDisputes>) -> Result<()> {
+        winner_disputes::dispute(ctx)
+    }
+
+    /// Арбитр делит ставку оспоренного места между продавцом и победителем.
+    pub fn arbiter_decides(ctx: Context<ArbiterDecides>, seller_bps: u16) -> Result<()> {
+        arbiter_decides::decide(ctx, seller_bps)
+    }
+
+    /// Арбитр отодвигает срок пруфа: ивент перенесли. Только позже и только
+    /// пока пруфа нет и срок не вышел.
+    pub fn arbiter_moves_proof(ctx: Context<ArbiterMovesProof>, new_deadline: i64) -> Result<()> {
+        arbiter_moves_proof::move_proof(ctx, new_deadline)
     }
 }

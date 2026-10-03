@@ -51,6 +51,7 @@ pub fn open_sale(
     sale_id: [u8; 16],
     closes_at: i64,
     extend_seconds: i64,
+    proof_deadline: i64,
 ) -> Result<()> {
     require!(
         extend_seconds >= 0 && extend_seconds <= MAX_EXTEND_SECONDS,
@@ -68,6 +69,14 @@ pub fn open_sale(
         closes_at <= now.saturating_add(MAX_SALE_SECONDS),
         EscrowError::SaleTooLong
     );
+    // Пруф - это вещь с напечатанными логотипами, а печатают их после торга.
+    // Сравниваем с жёстким концом, а не с заявленным: ставки под конец двигают
+    // закрытие на час вперёд, и срок внутри этого часа исчез бы вовсе - пруф
+    // уже не принять, а победитель забирает ставку назад. Нарочно продлить
+    // торг ставками ради такого возврата мог бы сам победитель. Верхней
+    // границы нет: ждать денег до далёкого ивента - выбор продавца.
+    let hard_closes_at = closes_at.saturating_add(TOTAL_EXTEND_SECONDS);
+    require!(proof_deadline > hard_closes_at, EscrowError::ProofBeforeClose);
 
     let sale = &mut ctx.accounts.sale;
     sale.sale = sale_id;
@@ -77,10 +86,12 @@ pub fn open_sale(
     sale.extend_seconds = extend_seconds;
     // Дальше этого ставки торг не утянут: заявленный конец плюс час на
     // финальную перестрелку. Записывается при открытии и не меняется.
-    sale.hard_closes_at = closes_at.saturating_add(TOTAL_EXTEND_SECONDS);
+    sale.hard_closes_at = hard_closes_at;
     sale.fee_bps = ctx.accounts.config.fee_bps;
     sale.bump = ctx.bumps.sale;
-    sale.reserved = [0u8; 24];
+    sale.proof_deadline = proof_deadline;
+    sale.proved_at = 0;
+    sale.first_proof_deadline = proof_deadline;
 
     Ok(())
 }
