@@ -17,12 +17,17 @@
  * chain/programs/oxar-escrow/src/state; поменяются там - поменяются и здесь.
  */
 
-const ACCOUNT_OVERHEAD = 128;
+/** Служебные байты, которые сеть добавляет к каждому аккаунту при расчёте залога. */
+export const ACCOUNT_OVERHEAD = 128;
 const SALE_BYTES = 139;
 const LOT_BYTES = 179;
 const VAULT_BYTES = 165;
 const SIGNATURE_LAMPORTS = 5000;
-const LOTS_PER_TX = 3;
+/**
+ * Сколько мест открывается одной транзакцией: каждое место - два новых
+ * аккаунта, больше трёх упирается в лимит вычислений и размер пакета.
+ */
+export const LOTS_PER_TX = 3;
 
 
 export type PublishCost = {
@@ -46,4 +51,14 @@ export function publishCost(spotsPerSale: number[], rentPerByte: number): Publis
     kept += rent(SALE_BYTES) + Math.ceil(spots / LOTS_PER_TX) * SIGNATURE_LAMPORTS;
   }
   return { backLamports: back, keptLamports: kept, totalLamports: back + kept };
+}
+
+/**
+ * Сколько мест в каждом торге: места с одним сроком закрытия идут одним
+ * торгом, с разными - разными (так их и открывает публикация).
+ */
+export function spotsPerSale(closesAt: string[]): number[] {
+  const bySale = new Map<string, number>();
+  for (const at of closesAt) bySale.set(at, (bySale.get(at) ?? 0) + 1);
+  return [...bySale.values()];
 }

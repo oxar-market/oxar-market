@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { minProofDeadline, publishCost, type PublishCost } from "@oxar/core";
+import { formatSol, minProofDeadline, parseUsd, publishCost, spotsPerSale, validSaleWindow, type PublishCost } from "@oxar/core";
 import type { PricingThing, SpotPlan, Worn } from "@/lib/seller";
-import { spotsPerSale } from "@/lib/publish";
 import { rentPerByte } from "@/lib/chain";
 import { Bar, SpotMark } from "./parts.tsx";
 
@@ -236,8 +235,8 @@ export function SetUpSpots({
       {/* Сколько нужно на кошельке - на самой кнопке; здесь - что из этого вернётся. */}
       {cost && (
         <p className="sl-plan-note">
-          Most of it comes back: {sol(cost.backLamports)} SOL is a deposit that returns to your
-          wallet when the auction ends. Only {sol(cost.keptLamports)} SOL pays the network.
+          Most of it comes back: {formatSol(cost.backLamports)} is a deposit that returns to your
+          wallet when the auction ends. Only {formatSol(cost.keptLamports)} pays the network.
         </p>
       )}
 
@@ -250,7 +249,7 @@ export function SetUpSpots({
           disabled={!valid || !described || !proofOk || publishing}
           onClick={() => onPublish(plans as { spotId: string; plan: SpotPlan }[], worn)}
         >
-          {publishing ? "Publishing…" : cost ? `Publish · ${sol(cost.totalLamports)} SOL` : "Publish"}
+          {publishing ? "Publishing…" : cost ? `Publish · ${formatSol(cost.totalLamports)}` : "Publish"}
         </button>
       </div>
 
@@ -473,22 +472,17 @@ function whenLabel(value: string): string {
   return `${day}, ${time}`;
 }
 
-function cents(value: string): number | null {
-  const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? Math.round(number * 100) : null;
-}
-
 function runDays(one: Draft): number {
   return Math.max(0, Math.round((Date.parse(one.closes) - Date.parse(one.opens)) / 86_400_000));
 }
 
 function toPlan(one: Draft): SpotPlan | null {
-  const reserve = cents(one.reserve);
-  const step = cents(one.step);
+  const reserve = parseUsd(one.reserve);
+  const step = parseUsd(one.step);
   const opens = Date.parse(one.opens);
   const closes = Date.parse(one.closes);
   // Программа не примет торг длиннее 30 дней и закрытый в прошлом.
-  if (!reserve || !step || !(closes > opens) || closes < Date.now() || closes - opens > 30 * 86_400_000) {
+  if (!reserve || !step || !validSaleWindow(opens, closes, Date.now())) {
     return null;
   }
   return {
@@ -500,13 +494,10 @@ function toPlan(one: Draft): SpotPlan | null {
   };
 }
 
-// Четыре знака: с тремя части не складывались в сумму на кнопке.
-const sol = (lamports: number) => (lamports / 1e9).toFixed(4);
-
 /**
  * Во что обойдётся публикация - честно: залог за места вернётся после
  * торга, а аккаунт торга и подписи уходят сети.
  */
 export function costLine(cost: PublishCost): string {
-  return `Publishing needs about ${sol(cost.totalLamports)} SOL in your wallet. ${sol(cost.backLamports)} SOL of it is a deposit that comes back to you when the auction ends; ${sol(cost.keptLamports)} SOL pays the network and does not come back.`;
+  return `Publishing needs about ${formatSol(cost.totalLamports)} in your wallet. ${formatSol(cost.backLamports)} of it is a deposit that comes back to you when the auction ends; ${formatSol(cost.keptLamports)} pays the network and does not come back.`;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUsd } from "@oxar/core";
+import { formatUsd, hasOpened } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import { db } from "@/lib/session";
 import {
@@ -127,7 +127,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
     const opens = one.opensAt === null ? null : Date.parse(one.opensAt);
     mark(closes, "close");
     if (opens !== null) mark(opens, "open");
-    const later = opens !== null && opens > now;
+    const later = !hasOpened(opens, now);
     const anchor = later ? (opens as number) : closes;
     const key = dayKey(anchor);
     const group = byDay.get(key) ?? { at: anchor, title: dayTitle(anchor, now), rows: [] };
@@ -197,8 +197,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         }}
       >
       {things.map((one) => {
-        const opensLater =
-          one.opensAt !== null && Date.parse(one.opensAt) > now;
+        const opensLater = !hasOpened(one.opensAt === null ? null : Date.parse(one.opensAt), now);
         const soon = Date.parse(one.closesAt) - now < 86_400_000;
         return (
           <div className="hero" key={one.id}>

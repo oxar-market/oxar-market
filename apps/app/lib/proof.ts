@@ -1,7 +1,7 @@
 "use client";
 
 import { ComputeBudgetProgram, PublicKey, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
-import { proofPayload } from "@oxar/core";
+import { normalizeProof, proofPayload } from "@oxar/core";
 import {
   connection,
   decodeLot,
@@ -123,9 +123,9 @@ export async function submitProof(
     uploaded.push(path);
   }
 
-  const links = parts.links.map((one) => one.trim()).filter((one) => one.length > 0);
-  const note = parts.note.trim();
-  const hash = await sha256(proofPayload({ photos: uploaded, links, note }));
+  // Хранится ровно то, что хешируется: иначе запись разойдётся с хешем в программе.
+  const { photos, links, note } = normalizeProof({ photos: uploaded, links: parts.links, note: parts.note });
+  const hash = await sha256(proofPayload({ photos, links, note }));
 
   // Пруф уже в программе (прошлая попытка дошла до цепочки) - только запись.
   const chain = await readSale(sale).catch(() => null);
@@ -155,7 +155,7 @@ export async function submitProof(
   const { error } = await db.from("proofs").insert({
     sale: sale.toBase58(),
     thing_id: thingId,
-    photos: uploaded,
+    photos,
     links,
     note: note || null,
     hash: hex(hash),

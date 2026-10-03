@@ -50,6 +50,8 @@ Deno.serve(async (request) => {
       .select("bidder")
       .eq("lot_id", lot.id)
       .order("amount_cents", { ascending: false })
+      // При равных суммах - кто поставил раньше, как у победителя на экране.
+      .order("created_at", { ascending: true })
       .limit(1);
     const winner = top?.[0]?.bidder;
     if (!winner) continue;
@@ -61,7 +63,9 @@ Deno.serve(async (request) => {
     const label = (lot.thing_spots as { label?: string } | null)?.label ?? "";
     const title = (lot.things as { title?: string } | null)?.title ?? "";
     const payload = JSON.stringify({
-      title: `Proof is in${label ? ` for spot ${label}` : ""}`,
+      // Подпись места - как spotName в packages/core: номер клетки футболки
+      // получает слово, у вещи продавца оно уже есть («Spot 1»).
+      title: `Proof is in${label ? ` for ${/^\d+$/.test(label) ? `spot ${label}` : label}` : ""}`,
       body: `The seller showed ${title || "the thing"} with your logo. Check it within 72 hours, or the payment goes to the seller.`,
       url: "https://app.oxar.app/",
     });

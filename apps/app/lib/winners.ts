@@ -1,5 +1,6 @@
 "use client";
 
+import { closeDay } from "@oxar/core";
 import { db } from "./session.ts";
 import { photoUrl } from "./seller.ts";
 import { zip } from "./zip.ts";
@@ -187,7 +188,7 @@ export async function loadBidTimeline(thingId: string, closesOn: string): Promis
     .eq("rehearsal", false);
   const out: BidEvent[] = [];
   for (const lot of data ?? []) {
-    if (lot.closes_at.slice(0, 10) !== closesOn.slice(0, 10)) continue;
+    if (closeDay(lot.closes_at) !== closeDay(closesOn)) continue;
     const spot = lot.thing_spots as unknown as { label: string; code: string } | null;
     for (const bid of (lot.lot_bids as unknown as {
       created_at: string; amount_cents: number; brand: string; media_url: string;

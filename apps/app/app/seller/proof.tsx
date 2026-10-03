@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PublicKey } from "@solana/web3.js";
-import { APPEAL_SECONDS, proofMissed, takesProof } from "@oxar/core";
+import { APPEAL_SECONDS, hasBuyerProtection, proofMissed, takesProof } from "@oxar/core";
 import { loadThingSales, submitProof, type SaleView, type Signer } from "@/lib/proof";
 import { photoUrl } from "@/lib/seller";
 
@@ -18,7 +18,7 @@ export function ProofPanel({ thingId, seller, sign }: { thingId: string; seller:
 
   if (!sales) return null;
   // Торги до защиты покупателя (срок пруфа - ноль) платят сразу: панели нет.
-  const guarded = sales.filter((one) => one.chain && one.chain.proofDeadline > 0);
+  const guarded = sales.filter((one) => one.chain && hasBuyerProtection(one.chain));
   if (guarded.length === 0) return null;
   return (
     <>

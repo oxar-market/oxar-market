@@ -1,7 +1,7 @@
 "use client";
 
+import { cleanHandle, shortWallet, type Score } from "@oxar/core";
 import { db } from "./session.ts";
-import type { Score } from "./seller.ts";
 
 /** Отзыв покупателя о продавце, как его видят все. */
 export type Review = {
@@ -39,7 +39,7 @@ export async function loadSellerName(seller: string): Promise<string | null> {
     .eq("seller", seller)
     .maybeSingle();
   if (data?.handle) return `@${data.handle}`;
-  if (data?.wallet) return `${data.wallet.slice(0, 4)}…${data.wallet.slice(-4)}`;
+  if (data?.wallet) return shortWallet(data.wallet);
   return null;
 }
 
@@ -57,7 +57,7 @@ export async function loadMyHandle(): Promise<string | null> {
  * и подчёркивание, до пятнадцати знаков; занятый не пройдёт.
  */
 export async function saveMyHandle(handle: string): Promise<"ok" | "taken" | "bad"> {
-  if (!db || !/^[A-Za-z0-9_]{1,15}$/.test(handle)) return "bad";
+  if (!db || cleanHandle(handle) !== handle) return "bad";
   const { data: auth } = await db.auth.getUser();
   if (!auth.user) return "bad";
   // Не upsert: он переписал бы и user_id, а право на запись есть только у
@@ -89,19 +89,4 @@ export async function loadReviews(seller: string): Promise<Review[]> {
     thing: row.thing,
     spot: row.spot,
   }));
-}
-
-/**
- * Счёт одной строкой. Меньше трёх сделок - «New seller»: две пятёрки
- * подряд ещё не репутация (правило борда «Where scores live»).
- */
-export function scoreText(score: Score, side: "seller" | "buyer" = "seller", own = false): string {
-  // Чужим до трёх сделок - «новичок»: одна пятёрка не делает человека
-  // проверенным. Себе свою оценку показываем сразу, иначе она пропадает.
-  if (own && score.rating !== null) {
-    return `★ ${score.rating.toFixed(1)} · ${score.deals === 1 ? "1 deal" : `${score.deals} deals`}`;
-  }
-  if (score.deals < 3) return `New ${side}`;
-  if (score.rating === null) return `${score.deals} deals, no ratings yet`;
-  return `★ ${score.rating.toFixed(1)} · ${score.deals} deals`;
 }

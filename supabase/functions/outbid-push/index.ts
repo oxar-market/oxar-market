@@ -48,6 +48,7 @@ Deno.serve(async (request) => {
     .eq("lot_id", bid.lot_id)
     .lt("created_at", bid.created_at)
     .order("amount_cents", { ascending: false })
+    .order("created_at", { ascending: true })
     .limit(1);
   const loser = before?.[0];
   if (!loser || loser.bidder === bid.bidder) {
@@ -69,7 +70,8 @@ Deno.serve(async (request) => {
   const label = (lot?.thing_spots as { label?: string } | null)?.label ?? "";
 
   const payload = JSON.stringify({
-    title: `You've been outbid${label ? ` on spot ${label}` : ""}`,
+    // Как spotName в packages/core: слово «spot» - только номеру клетки.
+    title: `You've been outbid${label ? ` on ${/^\d+$/.test(label) ? `spot ${label}` : label}` : ""}`,
     body: `The bid is now $${(bid.amount_cents / 100).toFixed(2)}. There is still time to take it back.`,
     url: "https://app.oxar.app/",
   });

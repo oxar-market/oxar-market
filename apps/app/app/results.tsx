@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUsd } from "@oxar/core";
+import { closeDay, formatUsd } from "@oxar/core";
 import { SUITCASE, ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { loadWorn, WornInfo, type Worn } from "./worn.tsx";
@@ -43,7 +43,7 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
     void loadWinners(held.thingId).then((all) => {
       // Строка на маркете - один день закрытия; торги вещи в другие дни сюда
       // не подмешиваем.
-      const sameDay = all.filter((one) => one.closesAt.slice(0, 10) === held.closesAt.slice(0, 10));
+      const sameDay = all.filter((one) => closeDay(one.closesAt) === closeDay(held.closesAt));
       setList(sameDay.filter((one) => one.status === "won"));
       setSettled(sameDay.every((one) => one.status === "won"));
     });

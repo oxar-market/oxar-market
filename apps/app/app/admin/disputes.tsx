@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MAX_PROOF_MOVE_SECONDS, arbiterSplit, formatUsd } from "@oxar/core";
+import { MAX_PROOF_MOVE_SECONDS, arbiterSplit, formatUsd, movesProof, percentToBps, spotName, unitsToCents } from "@oxar/core";
 import { decideDispute, loadAwaitingProof, loadDisputes, moveProof, type AwaitingProof, type Dispute } from "@/lib/arbiter";
 import { photoUrl } from "@/lib/seller";
-import { spotName } from "@/lib/auction";
 
 /**
  * Арбитр: споры по местам и сроки пруфа. Подпись - Phantom с ключом админа
@@ -52,15 +51,15 @@ function DisputeCard({ dispute, onDone }: { dispute: Dispute; onDone: () => void
 
   const settled = !dispute.lot || !dispute.sale;
   const top = dispute.lot?.topBid ?? 0n;
-  // USDC - шесть знаков, цент - это десять тысяч базовых единиц.
-  const usd = (units: bigint) => formatUsd(Number(units / 10_000n));
+  const usd = (units: bigint) => formatUsd(unitsToCents(units));
   const preview = (bps: number) => {
     if (!dispute.sale) return "";
     const split = arbiterSplit(top, bps, dispute.sale.feeBps);
     return `seller ${usd(split.toSeller)} · fee ${usd(split.fee)} · winner ${usd(split.toWinner)}`;
   };
-  const bps = Math.round(Number(percent) * 100);
-  const valid = Number.isFinite(bps) && bps >= 0 && bps <= 10_000;
+  const parsed = percentToBps(percent);
+  const valid = parsed !== null;
+  const bps = parsed ?? 0;
 
   async function decide(share: number) {
     setBusy(true);
@@ -139,7 +138,7 @@ function MoveCard({ sale, onDone }: { sale: AwaitingProof; onDone: () => void })
   const next = day ? Date.parse(`${day}T23:59`) : NaN;
   // Программа не даст увезти срок дальше девяноста дней от первого.
   const limit = sale.chain.firstProofDeadline + MAX_PROOF_MOVE_SECONDS;
-  const later = Number.isFinite(next) && next / 1000 > sale.chain.proofDeadline && next / 1000 <= limit;
+  const later = Number.isFinite(next) && movesProof(sale.chain, Math.floor(Date.now() / 1000), next / 1000);
 
   return (
     <div className="sl-card ad-card">

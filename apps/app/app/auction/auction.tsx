@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import {
+  EXTEND_MS,
   escrowedCents,
   formatUsd,
   hasOpened,
   isOpen,
   minBidCents,
+  shortWallet,
 } from "@oxar/core";
 import {
   loadBidCounts,
@@ -348,7 +350,7 @@ export function Auction() {
   // Последние пять минут - то самое окно, в котором ставка двигает конец всей
   // вещи. Его и подсвечиваем: там решается торг.
   const endingSoon =
-    closesAt !== null && closesAt - now > 0 && closesAt - now <= 5 * 60_000;
+    closesAt !== null && closesAt - now > 0 && closesAt - now <= EXTEND_MS;
 
   // Торгов сейчас нет: между аукционами экран показывает, что будет дальше,
   // а не голограмму прошедшей вещи. Итоги прошедшего - на маркете.
@@ -856,11 +858,6 @@ function until(at: number, now: number): string {
  * Дни отдельным числом впереди: «49:12:07» прочитать нельзя, а «2d 01:12:07»
  * читается сразу.
  */
-/** Кошелёк по краям: свой узнают, чужой не притворяется именем. */
-function shortWallet(at: string): string {
-  return `${at.slice(0, 4)}..${at.slice(-4)}`;
-}
-
 /** «4m ago»: свежесть ставки важнее календаря. */
 function ago(at: string, now: number): string {
   const s = Math.max(0, Math.floor((now - Date.parse(at)) / 1000));

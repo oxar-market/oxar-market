@@ -4,8 +4,8 @@ const nextConfig = {
   // готовым каталогом и не тратит квоту сборок.
   output: "export",
   reactStrictMode: true,
-  // Сцена приезжает исходниками из пакета - её собирает сам Next.
-  transpilePackages: ["@oxar/stage"],
+  // Сцена и правила приезжают исходниками из пакетов - их собирает сам Next.
+  transpilePackages: ["@oxar/core", "@oxar/stage"],
 };
 
 export default nextConfig;

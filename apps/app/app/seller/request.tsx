@@ -1,8 +1,8 @@
 "use client";
 
-import { avatarLetter } from "@oxar/core";
+import { avatarLetter, rentDays, rentTotalCents, scoreText, shortWallet } from "@oxar/core";
 import type { SellerRequest } from "@/lib/seller";
-import { Bar, SpotMark, clock, shortDay, shortWallet, usd } from "./parts.tsx";
+import { Bar, SpotMark, clock, shortDay, usd } from "./parts.tsx";
 
 /**
  * Заявка на аренду: чьё лого, на каком месте, на сколько и за сколько.
@@ -24,13 +24,8 @@ export function RequestView({
   busy: boolean;
   failed: boolean;
 }) {
-  // Последний день аренды входит в срок: «Oct 1 - Oct 14» - это 14 дней.
-  const days =
-    Math.round((Date.parse(request.endsOn) - Date.parse(request.startsOn)) / 86_400_000) + 1;
-  const scoreLine =
-    request.buyerDeals < 3 || request.buyerRating === null
-      ? "New buyer"
-      : `Buyer ★ ${request.buyerRating.toFixed(1)} · ${request.buyerDeals} deals`;
+  const days = rentDays(request.startsOn, request.endsOn);
+  const scoreLine = scoreText({ rating: request.buyerRating, deals: request.buyerDeals }, "buyer");
   return (
     <>
       <Bar title="Request" onBack={onBack} />
@@ -72,7 +67,7 @@ export function RequestView({
         </div>
         <div className="total">
           <span>Total</span>
-          <span>{usd(days * request.pricePerDayCents)}</span>
+          <span>{usd(rentTotalCents(request.startsOn, request.endsOn, request.pricePerDayCents))}</span>
         </div>
       </div>
 

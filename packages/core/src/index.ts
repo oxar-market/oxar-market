@@ -1,42 +1,40 @@
 export {
-  BID_STEP_RATE,
   BRAND_MAX,
   EXTEND_MS,
-  MIN_STEP_CENTS,
   cleanBrand,
-  closesAfterBid,
+  closeDay,
   escrowedCents,
   hasOpened,
   isOpen,
   minBidCents,
-  winner,
-  type Bid,
+  nextClose,
+  validSaleWindow,
 } from "./auction.ts";
 
+export { EXTEND_SECONDS, MAX_SALE_SECONDS, MIN_STEP_CENTS, hasWinner, minNextUnits } from "./lot.ts";
+
 export {
-  FEE_BPS,
-  FEE_RATE,
   USDC_DECIMALS,
+  centsToUnits,
+  formatSol,
   formatUsd,
-  fromUsdcBaseUnits,
   parseUsd,
-  splitPayout,
-  toUsdcBaseUnits,
-  type Split,
+  payoutSplit,
+  percentToBps,
+  unitsToCents,
 } from "./money.ts";
 
-export { AVATAR_TONES, avatarLetter, avatarTone } from "./avatar.ts";
+export { avatarLetter } from "./avatar.ts";
 
-export {
-  OUTLINE_MAX,
-  outlineBox,
-  outlineInBox,
-  simplifyOutline,
-  type Box,
-  type Point,
-} from "./outline.ts";
+export { HANDLE_MAX, cleanHandle, handleInput } from "./handle.ts";
 
-export { publishCost, type PublishCost } from "./publish.ts";
+export { scoreText, shortWallet, spotName, type Score } from "./labels.ts";
+
+export { outlineInBox, type Box, type Point } from "./outline.ts";
+
+export { ACCOUNT_OVERHEAD, LOTS_PER_TX, publishCost, spotsPerSale, type PublishCost } from "./publish.ts";
+
+export { rentDays, rentTotalCents, thingState, type ThingState } from "./seller.ts";
 
 export {
   APPEAL_SECONDS,
@@ -46,14 +44,18 @@ export {
   appealOpen,
   arbiterSplit,
   disputeLapsed,
+  hasBuyerProtection,
   minProofDeadline,
+  movesProof,
   pays,
   proofMissed,
+  settledOutcome,
   spotStage,
   takesProof,
   type ProofSale,
   type ProofSpot,
+  type SettledOutcome,
   type SpotStage,
 } from "./proof.ts";
 
-export { proofPayload, type ProofParts } from "./proof-payload.ts";
+export { normalizeProof, proofPayload, type ProofParts } from "./proof-payload.ts";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HANDLE_MAX, handleInput, rentDays, rentTotalCents } from "@oxar/core";
 import type { DealToRate, Score, SellerRequest, SellerThing } from "@/lib/seller";
 import { loadMyHandle, saveMyHandle } from "@/lib/reviews";
 import { BUILD } from "@/lib/build";
@@ -79,8 +80,8 @@ export function SellerHome({
               {requests.length === 1 ? "1 request waiting" : `${requests.length} requests waiting`}
             </b>
             <small>
-              {first.spotLabel} · {first.thingTitle} · {days(first)} days ·{" "}
-              {usd(days(first) * first.pricePerDayCents)}
+              {first.spotLabel} · {first.thingTitle} · {rentDays(first.startsOn, first.endsOn)} days ·{" "}
+              {usd(rentTotalCents(first.startsOn, first.endsOn, first.pricePerDayCents))}
             </small>
           </span>
           <span className="go">Review</span>
@@ -186,11 +187,6 @@ function line(one: SellerThing, now: number): string {
   }
 }
 
-/** Последний день аренды входит в срок: «Oct 1 - Oct 14» - это 14 дней. */
-function days(request: SellerRequest): number {
-  return Math.round((Date.parse(request.endsOn) - Date.parse(request.startsOn)) / 86_400_000) + 1;
-}
-
 /**
  * Имя на маркете: «Sold by @name» под каждой вещью. Без него покупатели
  * видят кошелёк.
@@ -223,10 +219,10 @@ function NameCard() {
           @
           <input
             value={value}
-            maxLength={15}
+            maxLength={HANDLE_MAX}
             placeholder="nickname"
             onChange={(event) => {
-              setValue(event.target.value.replace(/[^A-Za-z0-9_]/g, ""));
+              setValue(handleInput(event.target.value));
               setState("idle");
             }}
           />

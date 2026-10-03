@@ -8,10 +8,20 @@
  */
 export type ProofParts = { photos: string[]; links: string[]; note: string };
 
-export function proofPayload(parts: ProofParts): string {
-  return JSON.stringify({
+/**
+ * Пруф в том виде, в каком его хранят и хешируют: фото по алфавиту, ссылки без
+ * пустых и пробелов, текст без пробелов по краям. Хранить надо ровно это -
+ * иначе запись в базе разойдётся с хешем в программе.
+ */
+export function normalizeProof(parts: ProofParts): ProofParts {
+  return {
     photos: [...parts.photos].sort(),
     links: parts.links.map((one) => one.trim()).filter((one) => one.length > 0),
     note: parts.note.trim(),
-  });
+  };
+}
+
+export function proofPayload(parts: ProofParts): string {
+  const clean = normalizeProof(parts);
+  return JSON.stringify({ photos: clean.photos, links: clean.links, note: clean.note });
 }

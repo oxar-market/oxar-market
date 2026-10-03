@@ -23,6 +23,8 @@ import {
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { fetchLot, fetchSale } from "./lot";
+// Правила - из packages/core прямым путём: пакетом ts-node его не возьмёт.
+import { payoutSplit } from "../../packages/core/src/money";
 
 /** Та же сеть, что у открытия лота: девнет, пока не сказано иное. */
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
@@ -89,8 +91,7 @@ async function main() {
   // Комиссия, продавец и получатель комиссии - в торге вещи: они общие на все
   // её места, и выплата берёт их оттуда, а не из лота.
   const sale = await fetchSale(program, lot.sale);
-  const fee = (BigInt(lot.topBid.toString()) * BigInt(sale.feeBps)) / 10_000n;
-  const toSeller = BigInt(lot.topBid.toString()) - fee;
+  const { fee, toSeller } = payoutSplit(BigInt(lot.topBid.toString()), sale.feeBps);
 
   const signature = await program.methods
     .lotPaysSeller()

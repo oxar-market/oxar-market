@@ -19,6 +19,8 @@ import { getMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { fetchLot } from "./lot";
+// Правила - из packages/core прямым путём: пакетом ts-node его не возьмёт.
+import { centsToUnits, parseUsd } from "../../packages/core/src/money";
 
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 
@@ -30,8 +32,8 @@ function arg(name: string): string | undefined {
 async function main() {
   const id = arg("lot");
   if (!id) throw new Error("нужен --lot=<uuid>");
-  const dollars = Number(arg("amount"));
-  if (!Number.isFinite(dollars) || dollars <= 0) throw new Error("нужен --amount=<сумма>");
+  const cents = parseUsd(arg("amount") ?? "");
+  if (!cents) throw new Error("нужен --amount=<сумма>");
 
   const path = arg("keypair") ?? `${homedir()}/.config/solana/id.json`;
   const bidder = Keypair.fromSecretKey(
@@ -55,7 +57,7 @@ async function main() {
 
   const lot = await fetchLot(program, lotPda);
   const { decimals } = await getMint(connection, lot.mint);
-  const amount = BigInt(Math.round(dollars * Math.pow(10, decimals)));
+  const amount = centsToUnits(cents, decimals);
 
   // Прежнего лидера может не быть - тогда в его роли идёт сам участник, и
   // программа не возвращает ничего. Так же поступает экран.

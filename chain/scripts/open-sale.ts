@@ -34,11 +34,12 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { fetchConfig } from "./lot";
+// Правила - из packages/core прямым путём: пакетом ts-node его не возьмёт.
+import { EXTEND_SECONDS } from "../../packages/core/src/lot";
+import { minProofDeadline } from "../../packages/core/src/proof";
 
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 const THING_SLUG = "superteam-ua-tee";
-/** На сколько ставка под конец двигает закрытие всей вещи. */
-const EXTEND_SECONDS = 300;
 
 function arg(name: string): string | undefined {
   const found = process.argv.find((one) => one.startsWith(`--${name}=`));
@@ -121,7 +122,7 @@ async function main() {
   if (!proofBy || Number.isNaN(proofBy.getTime())) {
     throw new Error("нужен --proof-by: до когда покажем вещь в деле, например 2026-10-20T21:00:00Z");
   }
-  if (proofBy.getTime() <= closesAt.getTime() + 3_600_000) {
+  if (Math.floor(proofBy.getTime() / 1000) < minProofDeadline(Math.floor(closesAt.getTime() / 1000))) {
     throw new Error("--proof-by должен быть позже закрытия плюс час продления");
   }
   const saleBytes = Array.from(Buffer.from(id.replace(/-/g, ""), "hex"));

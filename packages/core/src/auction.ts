@@ -9,24 +9,16 @@
  * момент закрытия один для всех, где бы кто ни находился.
  */
 
-/** Шаг ставки: пять процентов от текущей. Иначе торг идёт по центу. */
-export const BID_STEP_RATE = 0.05;
-/** Но не мельче доллара: на дешёвых местах процент вырождается в копейки. */
-export const MIN_STEP_CENTS = 100;
+import { EXTEND_SECONDS, MAX_SALE_SECONDS, MIN_STEP_CENTS, minNextUnits } from "./lot.ts";
+import { centsToUnits, unitsToCents } from "./money.ts";
+
 /** Ставка в последние пять минут продлевает приём на столько же. */
-export const EXTEND_MS = 5 * 60_000;
+export const EXTEND_MS = EXTEND_SECONDS * 1000;
 /**
  * Сколько знаков даём имени стартапа. Сорок - это «Solana Foundation» с
  * запасом и вдвое меньше того, что влезет в строку ставки на телефоне.
  */
 export const BRAND_MAX = 40;
-
-export type Bid = {
-  bidder: string;
-  amountCents: number;
-  /** Когда ставка сделана, epoch ms. */
-  at: number;
-};
 
 /**
  * Сколько нужно поставить сейчас. Первая ставка равна резервной цене - ниже
@@ -44,11 +36,46 @@ export function minBidCents(
 ): number {
   assertCents(reserveCents, "reserveCents");
   assertCents(stepCents, "stepCents");
-  if (topCents === null) return reserveCents;
-  assertCents(topCents, "topCents");
+  if (topCents !== null) assertCents(topCents, "topCents");
+  // Считаем как программа - в базовых единицах, - и вверх до цента: ставку
+  // набирают центами, а меньше программа не примет. Пять процентов от $50.01
+  // - это $2.5005, и минимум - $52.52, а не округлённые $52.51.
+  const units = minNextUnits({
+    reserve: centsToUnits(reserveCents),
+    minStep: centsToUnits(stepCents),
+    topBid: centsToUnits(topCents ?? 0),
+    hasBid: topCents !== null,
+  });
+  return unitsToCents(units, "ceil");
+}
 
-  const step = Math.max(stepCents, Math.round(topCents * BID_STEP_RATE));
-  return topCents + step;
+/**
+ * Можно ли открыть торг с такими сроками. Закрытие позже открытия - правило
+ * экрана; не в прошлом и не дальше месяца от публикации - правило программы
+ * (`seller_opens_sale`): месяц она считает от момента, когда торг заводят в
+ * цепочке, а не от объявленного открытия. Миллисекунды.
+ */
+export function validSaleWindow(opensAt: number, closesAt: number, now: number): boolean {
+  return closesAt > opensAt && closesAt > now && closesAt <= now + MAX_SALE_SECONDS * 1000;
+}
+
+/**
+ * День закрытия торга (UTC, «ГГГГ-ММ-ДД») - по нему итоги и история
+ * собирают места одного торга вещи: места одного торга закрываются в одну
+ * секунду, а торги одной вещи - в разные дни.
+ */
+export function closeDay(closesAt: string | number): string {
+  return new Date(closesAt).toISOString().slice(0, 10);
+}
+
+/**
+ * Ближайшее закрытие вещи для обратного отсчёта: самое раннее из тех, что
+ * ещё впереди; все прошли - самое позднее. Миллисекунды; пусто - null.
+ */
+export function nextClose(closes: number[], now: number): number | null {
+  if (closes.length === 0) return null;
+  const ahead = closes.filter((at) => at > now);
+  return ahead.length ? Math.min(...ahead) : Math.max(...closes);
 }
 
 /** Идёт ли приём ставок. В момент закрытия - уже нет. */
@@ -80,35 +107,6 @@ export function hasOpened(opensAt: number | null, now: number): boolean {
 export function cleanBrand(raw: string): string | null {
   const name = raw.trim().replace(/\s+/g, " ");
   return name.length > 0 && name.length <= BRAND_MAX ? name : null;
-}
-
-/**
- * Новый момент закрытия после ставки. Отсчёт идёт от самой ставки, а не от
- * прежнего срока: иначе ставка за секунду до конца добавляла бы почти ноль.
- */
-export function closesAfterBid(closesAt: number, bidAt: number): number {
-  if (closesAt - bidAt >= EXTEND_MS) return closesAt;
-  return bidAt + EXTEND_MS;
-}
-
-/**
- * Победитель на момент закрытия. При равных суммах - тот, кто поставил раньше:
- * повторять чужую сумму и выигрывать за счёт скорости нельзя.
- */
-export function winner(bids: Bid[], reserveCents: number): Bid | null {
-  assertCents(reserveCents, "reserveCents");
-
-  let best: Bid | null = null;
-  for (const bid of bids) {
-    if (bid.amountCents < reserveCents) continue;
-    if (!best) {
-      best = bid;
-      continue;
-    }
-    if (bid.amountCents > best.amountCents) best = bid;
-    else if (bid.amountCents === best.amountCents && bid.at < best.at) best = bid;
-  }
-  return best;
 }
 
 /**

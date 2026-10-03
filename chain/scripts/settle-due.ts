@@ -33,8 +33,9 @@ import {
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { fetchConfig, fetchLot, fetchSale, type ChainLot, type ChainSale } from "./lot";
+import { hasWinner } from "../../packages/core/src/lot";
 // Правила защиты покупателя - те же, что у приложения.
-import { disputeLapsed, pays, proofMissed } from "../../packages/core/src/proof";
+import { disputeLapsed, hasBuyerProtection, pays, proofMissed } from "../../packages/core/src/proof";
 
 const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 
@@ -222,13 +223,17 @@ async function main() {
         console.log(`${label}: цепь продлила торг, ещё идёт`);
         continue;
       }
-      const won = lot.topBidder !== null && BigInt(lot.topBid.toString()) >= BigInt(lot.reserve.toString());
+      const won = hasWinner({
+        topBid: BigInt(lot.topBid.toString()),
+        reserve: BigInt(lot.reserve.toString()),
+        hasBid: lot.topBidder !== null,
+      });
 
       if (!won) {
         const signature = await close(lotPda, lot, sale);
         await mark(row.id, { status: "unsold", settle_signature: signature });
         console.log(`${label}: закрыт без победителя, ${signature}`);
-      } else if (Number(sale.proofDeadline.toString()) === 0) {
+      } else if (!hasBuyerProtection({ proofDeadline: Number(sale.proofDeadline.toString()) })) {
         // Торг до защиты покупателя: платит сразу, как раньше.
         const signature = await pay(lotPda, lot, sale);
         await mark(row.id, { status: "won", settle_signature: signature });
