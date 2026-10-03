@@ -470,9 +470,9 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       )}
 
       <div className="mail-card">
-        <span className="mail-head">Get an email when a new thing opens</span>
+        <span className="mail-head">Join the waitlist</span>
         {mail === "done" ? (
-          <p className="lead">You are on the list. We will write when a new thing opens.</p>
+          <p className="lead">You are on the waitlist. We will write when a new auction opens.</p>
         ) : (
           <>
             <form className="join" onSubmit={join}>
@@ -488,10 +488,10 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
                 autoComplete="email"
               />
               <button type="submit" className="primary" disabled={mail === "sending"}>
-                {mail === "sending" ? "Joining…" : "Notify me"}
+                {mail === "sending" ? "Joining…" : "Join"}
               </button>
             </form>
-            <span className="muted small">One email per new thing. No newsletter.</span>
+            <span className="muted small">One email when a new auction opens. No newsletter.</span>
             {mail === "failed" && (
               <p className="bad">That did not go through. Check the address and try again.</p>
             )}
