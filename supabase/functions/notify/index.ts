@@ -1,5 +1,5 @@
 // Разносчик уведомлений: берёт событие из очереди notification_events и шлёт
-// пуш на все устройства человека.
+// пуш на все устройства человека и письмо на привязанную почту.
 //
 // Будит его триггер на новой строке очереди. Телу запроса не верим: из него -
 // только id, а событие функция забирает себе отметкой pushed_at, и только
@@ -19,6 +19,12 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY")!;
+// Нет ключа - писем нет, пуши идут как прежде.
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const FROM = "OXAR <notifications@oxar.app>";
+// «Перебили» письмом - не чаще раза в столько на место: в торге под конец
+// перебивают поминутно, и пачка писем хуже одного.
+const OUTBID_EMAIL_GAP_MS = 15 * 60_000;
 
 webpush.setVapidDetails("mailto:daniel.l@oxar.app", VAPID_PUBLIC, VAPID_PRIVATE);
 
@@ -104,5 +110,56 @@ Deno.serve(async (request) => {
       }
     }
   }
-  return new Response(`отправлено: ${sent}`, { status: 200 });
+  const emailed = await email(event, payload);
+  return new Response(`пушей: ${sent}, письмо: ${emailed}`, { status: 200 });
 });
+
+/** Письмо по событию, если человек его хочет. Возвращает, что вышло. */
+async function email(event: Event, payload: { title: string; body: string; url: string }): Promise<string> {
+  if (!RESEND_API_KEY) return "нет ключа";
+  const { data: settings } = await db
+    .from("notification_settings")
+    .select("email, email_on, email_outbid")
+    .eq("user_id", event.user_id)
+    .maybeSingle();
+  if (!settings?.email || !settings.email_on) return "не хочет";
+  if (event.kind === "outbid") {
+    if (!settings.email_outbid) return "не хочет";
+    const { data: recent } = await db
+      .from("notification_events")
+      .select("id")
+      .eq("user_id", event.user_id)
+      .eq("kind", "outbid")
+      .eq("data->>lot_id", String(event.data.lot_id))
+      .gte("emailed_at", new Date(Date.now() - OUTBID_EMAIL_GAP_MS).toISOString())
+      .limit(1);
+    if (recent?.length) return "недавно писали";
+  }
+
+  // Забрать письмо себе, как и пуш: второй вызов его не повторит.
+  const { data: claimed } = await db
+    .from("notification_events")
+    .update({ emailed_at: new Date().toISOString() })
+    .eq("id", event.id)
+    .is("emailed_at", null)
+    .select("id");
+  if (!claimed?.length) return "уже";
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: FROM,
+      to: settings.email,
+      subject: payload.title,
+      text: `${payload.body}\n\nOpen OXAR: ${payload.url}\n\nTo change or stop these emails, open You > Notifications in the app.`,
+    }),
+  });
+  if (!response.ok) {
+    // Отметку снимаем: письмо не ушло, следующий проход расчёта его дошлёт.
+    await db.from("notification_events").update({ emailed_at: null }).eq("id", event.id);
+    console.error("письмо не ушло:", response.status, await response.text());
+    return "ошибка";
+  }
+  return "ушло";
+}
