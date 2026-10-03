@@ -186,8 +186,19 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: >-
-          supabase functions deploy privy-session outbid-push proof-push
+          supabase functions deploy privy-session notify
           --project-ref islmypspqjxuhplcibam
+
+      # Прежние пуш-функции звать мог кто угодно с анонимным ключом, и
+      # outbid-push слал пуш на каждый вызов. Их место заняла очередь и notify;
+      # сами функции снимаем, чтобы дыра не жила на проде. Уже снятые - не ошибка.
+      - name: Снять прежние пуш-функции
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          for name in outbid-push proof-push; do
+            supabase functions delete "$name" --project-ref islmypspqjxuhplcibam || true
+          done
 
       # Проверка после выкатки, а не «должно работать»: функция обязана
       # отбивать запрос без токена и запрос с поддельным. Если она отвечает
