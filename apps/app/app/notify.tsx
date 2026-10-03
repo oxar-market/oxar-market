@@ -14,7 +14,20 @@ import { loadNotifySettings, saveNotifySetting, type NotifySettings } from "@/li
 export function Notifications() {
   const { user, updateEmail } = usePrivy();
   const email = user?.email?.address ?? null;
-  const { linkEmail } = useLinkAccount();
+  // Окно Privy на занятой почте пишет «Authentication failed» - это их экран,
+  // его не поменять. Поэтому после него объясняем сами, что случилось.
+  const [linkProblem, setLinkProblem] = useState("");
+  const { linkEmail } = useLinkAccount({
+    onSuccess: () => setLinkProblem(""),
+    onError: (error) => {
+      if (error === "exited_link_flow") return;
+      setLinkProblem(
+        error === "linked_to_another_user"
+          ? "That email already signs in to its own OXAR account, so it can't be added to this one. Sign in with that email instead, or add a different one here."
+          : "The email was not added. Try again.",
+      );
+    },
+  });
 
   const [settings, setSettings] = useState<NotifySettings | null>(null);
   const [push, setPush] = useState<PushState>("unsupported");
@@ -45,8 +58,9 @@ export function Notifications() {
         <>
           <p className="role-note">
             Add an email so you hear about outbids, wins and the 72-hour proof check even when this
-            tab is closed.
+            tab is closed. Use one you don&apos;t already sign in to OXAR with.
           </p>
+          {linkProblem && <p className="bad">{linkProblem}</p>}
           <button type="button" className="ghost small" onClick={linkEmail}>
             Add email
           </button>
