@@ -156,7 +156,8 @@ async function email(event: Event, payload: { title: string; body: string; url: 
     }),
   });
   if (!response.ok) {
-    // Отметку снимаем: письмо не ушло, следующий проход расчёта его дошлёт.
+    // Отметку снимаем: письмо не ушло, и повторный вызов по этому событию
+    // попробует снова, а не решит, что оно отправлено.
     await db.from("notification_events").update({ emailed_at: null }).eq("id", event.id);
     console.error("письмо не ушло:", response.status, await response.text());
     return "ошибка";
