@@ -41,7 +41,11 @@ export default function Home() {
   // секрет сессии съёмки, он и есть допуск.
   const [capture, setCapture] = useState<string | null>(null);
   useEffect(() => {
-    const secret = new URLSearchParams(window.location.search).get("c");
+    const params = new URLSearchParams(window.location.search);
+    // Кнопка из письма ведёт на вкладку: ?tab=you, ?tab=auction, ?tab=market.
+    const opened = params.get("tab");
+    if (opened === "market" || opened === "auction" || opened === "you") setTab(opened);
+    const secret = params.get("c");
     if (secret && /^[a-z0-9]{10}$/.test(secret)) {
       setCapture(secret);
       setTab("you");

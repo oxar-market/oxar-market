@@ -65,6 +65,16 @@ jobs:
           grep -qE '# fail 0' /tmp/test.log \
             || { echo "есть упавшие тесты"; exit 1; }
 
+      # Текст уведомлений и письма. Функция notify живёт вне пакетов pnpm,
+      # поэтому turbo её не видит - гоняем отдельно и так же требуем число.
+      - name: Тесты текста уведомлений
+        run: |
+          node --test --experimental-strip-types supabase/functions/notify/*.test.ts 2>&1 | tee /tmp/notify.log
+          grep -qE '# pass [1-9]' /tmp/notify.log \
+            || { echo "ни одного пройденного теста уведомлений"; exit 1; }
+          grep -qE '# fail 0' /tmp/notify.log \
+            || { echo "есть упавшие тесты уведомлений"; exit 1; }
+
       - run: pnpm build
 
   deploy:
