@@ -182,6 +182,19 @@ jobs:
           VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }}
           --project-ref islmypspqjxuhplcibam
 
+      # Ключ почты - отдельно и только если он заведён: без него notify шлёт
+      # одни пуши, а пустое значение затёрло бы ключ, положенный раньше.
+      - name: Ключ почты -> Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          if [ -n "$RESEND_API_KEY" ]; then
+            supabase secrets set RESEND_API_KEY="$RESEND_API_KEY" --project-ref islmypspqjxuhplcibam
+          else
+            echo "RESEND_API_KEY не заведён - писем не будет, только пуши"
+          fi
+
       - name: Функции -> Supabase
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
