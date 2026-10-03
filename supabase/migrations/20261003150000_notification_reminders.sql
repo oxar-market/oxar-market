@@ -95,6 +95,12 @@ declare
 begin
   select t.seller into seller from lots l join things t on t.id = l.thing_id where l.id = new.lot_id;
 
+  -- Спор бывает только по выигранному месту. Строку по идущему торгу политика
+  -- больше не пустит (ниже), а триггер на всякий случай молчит и сам.
+  if not exists (select 1 from lots l where l.id = new.lot_id and l.status = 'won') then
+    return new;
+  end if;
+
   if tg_op = 'INSERT' then
     if seller is not null then
       insert into notification_events (user_id, kind, key, data)
@@ -199,3 +205,49 @@ $$;
 
 revoke all on function queue_reminders() from public, anon, authenticated;
 grant execute on function queue_reminders() to service_role;
+
+-- Пруф - только своему торгу. Политика проверяла, что вещь своя, но не что
+-- адрес торга - её: продавец мог положить «пруф» с чужим адресом. Тогда
+-- победители чужого торга получили бы ложное «Proof is in», а настоящий пруф
+-- того торга уже не лёг бы - адрес торга здесь первичный ключ.
+drop policy "продавец кладёт пруф своей вещи" on proofs;
+create policy "продавец кладёт пруф своей вещи" on proofs for insert to authenticated
+  with check (
+    exists (select 1 from lots l where l.chain_sale = sale and l.thing_id = proofs.thing_id)
+    and (
+      is_admin()
+      or exists (select 1 from things t where t.id = thing_id and t.seller = auth.uid())
+    )
+  );
+
+-- И триггер берёт победителей только того торга этой вещи.
+create or replace function push_proof()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into notification_events (user_id, kind, key, data)
+  select lot_leader(l.id), 'proof', 'proof:' || l.id, jsonb_build_object('lot_id', l.id, 'sale', new.sale)
+  from lots l
+  where l.chain_sale = new.sale and l.thing_id = new.thing_id and l.status = 'won' and lot_leader(l.id) is not null
+  on conflict (key) do nothing;
+  return new;
+end;
+$$;
+
+-- Спор открывают по выигранному месту, а не по идущему торгу: там «верхняя
+-- ставка» - ещё не победа, и спорить не о чем.
+drop policy "победитель открывает спор" on disputes;
+create policy "победитель открывает спор" on disputes for insert to authenticated
+  with check (
+    winner = auth.uid()
+    and exists (select 1 from lots l where l.id = disputes.lot_id and l.status = 'won')
+    and exists (
+      select 1 from lot_bids b
+      where b.lot_id = disputes.lot_id
+        and b.bidder = auth.uid()
+        and b.amount_cents = (select max(amount_cents) from lot_bids where lot_id = disputes.lot_id)
+    )
+  );
