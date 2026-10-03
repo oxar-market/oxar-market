@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { loadOnAir, type AirThing } from "@/lib/auction";
+import { restingSlide } from "@/lib/slides";
 import { Auction, Between } from "./auction.tsx";
 import { ListingAuction } from "../listing/listing.tsx";
 
@@ -53,6 +54,20 @@ export function AuctionTab({ house, onBack }: { house: boolean; onBack: () => vo
     const at = (to + slides) % slides;
     el.scrollTo({ left: at * el.clientWidth, behavior: "smooth" });
   }
+  // Страховка, как на маркете: прокрутка затихла, пальца нет, а слайд не на
+  // месте - Safari на iPhone после оборванной прокрутки сам не довозит.
+  const touching = useRef(false);
+  const idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  function settleSoon() {
+    clearTimeout(idle.current);
+    idle.current = setTimeout(() => {
+      const el = rail.current;
+      if (!el || touching.current) return;
+      const rest = restingSlide(el.scrollLeft, el.clientWidth, slides);
+      if (rest.off) el.scrollTo({ left: rest.left, behavior: "smooth" });
+    }, 150);
+  }
+  useEffect(() => () => clearTimeout(idle.current), []);
 
   // Пока список не доехал, не знаем, чей экран показывать: только шапка.
   if (!air) {
@@ -112,7 +127,19 @@ export function AuctionTab({ house, onBack }: { house: boolean; onBack: () => vo
           ref={rail}
           onScroll={(event) => {
             const el = event.currentTarget;
-            setSlide(Math.round(el.scrollLeft / el.clientWidth));
+            setSlide(restingSlide(el.scrollLeft, el.clientWidth, slides).index);
+            settleSoon();
+          }}
+          onTouchStart={() => {
+            touching.current = true;
+          }}
+          onTouchEnd={() => {
+            touching.current = false;
+            settleSoon();
+          }}
+          onTouchCancel={() => {
+            touching.current = false;
+            settleSoon();
           }}
         >
           {air.map((one) => (
