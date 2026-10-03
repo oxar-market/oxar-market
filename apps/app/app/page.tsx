@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLogin, usePrivy } from "@privy-io/react-auth";
-import { db, exchange } from "@/lib/session";
+import { useIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
+import { db, exchange, syncContact } from "@/lib/session";
 import { BUILD } from "@/lib/build";
 import { Auction } from "./auction/auction";
 import { Market } from "./market";
@@ -65,6 +65,16 @@ export default function Home() {
       live = false;
     };
   }, [ready, authenticated, getAccessToken]);
+
+  // Почта для писем: identity-токен меняется при входе и при привязке почты,
+  // тогда и сообщаем серверу. Строку настроек заводит обмен, поэтому - после него.
+  const { identityToken } = useIdentityToken();
+  useEffect(() => {
+    if (linked !== "ready" || !identityToken) return;
+    void getAccessToken().then((token) => {
+      if (token) void syncContact(token, identityToken);
+    });
+  }, [linked, identityToken, getAccessToken]);
 
   // Торг виден до входа, поэтому весь экран на готовность Privy не держим:
   // раньше `if (!ready) return <main />` отдавал белый лист, пока Privy

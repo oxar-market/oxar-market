@@ -51,6 +51,33 @@ function mailbox(privyId: string): string {
 }
 
 /**
+ * Настоящая почта человека - из identity-токена Privy.
+ *
+ * Токен подписан Privy тем же ключом, что и токен входа, а почта в нём -
+ * привязанная, то есть подтверждённая кодом. Поэтому ей можно писать. Почту,
+ * присланную браузером открытым текстом, мы не берём: так любой подписал бы
+ * чужой адрес на наши письма.
+ *
+ * undefined - токена нет или он не подошёл: почту не трогаем. null - токен
+ * настоящий, а почты в нём нет: её отвязали, стираем и у себя.
+ */
+async function verifiedEmail(idToken: string, privyId: string): Promise<string | null | undefined> {
+  if (!idToken) return undefined;
+  try {
+    const { payload } = await jwtVerify(idToken, jwks, { issuer: "privy.io", audience: PRIVY_APP_ID });
+    if (payload.sub !== privyId) return undefined;
+    // Privy кладёт список привязок строкой JSON.
+    const raw = payload.linked_accounts;
+    const accounts = (typeof raw === "string" ? JSON.parse(raw) : raw) as { type?: string; address?: string }[] | undefined;
+    if (!Array.isArray(accounts)) return undefined;
+    const email = accounts.find((one) => one.type === "email" && typeof one.address === "string");
+    return email?.address?.toLowerCase() ?? null;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Откуда разрешено звать. Список, а не звёздочка: функция выдаёт ключ от
  * сессии, и пускать к ней любой сайт незачем.
  *
@@ -73,7 +100,7 @@ function cors(origin: string | null): Record<string, string> {
     "Access-Control-Allow-Origin": origin,
     // Список заголовков перечислен целиком: браузер сверяет его с тем, что
     // собирался послать, и молча отказывает, если чего-то не хватает.
-    "Access-Control-Allow-Headers": "authorization, content-type, x-privy-token",
+    "Access-Control-Allow-Headers": "authorization, content-type, x-privy-token, x-privy-identity-token",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Max-Age": "3600",
     // Ответ зависит от Origin, и без этого его закэшировали бы для чужого.
@@ -116,6 +143,29 @@ Deno.serve(async (request) => {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
     auth: { persistSession: false },
   });
+  const email = await verifiedEmail(request.headers.get("X-Privy-Identity-Token") ?? "", privyId);
+
+  // Строка настроек есть у каждого вошедшего: переключатели человек правит
+  // сам, а завести строку может только сервер. Почту меняем, только если
+  // identity-токен её подтвердил или подтвердил, что её нет.
+  const saveContact = async (userId: string) => {
+    if (email === undefined) {
+      await admin.from("notification_settings").upsert({ user_id: userId }, { onConflict: "user_id", ignoreDuplicates: true });
+    } else {
+      await admin
+        .from("notification_settings")
+        .upsert({ user_id: userId, email, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    }
+  };
+
+  // Только почта: человек привязал или сменил её уже после входа. Сессия у
+  // него есть, новая не нужна.
+  if (new URL(request.url).searchParams.get("only") === "contact") {
+    const { data: known } = await admin.from("identities").select("user_id").eq("privy_id", privyId).maybeSingle();
+    if (!known) return new Response("Unknown user", { status: 404, headers: allow });
+    await saveContact(known.user_id);
+    return new Response(null, { status: 204, headers: allow });
+  }
 
   // generateLink заодно заводит человека, если его ещё нет, поэтому отдельной
   // регистрации не требуется: первый вход и есть регистрация.
@@ -137,8 +187,11 @@ Deno.serve(async (request) => {
       { onConflict: "user_id" },
     );
 
+  await saveContact(data.user.id);
+
   return new Response(
     JSON.stringify({ token_hash: data.properties.hashed_token }),
     { headers: { ...allow, "Content-Type": "application/json" } },
   );
 });
+

@@ -5,6 +5,7 @@ import { useConnectedStandardWallets, useStandardSignTransaction } from "@privy-
 import { PublicKey } from "@solana/web3.js";
 import { APPEAL_SECONDS, ARBITER_SECONDS, formatUsd, settledOutcome, spotName, spotStage } from "@oxar/core";
 import { WALLET_CHAIN } from "@/lib/chain";
+import { NoEmailHint } from "./notify.tsx";
 import { photoUrl } from "@/lib/seller";
 import { confirmWin, disputeWin, loadMyWins, type Win } from "@/lib/wins";
 import type { MyStand } from "@/lib/auction";
@@ -32,6 +33,7 @@ export function YourWins({ stands }: { stands: MyStand[] }) {
       <div className="bids-head">
         <span className="hist-title">Your wins</span>
       </div>
+      <NoEmailHint text="Proof arrives on its own schedule, and you have 72 hours to check it. Add an email so the window does not pass silently." />
       <div className="wins">
         {wins.map((win) => (
           <WinCard

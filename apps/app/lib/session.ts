@@ -69,3 +69,25 @@ export async function exchange(privyToken: string): Promise<Exchange> {
     return { ok: false, reason: "network" };
   }
 }
+
+/**
+ * Сообщить серверу почту человека: после входа и всякий раз, как её
+ * привязали или сменили. Сервер верит только подписи Privy в identity-токене,
+ * а не адресу от браузера.
+ */
+export async function syncContact(privyToken: string, identityToken: string): Promise<boolean> {
+  if (!url) return false;
+  try {
+    const response = await fetch(`${url}/functions/v1/privy-session?only=contact`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${anon}`,
+        "X-Privy-Token": privyToken,
+        "X-Privy-Identity-Token": identityToken,
+      },
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}

@@ -22,6 +22,7 @@ import {
   type Thing,
 } from "@/lib/auction";
 import { BidForm } from "./bid.tsx";
+import { NoEmailHint } from "../notify.tsx";
 import { PhotoView } from "./photo.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
@@ -382,6 +383,9 @@ export function Auction() {
           </button>
         )}
       </div>
+      {push === "on" && (
+        <NoEmailHint text="Push works only on this device, and only while notifications stay allowed. Add an email so you don't miss an outbid." />
+      )}
 
       <header className="lot-top">
         <div className="lot-title">
