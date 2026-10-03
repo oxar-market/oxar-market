@@ -122,6 +122,9 @@ export function BidForm({
 
   async function place() {
     setError("");
+    // Сумма ниже минимума - кнопка уже говорит «Enter at least»; вторая,
+    // красная строка про то же самое читалась бы как сбой.
+    if (cents !== null && cents < need) return;
     if (!art) return setError("Add your artwork first - it goes in with the bid.");
     if (!wallet) return setError("No wallet connected. Sign in again to get one.");
     if (cents === null) return setError("That is not an amount. Try 75 or 75.50.");
@@ -299,6 +302,10 @@ export function BidForm({
           </span>
         )}
 
+        {/* Ошибка - в карточке, прямо над кнопкой: под карточкой её не
+            видно с кнопки, и она читалась отдельно от ставки. */}
+        {error && <p className="bad">{error}</p>}
+
         {/* Кнопка приглушена, но нажимается. Недоступная кнопка не отвечает
             на «почему», и человек остаётся гадать; эта называет недостающий
             шаг прямо на себе - проверки для этого уже написаны в `place`. */}
@@ -322,9 +329,7 @@ export function BidForm({
         </button>
       </div>
 
-      {error ? (
-        <p className="bad">{error}</p>
-      ) : (
+      {!error && (
         <p className="muted" id="bid-hint">
           {needsArt && needsName
             ? "Two things before you can bid: your artwork on the shirt, and the name of the startup it belongs to."

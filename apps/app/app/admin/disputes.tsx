@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MAX_PROOF_MOVE_SECONDS, arbiterSplit, formatUsd, movesProof, percentToBps, spotName, unitsToCents } from "@oxar/core";
 import { decideDispute, loadAwaitingProof, loadDisputes, moveProof, type AwaitingProof, type Dispute } from "@/lib/arbiter";
 import { photoUrl } from "@/lib/seller";
+import { Gallery } from "../gallery.tsx";
 
 /**
  * Арбитр: споры по местам и сроки пруфа. Подпись - Phantom с ключом админа
@@ -83,13 +84,7 @@ function DisputeCard({ dispute, onDone }: { dispute: Dispute; onDone: () => void
       </p>
       {dispute.proof && (
         <>
-          <div className="ad-photos">
-            {dispute.proof.photos.map((path) => (
-              <a className="sl-photo" key={path} href={photoUrl(path)} target="_blank" rel="noreferrer">
-                <img src={photoUrl(path)} alt="" />
-              </a>
-            ))}
-          </div>
+          <Gallery urls={dispute.proof.photos.map(photoUrl)} listClass="ad-photos" itemClass="sl-photo" />
           {dispute.proof.links.map((link) => (
             <a key={link} className="win-link" href={link} target="_blank" rel="noreferrer">
               {link}

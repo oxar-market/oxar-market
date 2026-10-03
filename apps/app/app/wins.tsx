@@ -6,6 +6,7 @@ import { PublicKey } from "@solana/web3.js";
 import { APPEAL_SECONDS, ARBITER_SECONDS, formatUsd, settledOutcome, spotName, spotStage } from "@oxar/core";
 import { WALLET_CHAIN } from "@/lib/chain";
 import { NoEmailHint } from "./notify.tsx";
+import { Gallery } from "./gallery.tsx";
 import { photoUrl } from "@/lib/seller";
 import { confirmWin, disputeWin, loadMyWins, type Win } from "@/lib/wins";
 import type { MyStand } from "@/lib/auction";
@@ -117,10 +118,18 @@ function WinCard({
       )}
       {stage === "proof_missed" && <p className="muted">No proof by the deadline. Your bid is on its way back.</p>}
       {stage === "disputed" && (
-        <p className="muted">
-          You disputed the proof. OXAR reviews it and decides by {day(win.lot.disputedAt + ARBITER_SECONDS)}; if not,
-          your bid comes back.
-        </p>
+        // Что будет дальше - первой строкой: после спора человек остаётся с
+        // замороженными деньгами и должен знать, кто решает и до какого дня.
+        <>
+          <p className="muted">
+            You disputed this. OXAR reviews it and decides. Your {formatUsd(win.cents)} stays locked until then.
+          </p>
+          {win.dispute && <p className="muted">Your reason: {win.dispute.reason}</p>}
+          <p className="muted">
+            Opened {day(win.lot.disputedAt)}. If there is no decision by {day(win.lot.disputedAt + ARBITER_SECONDS)},
+            your bid comes back.
+          </p>
+        </>
       )}
       {stage === "dispute_lapsed" && <p className="muted">No decision in 30 days. Your bid is on its way back.</p>}
       {stage === "payable" && <p className="muted">The check window is over. Your bid goes to the seller.</p>}
@@ -133,13 +142,7 @@ function WinCard({
           {win.proof && (
             <>
               {win.proof.photos.length > 0 && (
-                <div className="sl-minis">
-                  {win.proof.photos.map((path) => (
-                    <a className="sl-mini" key={path} href={photoUrl(path)} target="_blank" rel="noreferrer">
-                      <img src={photoUrl(path)} alt="" />
-                    </a>
-                  ))}
-                </div>
+                <Gallery urls={win.proof.photos.map(photoUrl)} listClass="sl-minis" itemClass="sl-mini" />
               )}
               {win.proof.links.map((link) => (
                 <a key={link} className="win-link" href={link} target="_blank" rel="noreferrer">
@@ -178,17 +181,19 @@ function WinCard({
               </div>
             </>
           ) : (
-            <div className="win-actions">
-              <button type="button" className="sl-pill" disabled={busy} onClick={() => setDisputing(true)}>
-                Dispute
+            // Два ответа одного веса: крупная тёмная «выплатить» рядом с
+            // мелкой «спорить» подталкивала победителя к выплате.
+            <div className="win-pair">
+              <button type="button" className="sl-btn light" disabled={busy} onClick={() => setDisputing(true)}>
+                Open a dispute
               </button>
               <button
                 type="button"
-                className="sl-btn dark"
+                className="sl-btn light"
                 disabled={busy || !winner}
                 onClick={() => run(() => confirmWin(win, winner!, sign), "The payment was not released. Try again.")}
               >
-                {busy ? "Releasing…" : "Looks good, release payment"}
+                {busy ? "Releasing…" : "Release payment"}
               </button>
             </div>
           )}

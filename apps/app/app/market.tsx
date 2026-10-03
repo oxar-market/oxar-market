@@ -10,6 +10,8 @@ import {
   type MarketThing,
   type UpcomingThing,
 } from "@/lib/auction";
+import { heroClock, left } from "@/lib/clock";
+import { restingSlide } from "@/lib/slides";
 import { Game } from "./game/game";
 import { ResultsView } from "./results.tsx";
 import { PastHero } from "./past.tsx";
@@ -109,8 +111,32 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
     if (!el || slides === 0) return;
     const at = (to + slides) % slides;
     el.scrollTo({ left: at * el.clientWidth, behavior: "smooth" });
-    if (reveal) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (reveal) revealRail();
   }
+  // Страницу к карусели двигаем окном, а не scrollIntoView самой ленты:
+  // Safari на iPhone этим вызовом обрывал её плавную прокрутку, и лента
+  // вставала посреди двух слайдов - полкарточки соседа слева, текст обрезан
+  // справа.
+  function revealRail() {
+    const el = rail.current;
+    if (!el) return;
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: "smooth" });
+  }
+  // Страховка на тот же случай: прокрутка ленты затихла, пальца на ней нет,
+  // а слайд стоит не на месте - доводим до ближайшего. Привязка Safari к
+  // слайду после оборванной прокрутки сама не срабатывает.
+  const touching = useRef(false);
+  const idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  function settleSoon() {
+    clearTimeout(idle.current);
+    idle.current = setTimeout(() => {
+      const el = rail.current;
+      if (!el || touching.current) return;
+      const rest = restingSlide(el.scrollLeft, el.clientWidth, slides);
+      if (rest.off) el.scrollTo({ left: rest.left, behavior: "smooth" });
+    }, 150);
+  }
+  useEffect(() => () => clearTimeout(idle.current), []);
 
   // Программа по дням. Идущий торг стоит в дне закрытия, назначенный - в
   // дне открытия, вещь без даты - отдельной группой в конце. Полоса из семи
@@ -137,8 +163,8 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       name: one.title,
       price: one.topCents > 0 ? formatUsd(one.topCents) : "-",
       time: later
-        ? `opens in ${left(one.opensAt as string, now)}`
-        : `closes in ${left(one.closesAt, now)}`,
+        ? `opens in ${left(opens as number, now)}`
+        : `closes in ${left(closes, now)}`,
     });
     byDay.set(key, group);
   });
@@ -193,12 +219,25 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         ref={rail}
         onScroll={(event) => {
           const el = event.currentTarget;
-          setSlide(Math.round(el.scrollLeft / el.clientWidth));
+          setSlide(restingSlide(el.scrollLeft, el.clientWidth, slides).index);
+          settleSoon();
+        }}
+        onTouchStart={() => {
+          touching.current = true;
+        }}
+        onTouchEnd={() => {
+          touching.current = false;
+          settleSoon();
+        }}
+        onTouchCancel={() => {
+          touching.current = false;
+          settleSoon();
         }}
       >
       {things.map((one) => {
-        const opensLater = !hasOpened(one.opensAt === null ? null : Date.parse(one.opensAt), now);
-        const soon = Date.parse(one.closesAt) - now < 86_400_000;
+        const opensAt = one.opensAt === null ? null : Date.parse(one.opensAt);
+        const opensLater = !hasOpened(opensAt, now);
+        const clock = heroClock(opensAt, Date.parse(one.closesAt), now);
         return (
           <div className="hero" key={one.id}>
             <div
@@ -263,20 +302,17 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
                 ))}
               </span>
               )}
-              <span className="now-pill">
-                <span className="dot" />
-                {opensLater ? "OPENS SOON" : soon ? "CLOSING SOON" : "LIVE NOW"}
-              </span>
-              {!opensLater && (
-                <span className="hero-time" suppressHydrationWarning>
-                  <span className="hero-time-cap">closes in</span>
-                  {left(one.closesAt, now)}
-                </span>
-              )}
             </div>
             <div className="hero-card">
               <div>
                 <h2 className="hero-name">{one.title}</h2>
+                {/* Часы - строкой под названием, а не плашками на фото: на
+                    телефоне пилюля и таймер стояли на разной высоте и
+                    вылезали за края снимка. */}
+                <span className="hero-clock" suppressHydrationWarning>
+                  <span className={clock.urgent ? "dot urgent" : "dot"} />
+                  {clock.text}
+                </span>
                 {one.tagline && <p className="hero-who">{one.tagline}</p>}
                 {one.owner && <SellerLine seller={one.owner} house={one.house} />}
               </div>
@@ -363,10 +399,10 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
               onClick={() => {
                 setDayOn(key);
                 // Сегодня без событий - точка возврата: к карусели наверху.
-                const target = byDay.has(key)
-                  ? document.getElementById(`mk-day-${key}`)
-                  : rail.current;
-                target?.scrollIntoView({ behavior: "smooth", block: "start" });
+                if (!byDay.has(key)) return revealRail();
+                document
+                  .getElementById(`mk-day-${key}`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
             >
               <span className="mk-day-dow">
@@ -558,13 +594,4 @@ function dayTitle(at: number, now: number): string {
 /** День для строк истории: коротко, в часах читателя. */
 function day(at: string): string {
   return new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-/** Сколько осталось торгу: крупно дни, дальше часы-минуты-секунды. */
-function left(closesAt: string, now: number): string {
-  const s = Math.max(0, Math.floor((Date.parse(closesAt) - now) / 1000));
-  const d = Math.floor(s / 86_400);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const clock = `${pad(Math.floor((s % 86_400) / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
-  return d > 0 ? `${d}d ${clock}` : clock;
 }
