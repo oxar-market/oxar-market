@@ -1,6 +1,6 @@
 "use client";
 
-import { closeDay, isOpen } from "@oxar/core";
+import { closeDay, isOpen, onAir, type LotWindow, type OnAir } from "@oxar/core";
 import { db } from "./session.ts";
 import { photoUrl } from "./seller.ts";
 
@@ -118,6 +118,39 @@ export async function loadNextHouseTitle(): Promise<string | null> {
     .order("created_at");
   const next = (data ?? []).find((one) => ((one.lots as unknown[] | null) ?? []).length === 0);
   return next?.title ?? null;
+}
+
+/** Торг на вкладке Auction и чья вещь: наша идёт своим экраном. */
+export type AirThing = OnAir & { house: boolean };
+
+/**
+ * Торги для вкладки Auction: идущие, за ними назначенные, наши и продавцов.
+ * Вещь - только та, что видна на маркете (active): торг вещи, которую мы ещё
+ * не вывели на маркет, не показываем и здесь. Порядок - правило core.
+ */
+export async function loadOnAir(): Promise<AirThing[]> {
+  if (!db) return [];
+  const now = Date.now();
+  const { data } = await db
+    .from("lots")
+    .select("thing_id, opens_at, closes_at, things:thing_id(active, house)")
+    .eq("status", "open")
+    .gt("closes_at", new Date(now).toISOString())
+    .limit(400);
+
+  const house = new Map<string, boolean>();
+  const lots: LotWindow[] = [];
+  for (const lot of data ?? []) {
+    const info = lot.things as unknown as { active?: boolean; house?: boolean } | null;
+    if (!info || info.active === false) continue;
+    house.set(lot.thing_id, info.house ?? false);
+    lots.push({
+      thingId: lot.thing_id,
+      opensAt: lot.opens_at ? Date.parse(lot.opens_at) : null,
+      closesAt: Date.parse(lot.closes_at),
+    });
+  }
+  return onAir(lots, now).map((one) => ({ ...one, house: house.get(one.thingId) ?? false }));
 }
 
 /** Ставки лота: от высокой к низкой, как их и читают. */

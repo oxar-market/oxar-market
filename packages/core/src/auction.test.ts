@@ -10,6 +10,7 @@ import {
   isOpen,
   minBidCents,
   nextClose,
+  onAir,
   validSaleWindow,
 } from "./auction.ts";
 import { EXTEND_SECONDS, MAX_SALE_SECONDS, MIN_STEP_CENTS, hasWinner, minNextUnits } from "./lot.ts";
@@ -163,4 +164,89 @@ test("перебитые ставки складывать нечего: счи�
   // Два места, на каждом торговались втроём. В хранилищах лежит по лидеру,
   // остальным деньги вернулись той же транзакцией, что их перебила.
   assert.equal(escrowedCents([30_000, 20_000]), 50_000);
+});
+
+const H = 3_600_000;
+const NOW = Date.parse("2026-10-03T12:00:00Z");
+
+test("на вкладке торга нет ничего, если лотов нет", () => {
+  assert.deepEqual(onAir([], NOW), []);
+});
+
+test("закрывшийся торг на вкладку не идёт, в момент закрытия - уже нет", () => {
+  assert.deepEqual(
+    onAir(
+      [
+        { thingId: "a", opensAt: null, closesAt: NOW - H },
+        { thingId: "b", opensAt: null, closesAt: NOW },
+      ],
+      NOW,
+    ),
+    [],
+  );
+});
+
+test("идущий торг стоит раньше назначенного, даже если тот открывается через минуту", () => {
+  const order = onAir(
+    [
+      { thingId: "soon", opensAt: NOW + 60_000, closesAt: NOW + 2 * H },
+      { thingId: "live", opensAt: NOW - H, closesAt: NOW + 48 * H },
+    ],
+    NOW,
+  );
+  assert.deepEqual(
+    order.map((one) => [one.thingId, one.live]),
+    [
+      ["live", true],
+      ["soon", false],
+    ],
+  );
+});
+
+test("идущие - от ближайшего закрытия, назначенные - от ближайшего открытия", () => {
+  const order = onAir(
+    [
+      { thingId: "later", opensAt: NOW + 5 * H, closesAt: NOW + 50 * H },
+      { thingId: "long", opensAt: null, closesAt: NOW + 30 * H },
+      { thingId: "next", opensAt: NOW + H, closesAt: NOW + 60 * H },
+      { thingId: "short", opensAt: NOW - H, closesAt: NOW + 2 * H },
+    ],
+    NOW,
+  );
+  assert.deepEqual(
+    order.map((one) => one.thingId),
+    ["short", "long", "next", "later"],
+  );
+});
+
+test("лоты одной вещи - один торг: открытие по самому раннему, закрытие по самому позднему", () => {
+  assert.deepEqual(
+    onAir(
+      [
+        { thingId: "a", opensAt: NOW + 2 * H, closesAt: NOW + 10 * H },
+        { thingId: "a", opensAt: NOW + H, closesAt: NOW + 12 * H },
+      ],
+      NOW,
+    ),
+    [{ thingId: "a", opensAt: NOW + H, closesAt: NOW + 12 * H, live: false }],
+  );
+});
+
+test("лот без срока открытия делает торг вещи идущим", () => {
+  // Так же считают экраны торга: хоть один лот без срока - торг уже идёт.
+  assert.deepEqual(
+    onAir(
+      [
+        { thingId: "a", opensAt: NOW + H, closesAt: NOW + 10 * H },
+        { thingId: "a", opensAt: null, closesAt: NOW + 10 * H },
+      ],
+      NOW,
+    ),
+    [{ thingId: "a", opensAt: null, closesAt: NOW + 10 * H, live: true }],
+  );
+});
+
+test("торг идёт с назначенной минуты", () => {
+  assert.equal(onAir([{ thingId: "a", opensAt: NOW, closesAt: NOW + H }], NOW)[0]?.live, true);
+  assert.equal(onAir([{ thingId: "a", opensAt: NOW + 1, closesAt: NOW + H }], NOW)[0]?.live, false);
 });

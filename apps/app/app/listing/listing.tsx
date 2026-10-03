@@ -38,12 +38,13 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       if (!loaded) return;
       if (loaded.shape) setLook("live");
       // С «Raise your bid» торг открывается сразу на том месте.
+      // Снимаем метку, только если место наше: на вкладке Auction рядом
+      // грузится торг футболки, и метка могла прийти к нему.
       const jump = window.sessionStorage.getItem("oxar.jump");
-      window.sessionStorage.removeItem("oxar.jump");
+      const mine = loaded.spots.some((spot) => spot.code === jump);
+      if (mine) window.sessionStorage.removeItem("oxar.jump");
       const first = loaded.spots.find((spot) => loaded.lots.some((lot) => lot.spot_code === spot.code));
-      setPicked(
-        loaded.spots.some((spot) => spot.code === jump) ? jump : (first?.code ?? loaded.spots[0]?.code ?? null),
-      );
+      setPicked(mine ? jump : (first?.code ?? loaded.spots[0]?.code ?? null));
     });
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
@@ -285,7 +286,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           прежде, чем ставит. */}
       <WornInfo thingId={thingId} />
 
-      {lots.length > 0 && (
+      {/* До открытия мест не показываем: выбирать и ставить ещё нечего, а
+          сетка с ценами обещала торг, который не идёт. */}
+      {started && lots.length > 0 && (
         <>
           <div className="pick-head">
             <span className="pick-title">Pick a spot</span>

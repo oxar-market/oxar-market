@@ -8,7 +8,10 @@ export {
   isOpen,
   minBidCents,
   nextClose,
+  onAir,
   validSaleWindow,
+  type LotWindow,
+  type OnAir,
 } from "./auction.ts";
 
 export { EXTEND_SECONDS, MAX_SALE_SECONDS, MIN_STEP_CENTS, hasWinner, minNextUnits } from "./lot.ts";

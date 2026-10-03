@@ -2553,6 +2553,37 @@ input:focus {
   padding-top: 1rem;
 }
 
+/* Вкладка торга листает целые экраны торга той же каруселью. Поля экрана
+   карусель снимает, слайд возвращает их себе; точки и стрелки - строкой
+   над ней. */
+.hero-rail > .air-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  padding: 0 1.25rem;
+  scroll-snap-align: start;
+}
+
+.air-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.air-nav .hero-arrow {
+  position: static;
+  transform: none;
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+}
+
+.air-nav .hero-pager {
+  width: auto;
+  padding: 0;
+}
+
 .hero-pager button {
   cursor: pointer;
   border: 0;

@@ -595,7 +595,6 @@ export function Auction() {
       {!started ? (
         <p className="lot-state">
           <strong>Bidding opens in {until(startsAt as number, now)}</strong>
-          {` · ${lots.length} ${lots.length === 1 ? "spot" : "spots"} on this shirt`}
           {lots.length > 0 &&
             ` · from ${formatUsd(Math.min(...lots.map((one) => one.reserve_cents)))}`}
         </p>
@@ -921,7 +920,7 @@ function spanOf(ms: number): string {
  * (вещь не объявлена, знак вопроса), ниже - как это пойдёт. Прошедший торг
  * здесь не показываем, он живёт на маркете.
  */
-function Between() {
+export function Between() {
   const [title, setTitle] = useState<string | null>(null);
   useEffect(() => {
     void loadNextHouseTitle().then(setTitle);
