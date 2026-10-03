@@ -14,6 +14,7 @@ import { amIAdmin } from "@/lib/admin";
 import { Admin } from "./admin/admin.tsx";
 import { SellerApply } from "./seller/apply.tsx";
 import { YourWins } from "./wins.tsx";
+import { Notifications } from "./notify.tsx";
 import { loadScoreOf } from "@/lib/reviews";
 
 /**
@@ -427,6 +428,8 @@ export function You({ onOpenAuction }: { onOpenAuction: (thingId?: string) => vo
         )}
       </div>
       )}
+
+      <Notifications />
 
       <ThemeRow />
 
