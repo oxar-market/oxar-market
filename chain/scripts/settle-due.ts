@@ -268,12 +268,18 @@ async function main() {
         // решил арбитр или кто-то позвал возврат. Итог - по той транзакции.
         const [last] = await connection.getSignaturesForAddress(lotPda, { limit: 1 });
         const tx = last ? await connection.getTransaction(last.signature, { maxSupportedTransactionVersion: 0 }) : null;
-        const logs = (tx?.meta?.logMessages ?? []).join("\n");
+        // Нода ещё не отдаёт закрывшую транзакцию - итог по ней не узнать:
+        // без логов возврат записался бы выплатой. Следующий проход повторит.
+        if (!last || !tx) {
+          console.log(`${label}: закрыт, но транзакция закрытия ещё не видна - позже`);
+          continue;
+        }
+        const logs = (tx.meta?.logMessages ?? []).join("\n");
         const refunded =
           logs.includes("Instruction: SellerClosesLot") ||
           (logs.includes("Instruction: ArbiterDecides") &&
             (await rest(`disputes?lot_id=eq.${row.id}&select=seller_bps`))[0]?.seller_bps === 0);
-        await mark(row.id, { status: refunded ? "refunded" : "won", settle_signature: last?.signature ?? "closed" });
+        await mark(row.id, { status: refunded ? "refunded" : "won", settle_signature: last.signature });
         console.log(`${label}: закрыт в приложении - ${refunded ? "возврат" : "выплата"}`);
         continue;
       }
