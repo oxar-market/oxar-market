@@ -299,6 +299,16 @@ async function main() {
   }
 
   await sweepProceeds();
+
+  // Напоминания по времени - в очередь уведомлений: конец торга через час,
+  // последние сутки на проверку пруфа, срок пруфа у продавца. Упало - расчёт
+  // от этого не страдает, следующий проход положит их снова.
+  try {
+    const added = await rest("rpc/queue_reminders", { method: "POST", body: "{}" });
+    if (added) console.log(`напоминаний в очередь: ${added}`);
+  } catch (error) {
+    console.error("напоминания не поставлены -", error);
+  }
 }
 
 main().catch((error) => {
