@@ -1,6 +1,6 @@
 "use client";
 
-import { shortWallet, spotName, thingState, type Score, type ThingState } from "@oxar/core";
+import { proofDue, shortWallet, spotName, thingState, type Score, type ThingState } from "@oxar/core";
 import { db } from "./session.ts";
 
 export type { Score, ThingState };
@@ -28,8 +28,6 @@ export type SellerThing = {
   state: ThingState;
   /** Сколько мест ушли с победителем - у закончившегося торга. */
   wonSpots: number;
-  /** Одобрена админом и видна на маркете. */
-  onMarket: boolean;
   /** Отклонена админом - и почему. */
   declinedReason: string | null;
   spots: number;
@@ -39,6 +37,8 @@ export type SellerThing = {
   rentedSpots: number;
   /** Ближайшее закрытие открытого торга. */
   closesAt: string | null;
+  /** До когда прислать пруф выигранных мест - пока он не прислан и срок не вышел. */
+  proofBy: string | null;
   /** До какого дня тянется самая поздняя аренда. */
   rentedUntil: string | null;
 };
@@ -98,9 +98,10 @@ export async function loadSellerScore(): Promise<Score> {
 /**
  * Вещи продавца со статусом одной строкой.
  *
- * Статус выводится из данных, а не хранится: торг открыт - live, есть
- * одобренная аренда в сроке - rented, листинг собирается - preparing, иначе
- * idle. Хранимый статус разошёлся бы с лотами при первом же закрытии.
+ * Статус выводится из данных, а не хранится: торг открыт - live (а пока
+ * админ не пустил вещь на маркет - reviewing), выигранные места ждут пруфа -
+ * proof, есть одобренная аренда в сроке - rented, листинг собирается -
+ * preparing, иначе idle. Хранимый статус разошёлся бы с лотами при первом же закрытии.
  */
 export async function loadSellerThings(): Promise<SellerThing[]> {
   if (!db) return [];
@@ -109,7 +110,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
 
   const { data: things } = await db
     .from("things")
-    .select("id, title, stage, active, declined_reason, photos, created_at, thing_spots(id), lots(id, status, closes_at)")
+    .select("id, title, stage, active, declined_reason, photos, created_at, thing_spots(id), lots(id, status, closes_at, proof_by, chain_sale)")
     .eq("seller", auth.user.id)
     // Наши вещи (футболка) записаны на владельца площадки ради оценок, но
     // ведутся миграциями и скриптами, а не кабинетом.
@@ -126,8 +127,19 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
       .map((lot) => lot.id),
   );
 
+  // Торги с выигранными местами под защитой покупателя: прислан ли пруф.
+  const wonSales = [
+    ...new Set(
+      things.flatMap((one) =>
+        ((one.lots as { status: string; chain_sale: string | null }[] | null) ?? [])
+          .filter((lot) => lot.status === "won" && lot.chain_sale)
+          .map((lot) => lot.chain_sale as string),
+      ),
+    ),
+  ];
+
   const today = new Date().toISOString().slice(0, 10);
-  const [{ data: rents }, { data: bids }] = await Promise.all([
+  const [{ data: rents }, { data: bids }, { data: proofs }] = await Promise.all([
     spotIds.length
       ? db
           .from("rent_requests")
@@ -139,29 +151,47 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
     openLots.length
       ? db.from("lot_bids").select("lot_id").in("lot_id", openLots)
       : Promise.resolve({ data: [] as { lot_id: string }[] }),
+    wonSales.length
+      ? db.from("proofs").select("sale").in("sale", wonSales)
+      : Promise.resolve({ data: [] as { sale: string }[] }),
   ]);
   const bidLots = new Set((bids ?? []).map((one) => one.lot_id));
+  const proved = new Set((proofs ?? []).map((one) => one.sale));
 
   return things.map((one) => {
     const spots = (one.thing_spots as { id: string }[] | null) ?? [];
-    const lots = (one.lots as { id: string; status: string; closes_at: string }[] | null) ?? [];
+    const lots = (one.lots as {
+      id: string; status: string; closes_at: string; proof_by: string | null; chain_sale: string | null;
+    }[] | null) ?? [];
     const open = lots.filter((lot) => lot.status === "open");
     const closed = lots.filter((lot) => lot.status === "won" || lot.status === "unsold" || lot.status === "refunded");
     const mine = new Set(spots.map((spot) => spot.id));
     const rented = (rents ?? []).filter((rent) => mine.has(rent.spot_id));
     const photos = (one.photos as string[] | null) ?? [];
+    const now = Date.now();
+    const states = lots.map((lot) => ({
+      status: lot.status,
+      closesAt: Date.parse(lot.closes_at),
+      proofBy: lot.proof_by ? Date.parse(lot.proof_by) : null,
+      proved: lot.chain_sale !== null && proved.has(lot.chain_sale),
+    }));
     const state = thingState(
-      { declined: Boolean(one.declined_reason), preparing: one.stage === "preparing", rented: rented.length > 0 },
-      lots.map((lot) => ({ status: lot.status, closesAt: Date.parse(lot.closes_at) })),
-      Date.now(),
+      {
+        declined: Boolean(one.declined_reason),
+        preparing: one.stage === "preparing",
+        rented: rented.length > 0,
+        onMarket: one.active,
+      },
+      states,
+      now,
     );
+    const proofBy = proofDue(states, now);
     return {
       id: one.id,
       title: one.title,
       cover: photos[0] ? photoUrl(photos[0]) : null,
       state,
       wonSpots: closed.filter((lot) => lot.status === "won").length,
-      onMarket: one.active,
       declinedReason: one.declined_reason ?? null,
       spots: spots.length,
       bidSpots: open.filter((lot) => bidLots.has(lot.id)).length,
@@ -169,6 +199,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
       closesAt: open.length
         ? open.map((lot) => lot.closes_at).sort()[0]
         : null,
+      proofBy: proofBy === null ? null : new Date(proofBy).toISOString(),
       rentedUntil: rented.length
         ? rented.map((rent) => rent.ends_on).sort().at(-1) ?? null
         : null,
@@ -601,6 +632,10 @@ export async function loadDealsToRate(
     .from("lots")
     .select("id, closes_at, thing_spots(label), things(title, seller, photos), lot_bids(bidder, bidder_wallet, amount_cents, created_at)")
     .eq("status", "won")
+    // Оценка - когда сделка закрыта: место выплачено (есть подпись расчёта).
+    // Раньше продавец путал её с пруфом. Торг до защиты покупателя (без срока
+    // пруфа) выплачен уже тем, что выигран.
+    .or("settle_signature.not.is.null,proof_by.is.null")
     // Прогоны до первого настоящего торга не оцениваются.
     .eq("rehearsal", false);
   for (const lot of lots ?? []) {

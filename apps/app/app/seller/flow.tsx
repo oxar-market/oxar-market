@@ -287,29 +287,36 @@ export function SellerFlow({
           }}
         />,
       );
-    case "winners":
+    case "winners": {
+      const proof = (
+        <ProofPanel
+          thingId={view.thing.id}
+          seller={wallet ? new PublicKey(wallet.address) : null}
+          sign={async (transaction) => {
+            const { signedTransaction } = await signTransaction({
+              transaction: transaction.serialize(),
+              wallet,
+              chain: WALLET_CHAIN,
+            });
+            return signedTransaction;
+          }}
+        />
+      );
+      // Пруф ещё ждут - он первым, над логотипами: под ними его не находили.
+      const due = view.thing.state === "proof";
       return column(
         <>
           <Bar title="Winning logos" onBack={home} />
+          {due && proof}
           <p className="sl-lead">
             {view.thing.title}: what to put on each spot. Open a logo to save the
             file.
           </p>
           <Winners thingId={view.thing.id} title={view.thing.title} />
-          <ProofPanel
-            thingId={view.thing.id}
-            seller={wallet ? new PublicKey(wallet.address) : null}
-            sign={async (transaction) => {
-              const { signedTransaction } = await signTransaction({
-                transaction: transaction.serialize(),
-                wallet,
-                chain: WALLET_CHAIN,
-              });
-              return signedTransaction;
-            }}
-          />
+          {!due && proof}
         </>,
       );
+    }
         default:
       return (
           <>

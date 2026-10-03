@@ -43,6 +43,29 @@ export function minProofDeadline(closesAt: number): number {
   return closesAt + TOTAL_EXTEND_SECONDS + 1;
 }
 
+/** Срок пруфа - конец выбранного дня по часам продавца. */
+export const PROOF_DAY_END = "23:59";
+
+/**
+ * Самый ранний день пруфа («ГГГГ-ММ-ДД»), который можно выбрать при
+ * публикации. Конец этого дня должен быть не раньше, чем примет программа
+ * (`minProofDeadline`), и сам день - не раньше последнего дня, когда вещь
+ * носят: пруф - это вещь в деле с логотипами, до того дня его не покажешь.
+ *
+ * Всё по часам продавца, без зоны, как в полях даты: `closes` -
+ * «ГГГГ-ММ-ДДTЧЧ:ММ», `lastWornDay` - «ГГГГ-ММ-ДД» или пусто. Часы считаем
+ * как UTC: нужен календарь, а не момент.
+ */
+export function earliestProofDay(closes: string, lastWornDay: string): string {
+  const min = minProofDeadline(Date.parse(`${closes}Z`) / 1000);
+  let day = new Date(min * 1000).toISOString().slice(0, 10);
+  // Минимум в последнюю минуту дня: конец этого дня уже раньше него.
+  if (Date.parse(`${day}T${PROOF_DAY_END}Z`) / 1000 < min) {
+    day = new Date(Date.parse(`${day}T12:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  }
+  return lastWornDay > day ? lastWornDay : day;
+}
+
 const legacy = (sale: ProofSale) => sale.proofDeadline === 0;
 
 /** Торг открыт с защитой покупателя (у старых торгов срока пруфа нет). */

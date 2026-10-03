@@ -3932,6 +3932,19 @@ a.sl-pill {
   background: #3fd1a8;
 }
 
+/* На ревью - не горит, как live: покупатели его ещё не видят. */
+.sl-state.reviewing i {
+  background: transparent;
+  border: 1.5px solid #f2a900;
+  width: 7px;
+  height: 7px;
+}
+
+/* Ход за продавцом: без пруфа к сроку ставки уйдут обратно. */
+.sl-state.proof i {
+  background: #f2a900;
+}
+
 .sl-foot {
   display: flex;
   justify-content: space-between;
