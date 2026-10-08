@@ -467,6 +467,7 @@ export function ThingStage({
           const start = dir
             .clone()
             .multiplyScalar(1.2)
+            .add(new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle)).multiplyScalar(spot.shift ?? 0))
             .setY(low + tall * spot.height);
           raycaster.set(start, dir.clone().negate());
           // Целимся во все меши сразу: у вещи их бывает несколько, и какая
@@ -546,6 +547,9 @@ export function ThingStage({
             // приподнять - иначе они спорят и пятно мерцает полосами.
             polygonOffset: true,
             polygonOffsetFactor: -4,
+            // Factor сдвигает по наклону грани, а плоскую крышку ноутбука
+            // видно в лоб - наклона нет, и без units декаль тонула в ней.
+            polygonOffsetUnits: -4,
             depthWrite: false,
           });
           const mesh = new THREE.Mesh(geometry, material);
@@ -563,6 +567,7 @@ export function ThingStage({
               transparent: true,
               polygonOffset: true,
               polygonOffsetFactor: -8,
+              polygonOffsetUnits: -8,
               depthWrite: false,
             }),
           );

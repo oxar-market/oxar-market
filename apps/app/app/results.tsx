@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { closeDay, formatUsd } from "@oxar/core";
-import { SUITCASE, ThingStage, type Stage } from "@oxar/stage";
+import { LAPTOP, SUITCASE, ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { Media } from "./gallery.tsx";
 import { loadWorn, WornInfo, type Worn } from "./worn.tsx";
@@ -158,7 +158,7 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
       {held.house ? (
         <div className="case-stage">
           <ThingStage
-            shape={held.model?.includes("suitcase") ? SUITCASE : undefined}
+            shape={held.model?.includes("suitcase") ? SUITCASE : held.model?.includes("laptop") ? LAPTOP : undefined}
             picked={picked}
             onPick={(code) => setPicked((was) => (was === code ? null : code))}
             stage={stage}
