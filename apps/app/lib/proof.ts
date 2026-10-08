@@ -119,7 +119,7 @@ export async function submitProof(
     const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const path = `proof/${thingId}/${crypto.randomUUID()}.${ext}`;
     const { error } = await db.storage.from("things").upload(path, file, { contentType: file.type || undefined });
-    if (error) return { ok: false, uploaded, onChain: false, why: "Could not upload a photo. Try again." };
+    if (error) return { ok: false, uploaded, onChain: false, why: "Could not upload a file. Each must be under 50 MB." };
     uploaded.push(path);
   }
 
