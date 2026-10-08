@@ -5,6 +5,7 @@ import type { PublicKey } from "@solana/web3.js";
 import { APPEAL_SECONDS, hasBuyerProtection, proofMissed, takesProof } from "@oxar/core";
 import { loadThingSales, submitProof, type SaleView, type Signer } from "@/lib/proof";
 import { photoUrl } from "@/lib/seller";
+import { Media } from "../gallery.tsx";
 
 /**
  * Пруф продавца: вещь в деле с логотипами. Деньги победителей программа
@@ -72,7 +73,7 @@ function SaleProof({
           <div className="sl-minis">
             {sale.proof.photos.map((path) => (
               <div className="sl-mini" key={path}>
-                <img src={photoUrl(path)} alt="" />
+                <Media src={photoUrl(path)} />
               </div>
             ))}
           </div>
@@ -108,10 +109,10 @@ function SaleProof({
       {open && (
         <>
           <label className="sl-field wide">
-            Photos
+            Photos or videos
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               multiple
               disabled={locked}
               onChange={(event) => setFiles([...(event.target.files ?? [])])}

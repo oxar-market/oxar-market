@@ -14,6 +14,7 @@ import {
   type AdminThing,
 } from "@/lib/admin";
 import { photoUrl } from "@/lib/seller";
+import { Media } from "../gallery.tsx";
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
@@ -460,7 +461,7 @@ function AdminThingView({
           <div className="ad-photos">
             {thing.proof.map((path) => (
               <span className="sl-photo ad-proof" key={path}>
-                <img src={photoUrl(path)} alt="" />
+                <Media src={photoUrl(path)} />
                 <button
                   type="button"
                   className="ghost small"
@@ -481,17 +482,17 @@ function AdminThingView({
           <p className="muted">No photos yet. The results page says the thing is being prepared.</p>
         )}
         <label className="sl-btn light">
-          Add photos
+          Add photos or videos
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             multiple
             hidden
             disabled={busy}
             onChange={(event) => {
               const files = [...(event.target.files ?? [])];
               event.target.value = "";
-              if (files.length) void run(() => uploadProof(thing.id, files, thing.proof), "Upload failed.");
+              if (files.length) void run(() => uploadProof(thing.id, files, thing.proof), "Upload failed. Each file must be under 50 MB.");
             }}
           />
         </label>

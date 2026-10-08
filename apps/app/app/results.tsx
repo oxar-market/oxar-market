@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { closeDay, formatUsd } from "@oxar/core";
 import { SUITCASE, ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
+import { Media } from "./gallery.tsx";
 import { loadWorn, WornInfo, type Worn } from "./worn.tsx";
 import { loadBidTimeline, loadPlacements, loadProof, loadWinners, type BidEvent, type Winner } from "@/lib/winners";
 
@@ -225,7 +226,7 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
         {proven ? (
           <div className="proof-shots">
             {proof.map((url) => (
-              <img key={url} src={url} alt="" />
+              <Media key={url} src={url} play />
             ))}
           </div>
         ) : (

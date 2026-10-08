@@ -2,7 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isVideo } from "@/lib/media";
 import { stepIndex, swipeStep } from "@/lib/slides";
+
+/**
+ * Снимок или видео пруфа. Миниатюра видео - его первый кадр: iPhone без
+ * #t сдвига кадр не рисует и показывает пустоту.
+ */
+export function Media({ src, play = false }: { src: string; play?: boolean }) {
+  if (!isVideo(src)) return <img src={src} alt="" />;
+  return play ? (
+    <video src={src} controls playsInline preload="metadata" />
+  ) : (
+    <video src={`${src}#t=0.1`} muted playsInline preload="metadata" />
+  );
+}
 
 /**
  * Ряд снимков, которые открываются здесь же, во весь экран. Прежде тап вёл
@@ -22,7 +36,7 @@ export function Gallery({ urls, listClass, itemClass }: { urls: string[]; listCl
             aria-label={`Open photo ${at + 1}`}
             onClick={() => setOpen(at)}
           >
-            <img src={url} alt="" />
+            <Media src={url} />
           </button>
         ))}
       </div>
@@ -95,7 +109,21 @@ function Viewer({ urls, start, onClose }: { urls: string[]; start: number; onClo
         onClose();
       }}
     >
-      <img src={urls[at]} alt={`Photo ${at + 1} of ${urls.length}`} draggable={false} />
+      {isVideo(urls[at]) ? (
+        // Тап по плееру - перемотка и пауза, а не закрыть просмотр.
+        <video
+          key={urls[at]}
+          src={urls[at]}
+          controls
+          autoPlay
+          playsInline
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+          onPointerUp={(event) => event.stopPropagation()}
+        />
+      ) : (
+        <img src={urls[at]} alt={`Photo ${at + 1} of ${urls.length}`} draggable={false} />
+      )}
       <button type="button" className="viewer-close" aria-label="Close" onClick={onClose}>
         &times;
       </button>
