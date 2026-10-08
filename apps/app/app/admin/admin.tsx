@@ -172,6 +172,8 @@ function AdminThingView({
   const [title, setTitle] = useState(thing.title);
   const [tagline, setTagline] = useState(thing.tagline ?? "");
   const [busy, setBusy] = useState(false);
+  // Видео грузится десятки секунд: кнопка говорит, что идёт загрузка.
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
   // «Кто, где, когда, особенность» правит и админ: продавец пишет это до
@@ -482,7 +484,7 @@ function AdminThingView({
           <p className="muted">No photos yet. The results page says the thing is being prepared.</p>
         )}
         <label className="sl-btn light">
-          Add photos or videos
+          {uploading ? "Uploading…" : "Add photos or videos"}
           <input
             type="file"
             accept="image/*,video/*"
@@ -492,7 +494,11 @@ function AdminThingView({
             onChange={(event) => {
               const files = [...(event.target.files ?? [])];
               event.target.value = "";
-              if (files.length) void run(() => uploadProof(thing.id, files, thing.proof), "Upload failed. Each file must be under 50 MB.");
+              if (!files.length) return;
+              setUploading(true);
+              void run(() => uploadProof(thing.id, files, thing.proof), "Upload failed. Each file must be under 50 MB.").finally(() =>
+                setUploading(false),
+              );
             }}
           />
         </label>
