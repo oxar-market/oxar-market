@@ -14,16 +14,19 @@ export type Worn = {
   where: string | null;
   when: string | null;
   about: string | null;
+  /** Прежние место и дата, если вещь переехала на площадку крупнее. */
+  whereWas: string | null;
+  whenWas: string | null;
   /** До когда продавец покажет пруф - с последнего торга вещи. Нет - торг до защиты покупателя. */
   proofBy: string | null;
 };
 
 /** Ошибка (например, поля ещё не доехали) - те же «To be announced». */
 export async function loadWorn(thingId: string): Promise<Worn> {
-  const empty = { by: null, where: null, when: null, about: null, proofBy: null };
+  const empty = { by: null, where: null, when: null, about: null, whereWas: null, whenWas: null, proofBy: null };
   if (!db) return empty;
   const [{ data }, { data: lot }] = await Promise.all([
-    db.from("things").select("worn_by, worn_where, worn_when, worn_about").eq("id", thingId).maybeSingle(),
+    db.from("things").select("worn_by, worn_where, worn_when, worn_about, worn_where_was, worn_when_was").eq("id", thingId).maybeSingle(),
     // Срок пруфа покупатель видит до ставки: он же решает, когда уйдут деньги.
     db
       .from("lots")
@@ -39,6 +42,8 @@ export async function loadWorn(thingId: string): Promise<Worn> {
     where: data?.worn_where ?? null,
     when: data?.worn_when ?? null,
     about: data?.worn_about ?? null,
+    whereWas: data?.worn_where_was ?? null,
+    whenWas: data?.worn_when_was ?? null,
     proofBy: (lot?.proof_by as string | null | undefined) ?? null,
   };
 }
@@ -49,19 +54,25 @@ export function WornInfo({ thingId }: { thingId: string }) {
     void loadWorn(thingId).then(setWorn);
   }, [thingId]);
   if (!worn) return null;
-  const rows: [string, string | null][] = [
-    ["Who has it", worn.by],
-    ["Where", worn.where],
-    ["When", worn.when],
+  // Прежнее значение - зачёркнутым под новым: место сменилось на крупнее, и
+  // это видно, а не тихо подменено.
+  const rows: [string, string | null, string | null][] = [
+    ["Who has it", worn.by, null],
+    ["Where", worn.where, worn.whereWas],
+    ["When", worn.when, worn.whenWas],
   ];
   return (
     <>
       {worn.about && <p className="muted">{worn.about}</p>}
       <dl className="worn">
-        {rows.map(([label, value]) => (
+        {rows.map(([label, value, was]) => (
           <div key={label}>
-            <dt>{label}</dt>
+            <dt>
+              {label}
+              {was && label === "Where" && <span className="worn-up">Upgraded</span>}
+            </dt>
             <dd className={value ? "" : "tba"}>{value ?? "To be announced"}</dd>
+            {was && <s className="worn-was">{was}</s>}
           </div>
         ))}
         {worn.proofBy && (
