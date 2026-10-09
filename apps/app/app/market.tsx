@@ -526,10 +526,10 @@ function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void 
             </button>
           )
         ) : (
-          // Что именно выйдет, пока не говорим: вместо вещи - знак вопроса,
-          // тот же, что у торгов, которые ещё не открылись.
+          // Наша вещь до торга - голограммой: что за вещь, видно, а чья и
+          // когда - скажет анонс.
           <div className="hero-stage">
-            <SoonHologram />
+            <SoonHologram model={thing.model} />
           </div>
         )}
         <span className="now-pill">

@@ -14,7 +14,7 @@ import {
 import {
   loadBidCounts,
   loadBids,
-  loadNextHouseTitle,
+  loadNextHouse,
   loadThing,
   loadTopBids,
   type Bid,
@@ -921,9 +921,9 @@ function spanOf(ms: number): string {
  * здесь не показываем, он живёт на маркете.
  */
 export function Between() {
-  const [title, setTitle] = useState<string | null>(null);
+  const [next, setNext] = useState<{ title: string; model: string | null } | null>(null);
   useEffect(() => {
-    void loadNextHouseTitle().then(setTitle);
+    void loadNextHouse().then(setNext);
   }, []);
 
   return (
@@ -937,7 +937,7 @@ export function Between() {
       <div className="hero">
         <div className="hero-photo in3d">
           <div className="hero-stage between-scene">
-            <SoonHologram />
+            <SoonHologram model={next?.model} />
           </div>
           <span className="now-pill">
             <span className="dot" />
@@ -946,8 +946,12 @@ export function Between() {
         </div>
         <div className="hero-card">
           <div>
-            <h2 className="hero-name">{title ?? "Not announced yet"}</h2>
-            <p className="hero-who">The thing is not decided yet. Details show up here before bidding opens.</p>
+            <h2 className="hero-name">{next?.title ?? "Not announced yet"}</h2>
+            <p className="hero-who">
+              {next
+                ? "Who has it, where and when show up here before bidding opens."
+                : "The thing is not decided yet. Details show up here before bidding opens."}
+            </p>
           </div>
           <div className="hero-stat">
             <span className="muted">Bidding opens</span>
@@ -960,7 +964,7 @@ export function Between() {
               <span>What it is, who has it, where and when - all before bidding opens.</span>
             </li>
             <li>
-              <b>Bidding runs for a week</b>
+              <b>Bidding runs for a few days</b>
               <span>Every marked spot on it is auctioned. A late bid extends the clock.</span>
             </li>
             <li>
