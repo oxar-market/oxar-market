@@ -108,16 +108,16 @@ export async function loadThing(): Promise<{
  * Следующая наша вещь - та, у которой ещё не было ни одного торга. Её имя
  * экран торга показывает в паузе между аукционами.
  */
-export async function loadNextHouseTitle(): Promise<string | null> {
+export async function loadNextHouse(): Promise<{ title: string; model: string | null } | null> {
   if (!db) return null;
   const { data } = await db
     .from("things")
-    .select("title, lots(id)")
+    .select("title, model_url, lots(id)")
     .eq("house", true)
     .eq("active", true)
     .order("created_at");
   const next = (data ?? []).find((one) => ((one.lots as unknown[] | null) ?? []).length === 0);
-  return next?.title ?? null;
+  return next ? { title: next.title, model: (next.model_url as string) || null } : null;
 }
 
 /** Торг на вкладке Auction и чья вещь: наша идёт своим экраном. */
@@ -327,6 +327,8 @@ export type UpcomingThing = {
   photo: string | null;
   owner: string | null;
   house: boolean;
+  /** Модель нашей вещи: анонс показывает её голограммой. */
+  model: string | null;
 };
 
 /** Строка «Held earlier»: чем кончился прошедший торг. */
@@ -392,6 +394,7 @@ export async function loadMarket(): Promise<{
       owner: one.seller,
       house: one.house,
       photo: one.photos?.[0] ? shots.getPublicUrl(one.photos[0]).data.publicUrl : null,
+      model: one.house ? (one.model_url as string) || null : null,
     }));
 
   const { data } = await db
