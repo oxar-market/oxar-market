@@ -5740,6 +5740,21 @@ a.sl-pill {
   color: var(--mut2);
 }
 
+/* Вещь переехала на площадку крупнее: прежнее - зачёркнутым под новым. */
+.worn-was {
+  font-size: 0.8125rem;
+  color: var(--mut2);
+}
+
+.worn-up {
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.4375rem;
+  border-radius: 999px;
+  background: #e3f6ec;
+  color: #137a4a;
+  letter-spacing: 0.04em;
+}
+
 @media (max-width: 30rem) {
   .worn {
     grid-template-columns: 1fr;
