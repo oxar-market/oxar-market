@@ -7,6 +7,7 @@ import { loadBids, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
+import { houseShape } from "@/lib/shape";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
 import { WornInfo } from "../worn.tsx";
@@ -148,6 +149,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     : null;
   const started = hasOpened(opensAt, now);
   const soon = lots.length > 0 && !started;
+  // Наша вещь с разметкой в коде: до открытия - её голограмма, а не знак
+  // вопроса, и площадка не «новый продавец».
+  const ours = Boolean(thing.shape && houseShape(thing.shape.model));
   const top = bids[0] ?? null;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents) : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
@@ -173,7 +177,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               LIVE
             </span>
           )}
-          {thing.seller && <SellerLine seller={thing.seller} house={false} />}
+          {thing.seller && <SellerLine seller={thing.seller} house={ours} />}
           <h1>{thing.title}</h1>
           {pot > 0 && (
             <p className="lot-pot">
@@ -205,7 +209,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         {/* Торг назначен, но ещё не открылся - знак вопроса голограммой. */}
         {soon ? (
           <div className="look">
-            <SoonHologram />
+            <SoonHologram model={ours ? thing.shape?.model : null} />
           </div>
         ) : look === "live" && thing.shape ? (
           <div className="look">

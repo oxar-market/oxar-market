@@ -24,7 +24,8 @@ export function SellerLine({ seller, house }: { seller: string; house: boolean }
     <>
       <button type="button" className="seller-line" onClick={() => setOpen(true)}>
         Sold by <b>{name}</b>
-        {score && <span> · {scoreText(score)}</span>}
+        {/* «New seller» - про продавцов, а не про площадку. */}
+        {score && !(house && score.deals < 3) && <span> · {scoreText(score)}</span>}
       </button>
       {open && score && (
         <Reviews seller={seller} name={name} score={score} onClose={() => setOpen(false)} />
