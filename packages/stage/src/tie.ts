@@ -20,8 +20,9 @@ export const TIE: Shape = {
   model: "/models/tie.glb",
   spots: TIE_SPOTS,
   depth: 0.09,
-  cloth: false,
-  // Модель серая, а галстук Simon - тёмно-синий, как на фото.
-  paint: 0x2a3a78,
+  // Матовый белый хлопок, как наша футболка: модель из Tripo глянцевая и
+  // серая, а на глянце узор читался бы бликами. Цвет ткани решится с
+  // мастерской - тогда `paint`.
+  cloth: true,
   noun: "tie",
 };
