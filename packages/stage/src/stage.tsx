@@ -234,6 +234,12 @@ export function ThingStage({
           InstanceType<typeof THREE.Material>
         >();
         for (const mesh of meshes) {
+          // Своя краска поверх текстуры: тени и блики модели остаются, цвет -
+          // как у настоящей вещи.
+          const paint = thingShape.current.paint;
+          if (paint !== undefined) {
+            (mesh.material as InstanceType<typeof THREE.MeshStandardMaterial>).color?.set(paint);
+          }
           if (!thingShape.current.cloth) {
             cloth.set(mesh, mesh.material as InstanceType<typeof THREE.Material>);
             continue;
@@ -534,6 +540,16 @@ export function ThingStage({
             new THREE.Vector3(spot.size[0], spot.size[1], thingShape.current.depth),
           );
           if (patch !== surface) patch.geometry.dispose();
+          // Узор ложится на длинную наклонную поверхность, и коробка нужна
+          // глубокая - а глубокая цепляет изнанку. Её грани смотрят от
+          // зрителя: их выбрасываем, иначе узор вышел бы и на обороте.
+          if (spot.tile) {
+            facingOnly(
+              THREE,
+              geometry,
+              new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld),
+            );
+          }
           const material = new THREE.MeshStandardMaterial({
             map: placeholder(THREE, spot),
             color: tint.idle,
@@ -1010,6 +1026,25 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   const known = sheets.get(key);
   if (known) return known;
 
+  // Узорное место пустым - тот же узор, только вместо логотипа «YOUR LOGO»:
+  // уголки по краям коробки легли бы мимо вещи, она уже коробки.
+  if (spot.tile) {
+    const word = document.createElement("canvas");
+    word.width = 360;
+    word.height = 120;
+    const wctx = word.getContext("2d");
+    if (!wctx) throw new Error("нет 2d-контекста");
+    wctx.fillStyle = "rgba(255,255,255,0.95)";
+    wctx.textAlign = "center";
+    wctx.textBaseline = "middle";
+    wctx.font = `600 52px ${getComputedStyle(document.body).fontFamily}`;
+    wctx.letterSpacing = "6px";
+    wctx.fillText("YOUR LOGO", word.width / 2, word.height / 2);
+    const made = pattern(THREE, spot, word, 0.92);
+    sheets.set(key, made);
+    return made;
+  }
+
   // Холст повторяет пропорции места: иначе рамка и буквы растянутся вместе с
   // декалью.
   const span = 512;
@@ -1152,6 +1187,7 @@ function artwork(
   spot: Spot,
   image: HTMLImageElement,
 ) {
+  if (spot.tile) return pattern(THREE, spot, image);
   const [wide, tall] = spot.size;
   const span = 512;
   const canvas = document.createElement("canvas");
@@ -1174,6 +1210,80 @@ function artwork(
   made.colorSpace = THREE.SRGBColorSpace;
   made.anisotropy = 8;
   return made;
+}
+
+/**
+ * Узор из логотипа: ряды со сдвигом на полклетки через ряд, как значки на
+ * галстуке. Три клетки в ширину места; что выходит за край вещи, срежет
+ * сама поверхность - декаль лежит только на ней.
+ */
+function pattern(
+  THREE: typeof import("three"),
+  spot: Spot,
+  image: HTMLImageElement | HTMLCanvasElement,
+  /** Какую долю клетки занимает картинка. Надписи нужно больше, чем знаку. */
+  fill = 0.62,
+) {
+  const [wide, tall] = spot.size;
+  const height = 2048;
+  const width = Math.round((height * wide) / tall);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("нет 2d-контекста");
+
+  const cell = width / 3;
+  const step = cell * 0.8;
+  const logo = fitInside(
+    {
+      width: ("naturalWidth" in image && image.naturalWidth) || image.width,
+      height: ("naturalHeight" in image && image.naturalHeight) || image.height,
+    },
+    { width: cell * fill, height: step * fill },
+  );
+  for (let row = 0; row * step < height + step; row++) {
+    const offset = row % 2 ? cell / 2 : 0;
+    for (let col = -1; col * cell < width + cell; col++) {
+      const cx = col * cell + offset + cell / 2;
+      const cy = row * step + step / 2;
+      ctx.drawImage(image, cx - logo.width / 2, cy - logo.height / 2, logo.width, logo.height);
+    }
+  }
+
+  const made = new THREE.CanvasTexture(canvas);
+  made.colorSpace = THREE.SRGBColorSpace;
+  made.anisotropy = 8;
+  return made;
+}
+
+/** Оставить у декали только грани, что смотрят туда же, куда место. */
+function facingOnly(
+  THREE: typeof import("three"),
+  geometry: InstanceType<typeof THREE.BufferGeometry>,
+  toward: InstanceType<typeof THREE.Vector3>,
+) {
+  const names = ["position", "normal", "uv"] as const;
+  // DecalGeometry отдаёт обычные Float32-атрибуты, без чередования.
+  const from = names.map((name) => geometry.getAttribute(name) as InstanceType<typeof THREE.BufferAttribute>);
+  const kept: number[][] = names.map(() => []);
+  const normal = from[1];
+  for (let at = 0; at < from[0].count; at += 3) {
+    let dot = 0;
+    for (let v = at; v < at + 3; v++) {
+      dot += normal.getX(v) * toward.x + normal.getY(v) * toward.y + normal.getZ(v) * toward.z;
+    }
+    if (dot <= 0) continue;
+    names.forEach((_, i) => {
+      const attr = from[i];
+      for (let v = at; v < at + 3; v++) {
+        for (let c = 0; c < attr.itemSize; c++) kept[i].push(attr.array[v * attr.itemSize + c] as number);
+      }
+    });
+  }
+  names.forEach((name, i) => {
+    geometry.setAttribute(name, new THREE.Float32BufferAttribute(kept[i], from[i].itemSize));
+  });
 }
 
 /**

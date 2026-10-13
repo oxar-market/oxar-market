@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatUsd, hasOpened } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
+import { houseShape, isShirt } from "@/lib/shape";
 import { db } from "@/lib/session";
 import {
   loadMarket,
@@ -238,11 +239,13 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         const opensAt = one.opensAt === null ? null : Date.parse(one.opensAt);
         const opensLater = !hasOpened(opensAt, now);
         const clock = heroClock(opensAt, Date.parse(one.closesAt), now);
+        // Наша вещь не футболка: снимков для фото-режима у неё нет, только сцена.
+        const ownModel = !one.seller && !isShirt(one.model);
         return (
           <div className="hero" key={one.id}>
             <div
               className={
-                (heroLook === "live" && !one.seller) || (one.seller && opensLater)
+                ((heroLook === "live" || ownModel) && !one.seller) || (one.seller && opensLater)
                   ? "hero-photo in3d"
                   : "hero-photo"
               }
@@ -264,9 +267,10 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
                     <img src={one.photo} alt={one.title} />
                   </button>
                 )
-              ) : heroLook === "live" ? (
+              ) : heroLook === "live" || ownModel ? (
                 <div className="hero-stage">
                   <ThingStage
+                    shape={houseShape(one.model)}
                     picked={null}
                     onPick={() => {}}
                     stage={heroStage}
@@ -288,7 +292,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
                   art={one.art}
                 />
               )}
-              {!one.seller && (
+              {!one.seller && !ownModel && (
               <span className="look-flip">
                 {(["live", "photo"] as const).map((view) => (
                   <button

@@ -4,6 +4,7 @@ import type { Shape, Spot } from "@oxar/stage";
 import type { Lot } from "./auction.ts";
 import { db } from "./session.ts";
 import { photoUrl, type Rect } from "./seller.ts";
+import { houseShape } from "./shape.ts";
 
 /**
  * Вещь продавца на торге: снимки, места и, если мы уже приложили её, модель.
@@ -79,6 +80,9 @@ export function listedSpots(rows: SpotRow[]): ListedSpot[] {
 
 /** Сцена по модели вещи и местам на ней. Нет модели или мест - нет сцены. */
 export function shapeOf(model: string | null, spots: ListedSpot[]): Shape | null {
+  // Наша вещь со своей разметкой в коде - она, а не разметка из базы.
+  const fixed = houseShape(model);
+  if (fixed) return fixed;
   if (!model || spots.length === 0 || spots.some((spot) => !spot.geo)) return null;
   return {
     model,
