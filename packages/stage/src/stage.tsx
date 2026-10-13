@@ -234,12 +234,6 @@ export function ThingStage({
           InstanceType<typeof THREE.Material>
         >();
         for (const mesh of meshes) {
-          // Своя краска поверх текстуры: тени и блики модели остаются, цвет -
-          // как у настоящей вещи.
-          const paint = thingShape.current.paint;
-          if (paint !== undefined) {
-            (mesh.material as InstanceType<typeof THREE.MeshStandardMaterial>).color?.set(paint);
-          }
           if (!thingShape.current.cloth) {
             cloth.set(mesh, mesh.material as InstanceType<typeof THREE.Material>);
             continue;
@@ -248,7 +242,7 @@ export function ThingStage({
             typeof THREE.MeshStandardMaterial
           >;
           mesh.material = new THREE.MeshPhysicalMaterial({
-            color: REPAINT.color,
+            color: thingShape.current.paint ?? REPAINT.color,
             roughness: 0.96,
             metalness: 0,
             sheen: 1,
@@ -977,28 +971,30 @@ export function ThingStage({
       {state === "failed" && (
         <span className="stage-note">The {noun} could not be shown here.</span>
       )}
+      {/* Подпись места под курсором - по центру, а знак «вещь можно
+          вертеть» - справа, всегда. Прежде они делили одно место, и у вещи,
+          где место во всю поверхность (галстук), курсор почти всегда стоял
+          на месте - знак пропадал, пока вещь не начнут вертеть. На
+          голограмме подписи нет: мест на ней не видно. */}
+      {state === "ready" && hovered && !ghosting && (
+        <span className="stage-hint">{SPOTS.find((spot) => spot.code === hovered)?.label ?? "Spot"}</span>
+      )}
       {state === "ready" && (
-        <span className={hovered && !ghosting ? "stage-hint" : "stage-hint stage-hint-turn"}>
-          {/* На голограмме подписи мест нет: мест на ней не видно, и
-              подпись выдавала бы то, что спрятано. */}
-          {hovered && !ghosting ? (
-            (SPOTS.find((spot) => spot.code === hovered)?.label ?? "Spot")
-          ) : (
-            // Вместо фразы - знак «вещь можно вертеть»: орбита вокруг вещи,
-            // передняя дуга со стрелкой ярче, задняя тише. Его узнают без
-            // чтения, а фраза под вещью читалась как сбой.
-            <svg
-              className="stage-turn"
-              viewBox="0 0 48 32"
-              role="img"
-              aria-label={SPOTS.length === 0 ? `Drag to turn the ${noun}` : `Drag to turn the ${noun}, tap a spot`}
-            >
-              <path d="M9.28 19.5A17 7 0 0 0 38.72 19.5" />
-              <path d="M34.14 19.94 38.72 19.5l-1.91 4.19" />
-              <path d="M9.28 12.5A17 7 0 0 1 38.72 12.5" opacity=".45" />
-              <path d="M13.86 12.06 9.28 12.5l1.91-4.19" opacity=".45" />
-            </svg>
-          )}
+        <span className="stage-hint stage-hint-turn">
+          {/* Вместо фразы - знак «вещь можно вертеть»: орбита вокруг вещи,
+              передняя дуга со стрелкой ярче, задняя тише. Его узнают без
+              чтения, а фраза под вещью читалась как сбой. */}
+          <svg
+            className="stage-turn"
+            viewBox="0 0 48 32"
+            role="img"
+            aria-label={SPOTS.length === 0 ? `Drag to turn the ${noun}` : `Drag to turn the ${noun}, tap a spot`}
+          >
+            <path d="M9.28 19.5A17 7 0 0 0 38.72 19.5" />
+            <path d="M34.14 19.94 38.72 19.5l-1.91 4.19" />
+            <path d="M9.28 12.5A17 7 0 0 1 38.72 12.5" opacity=".45" />
+            <path d="M13.86 12.06 9.28 12.5l1.91-4.19" opacity=".45" />
+          </svg>
         </span>
       )}
     </div>
@@ -1026,21 +1022,26 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   const known = sheets.get(key);
   if (known) return known;
 
-  // Узорное место пустым - тот же узор, только вместо логотипа «YOUR LOGO»:
-  // уголки по краям коробки легли бы мимо вещи, она уже коробки.
+  // Узорное место пустым - та же мозаика, только вместо логотипа квадратик
+  // «LOGO»: уголки по краям коробки легли бы мимо вещи, она уже коробки, а
+  // строка текста складывалась в полосы, а не в мозаику.
   if (spot.tile) {
-    const word = document.createElement("canvas");
-    word.width = 360;
-    word.height = 120;
-    const wctx = word.getContext("2d");
-    if (!wctx) throw new Error("нет 2d-контекста");
-    wctx.fillStyle = "rgba(255,255,255,0.95)";
-    wctx.textAlign = "center";
-    wctx.textBaseline = "middle";
-    wctx.font = `600 52px ${getComputedStyle(document.body).fontFamily}`;
-    wctx.letterSpacing = "6px";
-    wctx.fillText("YOUR LOGO", word.width / 2, word.height / 2);
-    const made = pattern(THREE, spot, word, 0.92);
+    const mark = document.createElement("canvas");
+    mark.width = mark.height = 200;
+    const mctx = mark.getContext("2d");
+    if (!mctx) throw new Error("нет 2d-контекста");
+    mctx.strokeStyle = "rgba(255,255,255,0.95)";
+    mctx.lineWidth = 10;
+    mctx.beginPath();
+    mctx.roundRect(12, 12, 176, 176, 28);
+    mctx.stroke();
+    mctx.fillStyle = "rgba(255,255,255,0.95)";
+    mctx.textAlign = "center";
+    mctx.textBaseline = "middle";
+    mctx.font = `700 46px ${getComputedStyle(document.body).fontFamily}`;
+    mctx.letterSpacing = "3px";
+    mctx.fillText("LOGO", 100, 102);
+    const made = pattern(THREE, spot, mark);
     sheets.set(key, made);
     return made;
   }
@@ -1221,8 +1222,6 @@ function pattern(
   THREE: typeof import("three"),
   spot: Spot,
   image: HTMLImageElement | HTMLCanvasElement,
-  /** Какую долю клетки занимает картинка. Надписи нужно больше, чем знаку. */
-  fill = 0.62,
 ) {
   const [wide, tall] = spot.size;
   const height = 2048;
@@ -1233,14 +1232,16 @@ function pattern(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("нет 2d-контекста");
 
-  const cell = width / 3;
-  const step = cell * 0.8;
+  // Мозаика, как значки на галстуке: в ряду два-три знака с промежутком в
+  // знак, ряды со сдвигом на полклетки - знаки встают в шахматку.
+  const cell = width / 2.4;
+  const step = cell * 0.5;
   const logo = fitInside(
     {
       width: ("naturalWidth" in image && image.naturalWidth) || image.width,
       height: ("naturalHeight" in image && image.naturalHeight) || image.height,
     },
-    { width: cell * fill, height: step * fill },
+    { width: cell * 0.46, height: step * 0.8 },
   );
   for (let row = 0; row * step < height + step; row++) {
     const offset = row % 2 ? cell / 2 : 0;

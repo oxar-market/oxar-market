@@ -15,7 +15,7 @@ test("узор лежит на полотне, ниже узла и петли",
   assert.ok(spot!.height + half <= 0.72, "не выше узла");
 });
 
-test("галстук не ткань под перекраску в белое, а свой цвет", () => {
-  assert.equal(TIE.cloth, false);
-  assert.equal(typeof TIE.paint, "number");
+test("галстук - матовая ткань, белая, пока цвет не выбран", () => {
+  assert.equal(TIE.cloth, true);
+  assert.equal(TIE.paint, undefined);
 });
