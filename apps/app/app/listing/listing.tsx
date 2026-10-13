@@ -7,7 +7,6 @@ import { loadBids, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
-import { houseShape } from "@/lib/shape";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
 import { WornInfo } from "../worn.tsx";
@@ -149,9 +148,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     : null;
   const started = hasOpened(opensAt, now);
   const soon = lots.length > 0 && !started;
-  // Наша вещь с разметкой в коде: до открытия - её голограмма, а не знак
-  // вопроса, и площадка не «новый продавец».
-  const ours = Boolean(thing.shape && houseShape(thing.shape.model));
+  // Наша вещь: до открытия - голограмма её модели, а не знак вопроса, и
+  // площадка не «новый продавец». Признак - флаг house из базы, его ставим
+  // только мы; по адресу модели судить нельзя - его можно подделать.
+  const ours = thing.house;
   const top = bids[0] ?? null;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents) : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
@@ -206,9 +206,12 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       </header>
 
       <div className="lot-scene">
-        {/* Торг назначен, но ещё не открылся - знак вопроса голограммой. */}
+        {/* Торг назначен, но ещё не открылся - голограмма: у нашей вещи её
+            модель, у вещи продавца знак вопроса. Подложка светлая, как на
+            экране между торгами: тёмный прямоугольник на светлой странице
+            читался дырой. */}
         {soon ? (
-          <div className="look">
+          <div className="look between-scene">
             <SoonHologram model={ours ? thing.shape?.model : null} />
           </div>
         ) : look === "live" && thing.shape ? (

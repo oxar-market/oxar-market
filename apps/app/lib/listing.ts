@@ -39,6 +39,8 @@ export type ListedThing = {
   lots: Lot[];
   /** Кого оценивают покупатели. */
   seller: string | null;
+  /** Наша вещь. Флаг ставим только мы, поэтому на нём - сигналы доверия. */
+  house: boolean;
 };
 
 type SpotRow = {
@@ -108,7 +110,7 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
   if (!db) return null;
   const { data: thing } = await db
     .from("things")
-    .select(`id, title, tagline, seller, photos, model_url, thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, seller, house, photos, model_url, thing_spots(${SPOT_COLUMNS})`)
     .eq("id", thingId)
     .maybeSingle();
   if (!thing) return null;
@@ -134,5 +136,6 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
       return spot_code ? [{ ...lot, spot_code } as Lot] : [];
     }),
     seller: thing.seller,
+    house: thing.house === true,
   };
 }
