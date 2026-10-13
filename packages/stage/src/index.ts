@@ -17,6 +17,7 @@ export {
 } from "./spots.ts";
 export { SUITCASE, SUITCASE_SPOTS } from "./suitcase.ts";
 export { LAPTOP, LAPTOP_SPOTS } from "./laptop.ts";
+export { TIE, TIE_SPOTS } from "./tie.ts";
 export { SOON } from "./soon.ts";
 export { fitInside } from "./fit.ts";
 export { applyQuad, quadTransform, type Corners } from "./quad.ts";

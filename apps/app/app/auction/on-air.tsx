@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { loadOnAir, type AirThing } from "@/lib/auction";
 import { restingSlide } from "@/lib/slides";
+import { isShirt } from "@/lib/shape";
 import { Auction, Between } from "./auction.tsx";
 import { ListingAuction } from "../listing/listing.tsx";
 
@@ -83,8 +84,10 @@ export function AuctionTab({ house, onBack }: { house: boolean; onBack: () => vo
   }
   if (air.length === 0) return <Between />;
 
+  // Свой экран - только у нашей футболки: он держит её фото-режим. Остальные
+  // наши вещи идут общим экраном торга со своей разметкой.
   const screen = (one: AirThing) =>
-    one.house ? <Auction /> : <ListingAuction thingId={one.thingId} onBack={onBack} />;
+    one.house && isShirt(one.model) ? <Auction /> : <ListingAuction thingId={one.thingId} onBack={onBack} />;
   if (air.length === 1) return screen(air[0] as AirThing);
 
   return (

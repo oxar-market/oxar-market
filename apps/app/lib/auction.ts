@@ -121,7 +121,7 @@ export async function loadNextHouse(): Promise<{ title: string; model: string | 
 }
 
 /** Торг на вкладке Auction и чья вещь: наша идёт своим экраном. */
-export type AirThing = OnAir & { house: boolean };
+export type AirThing = OnAir & { house: boolean; model: string | null };
 
 /**
  * Торги для вкладки Auction: идущие, за ними назначенные, наши и продавцов.
@@ -133,24 +133,30 @@ export async function loadOnAir(): Promise<AirThing[]> {
   const now = Date.now();
   const { data } = await db
     .from("lots")
-    .select("thing_id, opens_at, closes_at, things:thing_id(active, house)")
+    .select("thing_id, opens_at, closes_at, things:thing_id(active, house, model_url)")
     .eq("status", "open")
     .gt("closes_at", new Date(now).toISOString())
     .limit(400);
 
   const house = new Map<string, boolean>();
+  const model = new Map<string, string | null>();
   const lots: LotWindow[] = [];
   for (const lot of data ?? []) {
-    const info = lot.things as unknown as { active?: boolean; house?: boolean } | null;
+    const info = lot.things as unknown as { active?: boolean; house?: boolean; model_url?: string | null } | null;
     if (!info || info.active === false) continue;
     house.set(lot.thing_id, info.house ?? false);
+    model.set(lot.thing_id, info.model_url || null);
     lots.push({
       thingId: lot.thing_id,
       opensAt: lot.opens_at ? Date.parse(lot.opens_at) : null,
       closesAt: Date.parse(lot.closes_at),
     });
   }
-  return onAir(lots, now).map((one) => ({ ...one, house: house.get(one.thingId) ?? false }));
+  return onAir(lots, now).map((one) => ({
+    ...one,
+    house: house.get(one.thingId) ?? false,
+    model: model.get(one.thingId) ?? null,
+  }));
 }
 
 /** Ставки лота: от высокой к низкой, как их и читают. */
@@ -315,6 +321,8 @@ export type MarketThing = {
   /** Кого оценивают покупатели, и наша ли это вещь - для строки «Sold by». */
   owner: string | null;
   house: boolean;
+  /** Модель нашей вещи: по ней сцена и её разметка. */
+  model: string | null;
 };
 
 /** Анонс: вещь уже в каталоге, но торга на неё ещё не заводили. */
@@ -448,6 +456,7 @@ export async function loadMarket(): Promise<{
           photo: info.photos?.[0]
             ? db.storage.from("things").getPublicUrl(info.photos[0]).data.publicUrl
             : null,
+          model: info.house ? info.model_url || null : null,
         });
       known.spots += 1;
       if (top) {
