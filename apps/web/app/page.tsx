@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { closeDay, isOpen, nextClose } from "@oxar/core";
-import { SOON, ThingStage, type Stage } from "@oxar/stage";
+import { houseShape, SOON, ThingStage, type Stage } from "@oxar/stage";
 
 /** Зазор между карточками карусели, px. Тот же, что в CSS у .live-rail. */
 const RAIL_GAP = 12;
@@ -75,6 +75,11 @@ const CELLS: [number, number, number, number][] = [
 
 type Live = {
   title: string;
+  tagline: string | null;
+  /** Модель вещи: по ней сцена и разметка. Футболка - сцена по умолчанию. */
+  model: string | null;
+  /** Когда торг открывается; null - уже идёт. */
+  opensAt: number | null;
   closesAt: number;
   /** Код места - логотип лидера. Занято то, у чего есть запись. */
   art: Record<string, string>;
@@ -96,14 +101,15 @@ async function rest(path: string): Promise<unknown[] | null> {
 
 async function loadLive(): Promise<Live | null> {
   const lots = (await rest(
-    "lots?status=eq.open&select=id,closes_at,thing_id,thing_spots(code),things:thing_id(title,house,active)",
+    "lots?status=eq.open&select=id,opens_at,closes_at,thing_id,thing_spots(code),things:thing_id(title,tagline,model_url,house,active)",
   )) as
     | {
         id: string;
+        opens_at: string | null;
         closes_at: string;
         thing_id: string;
         thing_spots: { code: string } | null;
-        things: { title: string; house: boolean; active: boolean } | null;
+        things: { title: string; tagline: string | null; model_url: string | null; house: boolean; active: boolean } | null;
       }[]
     | null;
   // Лендинг - витрина наших вещей: афиша рисует футболку по нашей модели
@@ -134,8 +140,13 @@ async function loadLive(): Promise<Live | null> {
     if (lead && lot.thing_spots?.code) art[lot.thing_spots.code] = lead.art;
   }
 
+  // Открытие - по самому раннему лоту; лот без срока открытия уже идёт.
+  const opens = featured.map((one) => (one.opens_at ? Date.parse(one.opens_at) : null));
   return {
     title: featured[0].things?.title ?? "Shirt No. 1",
+    tagline: featured[0].things?.tagline ?? null,
+    model: featured[0].things?.model_url || null,
+    opensAt: opens.some((one) => one === null) ? null : Math.min(...(opens as number[])),
     closesAt: nextClose(featured.map((one) => Date.parse(one.closes_at)), Date.now()) ?? 0,
     art,
     spots: featured.length,
@@ -237,7 +248,11 @@ export default function Home() {
     return () => clearInterval(tick);
   }, []);
 
-  const running = live !== null && isOpen(live.closesAt, now);
+  // Назначенный торг ещё не идёт: до открытия - отсчёт до старта, а не до конца.
+  const scheduled = live !== null && live.opensAt !== null && live.opensAt > now;
+  const running = live !== null && isOpen(live.closesAt, now) && !scheduled;
+  // Наша вещь не футболка: снимка с сеткой у неё нет, только сцена её модели.
+  const liveShape = houseShape(live?.model);
   // Между торгами афиша не показывает прошлую вещь как будто живую: вместо
   // неё знак вопроса и прямые слова, что следующая вещь ещё не объявлена.
   const between = loaded && live === null;
@@ -247,6 +262,7 @@ export default function Home() {
   // так сказали на показе 1 октября 2026 - вещь должна встречать объёмом, а
   // фото остаётся на переключателе. Цена - мегабайт модели на первом экране.
   const [look, setLook] = useState<"photo" | "live">("live");
+  const liveLook = liveShape ? "live" : look;
   const stage = useRef<Stage | null>(null);
 
   // У прошлого торга свой переключатель и своя сцена. Общие были бы хуже:
@@ -371,10 +387,14 @@ export default function Home() {
           </div>
         ) : (
         <div className="live-card" key="live">
-          <div className={look === "live" ? "live-photo in3d" : "live-photo"}>
-            {look === "live" ? (
+          <div className={liveLook === "live" ? "live-photo in3d" : "live-photo"}>
+            {liveLook === "live" ? (
               <div className="live-stage">
                 <ThingStage
+                  // Сцена читает вещь один раз: модель приезжает с данными, и
+                  // тогда сцена собирается заново уже её.
+                  key={live?.model ?? "shirt"}
+                  shape={liveShape}
                   picked={null}
                   onPick={() => {}}
                   stage={stage}
@@ -426,6 +446,13 @@ export default function Home() {
                 NOW SHOWING
               </span>
             )}
+            {scheduled && (
+              <span className="now-pill">
+                <span className="dot" />
+                NEXT UP
+              </span>
+            )}
+            {!liveShape && (
             <span className="look-flip">
               {(["photo", "live"] as const).map((one) => (
                 <button
@@ -438,16 +465,23 @@ export default function Home() {
                 </button>
               ))}
             </span>
+            )}
           </div>
           <a className="live-info" href={APP_URL}>
             <span className="live-name">{live?.title ?? "Shirt No. 1"}</span>
             <span className="live-cd" suppressHydrationWarning>
-              {running ? countdown(live.closesAt - now) : ""}
+              {running ? countdown(live.closesAt - now) : scheduled ? countdown((live.opensAt ?? now) - now) : ""}
             </span>
             <span className="live-sub">
-              {live ? `${taken} of ${live.spots} spots taken - bid inside` : ""}
+              {live
+                ? liveShape && live.tagline
+                  ? live.tagline
+                  : `${taken} of ${live.spots} spots taken - bid inside`
+                : ""}
             </span>
-            <span className="live-sub">{running ? "left in this auction" : ""}</span>
+            <span className="live-sub">
+              {running ? "left in this auction" : scheduled ? "until bidding opens" : ""}
+            </span>
           </a>
         </div>
         )}
