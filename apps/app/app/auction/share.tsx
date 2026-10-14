@@ -60,7 +60,7 @@ export function ShareBid({
   }, [thingId]);
   const link = auctionLink(thingId);
   const text = broadcast
-    ? tieText({ mine, brand, cents, link })
+    ? tieText({ mine, brand, cents })
     : mine
       ? shareText({ cents, title, spot, worn, link })
       : leadText({ cents, title, spot, worn, link });
