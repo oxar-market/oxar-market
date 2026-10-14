@@ -83,6 +83,21 @@ export function leadText({
   return compose(`Top bid on ${where}: ${formatUsd(cents)}.`, worn, `\n\nOutbid it: ${link}`);
 }
 
+/**
+ * Торг галстука Simon: галстук говорит сам - он пойдёт в эфир, и на нём
+ * лидер. Свой голос у больших наших торгов: строки «кто/где/когда» в твите
+ * читались справкой, а не поводом нажать.
+ */
+export function tieText({ mine, brand, cents, link }: { mine: boolean; brand: string; cents: number; link: string }): string {
+  const name = brand.trim();
+  const head = "I'm going live on the Solana Ecosystem Call with @simonmolitor on Oct 29.";
+  const wearing = mine
+    ? `Wearing ${name || "this logo"} all over.`
+    : `Right now I'm wearing ${name || "someone's logo"}.`;
+  const ask = mine ? "Got a better logo?" : "Your logo next?";
+  return `${head}\n\n${wearing} Top bid: ${formatUsd(cents)}.\n\n${ask} ${link}`;
+}
+
 /** Окно нового твита с готовым текстом. */
 export function shareIntent(text: string): string {
   return `https://x.com/intent/post?text=${encodeURIComponent(text)}`;

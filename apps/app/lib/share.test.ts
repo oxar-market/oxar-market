@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { auctionLink, leadText, shareText, shareIntent } from "./share.ts";
+import { auctionLink, leadText, shareText, shareIntent, tieText } from "./share.ts";
 
 test("текст твита: сумма, вещь и ссылка, без длинных тире", () => {
   const text = shareText({ cents: 17500, title: "The tie" });
@@ -63,4 +63,24 @@ test("ставка лидера от площадки - не от первого
   const text = leadText({ cents: 15000, title: "The tie", link: "https://app.oxar.app/?thing=x" });
   assert.equal(text, "Top bid on the tie: $150.\n\nOutbid it: https://app.oxar.app/?thing=x");
   assert.ok(!/\bI\b/.test(text));
+});
+
+test("галстук говорит сам: своя ставка", () => {
+  assert.equal(
+    tieText({ mine: true, brand: "Acme", cents: 17500, link: "https://app.oxar.app/?thing=x" }),
+    "I'm going live on the Solana Ecosystem Call with @simonmolitor on Oct 29.\n\nWearing Acme all over. Top bid: $175.\n\nGot a better logo? https://app.oxar.app/?thing=x",
+  );
+});
+
+test("галстук говорит сам: лидер, которым делится площадка", () => {
+  const text = tieText({ mine: false, brand: "Acme", cents: 15000, link: "L" });
+  assert.equal(
+    text,
+    "I'm going live on the Solana Ecosystem Call with @simonmolitor on Oct 29.\n\nRight now I'm wearing Acme. Top bid: $150.\n\nYour logo next? L",
+  );
+});
+
+test("без названия бренда - без пустых слов", () => {
+  assert.match(tieText({ mine: true, brand: "", cents: 17500, link: "L" }), /Wearing this logo all over/);
+  assert.ok(tieText({ mine: false, brand: "  ", cents: 17500, link: "L" }).includes("Right now I'm wearing someone's logo."));
 });
