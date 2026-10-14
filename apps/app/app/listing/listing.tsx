@@ -198,7 +198,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               <strong>{formatUsd(pot)}</strong> bid so far
             </p>
           )}
-          <ShareAuction thingId={thingId} title={thing.title} />
+          <ShareAuction thingId={thingId} />
         </div>
         <div className="lot-side">
           {!started && opensAt !== null && (

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { auctionLink, auctionText, leadText, shareText, shareIntent } from "./share.ts";
+import { auctionLink, leadText, shareText, shareIntent } from "./share.ts";
 
 test("текст твита: сумма, вещь и ссылка, без длинных тире", () => {
   const text = shareText({ cents: 17500, title: "The tie" });
@@ -57,18 +57,6 @@ test("ссылка ведёт прямо на торг вещи", () => {
 test("в твите о ставке - прямая ссылка, если она есть", () => {
   const text = shareText({ cents: 17500, title: "The tie", link: "https://app.oxar.app/?thing=x" });
   assert.match(text, /Outbid me if you can: https:\/\/app\.oxar\.app\/\?thing=x$/);
-});
-
-test("поделиться торгом: что на торге, кто/где/когда и ссылка", () => {
-  const text = auctionText({
-    title: "The tie",
-    worn: { by: "Simon (@simonmolitor)", where: "Solana Ecosystem Call, live", when: "October 29" },
-    link: "https://app.oxar.app/?thing=x",
-  });
-  assert.equal(
-    text,
-    "Up for auction on OXAR: the tie.\nWho: Simon (@simonmolitor)\nWhere: Solana Ecosystem Call, live\nWhen: October 29\n\nBid here: https://app.oxar.app/?thing=x",
-  );
 });
 
 test("ставка лидера от площадки - не от первого лица", () => {

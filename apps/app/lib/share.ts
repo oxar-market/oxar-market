@@ -83,11 +83,6 @@ export function leadText({
   return compose(`Top bid on ${where}: ${formatUsd(cents)}.`, worn, `\n\nOutbid it: ${link}`);
 }
 
-/** Поделиться самим торгом - кнопка для всех, не только для ставивших. */
-export function auctionText({ title, worn, link }: { title: string; worn?: ShareWorn; link: string }): string {
-  return compose(`Up for auction on OXAR: ${inline(title)}.`, worn, `\n\nBid here: ${link}`);
-}
-
 /** Окно нового твита с готовым текстом. */
 export function shareIntent(text: string): string {
   return `https://x.com/intent/post?text=${encodeURIComponent(text)}`;

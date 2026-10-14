@@ -5888,3 +5888,38 @@ a.sl-pill {
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+/* Окно «Share this auction»: ссылка и кнопка скопировать, поверх экрана. */
+.share-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 12, 15, 0.45);
+}
+
+.share-pop-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  width: min(26rem, 100%);
+  padding: 1.25rem;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.share-link {
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg, #f9f9f7);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: copy;
+}

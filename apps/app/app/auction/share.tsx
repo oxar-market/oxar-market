@@ -3,7 +3,7 @@
 import { useEffect, useState, type RefObject } from "react";
 import { formatUsd } from "@oxar/core";
 import type { Stage } from "@oxar/stage";
-import { auctionLink, auctionText, leadText, shareIntent, shareText, type ShareWorn } from "@/lib/share";
+import { auctionLink, leadText, shareIntent, shareText, type ShareWorn } from "@/lib/share";
 import { loadWorn } from "../worn.tsx";
 
 /**
@@ -123,32 +123,63 @@ export function ShareBid({
 }
 
 /**
- * Поделиться самим торгом - для всех, не только для ставивших: что на торге,
- * кто/где/когда и ссылка прямо на него.
+ * Поделиться торгом - для всех: окно со ссылкой прямо на торг и кнопкой
+ * скопировать. Не твит: куда нести ссылку, человек решит сам. В X ведёт
+ * только шеринг ставки (ShareBid).
  */
-export function ShareAuction({ thingId, title }: { thingId: string; title: string }) {
-  const [worn, setWorn] = useState<ShareWorn | undefined>(undefined);
-  useEffect(() => {
-    void loadWorn(thingId).then(setWorn);
-  }, [thingId]);
+export function ShareAuction({ thingId }: { thingId: string }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const link = auctionLink(thingId);
 
-  async function share() {
-    const text = auctionText({ title, worn, link: auctionLink(thingId) });
-    if (touch() && navigator.share) {
-      try {
-        await navigator.share({ text });
-      } catch {
-        // Закрыл меню - не ошибка.
-      }
-      return;
+  useEffect(() => {
+    if (!open) return;
+    const key = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [open]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+    } catch {
+      setCopied(false);
     }
-    window.open(shareIntent(text), "_blank", "noopener");
   }
 
   return (
-    <button type="button" className="share-auction" onClick={share}>
-      Share auction
-    </button>
+    <>
+      <button
+        type="button"
+        className="share-auction"
+        onClick={() => {
+          setCopied(false);
+          setOpen(true);
+        }}
+      >
+        Share auction
+      </button>
+      {open && (
+        <div className="share-pop" role="dialog" aria-modal="true" aria-label="Share this auction" onClick={() => setOpen(false)}>
+          <div className="share-pop-card" onClick={(event) => event.stopPropagation()}>
+            <div className="share-head">
+              <b>Share this auction</b>
+              <button type="button" className="share-close" aria-label="Close" onClick={() => setOpen(false)}>
+                &times;
+              </button>
+            </div>
+            {/* Нажатие на саму ссылку тоже копирует: на телефоне в неё и тычут. */}
+            <button type="button" className="share-link" onClick={copy}>
+              {link}
+            </button>
+            <button type="button" className="sl-btn dark" onClick={copy}>
+              {copied ? "Copied" : "Copy link"}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
