@@ -10,6 +10,7 @@ import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
 import { ShareAuction, ShareBid } from "../auction/share.tsx";
+import { TIE } from "@oxar/stage";
 import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
 import { useAdmin } from "../admin/use-admin.ts";
 import { WornInfo } from "../worn.tsx";
@@ -41,7 +42,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [still, setStill] = useState<string | null>(null);
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
-  const [shared, setShared] = useState<{ cents: number; mine: boolean } | null>(null);
+  const [shared, setShared] = useState<{ cents: number; brand: string; mine: boolean } | null>(null);
   useEffect(() => setShared(null), [picked]);
 
   useEffect(() => {
@@ -374,7 +375,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           art={picked ? art[picked] : undefined}
           onPlaced={(bid) => {
             refresh();
-            setShared({ cents: bid.cents, mine: true });
+            setShared({ cents: bid.cents, brand: bid.brand, mine: true });
           }}
         >
           <label className="art-row">
@@ -429,6 +430,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           spot={thing.spots.length > 1 ? spotLabel : undefined}
           cents={shared.cents}
           mine={shared.mine}
+          brand={shared.brand}
+          broadcast={thing.shape?.model === TIE.model}
           onClose={() => setShared(null)}
         />
       )}
@@ -440,7 +443,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         <button
           type="button"
           className="sl-btn light share-lead"
-          onClick={() => setShared({ cents: top.amount_cents, mine: leading })}
+          onClick={() => setShared({ cents: top.amount_cents, brand: top.brand ?? "", mine: leading })}
         >
           {leading ? "Share your lead" : "Share the lead"}
         </button>

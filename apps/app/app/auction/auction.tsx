@@ -67,7 +67,7 @@ export function Auction() {
   const [picked, setPicked] = useState(SPOTS[0].code);
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
-  const [shared, setShared] = useState<{ cents: number; mine: boolean } | null>(null);
+  const [shared, setShared] = useState<{ cents: number; brand: string; mine: boolean } | null>(null);
   useEffect(() => setShared(null), [picked]);
   const [bids, setBids] = useState<Bid[]>([]);
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
@@ -626,7 +626,7 @@ export function Auction() {
           art={art[picked]}
           onPlaced={(bid) => {
             refresh();
-            setShared({ cents: bid.cents, mine: true });
+            setShared({ cents: bid.cents, brand: bid.brand, mine: true });
           }}
         >
       {/* Картинка - первый шаг ставки, а не украшение рядом с ней: без неё
@@ -690,6 +690,7 @@ export function Auction() {
           spot={SPOTS.find((spot) => spot.code === picked)?.label}
           cents={shared.cents}
           mine={shared.mine}
+          brand={shared.brand}
           onClose={() => setShared(null)}
         />
       )}
@@ -701,7 +702,7 @@ export function Auction() {
         <button
           type="button"
           className="sl-btn light share-lead"
-          onClick={() => setShared({ cents: top.amount_cents, mine: leading })}
+          onClick={() => setShared({ cents: top.amount_cents, brand: top.brand ?? "", mine: leading })}
         >
           {leading ? "Share your lead" : "Share the lead"}
         </button>

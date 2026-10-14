@@ -56,8 +56,8 @@ export function BidForm({
   /** Чьё имя сейчас на месте: перебиваешь не сумму, а кого-то. */
   topBrand: string;
   art: Art | undefined;
-  /** Ставка прошла - с её суммой: ею делятся в X. */
-  onPlaced: (bid: { cents: number }) => void;
+  /** Ставка прошла - с её суммой и брендом: ими делятся в X. */
+  onPlaced: (bid: { cents: number; brand: string }) => void;
   /** Шаг с картинкой: живёт в форме, как в направлении дизайна. */
   children?: React.ReactNode;
 }) {
@@ -194,7 +194,7 @@ export function BidForm({
       }
 
       setAmount("");
-      onPlaced({ cents });
+      onPlaced({ cents, brand: name });
     } catch (cause) {
       setError(reason(cause));
     } finally {

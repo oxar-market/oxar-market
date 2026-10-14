@@ -3,7 +3,7 @@
 import { useEffect, useState, type RefObject } from "react";
 import { formatUsd } from "@oxar/core";
 import type { Stage } from "@oxar/stage";
-import { auctionLink, leadText, shareIntent, shareText, type ShareWorn } from "@/lib/share";
+import { auctionLink, leadText, shareIntent, shareText, tieText, type ShareWorn } from "@/lib/share";
 import { loadWorn } from "../worn.tsx";
 
 /**
@@ -26,7 +26,9 @@ export function ShareBid({
   title,
   spot,
   cents,
+  brand,
   mine = true,
+  broadcast = false,
   onClose,
 }: {
   /** По нему - кто носит вещь, где и когда: это идёт в текст твита. */
@@ -38,8 +40,15 @@ export function ShareBid({
   /** Подпись места; пусто, если место у вещи одно. */
   spot?: string;
   cents: number;
+  /** Чей логотип на вещи: своя ставка - свой бренд, ставка лидера - его. */
+  brand: string;
   /** Своя ставка - от первого лица; ставка лидера, которой делится админ, - нет. */
   mine?: boolean;
+  /**
+   * Свой голос и вид у большого нашего торга - галстука Simon: вещь говорит
+   * сама, а картинка - заставка прямого эфира, а не справка.
+   */
+  broadcast?: boolean;
   onClose: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -50,15 +59,19 @@ export function ShareBid({
     void loadWorn(thingId).then(setWorn);
   }, [thingId]);
   const link = auctionLink(thingId);
-  const text = mine
-    ? shareText({ cents, title, spot, worn, link })
-    : leadText({ cents, title, spot, worn, link });
+  const text = broadcast
+    ? tieText({ mine, brand, cents, link })
+    : mine
+      ? shareText({ cents, title, spot, worn, link })
+      : leadText({ cents, title, spot, worn, link });
 
   // Картинку собираем сразу: системное меню «Поделиться» открывается только
   // по нажатию, и ждать в нём сборки нельзя - жест истечёт.
   useEffect(() => {
     const shot = stage.current?.snapshot(azimuth) ?? null;
-    const card = drawCard(shot, cents, title, spot, mine ? "I just bid" : "Top bid");
+    const card = broadcast
+      ? drawBroadcast(shot, cents, brand, mine ? "I just bid" : "Top bid")
+      : drawCard(shot, cents, title, spot, mine ? "I just bid" : "Top bid");
     let url = "";
     card.toBlob((blob) => {
       if (!blob) return;
@@ -69,7 +82,7 @@ export function ShareBid({
     return () => {
       if (url) URL.revokeObjectURL(url);
     };
-  }, [stage, azimuth, cents, title, spot, mine]);
+  }, [stage, azimuth, cents, title, spot, mine, broadcast, brand]);
 
   async function share() {
     if (!file) return;
@@ -233,5 +246,113 @@ function drawCard(
   ctx.fillStyle = "#6b6e76";
   ctx.font = `500 30px ${font}`;
   ctx.fillText("Outbid me at app.oxar.app", left, 600, 460);
+  return canvas;
+}
+
+/**
+ * Заставка эфира для галстука Simon: тёмная студия с размытыми огнями,
+ * галстук с логотипом крупно, «LIVE» и плашка внизу, как в новостях. Всё
+ * нарисовано здесь - ни кадра из эфира, ни чужого лица.
+ */
+function drawBroadcast(shot: HTMLCanvasElement | null, cents: number, brand: string, heading: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 675;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  const font = getComputedStyle(document.body).fontFamily;
+
+  // Студия: глубокий синий в чёрный и свет сверху.
+  const room = ctx.createRadialGradient(420, 120, 40, 520, 320, 900);
+  room.addColorStop(0, "#1d2a4a");
+  room.addColorStop(0.55, "#0b1020");
+  room.addColorStop(1, "#04060b");
+  ctx.fillStyle = room;
+  ctx.fillRect(0, 0, 1200, 675);
+
+  // Огни в расфокусе: одни и те же для всех карточек - узор, а не шум.
+  let seed = 7;
+  const next = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 26; i++) {
+    const x = next() * 1200;
+    const y = next() * 420;
+    const r = 18 + next() * 60;
+    const warm = next() > 0.55;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
+    glow.addColorStop(0, warm ? "rgba(255,196,120,0.22)" : "rgba(120,170,255,0.18)");
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Галстук крупно, чуть наклонён - висит в кадре, а не лежит на витрине.
+  if (shot) {
+    ctx.save();
+    // Узел - в кадре: по нему галстук узнаётся с первого взгляда.
+    ctx.translate(360, 300);
+    ctx.rotate((-5 * Math.PI) / 180);
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowBlur = 40;
+    ctx.drawImage(shot, -380, -380, 760, 760);
+    ctx.restore();
+  }
+
+  // LIVE в углу.
+  ctx.fillStyle = "#e0381c";
+  ctx.beginPath();
+  ctx.roundRect(44, 40, 132, 50, 10);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(70, 65, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = `700 26px ${font}`;
+  ctx.letterSpacing = "3px";
+  ctx.textBaseline = "middle";
+  ctx.fillText("LIVE", 88, 66);
+  ctx.letterSpacing = "0px";
+
+  // Ставка справа.
+  const left = 720;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = `600 30px ${font}`;
+  ctx.letterSpacing = "3px";
+  ctx.fillText(heading.toUpperCase(), left, 190);
+  ctx.letterSpacing = "0px";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `700 128px ${font}`;
+  ctx.fillText(formatUsd(cents), left, 310, 440);
+  if (brand.trim()) {
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = `600 40px ${font}`;
+    ctx.fillText(brand.trim(), left, 372, 440);
+  }
+
+  // Плашка внизу, как титр в эфире.
+  ctx.fillStyle = "#f4f4f1";
+  ctx.fillRect(0, 520, 1200, 110);
+  ctx.fillStyle = "#e0381c";
+  ctx.fillRect(0, 520, 14, 110);
+  ctx.fillStyle = "#0b1020";
+  ctx.font = `800 40px ${font}`;
+  ctx.fillText("SOLANA ECOSYSTEM CALL", 48, 568);
+  ctx.fillStyle = "#4a4f5a";
+  ctx.font = `500 30px ${font}`;
+  ctx.fillText("Oct 29 · with @simonmolitor · this tie, live", 48, 610);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#0b1020";
+  ctx.font = `600 28px ${font}`;
+  ctx.fillText("app.oxar.app", 1160, 590);
+  ctx.textAlign = "left";
+
+  // Тонкая полоса под титром - бегущая строка эфира.
+  ctx.fillStyle = "#0b1020";
+  ctx.fillRect(0, 630, 1200, 45);
+  ctx.fillStyle = "rgba(255,255,255,0.75)";
+  ctx.font = `500 22px ${font}`;
+  ctx.fillText("ONE SPONSOR GETS THE WHOLE TIE  ·  BID IN USDC  ·  ESCROW UNTIL IT'S ON AIR", 48, 659);
   return canvas;
 }
