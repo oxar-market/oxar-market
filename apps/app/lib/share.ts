@@ -83,24 +83,17 @@ export function leadText({
   return compose(`Top bid on ${where}: ${formatUsd(cents)}.`, worn, `\n\nOutbid it: ${link}`);
 }
 
-/** Id вещи-галстука в базе (slug shirt-xx) и короткий адрес на её торг. */
+/** Id вещи-галстука в базе (slug shirt-xx): на него ведёт app.oxar.app/tie. */
 export const TIE_THING = "3bbef1e7-9398-4164-84cb-4f48f1a39ec6";
-export const TIE_PATH = `${SITE}/tie`;
 
 /**
- * Торг галстука Simon: галстук говорит сам - он пойдёт в эфир, и на нём
- * лидер. Свой голос у больших наших торгов: строки «кто/где/когда» в твите
- * читались справкой, а не поводом нажать.
+ * Торг галстука Simon: одна строка, как тренд - «вот как я выгляжу в эфире
+ * на его галстуке», и картинка. Без сумм и ссылок: строки «кто/где/когда» и
+ * «Top bid» читались справкой, а не поводом повторить. Адрес - на картинке.
  */
-export function tieText({ mine, brand, cents }: { mine: boolean; brand: string; cents: number }): string {
-  const name = brand.trim();
-  // @EcosystemCall - хэндл эфира: X сделает его упоминанием, как и Simon.
-  const head = "I'm going live on @EcosystemCall with @simonmolitor on Oct 29.";
-  const wearing = mine
-    ? `Wearing ${name || "this logo"} all over.`
-    : `Right now I'm wearing ${name || "someone's logo"}.`;
-  // Короткий адрес, а не «?thing=<uuid>»: длинный хвост портил пост.
-  return `${head}\n\n${wearing} Top bid: ${formatUsd(cents)}.\n\nBid there: ${TIE_PATH}`;
+export function tieText({ mine, brand }: { mine: boolean; brand: string }): string {
+  const who = mine ? "I look" : `${brand.trim() || "the top bid"} looks`;
+  return `This is how ${who} live on @EcosystemCall, worn by @simonmolitor.`;
 }
 
 /** Окно нового твита с готовым текстом. */

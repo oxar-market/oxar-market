@@ -60,7 +60,7 @@ export function ShareBid({
   }, [thingId]);
   const link = auctionLink(thingId);
   const text = broadcast
-    ? tieText({ mine, brand, cents })
+    ? tieText({ mine, brand })
     : mine
       ? shareText({ cents, title, spot, worn, link })
       : leadText({ cents, title, spot, worn, link });
@@ -70,7 +70,7 @@ export function ShareBid({
   useEffect(() => {
     const shot = stage.current?.snapshot(azimuth) ?? null;
     const card = broadcast
-      ? drawBroadcast(shot, cents, brand, mine ? "I just bid" : "Top bid")
+      ? drawBroadcast(shot, brand)
       : drawCard(shot, cents, title, spot, mine ? "I just bid" : "Top bid");
     let url = "";
     card.toBlob((blob) => {
@@ -254,7 +254,7 @@ function drawCard(
  * галстук с логотипом крупно, «LIVE» и плашка внизу, как в новостях. Всё
  * нарисовано здесь - ни кадра из эфира, ни чужого лица.
  */
-function drawBroadcast(shot: HTMLCanvasElement | null, cents: number, brand: string, heading: string) {
+function drawBroadcast(shot: HTMLCanvasElement | null, brand: string) {
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
   canvas.height = 675;
@@ -314,22 +314,18 @@ function drawBroadcast(shot: HTMLCanvasElement | null, cents: number, brand: str
   ctx.fillText("LIVE", 88, 66);
   ctx.letterSpacing = "0px";
 
-  // Ставка справа.
+  // Справа - чей логотип на галстуке. Без суммы: картинка про то, как это
+  // выглядит в эфире, а не про торг.
   const left = 720;
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "rgba(255,255,255,0.7)";
   ctx.font = `600 30px ${font}`;
   ctx.letterSpacing = "3px";
-  ctx.fillText(heading.toUpperCase(), left, 190);
+  ctx.fillText("ON THE TIE", left, 230);
   ctx.letterSpacing = "0px";
   ctx.fillStyle = "#ffffff";
-  ctx.font = `700 128px ${font}`;
-  ctx.fillText(formatUsd(cents), left, 310, 440);
-  if (brand.trim()) {
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = `600 40px ${font}`;
-    ctx.fillText(brand.trim(), left, 372, 440);
-  }
+  ctx.font = `700 96px ${font}`;
+  ctx.fillText(brand.trim() || "Your logo", left, 330, 440);
 
   // Плашка внизу, как титр в эфире.
   ctx.fillStyle = "#f4f4f1";
