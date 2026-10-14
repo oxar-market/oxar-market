@@ -15,27 +15,16 @@ export type ShareWorn = { by: string | null; where: string | null; when: string 
 /** Предел твита. Строки «кто/где/когда» отпадают с конца, если не влезают. */
 const LIMIT = 280;
 
-/**
- * «I just bid $175 to put my logo on the tie.», под ней кто, где и когда, и
- * ссылка. Место называем, только если их у вещи несколько: у галстука оно
- * одно, и «Whole tie» в твите - шум. Ведущее «The» - со строчной: середина
- * фразы. Хэндл в «кто» X сам сделает упоминанием - носящий увидит твит.
- */
-export function shareText({
-  cents,
-  title,
-  spot,
-  worn,
-}: {
-  cents: number;
-  title: string;
-  spot?: string;
-  worn?: ShareWorn;
-}): string {
-  const thing = title.replace(/^The /, "the ");
-  const where = spot ? `${thing}, spot ${spot}` : thing;
-  const head = `I just bid ${formatUsd(cents)} to put my logo on ${where}.`;
-  const tail = `\n\nOutbid me if you can: ${SITE}`;
+/** Ссылка прямо на торг вещи: приложение открывает его по `?thing=`. */
+export function auctionLink(thingId: string): string {
+  return `https://${SITE}/?thing=${thingId}`;
+}
+
+/** Ведущее «The» в названии - со строчной: оно в середине фразы. */
+const inline = (title: string) => title.replace(/^The /, "the ");
+
+/** Заголовок, под ним кто/где/когда, внизу хвост; лишнее срезается с конца. */
+function compose(head: string, worn: ShareWorn | undefined, tail: string): string {
   const lines = [
     worn?.by ? `Who: ${worn.by}` : null,
     worn?.where ? `Where: ${worn.where}` : null,
@@ -43,6 +32,60 @@ export function shareText({
   ].filter((line): line is string => line !== null);
   while (lines.length > 0 && [head, ...lines].join("\n").length + tail.length > LIMIT) lines.pop();
   return [head, ...lines].join("\n") + tail;
+}
+
+/**
+ * «I just bid $175 to put my logo on the tie.», под ней кто, где и когда, и
+ * ссылка. Место называем, только если их у вещи несколько: у галстука оно
+ * одно, и «Whole tie» в твите - шум. Хэндл в «кто» X сам сделает
+ * упоминанием - носящий увидит твит.
+ */
+export function shareText({
+  cents,
+  title,
+  spot,
+  worn,
+  link = SITE,
+}: {
+  cents: number;
+  title: string;
+  spot?: string;
+  worn?: ShareWorn;
+  /** Прямая ссылка на торг; без неё - сайт. */
+  link?: string;
+}): string {
+  const where = spot ? `${inline(title)}, spot ${spot}` : inline(title);
+  return compose(
+    `I just bid ${formatUsd(cents)} to put my logo on ${where}.`,
+    worn,
+    `\n\nOutbid me if you can: ${link}`,
+  );
+}
+
+/**
+ * Ставка лидера, которой делится площадка (админ), а не сам ставивший: не от
+ * первого лица - «I just bid» от нашего имени было бы неправдой.
+ */
+export function leadText({
+  cents,
+  title,
+  spot,
+  worn,
+  link = SITE,
+}: {
+  cents: number;
+  title: string;
+  spot?: string;
+  worn?: ShareWorn;
+  link?: string;
+}): string {
+  const where = spot ? `${inline(title)}, spot ${spot}` : inline(title);
+  return compose(`Top bid on ${where}: ${formatUsd(cents)}.`, worn, `\n\nOutbid it: ${link}`);
+}
+
+/** Поделиться самим торгом - кнопка для всех, не только для ставивших. */
+export function auctionText({ title, worn, link }: { title: string; worn?: ShareWorn; link: string }): string {
+  return compose(`Up for auction on OXAR: ${inline(title)}.`, worn, `\n\nBid here: ${link}`);
 }
 
 /** Окно нового твита с готовым текстом. */

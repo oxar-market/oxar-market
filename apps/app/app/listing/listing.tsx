@@ -9,8 +9,9 @@ import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
-import { ShareBid } from "../auction/share.tsx";
+import { ShareAuction, ShareBid } from "../auction/share.tsx";
 import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
+import { useAdmin } from "../admin/use-admin.ts";
 import { WornInfo } from "../worn.tsx";
 
 /**
@@ -34,12 +35,13 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [now, setNow] = useState(() => Date.now());
   const stage = useRef<Stage | null>(null);
   const { wallets } = useConnectedStandardWallets();
+  const admin = useAdmin();
   // Снимок модели вместо фото: у нашей вещи без снимков фото-режим
   // показывает её саму, снятую сценой при переключении.
   const [still, setStill] = useState<string | null>(null);
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
-  const [shared, setShared] = useState<number | null>(null);
+  const [shared, setShared] = useState<{ cents: number; mine: boolean } | null>(null);
   useEffect(() => setShared(null), [picked]);
 
   useEffect(() => {
@@ -196,6 +198,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               <strong>{formatUsd(pot)}</strong> bid so far
             </p>
           )}
+          <ShareAuction thingId={thingId} title={thing.title} />
         </div>
         <div className="lot-side">
           {!started && opensAt !== null && (
@@ -371,7 +374,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           art={picked ? art[picked] : undefined}
           onPlaced={(bid) => {
             refresh();
-            setShared(bid.cents);
+            setShared({ cents: bid.cents, mine: true });
           }}
         >
           <label className="art-row">
@@ -424,16 +427,22 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           azimuth={Math.round((thing.shape?.spots.find((spot) => spot.code === picked)?.azimuth ?? 0) / 90) * 90}
           title={thing.title}
           spot={thing.spots.length > 1 ? spotLabel : undefined}
-          cents={shared}
+          cents={shared.cents}
+          mine={shared.mine}
           onClose={() => setShared(null)}
         />
       )}
 
       {/* Лидируешь - можешь поделиться и потом, а не только сразу после
-          ставки: вернулся на страницу, а кнопка на месте. Перебили - пропала. */}
-      {shared === null && leading && top && (
-        <button type="button" className="sl-btn light share-lead" onClick={() => setShared(top.amount_cents)}>
-          Share your lead
+          ставки: вернулся на страницу, а кнопка на месте. Перебили - пропала.
+          Админ делится ставкой лидера от имени площадки, не от первого лица. */}
+      {shared === null && (leading || (admin && running)) && top && (
+        <button
+          type="button"
+          className="sl-btn light share-lead"
+          onClick={() => setShared({ cents: top.amount_cents, mine: leading })}
+        >
+          {leading ? "Share your lead" : "Share the lead"}
         </button>
       )}
 
