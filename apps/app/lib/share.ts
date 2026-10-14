@@ -93,7 +93,7 @@ export const TIE_THING = "3bbef1e7-9398-4164-84cb-4f48f1a39ec6";
  */
 export function tieText({ mine, brand }: { mine: boolean; brand: string }): string {
   const who = mine ? "I look" : `${brand.trim() || "the top bid"} looks`;
-  return `This is how ${who} live on @EcosystemCall, on @simonmolitor's tie.`;
+  return `This is how ${who} live on @EcosystemCall, worn by @simonmolitor.`;
 }
 
 /** Окно нового твита с готовым текстом. */
