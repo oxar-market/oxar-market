@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
+import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
 import {
   EXTEND_MS,
   escrowedCents,
@@ -93,6 +94,7 @@ export function Auction() {
   // Колокольчик - только вошедшему: подписка привязана к человеку, и перебить
   // можно лишь того, кто может ставить. Гостю нажатие ничего не давало.
   const { authenticated } = usePrivy();
+  const { wallets } = useConnectedStandardWallets();
   const { login } = useLogin();
   useEffect(() => {
     void pushState().then(setPush);
@@ -338,6 +340,8 @@ export function Auction() {
     ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents)
     : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
+  // Мой кошелёк ведёт на этом месте - значит, есть чем поделиться.
+  const leading = Boolean(lot && running && top && wallets[0] && top.bidder_wallet === wallets[0].address);
 
   // Сколько денег торг держит прямо сейчас - по всей вещи, а не по выбранному
   // месту. Считается по тем же верхним ставкам, что и кружки в списке справа:
@@ -685,6 +689,14 @@ export function Auction() {
           cents={shared}
           onClose={() => setShared(null)}
         />
+      )}
+
+      {/* Лидируешь - можешь поделиться и потом, а не только сразу после
+          ставки: вернулся на страницу, а кнопка на месте. Перебили - пропала. */}
+      {shared === null && leading && top && (
+        <button type="button" className="sl-btn light share-lead" onClick={() => setShared(top.amount_cents)}>
+          Share your lead
+        </button>
       )}
 
       {bids.length > 0 && (
