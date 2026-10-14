@@ -85,15 +85,17 @@ export function leadText({
 
 /** Id вещи-галстука в базе (slug shirt-xx): на него ведёт app.oxar.app/tie. */
 export const TIE_THING = "3bbef1e7-9398-4164-84cb-4f48f1a39ec6";
+const TIE_PATH = `${SITE}/tie`;
 
 /**
  * Торг галстука Simon: одна строка, как тренд - «вот как я выгляжу в эфире
- * на его галстуке», и картинка. Без сумм и ссылок: строки «кто/где/когда» и
- * «Top bid» читались справкой, а не поводом повторить. Адрес - на картинке.
+ * на его галстуке», картинка и короткий адрес торга. Без сумм: строки
+ * «кто/где/когда» и «Top bid» читались справкой, а не поводом повторить.
  */
 export function tieText({ mine, brand }: { mine: boolean; brand: string }): string {
   const who = mine ? "I look" : `${brand.trim() || "the top bid"} looks`;
-  return `This is how ${who} live on @EcosystemCall, worn by @simonmolitor.`;
+  // Ссылка - короткая, отдельной строкой: хвост «?thing=<uuid>» портил пост.
+  return `This is how ${who} live on @EcosystemCall, worn by @simonmolitor.\n\nBid there: ${TIE_PATH}`;
 }
 
 /** Окно нового твита с готовым текстом. */
