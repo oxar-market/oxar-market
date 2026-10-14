@@ -65,21 +65,15 @@ test("ставка лидера от площадки - не от первого
   assert.ok(!/\bI\b/.test(text));
 });
 
-test("галстук говорит сам: своя ставка", () => {
+test("галстук: одна строка, как тренд, без ставок и ссылок", () => {
+  assert.equal(tieText({ mine: true, brand: "Acme" }), "This is how I look live on @EcosystemCall, on @simonmolitor's tie.");
+});
+
+test("галстук от площадки: как выглядит лидер", () => {
+  assert.equal(tieText({ mine: false, brand: "Acme" }), "This is how Acme looks live on @EcosystemCall, on @simonmolitor's tie.");
   assert.equal(
-    tieText({ mine: true, brand: "Acme", cents: 17500 }),
-    "I'm going live on @EcosystemCall with @simonmolitor on Oct 29.\n\nWearing Acme all over. Top bid: $175.\n\nBid there: app.oxar.app/tie",
+    tieText({ mine: false, brand: " " }),
+    "This is how the top bid looks live on @EcosystemCall, on @simonmolitor's tie.",
   );
 });
 
-test("галстук говорит сам: лидер, которым делится площадка", () => {
-  assert.equal(
-    tieText({ mine: false, brand: "Acme", cents: 15000 }),
-    "I'm going live on @EcosystemCall with @simonmolitor on Oct 29.\n\nRight now I'm wearing Acme. Top bid: $150.\n\nBid there: app.oxar.app/tie",
-  );
-});
-
-test("без названия бренда - без пустых слов", () => {
-  assert.match(tieText({ mine: true, brand: "", cents: 17500 }), /Wearing this logo all over/);
-  assert.ok(tieText({ mine: false, brand: "  ", cents: 17500 }).includes("Right now I'm wearing someone's logo."));
-});
