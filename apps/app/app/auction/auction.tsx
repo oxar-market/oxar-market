@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
+import { useAdmin } from "../admin/use-admin.ts";
 import {
   EXTEND_MS,
   escrowedCents,
@@ -66,7 +67,7 @@ export function Auction() {
   const [picked, setPicked] = useState(SPOTS[0].code);
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
-  const [shared, setShared] = useState<number | null>(null);
+  const [shared, setShared] = useState<{ cents: number; mine: boolean } | null>(null);
   useEffect(() => setShared(null), [picked]);
   const [bids, setBids] = useState<Bid[]>([]);
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
@@ -95,6 +96,7 @@ export function Auction() {
   // можно лишь того, кто может ставить. Гостю нажатие ничего не давало.
   const { authenticated } = usePrivy();
   const { wallets } = useConnectedStandardWallets();
+  const admin = useAdmin();
   const { login } = useLogin();
   useEffect(() => {
     void pushState().then(setPush);
@@ -624,7 +626,7 @@ export function Auction() {
           art={art[picked]}
           onPlaced={(bid) => {
             refresh();
-            setShared(bid.cents);
+            setShared({ cents: bid.cents, mine: true });
           }}
         >
       {/* Картинка - первый шаг ставки, а не украшение рядом с ней: без неё
@@ -686,16 +688,22 @@ export function Auction() {
           azimuth={Math.round((SPOTS.find((spot) => spot.code === picked)?.azimuth ?? 0) / 90) * 90}
           title={thing?.title ?? "Local Event Tee"}
           spot={SPOTS.find((spot) => spot.code === picked)?.label}
-          cents={shared}
+          cents={shared.cents}
+          mine={shared.mine}
           onClose={() => setShared(null)}
         />
       )}
 
       {/* Лидируешь - можешь поделиться и потом, а не только сразу после
-          ставки: вернулся на страницу, а кнопка на месте. Перебили - пропала. */}
-      {shared === null && leading && top && (
-        <button type="button" className="sl-btn light share-lead" onClick={() => setShared(top.amount_cents)}>
-          Share your lead
+          ставки: вернулся на страницу, а кнопка на месте. Перебили - пропала.
+          Админ делится ставкой лидера от имени площадки, не от первого лица. */}
+      {shared === null && (leading || (admin && running)) && top && (
+        <button
+          type="button"
+          className="sl-btn light share-lead"
+          onClick={() => setShared({ cents: top.amount_cents, mine: leading })}
+        >
+          {leading ? "Share your lead" : "Share the lead"}
         </button>
       )}
 

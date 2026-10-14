@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { shareText, shareIntent } from "./share.ts";
+import { auctionLink, auctionText, leadText, shareText, shareIntent } from "./share.ts";
 
 test("текст твита: сумма, вещь и ссылка, без длинных тире", () => {
   const text = shareText({ cents: 17500, title: "The tie" });
@@ -48,4 +48,31 @@ test("твит не длиннее 280: лишние строки отпадаю
   assert.ok(text.length <= 280, String(text.length));
   assert.match(text, /^I just bid \$175/);
   assert.match(text, /Outbid me if you can: app\.oxar\.app$/);
+});
+
+test("ссылка ведёт прямо на торг вещи", () => {
+  assert.equal(auctionLink("3bbef1e7-9398-4164-84cb-4f48f1a39ec6"), "https://app.oxar.app/?thing=3bbef1e7-9398-4164-84cb-4f48f1a39ec6");
+});
+
+test("в твите о ставке - прямая ссылка, если она есть", () => {
+  const text = shareText({ cents: 17500, title: "The tie", link: "https://app.oxar.app/?thing=x" });
+  assert.match(text, /Outbid me if you can: https:\/\/app\.oxar\.app\/\?thing=x$/);
+});
+
+test("поделиться торгом: что на торге, кто/где/когда и ссылка", () => {
+  const text = auctionText({
+    title: "The tie",
+    worn: { by: "Simon (@simonmolitor)", where: "Solana Ecosystem Call, live", when: "October 29" },
+    link: "https://app.oxar.app/?thing=x",
+  });
+  assert.equal(
+    text,
+    "Up for auction on OXAR: the tie.\nWho: Simon (@simonmolitor)\nWhere: Solana Ecosystem Call, live\nWhen: October 29\n\nBid here: https://app.oxar.app/?thing=x",
+  );
+});
+
+test("ставка лидера от площадки - не от первого лица", () => {
+  const text = leadText({ cents: 15000, title: "The tie", link: "https://app.oxar.app/?thing=x" });
+  assert.equal(text, "Top bid on the tie: $150.\n\nOutbid it: https://app.oxar.app/?thing=x");
+  assert.ok(!/\bI\b/.test(text));
 });

@@ -3,18 +3,22 @@
 import { useEffect, useState, type RefObject } from "react";
 import { formatUsd } from "@oxar/core";
 import type { Stage } from "@oxar/stage";
-import { shareIntent, shareText, type ShareWorn } from "@/lib/share";
+import { auctionLink, auctionText, leadText, shareIntent, shareText, type ShareWorn } from "@/lib/share";
 import { loadWorn } from "../worn.tsx";
 
 /**
  * Поделиться ставкой в X: готовый текст и картинка - вещь с логотипом и сумма.
  *
- * Окно твита по ссылке картинку не берёт, поэтому два пути. Где система умеет
- * делиться файлом (телефоны, Safari), - её меню «Поделиться»: человек выбирает
- * X, и твит открывается уже с картинкой и текстом. Где не умеет - картинка
- * уходит в буфер, X открывается с текстом, и остаётся вставить её. Плюс
- * кнопка сохранить картинку - на случай, если буфер не дался.
+ * Окно твита по ссылке картинку не берёт, поэтому два пути. На телефоне -
+ * меню «Поделиться»: в нём есть приложение X, и твит открывается уже с
+ * картинкой и текстом. На компьютере - сразу окно твита с текстом, а картинка
+ * в буфере: её вставить. Меню «Поделиться» умеет и Safari на Mac, но X в нём
+ * нет, и человек не понимал, куда делся твит. Плюс кнопка сохранить картинку -
+ * на случай, если буфер не дался.
  */
+
+/** Телефон или планшет: палец, а не мышь. Там меню «Поделиться» ведёт в X. */
+const touch = () => window.matchMedia("(pointer: coarse)").matches;
 export function ShareBid({
   thingId,
   stage,
@@ -22,6 +26,7 @@ export function ShareBid({
   title,
   spot,
   cents,
+  mine = true,
   onClose,
 }: {
   /** По нему - кто носит вещь, где и когда: это идёт в текст твита. */
@@ -33,6 +38,8 @@ export function ShareBid({
   /** Подпись места; пусто, если место у вещи одно. */
   spot?: string;
   cents: number;
+  /** Своя ставка - от первого лица; ставка лидера, которой делится админ, - нет. */
+  mine?: boolean;
   onClose: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -42,13 +49,16 @@ export function ShareBid({
   useEffect(() => {
     void loadWorn(thingId).then(setWorn);
   }, [thingId]);
-  const text = shareText({ cents, title, spot, worn });
+  const link = auctionLink(thingId);
+  const text = mine
+    ? shareText({ cents, title, spot, worn, link })
+    : leadText({ cents, title, spot, worn, link });
 
   // Картинку собираем сразу: системное меню «Поделиться» открывается только
   // по нажатию, и ждать в нём сборки нельзя - жест истечёт.
   useEffect(() => {
     const shot = stage.current?.snapshot(azimuth) ?? null;
-    const card = drawCard(shot, cents, title, spot);
+    const card = drawCard(shot, cents, title, spot, mine ? "I just bid" : "Top bid");
     let url = "";
     card.toBlob((blob) => {
       if (!blob) return;
@@ -59,12 +69,12 @@ export function ShareBid({
     return () => {
       if (url) URL.revokeObjectURL(url);
     };
-  }, [stage, azimuth, cents, title, spot]);
+  }, [stage, azimuth, cents, title, spot, mine]);
 
   async function share() {
     if (!file) return;
     setNote("");
-    if (navigator.canShare?.({ files: [file] })) {
+    if (touch() && navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file], text });
       } catch {
@@ -91,7 +101,7 @@ export function ShareBid({
   return (
     <div className="share-bid">
       <div className="share-head">
-        <b>Your bid is in. Tell people.</b>
+        <b>{mine ? "Your bid is in. Tell people." : "Share the top bid."}</b>
         <button type="button" className="share-close" aria-label="Close" onClick={onClose}>
           &times;
         </button>
@@ -113,10 +123,46 @@ export function ShareBid({
 }
 
 /**
+ * Поделиться самим торгом - для всех, не только для ставивших: что на торге,
+ * кто/где/когда и ссылка прямо на него.
+ */
+export function ShareAuction({ thingId, title }: { thingId: string; title: string }) {
+  const [worn, setWorn] = useState<ShareWorn | undefined>(undefined);
+  useEffect(() => {
+    void loadWorn(thingId).then(setWorn);
+  }, [thingId]);
+
+  async function share() {
+    const text = auctionText({ title, worn, link: auctionLink(thingId) });
+    if (touch() && navigator.share) {
+      try {
+        await navigator.share({ text });
+      } catch {
+        // Закрыл меню - не ошибка.
+      }
+      return;
+    }
+    window.open(shareIntent(text), "_blank", "noopener");
+  }
+
+  return (
+    <button type="button" className="share-auction" onClick={share}>
+      Share auction
+    </button>
+  );
+}
+
+/**
  * Карточка 1200x675 - размер, который X показывает в ленте целиком: слева
  * вещь с логотипом, справа сумма, вещь и куда идти перебивать.
  */
-function drawCard(shot: HTMLCanvasElement | null, cents: number, title: string, spot?: string) {
+function drawCard(
+  shot: HTMLCanvasElement | null,
+  cents: number,
+  title: string,
+  spot: string | undefined,
+  heading: string,
+) {
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
   canvas.height = 675;
@@ -146,7 +192,7 @@ function drawCard(shot: HTMLCanvasElement | null, cents: number, title: string, 
 
   ctx.fillStyle = "#14161a";
   ctx.font = `500 44px ${font}`;
-  ctx.fillText("I just bid", left, 250);
+  ctx.fillText(heading, left, 250);
   ctx.font = `700 132px ${font}`;
   ctx.fillText(formatUsd(cents), left, 380);
 

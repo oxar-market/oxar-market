@@ -48,6 +48,9 @@ export default function Home() {
     // Кнопка из письма ведёт на вкладку: ?tab=you, ?tab=auction, ?tab=market.
     const opened = params.get("tab");
     if (opened === "market" || opened === "auction" || opened === "you") setTab(opened);
+    // Ссылка «поделиться торгом» ведёт прямо на него: ?thing=<id вещи>.
+    const thing = params.get("thing");
+    if (thing && /^[0-9a-f-]{36}$/.test(thing)) openAuction(thing);
     const secret = params.get("c");
     if (secret && /^[a-z0-9]{10}$/.test(secret)) {
       setCapture(secret);
