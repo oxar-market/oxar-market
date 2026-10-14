@@ -65,15 +65,21 @@ test("ставка лидера от площадки - не от первого
   assert.ok(!/\bI\b/.test(text));
 });
 
-test("галстук: одна строка, как тренд, без ставок и ссылок", () => {
-  assert.equal(tieText({ mine: true, brand: "Acme" }), "This is how I look live on @EcosystemCall, worn by @simonmolitor.");
+test("галстук: одна строка, как тренд, и короткий адрес торга", () => {
+  assert.equal(
+    tieText({ mine: true, brand: "Acme" }),
+    "This is how I look live on @EcosystemCall, worn by @simonmolitor.\n\nBid there: app.oxar.app/tie",
+  );
 });
 
 test("галстук от площадки: как выглядит лидер", () => {
-  assert.equal(tieText({ mine: false, brand: "Acme" }), "This is how Acme looks live on @EcosystemCall, worn by @simonmolitor.");
+  assert.equal(
+    tieText({ mine: false, brand: "Acme" }),
+    "This is how Acme looks live on @EcosystemCall, worn by @simonmolitor.\n\nBid there: app.oxar.app/tie",
+  );
   assert.equal(
     tieText({ mine: false, brand: " " }),
-    "This is how the top bid looks live on @EcosystemCall, worn by @simonmolitor.",
+    "This is how the top bid looks live on @EcosystemCall, worn by @simonmolitor.\n\nBid there: app.oxar.app/tie",
   );
 });
 

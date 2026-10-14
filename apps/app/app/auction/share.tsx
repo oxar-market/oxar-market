@@ -240,8 +240,7 @@ function drawCard(
   ctx.font = `700 132px ${font}`;
   ctx.fillText(formatUsd(cents), left, 380);
 
-  ctx.font = `600 38px ${font}`;
-  ctx.fillText(spot ? `${title}, spot ${spot}` : title, left, 450, 460);
+  fitText(ctx, spot ? `${title}, spot ${spot}` : title, left, 450, 460, 600, 38, font);
 
   ctx.fillStyle = "#6b6e76";
   ctx.font = `500 30px ${font}`;
@@ -324,8 +323,7 @@ function drawBroadcast(shot: HTMLCanvasElement | null, brand: string) {
   ctx.fillText("ON THE TIE", left, 230);
   ctx.letterSpacing = "0px";
   ctx.fillStyle = "#ffffff";
-  ctx.font = `700 96px ${font}`;
-  ctx.fillText(brand.trim() || "Your logo", left, 330, 440);
+  fitText(ctx, brand.trim() || "Your logo", left, 330, 440, 700, 96, font);
 
   // Плашка внизу, как титр в эфире.
   ctx.fillStyle = "#f4f4f1";
@@ -351,4 +349,28 @@ function drawBroadcast(shot: HTMLCanvasElement | null, brand: string) {
   ctx.font = `500 22px ${font}`;
   ctx.fillText("ONE SPONSOR GETS THE WHOLE TIE  ·  BID IN USDC  ·  ESCROW UNTIL IT'S ON AIR", 48, 659);
   return canvas;
+}
+
+/**
+ * Строка в ширину: длинное имя уменьшается кеглем, а не сжимается. У
+ * fillText с пределом ширины буквы сплющивались - «HedgeYourFun» читался
+ * чужим шрифтом.
+ */
+function fitText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  max: number,
+  weight: number,
+  size: number,
+  font: string,
+) {
+  let px = size;
+  ctx.font = `${weight} ${px}px ${font}`;
+  while (px > 20 && ctx.measureText(text).width > max) {
+    px -= 2;
+    ctx.font = `${weight} ${px}px ${font}`;
+  }
+  ctx.fillText(text, x, y);
 }
