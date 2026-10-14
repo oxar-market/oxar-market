@@ -62,6 +62,11 @@ export type Stage = {
    * отменяла его сразу после выбора.
    */
   frame(code: string | null): void;
+  /**
+   * Снимок вещи с этой стороны со всем, что на ней сейчас, - квадрат на
+   * прозрачном фоне. Для картинки, которой делятся ставкой.
+   */
+  snapshot(azimuth: number): HTMLCanvasElement | null;
 };
 
 export function ThingStage({
@@ -607,7 +612,10 @@ export function ThingStage({
             // его. Кроме голограммы: на ней мест не видно вовсе, и рамка
             // выбранного - тоже место. Автовыбор при загрузке звал restyle
             // после входа в голограмму и проносил рамку сквозь неё.
-            decal.frame.visible = !showingGhost && decal.code === chosen;
+            // У места-узора рамки нет: оно - вся вещь, и уголки коробки,
+            // срезанные краем вещи, торчали бы рыжими огрызками.
+            const whole = SPOTS.find((spot) => spot.code === decal.code)?.tile;
+            decal.frame.visible = !showingGhost && decal.code === chosen && !whole;
             // Место с примеренной картинкой подсветка цвета не трогает: цвет
             // там принадлежит логотипу, а не рамке.
             if (mine.has(decal.code)) continue;
@@ -788,6 +796,40 @@ export function ThingStage({
             aimAt.copy(decal ? decal.point : new THREE.Vector3());
             aimFrom = decal ? near : far;
             arriving = true;
+          },
+          snapshot(azimuth) {
+            // Тот же способ, что у снимков ракурсов ниже, но с тем, что
+            // сейчас на вещи: поделиться ставкой - значит показать логотип.
+            const side = 1024;
+            const paper = document.createElement("canvas");
+            paper.width = paper.height = side;
+            const ink = paper.getContext("2d");
+            if (!ink) return null;
+            const target = new THREE.WebGLRenderTarget(side, side);
+            const lens = new THREE.PerspectiveCamera(camera.fov, 1, 0.1, 100);
+            const back = (reach / Math.tan(fov / 2)) * 1.12;
+            const angle = (azimuth * Math.PI) / 180;
+            lens.position.set(Math.sin(angle) * back, 0, Math.cos(angle) * back);
+            lens.lookAt(0, 0, 0);
+            const ringWas = ring.visible;
+            ring.visible = false;
+            if (shadow) shadow.visible = false;
+            renderer.setRenderTarget(target);
+            renderer.render(scene, lens);
+            const pixels = new Uint8Array(side * side * 4);
+            renderer.readRenderTargetPixels(target, 0, 0, side, side, pixels);
+            renderer.setRenderTarget(null);
+            target.dispose();
+            ring.visible = ringWas;
+            if (shadow) shadow.visible = true;
+            develop(pixels, renderer.toneMappingExposure);
+            const image = ink.createImageData(side, side);
+            for (let row = 0; row < side; row++) {
+              const from = (side - 1 - row) * side * 4;
+              image.data.set(pixels.subarray(from, from + side * 4), row * side * 4);
+            }
+            ink.putImageData(image, 0, 0);
+            return paper;
           },
         };
 

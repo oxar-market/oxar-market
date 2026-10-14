@@ -5812,3 +5812,59 @@ a.sl-pill {
   font-size: 0.875rem;
   color: var(--mut);
 }
+
+/* Поделиться ставкой: под формой, после того как ставка прошла. */
+.share-bid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.share-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.share-close {
+  border: 0;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.share-preview {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.share-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.share-actions .sl-btn {
+  flex: 1;
+  text-align: center;
+}
+
+/* Снимок модели вместо фото: вещь целиком на спокойном фоне. */
+.ls-photo .ls-still {
+  object-fit: contain;
+  background: #f4f4f1;
+}
+
+.ls-still-pick {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
