@@ -83,19 +83,24 @@ export function leadText({
   return compose(`Top bid on ${where}: ${formatUsd(cents)}.`, worn, `\n\nOutbid it: ${link}`);
 }
 
+/** Id вещи-галстука в базе (slug shirt-xx) и короткий адрес на её торг. */
+export const TIE_THING = "3bbef1e7-9398-4164-84cb-4f48f1a39ec6";
+export const TIE_PATH = `${SITE}/tie`;
+
 /**
  * Торг галстука Simon: галстук говорит сам - он пойдёт в эфир, и на нём
  * лидер. Свой голос у больших наших торгов: строки «кто/где/когда» в твите
  * читались справкой, а не поводом нажать.
  */
-export function tieText({ mine, brand, cents, link }: { mine: boolean; brand: string; cents: number; link: string }): string {
+export function tieText({ mine, brand, cents }: { mine: boolean; brand: string; cents: number }): string {
   const name = brand.trim();
-  const head = "I'm going live on the Solana Ecosystem Call with @simonmolitor on Oct 29.";
+  // @EcosystemCall - хэндл эфира: X сделает его упоминанием, как и Simon.
+  const head = "I'm going live on @EcosystemCall with @simonmolitor on Oct 29.";
   const wearing = mine
     ? `Wearing ${name || "this logo"} all over.`
     : `Right now I'm wearing ${name || "someone's logo"}.`;
-  const ask = mine ? "Got a better logo?" : "Your logo next?";
-  return `${head}\n\n${wearing} Top bid: ${formatUsd(cents)}.\n\n${ask} ${link}`;
+  // Короткий адрес, а не «?thing=<uuid>»: длинный хвост портил пост.
+  return `${head}\n\n${wearing} Top bid: ${formatUsd(cents)}.\n\nBid there: ${TIE_PATH}`;
 }
 
 /** Окно нового твита с готовым текстом. */
