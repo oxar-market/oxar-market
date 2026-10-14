@@ -9,6 +9,7 @@ import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
+import { ShareBid } from "../auction/share.tsx";
 import { WornInfo } from "../worn.tsx";
 
 /**
@@ -31,6 +32,13 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [artError, setArtError] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const stage = useRef<Stage | null>(null);
+  // Снимок модели вместо фото: у нашей вещи без снимков фото-режим
+  // показывает её саму, снятую сценой при переключении.
+  const [still, setStill] = useState<string | null>(null);
+  // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
+  // Другое место - другая ставка, прежняя карточка уходит.
+  const [shared, setShared] = useState<number | null>(null);
+  useEffect(() => setShared(null), [picked]);
 
   useEffect(() => {
     void loadListedThing(thingId).then((loaded) => {
@@ -227,6 +235,16 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         ) : (
           <div className="sl-photo ls-photo">
             {thing.photos[photo] && <img src={thing.photos[photo]} alt="" />}
+            {thing.photos.length === 0 && still && <img className="ls-still" src={still} alt="" />}
+            {thing.photos.length === 0 && thing.spots.length === 1 && (
+              // Место у вещи одно и занимает её целиком: выбрать - нажать на вещь.
+              <button
+                type="button"
+                className="ls-still-pick"
+                aria-label={thing.spots[0]!.label}
+                onClick={() => setPicked(thing.spots[0]!.code)}
+              />
+            )}
             {thing.spots.map((spot, index) => {
                 // Каждое место - на своём снимке.
                 if (!spot.rect || spot.photo !== photo) return null;
@@ -263,7 +281,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                 type="button"
                 className={look === which ? "look-tab on" : "look-tab"}
                 aria-pressed={look === which}
-                onClick={() => setLook(which)}
+                onClick={() => {
+                  // Своих снимков нет - снимаем модель, пока сцена ещё на экране.
+                  if (which === "shot" && thing.photos.length === 0) {
+                    const azimuth = thing.shape?.spots.find((spot) => spot.code === picked)?.azimuth ?? 0;
+                    setStill(stage.current?.snapshot(Math.round(azimuth / 90) * 90)?.toDataURL("image/png") ?? null);
+                  }
+                  setLook(which);
+                }}
               >
                 {name}
               </button>
@@ -340,7 +365,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           topCents={top?.amount_cents ?? null}
           topBrand={top?.brand ?? ""}
           art={picked ? art[picked] : undefined}
-          onPlaced={refresh}
+          onPlaced={(bid) => {
+            refresh();
+            setShared(bid.cents);
+          }}
         >
           <label className="art-row">
             <input
@@ -383,6 +411,18 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             )
           )}
         </BidForm>
+      )}
+
+      {shared !== null && (
+        <ShareBid
+          thingId={thingId}
+          stage={stage}
+          azimuth={Math.round((thing.shape?.spots.find((spot) => spot.code === picked)?.azimuth ?? 0) / 90) * 90}
+          title={thing.title}
+          spot={thing.spots.length > 1 ? spotLabel : undefined}
+          cents={shared}
+          onClose={() => setShared(null)}
+        />
       )}
 
       {!started && opensAt !== null && (

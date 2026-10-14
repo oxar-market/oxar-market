@@ -31,6 +31,7 @@ import { WornInfo } from "../worn.tsx";
 // надо удалить, - в шапке temp-photo.ts.
 import { TEMP_ANGLES, TEMP_FRONT_QUADS, TEMP_SHOTS } from "./temp-photo.ts";
 import { SPOTS, ThingStage, type Stage, type Views } from "@oxar/stage";
+import { ShareBid } from "./share.tsx";
 import { disablePush, enablePush, pushState, type PushState } from "@/lib/push.ts";
 
 /**
@@ -62,6 +63,10 @@ export function Auction() {
   // Лоты доехали: до этого «торгов нет» - не факт, а ожидание.
   const [loaded, setLoaded] = useState(false);
   const [picked, setPicked] = useState(SPOTS[0].code);
+  // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
+  // Другое место - другая ставка, прежняя карточка уходит.
+  const [shared, setShared] = useState<number | null>(null);
+  useEffect(() => setShared(null), [picked]);
   const [bids, setBids] = useState<Bid[]>([]);
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -613,7 +618,10 @@ export function Auction() {
           topCents={top?.amount_cents ?? null}
           topBrand={top?.brand ?? ""}
           art={art[picked]}
-          onPlaced={refresh}
+          onPlaced={(bid) => {
+            refresh();
+            setShared(bid.cents);
+          }}
         >
       {/* Картинка - первый шаг ставки, а не украшение рядом с ней: без неё
           ставка не уйдёт, печатать было бы нечего. Поэтому она стоит выше
@@ -667,6 +675,17 @@ export function Auction() {
         </BidForm>
       )}
 
+      {shared !== null && thing && (
+        <ShareBid
+          thingId={thing.id}
+          stage={stage}
+          azimuth={Math.round((SPOTS.find((spot) => spot.code === picked)?.azimuth ?? 0) / 90) * 90}
+          title={thing?.title ?? "Local Event Tee"}
+          spot={SPOTS.find((spot) => spot.code === picked)?.label}
+          cents={shared}
+          onClose={() => setShared(null)}
+        />
+      )}
 
       {bids.length > 0 && (
         <div className="lot-bids">
