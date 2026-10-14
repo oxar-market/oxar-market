@@ -10,6 +10,7 @@ import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
 import { ShareBid } from "../auction/share.tsx";
+import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
 import { WornInfo } from "../worn.tsx";
 
 /**
@@ -32,6 +33,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [artError, setArtError] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const stage = useRef<Stage | null>(null);
+  const { wallets } = useConnectedStandardWallets();
   // Снимок модели вместо фото: у нашей вещи без снимков фото-режим
   // показывает её саму, снятую сценой при переключении.
   const [still, setStill] = useState<string | null>(null);
@@ -163,6 +165,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const top = bids[0] ?? null;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents) : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
+  // Мой кошелёк ведёт на этом месте - значит, есть чем поделиться.
+  const leading = Boolean(lot && running && top && wallets[0] && top.bidder_wallet === wallets[0].address);
   const pot = lots.reduce((sum, one) => sum + (tops[one.id]?.amount_cents ?? 0), 0);
   const spotLabel = thing.spots.find((spot) => spot.code === picked)?.label ?? "";
 
@@ -423,6 +427,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           cents={shared}
           onClose={() => setShared(null)}
         />
+      )}
+
+      {/* Лидируешь - можешь поделиться и потом, а не только сразу после
+          ставки: вернулся на страницу, а кнопка на месте. Перебили - пропала. */}
+      {shared === null && leading && top && (
+        <button type="button" className="sl-btn light share-lead" onClick={() => setShared(top.amount_cents)}>
+          Share your lead
+        </button>
       )}
 
       {!started && opensAt !== null && (

@@ -5868,3 +5868,9 @@ a.sl-pill {
   background: none;
   cursor: pointer;
 }
+
+/* «Share your lead» - под формой, во всю её ширину. */
+.share-lead {
+  width: 100%;
+  margin-top: 1rem;
+}
