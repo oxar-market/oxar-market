@@ -112,11 +112,15 @@ export async function loadNextHouse(): Promise<{ title: string; model: string | 
   if (!db) return null;
   const { data } = await db
     .from("things")
-    .select("title, model_url, lots(id)")
+    .select("title, model_url, placed_on, lots(id)")
     .eq("house", true)
     .eq("active", true)
     .order("created_at");
-  const next = (data ?? []).find((one) => ((one.lots as unknown[] | null) ?? []).length === 0);
+  // Следующая - вещь без торгов, но не пилот: у пилота торгов не было, а
+  // место отдали; он прошёл, а не впереди. Иначе Delora стояла «Next thing».
+  const next = (data ?? []).find(
+    (one) => ((one.lots as unknown[] | null) ?? []).length === 0 && !one.placed_on,
+  );
   return next ? { title: next.title, model: (next.model_url as string) || null } : null;
 }
 

@@ -156,6 +156,8 @@ async function loadLive(): Promise<Live | null> {
 /** Последний закрытый торг нашей вещи: что продали, кому и на ком она будет. */
 type Past = {
   title: string;
+  /** Модель вещи: по ней сцена. Футболка - сцена по умолчанию. */
+  model: string | null;
   closedAt: number;
   raisedCents: number;
   logos: { url: string; brand: string }[];
@@ -166,14 +168,14 @@ type Past = {
 
 async function loadPast(): Promise<Past | null> {
   const lots = (await rest(
-    "lots?status=eq.won&rehearsal=eq.false&select=id,closes_at,thing_id,thing_spots:spot_id(code),things:thing_id(title,house,active)&order=closes_at.desc&limit=100",
+    "lots?status=eq.won&rehearsal=eq.false&select=id,closes_at,thing_id,thing_spots:spot_id(code),things:thing_id(title,house,active,model_url)&order=closes_at.desc&limit=100",
   )) as
     | {
         id: string;
         closes_at: string;
         thing_id: string;
         thing_spots: { code: string } | null;
-        things: { title: string; house: boolean; active: boolean } | null;
+        things: { title: string; house: boolean; active: boolean; model_url: string | null } | null;
       }[]
     | null;
   const ours = (lots ?? []).filter((one) => one.things?.house && one.things.active);
@@ -206,6 +208,7 @@ async function loadPast(): Promise<Past | null> {
 
   return {
     title: last.things?.title ?? "",
+    model: last.things?.model_url || null,
     closedAt: Date.parse(last.closes_at),
     raisedCents: [...top.values()].reduce((sum, one) => sum + one.amount_cents, 0),
     logos: [...top.values()].map((one) => ({ url: one.media_url, brand: one.brand })),
@@ -269,6 +272,9 @@ export default function Home() {
   // включив 3D на одном слайде, человек получил бы вторую сцену на соседнем,
   // которую не просил, - а это второй мегабайт и второй холст WebGL.
   const [pastLook, setPastLook] = useState<"photo" | "live">("live");
+  // Наша вещь не футболка: снимка с сеткой у неё нет, только сцена её модели.
+  const pastShape = houseShape(past?.model);
+  const pastLookNow = pastShape ? "live" : pastLook;
   const pastStage = useRef<Stage | null>(null);
 
   // Какой слайд открыт и чем его листают. Полоса прокрутки своя у каждого
@@ -490,10 +496,13 @@ export default function Home() {
             ней, той же карточкой, что живая. */}
         {past && (
           <div className="live-card">
-            <div className={pastLook === "live" ? "live-photo in3d" : "live-photo"}>
-              {pastLook === "live" ? (
+            <div className={pastLookNow === "live" ? "live-photo in3d" : "live-photo"}>
+              {pastLookNow === "live" ? (
                 <div className="live-stage">
                   <ThingStage
+                    // Сцена читает вещь один раз: модель приезжает с данными.
+                    key={past.model ?? "shirt"}
+                    shape={pastShape}
                     picked={null}
                     onPick={() => {}}
                     stage={pastStage}
@@ -527,6 +536,7 @@ export default function Home() {
                 </div>
               )}
               <span className="now-pill done">SOLD</span>
+              {!pastShape && (
               <span className="look-flip">
                 {(["photo", "live"] as const).map((one) => (
                   <button
@@ -539,6 +549,7 @@ export default function Home() {
                   </button>
                 ))}
               </span>
+              )}
             </div>
             <a className="live-info" href={APP_URL}>
               <span className="live-name">{past.title}</span>

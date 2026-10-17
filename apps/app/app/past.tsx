@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { closeDay, formatUsd } from "@oxar/core";
-import { ThingStage, type Stage } from "@oxar/stage";
+import { houseShape, isShirt, ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { loadWinners } from "@/lib/winners";
 import { PhotoView } from "./auction/photo.tsx";
@@ -35,7 +35,10 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
   }, [held]);
 
   // 3D включается рукой: мегабайт модели не грузим раньше, чем попросили.
-  const [look, setLook] = useState<"live" | "photo">("photo");
+  // Кроме нашей вещи не футболки: снимков у неё нет, только её модель.
+  const own = held.house && !isShirt(held.model);
+  const [chosen, setLook] = useState<"live" | "photo">("photo");
+  const look = own ? "live" : chosen;
   const stage = useRef<Stage | null>(null);
   // Сцена и победители приходят в любом порядке, а выключенное 3D сцену
   // разбирает - поэтому одеваем вещь на каждую готовую сцену и на каждый
@@ -57,6 +60,7 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
         {look === "live" ? (
           <div className="hero-stage">
             <ThingStage
+              shape={houseShape(held.model)}
               picked={null}
               onPick={() => {}}
               stage={stage}
@@ -81,7 +85,7 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
             </button>
           )
         )}
-        {held.house && (
+        {held.house && !own && (
           <span className="look-flip">
             {(["live", "photo"] as const).map((view) => (
               <button
