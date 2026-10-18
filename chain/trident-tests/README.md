@@ -1,83 +1,84 @@
-# Фаззинг эскроу на Trident
+# Fuzzing the escrow with Trident
 
-Харнесс для [Trident](https://github.com/Ackee-Blockchain/trident) 0.12: фаззер
-ведётся по жизненному циклу торга и после каждого шага проверяет инварианты,
-которые программа обязана держать при любой последовательности действий.
+A harness for [Trident](https://github.com/Ackee-Blockchain/trident) 0.12. The
+fuzzer is guided through the lifecycle of an auction and, after every step,
+checks invariants the program must hold under any sequence of actions.
 
-## Инварианты
+## Invariants
 
-1. **Хранилище открытого места держит ровно его лучшую ставку.** Ни больше, ни
-   меньше: `vault.amount == lot.top_bid`, а у места без ставок ноль.
-2. **Монета сохраняется.** Сумма по всем известным счетам (участники,
-   продавцы, площадка) плюс все открытые хранилища равна всему, что было
-   намятено. Деньги не появляются и не исчезают ни при одной операции.
-3. **Срок торга только вперёд и не выше потолка.** `closes_at` никогда не
-   уменьшается, никогда не превышает `hard_closes_at`, а комиссия и получатель,
-   скопированные из настроек при открытии, не меняются до конца торга.
-4. **Разбор места сходится до единицы.** Выплата: продавец получил
-   `top_bid − fee`, площадка `fee`. Возврат: последний участник получил ровно
-   `top_bid`, продавцу ничего. Арбитр: три части в сумме равны `top_bid`.
-   Во всех трёх случаях хранилище закрыто.
+1. **An open lot's vault holds exactly the top bid.** `vault.amount == lot.top_bid`,
+   and zero for a lot without bids.
+2. **Tokens are conserved.** The sum over every known token account (bidders,
+   sellers, platform) plus every open vault equals everything that was minted.
+   Nothing appears or disappears in any operation.
+3. **The sale close only moves forward and never past the cap.** `closes_at`
+   never decreases, never exceeds `hard_closes_at`, and the fee and fee
+   recipient copied from the config at open never change for the life of the sale.
+4. **Every settlement path sums to the bid, to the unit.** Payout: the seller
+   receives `top_bid − fee`, the platform `fee`. Refund: the last bidder receives
+   exactly `top_bid`, the seller nothing. Arbiter: the three parts add up to
+   `top_bid`. In all three cases the vault is closed.
 
-Плюс проверки ожидаемых отказов: ставка ниже шага, ставка после закрытия,
-подмена перебитого, закрытие идущего торга чужим, закрытие места с победителем
-до пропуска пруфа, выплата кранком внутри окна спора, выплата оспоренного
-места, спор после окна.
+On top of that, expected rejections are asserted with their specific error
+codes: a bid below the minimum step, a bid after close, a wrong previous bidder,
+a stranger closing a running sale, closing a lot that has a winner before the
+proof deadline has passed, a crank paying out inside the dispute window, paying
+out a disputed lot, and a dispute after the window.
 
-## Потоки
+## Flows
 
-| Поток | Что делает |
+| Flow | What it does |
 |---|---|
-| `open_sale` | Продавец открывает торг: срок от 10 минут до 30 дней (чаще до двух дней), окно продления до часа, срок пруфа после потолка. |
-| `open_lot` | Место на случайном торге со случайным резервом и шагом; на закрытом торге ожидается `LotClosed`. |
-| `place_bid` | Случайный участник ставит на случайное место. 15% ставок нарочно ниже минимума, 15% с подменой перебитого. Проверяется возврат перебитому, продление и его потолок. |
-| `time_passes` | Прыжок вперёд: минуты, часы, дни, иногда больше месяца. |
-| `settle_lot` | Разбор места на закрытом торге: пруф, досрочная выплата победителем, выплата кранком после 72 часов, спор и решение арбитра со случайной долей, возврат без победителя или при пропущенном пруфе. |
-| `dispute_late` | Спор после окна от настоящего победителя: обязан отвергаться. |
+| `open_sale` | The seller opens a sale: duration from 10 minutes to 30 days (mostly under two days), an extension window of up to one hour, a proof deadline after the hard cap. |
+| `open_lot` | A lot on a random sale with a random reserve and minimum step; on a closed sale `LotClosed` is expected. |
+| `place_bid` | A random bidder bids on a random lot. 15% of bids are deliberately below the minimum, 15% pass a wrong previous bidder. Checks the refund to the outbid bidder, the extension and its cap. |
+| `time_passes` | Jumps forward: minutes, hours, days, sometimes more than a month. |
+| `settle_lot` | Settles a lot on a closed sale: proof, early payout by the winner, payout by a crank after 72 hours, dispute and an arbiter decision with a random split, refund when there is no winner or the proof was missed. |
+| `dispute_late` | A dispute after the window from the real winner: must be rejected. |
 
-Площадка настраивается заново в каждой итерации со случайной комиссией от 0 до
-100%, двумя продавцами и четырьмя участниками по миллиону монет.
+Each iteration sets the platform up from scratch with a random fee from 0 to
+100%, two sellers and four bidders holding a million tokens each.
 
-## Запуск
+## Running
 
 ```bash
-# один раз: cargo install trident-cli --version 0.12.0 --locked
+# once: cargo install trident-cli --version 0.12.0 --locked
 cd chain
 cargo-build-sbf --manifest-path programs/oxar-escrow/Cargo.toml --tools-version v1.52 --sbf-out-dir target/deploy
 cd trident-tests
-trident fuzz run escrow            # случайный seed
-trident fuzz run escrow <SEED>     # воспроизвести прогон
+trident fuzz run escrow            # random seed
+trident fuzz run escrow <SEED>     # reproduce a run
 ```
 
-Число итераций и шагов задаётся в `main()` файла `escrow/test_fuzz.rs`.
+The number of iterations and steps is set in `main()` of `escrow/test_fuzz.rs`.
 
-## Результаты
+## Results
 
-Прогон 18 октября 2026, 10 000 итераций по 150 шагов (1,5 млн шагов),
+Run on 18 October 2026, 10,000 iterations × 150 steps (1.5 million steps),
 master seed `8b1075e1403ee97b3f5838ede817efaaf6199a64461c3c49c1effcf2ffa6f11b`.
-Нарушений инвариантов: 0. Паник: 0.
+Invariant violations: 0. Panics: 0.
 
-| Инструкция | Вызовов | Успех | Отказ (ожидаемый) |
+| Instruction | Invoked | Succeeded | Rejected (expected) |
 |---|---|---|---|
-| bidder_places_bid | 129 010 | 66 787 | 62 223 |
-| seller_closes_lot | 115 517 | 62 501 | 53 016 |
-| seller_opens_lot | 240 264 | 76 734 | 163 530 |
-| seller_opens_sale | 249 866 | 249 866 | 0 |
-| lot_pays_seller | 5 457 | 3 650 | 1 807 |
-| seller_submits_proof | 4 829 | 4 829 | 0 |
-| winner_disputes | 1 604 | 1 604 | 0 |
-| winner_disputes (после окна) | 1 605 | 0 | 1 605 |
-| arbiter_decides | 1 514 | 1 514 | 0 |
+| bidder_places_bid | 129,010 | 66,787 | 62,223 |
+| seller_closes_lot | 115,517 | 62,501 | 53,016 |
+| seller_opens_lot | 240,264 | 76,734 | 163,530 |
+| seller_opens_sale | 249,866 | 249,866 | 0 |
+| lot_pays_seller | 5,457 | 3,650 | 1,807 |
+| seller_submits_proof | 4,829 | 4,829 | 0 |
+| winner_disputes | 1,604 | 1,604 | 0 |
+| winner_disputes (after the window) | 1,605 | 0 | 1,605 |
+| arbiter_decides | 1,514 | 1,514 | 0 |
 
-Каждый отказ сверен с ожидаемым кодом ошибки; «неожиданных» отказов и
-«неожиданных» успехов не было.
+Every rejection was matched against the error code it was expected to fail
+with; there were no unexpected rejections and no unexpected successes.
 
-## Чего харнесс не покрывает
+## Not covered
 
-- `admin_sets_terms` после первой настройки и передачу админства.
-- `arbiter_moves_proof` (перенос срока пруфа).
-- Торги старого формата с `proof_deadline == 0`.
-- Монету, присланную в хранилище мимо торга (это покрыто интеграционным
-  тестом в `tests/oxar-auction.ts`).
-- Проверку владельца программы при первой настройке: в TridentSVM нет данных
-  программы, и проверка пропускается так же, как в деплой-скрипте.
+- `admin_sets_terms` after the initial setup, and admin handover.
+- `arbiter_moves_proof` (moving the proof deadline).
+- Legacy sales with `proof_deadline == 0`.
+- Tokens sent to a vault outside the auction (covered by the integration test
+  in `tests/oxar-auction.ts`).
+- The program-owner check on first setup: TridentSVM has no program data
+  account, so the check is skipped, the same as in the deploy script.
