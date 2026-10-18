@@ -1,0 +1,8 @@
+[fuzz.metrics]
+enabled = true
+
+
+[[fuzz.programs]]
+address = "4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe"
+program = "../target/deploy/oxar_escrow.so"
+ 
