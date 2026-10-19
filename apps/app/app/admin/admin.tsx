@@ -134,9 +134,26 @@ export function Admin() {
           }}
         />
       ) : (
-        <button type="button" className="sl-btn light" onClick={() => setPreparing(true)}>
-          Prepare an auction for a seller
-        </button>
+        <>
+          <button type="button" className="sl-btn light" onClick={() => setPreparing(true)}>
+            Prepare an auction for a seller
+          </button>
+          {/* Вещи с готовым набором мест и цен: их не заводят заново, а
+              передают продавцу карточкой на странице вещи. */}
+          {(things ?? []).some(giveable) && (
+            <p className="muted ad-sets">
+              Or give a prepared thing with its price set:{" "}
+              {(things ?? []).filter(giveable).map((one, at) => (
+                <span key={one.id}>
+                  {at > 0 && " · "}
+                  <button type="button" className="link" onClick={() => setOpen(one.id)}>
+                    {one.title}
+                  </button>
+                </span>
+              ))}
+            </p>
+          )}
+        </>
       )}
       {things?.length === 0 && <p className="muted">Nothing sent yet.</p>}
       {things && things.length > 0 && (
@@ -161,6 +178,11 @@ export function Admin() {
       )}
     </>
   );
+}
+
+/** Подготовленная вещь с местами, ещё не переданная продавцу. */
+function giveable(thing: AdminThing): boolean {
+  return thing.prepared && !thing.published && thing.drafts.length === 0 && thing.spots.length > 0;
 }
 
 const STATE_LABEL = {
@@ -559,7 +581,7 @@ function AdminThingView({
       )}
 
       {/* Подготовленная вещь без черновиков - её ещё не передали продавцу. */}
-      {thing.prepared && !thing.published && thing.drafts.length === 0 && thing.spots.length > 0 && (
+      {giveable(thing) && (
         <GiveToSeller thing={thing} onDone={onChanged} />
       )}
 
