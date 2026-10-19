@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useConnectedStandardWallets, useStandardSignTransaction } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
-import { APPEAL_SECONDS, ARBITER_SECONDS, formatUsd, settledOutcome, spotName, spotStage } from "@oxar/core";
+import { APPEAL_SECONDS, ARBITER_SECONDS, formatUsd, hasBuyerProtection, settledOutcome, spotName, spotStage } from "@oxar/core";
 import { WALLET_CHAIN } from "@/lib/chain";
 import { NoEmailHint } from "./notify.tsx";
 import { Gallery } from "./gallery.tsx";
@@ -78,7 +78,13 @@ function WinCard({
   // Аккаунт места закрыт - деньги ушли: продавцу или назад победителю.
   if (!win.lot || !win.sale) {
     const share = win.dispute?.sellerBps ?? null;
-    const outcome = settledOutcome({ sellerBps: share, proved: win.proof !== null, refunded: win.refunded });
+    const outcome = settledOutcome({
+      // Торг не прочитался - считаем защищённым: так было до торгов без пруфа.
+      protection: win.sale ? hasBuyerProtection(win.sale) : true,
+      sellerBps: share,
+      proved: win.proof !== null,
+      refunded: win.refunded,
+    });
     const text =
       share === null
         ? outcome === "paid"
@@ -132,7 +138,13 @@ function WinCard({
         </>
       )}
       {stage === "dispute_lapsed" && <p className="muted">No decision in 30 days. Your bid is on its way back.</p>}
-      {stage === "payable" && <p className="muted">The check window is over. Your bid goes to the seller.</p>}
+      {stage === "payable" && (
+        <p className="muted">
+          {hasBuyerProtection(win.sale)
+            ? "The check window is over. Your bid goes to the seller."
+            : "The auction closed. Your bid goes to the seller."}
+        </p>
+      )}
       {stage === "appeal" && (
         <>
           <p className="muted">

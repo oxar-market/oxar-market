@@ -7,6 +7,7 @@ import {
   awaitsReview,
   reviewThing,
   loadAdminThings,
+  saleModeOk,
   saveSpotGeo,
   updateThing,
   uploadModel,
@@ -156,6 +157,9 @@ const STATE_CLASS = {
 
 /** Размер места на модели по умолчанию - в единицах сцены, вещь в ней ~0.62. */
 const SIZE = 0.1;
+
+const LOCKUP_MISMATCH =
+  "Its auction on chain pays at close without proof, but this thing is not marked No money lockup. Do not approve it.";
 
 function AdminThingView({
   thing,
@@ -529,6 +533,29 @@ function AdminThingView({
         </div>
       )}
 
+      {/* Режим выплаты пишется в цепочку при открытии торга: после
+          публикации флаг уже ничего не меняет, и снять его нельзя. */}
+      {(!thing.published || thing.noLockup) && (
+        <div className="sl-card ad-card">
+          <h3>Payout</h3>
+          {thing.published ? (
+            <p className="muted">No money lockup: the seller is paid at close, without proof.</p>
+          ) : (
+            <label className="ad-lockup">
+              <input
+                type="checkbox"
+                checked={thing.noLockup}
+                disabled={busy}
+                onChange={(event) =>
+                  run(() => updateThing(thing.id, { no_lockup: event.target.checked }), "Could not save it.")
+                }
+              />
+              No money lockup: the seller is paid at close, without proof
+            </label>
+          )}
+        </div>
+      )}
+
       {!thing.house && (
       <div className="sl-card ad-card">
         <h3>Review</h3>
@@ -552,7 +579,10 @@ function AdminThingView({
             type="button"
             className="sl-btn dark"
             disabled={busy}
-            onClick={() => decide(() => reviewThing(thing.id, true), "Could not approve it.")}
+            onClick={async () => {
+              if (!(await saleModeOk(thing))) return setError(LOCKUP_MISMATCH);
+              void decide(() => reviewThing(thing.id, true), "Could not approve it.");
+            }}
           >
             Approve
           </button>
@@ -600,9 +630,10 @@ function AdminThingView({
             type="button"
             className="sl-btn dark"
             disabled={busy}
-            onClick={() =>
-              run(() => updateThing(thing.id, { active: true, hidden: false }), "Could not show it.")
-            }
+            onClick={async () => {
+              if (!(await saleModeOk(thing))) return setError(LOCKUP_MISMATCH);
+              void run(() => updateThing(thing.id, { active: true, hidden: false }), "Could not show it.");
+            }}
           >
             Show on Market
           </button>

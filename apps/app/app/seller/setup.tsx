@@ -89,7 +89,8 @@ export function SetUpSpots({
   // календаре, и в торге. Ставший слишком ранним (закрытие или «когда»
   // сдвинули) - причина словами, а не другой день.
   const proofBy = proofDay || (suggested > proofMin ? suggested : proofMin);
-  const proofOk = proofBy >= proofMin;
+  // Торг без пруфа (решает админ): срока нет вовсе, деньги - по закрытию.
+  const proofOk = thing.noLockup || proofBy >= proofMin;
   const proofProblem = proofOk
     ? null
     : lastWorn && proofBy < lastWorn
@@ -99,7 +100,10 @@ export function SetUpSpots({
     const plan = toPlan(one);
     return {
       spotId: thing.spots[index]!.id,
-      plan: plan && plan.kind === "auction" ? { ...plan, proofBy: new Date(`${proofBy}T${PROOF_DAY_END}`).toISOString() } : plan,
+      plan:
+        plan && plan.kind === "auction" && !thing.noLockup
+          ? { ...plan, proofBy: new Date(`${proofBy}T${PROOF_DAY_END}`).toISOString() }
+          : plan,
     };
   });
   const valid = plans.every((one) => one.plan !== null);
@@ -227,6 +231,14 @@ export function SetUpSpots({
 
       {/* Деньги победителей уходят продавцу только после пруфа - и этот срок
           видят покупатели до ставки. */}
+      {thing.noLockup ? (
+        <div className="sl-card sl-plan">
+          <div className="sl-plan-head">
+            <h3>Payout</h3>
+          </div>
+          <p className="sl-plan-note">The winning bids are paid to your wallet as soon as the auction closes.</p>
+        </div>
+      ) : (
       <div className="sl-card sl-plan">
         <div className="sl-plan-head">
           <h3>Proof</h3>
@@ -238,6 +250,7 @@ export function SetUpSpots({
           check it, then you are paid. No proof by this day, and the bids go back to the winners.
         </p>
       </div>
+      )}
 
       {failed && <p className="bad">Could not save the prices. Try again.</p>}
       {problem && <p className="bad">{problem}</p>}

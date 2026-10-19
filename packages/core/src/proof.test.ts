@@ -132,16 +132,21 @@ test("арбитр двигает срок пруфа только позже и
 });
 
 test("чем кончилось место: решение арбитра важнее отметки расчёта", () => {
-  assert.equal(settledOutcome({ sellerBps: null, proved: true, refunded: false }), "paid");
-  assert.equal(settledOutcome({ sellerBps: null, proved: true, refunded: true }), "refunded", "арбитр молчал");
+  const guarded = { protection: true };
+  assert.equal(settledOutcome({ ...guarded, sellerBps: null, proved: true, refunded: false }), "paid");
+  assert.equal(settledOutcome({ ...guarded, sellerBps: null, proved: true, refunded: true }), "refunded", "арбитр молчал");
   assert.equal(
-    settledOutcome({ sellerBps: null, proved: false, refunded: false }),
+    settledOutcome({ ...guarded, sellerBps: null, proved: false, refunded: false }),
     "refunded",
     "без пруфа - только назад, даже если расчёт ещё не отметил",
   );
-  assert.equal(settledOutcome({ sellerBps: 10_000, proved: true, refunded: false }), "paid");
-  assert.equal(settledOutcome({ sellerBps: 0, proved: true, refunded: false }), "refunded");
-  assert.equal(settledOutcome({ sellerBps: 5_000, proved: true, refunded: false }), "split");
+  assert.equal(settledOutcome({ ...guarded, sellerBps: 10_000, proved: true, refunded: false }), "paid");
+  assert.equal(settledOutcome({ ...guarded, sellerBps: 0, proved: true, refunded: false }), "refunded");
+  assert.equal(settledOutcome({ ...guarded, sellerBps: 5_000, proved: true, refunded: false }), "split");
+});
+
+test("торг без пруфа: закрытое место выплачено продавцу, а не вернулось", () => {
+  assert.equal(settledOutcome({ protection: false, sellerBps: null, proved: false, refunded: false }), "paid");
 });
 
 test("день пруфа - не раньше, чем примет программа: закрытие плюс час", () => {

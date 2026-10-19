@@ -288,6 +288,8 @@ export type PricingThing = {
   cover: string | null;
   /** Все снимки вещи: на экране цен места видны каждое на своём. */
   photos: string[];
+  /** Админ отметил торг без пруфа: деньги продавцу сразу по закрытию. */
+  noLockup: boolean;
   spots: {
     id: string;
     label: string;
@@ -325,7 +327,7 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
   if (!db) return null;
   const { data } = await db
     .from("things")
-    .select("id, title, photos, worn_by, worn_where, worn_when, worn_about, thing_spots(id, label, sort, photo, outline, x, y, w, h)")
+    .select("id, title, photos, no_lockup, worn_by, worn_where, worn_when, worn_about, thing_spots(id, label, sort, photo, outline, x, y, w, h)")
     .eq("id", thingId)
     .maybeSingle();
   if (!data) return null;
@@ -351,6 +353,7 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
     title: data.title,
     cover: photos[0] ? photoUrl(photos[0]) : null,
     photos: photos.map(photoUrl),
+    noLockup: data.no_lockup === true,
     spots,
     worn: {
       by: data.worn_by ?? "",

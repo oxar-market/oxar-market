@@ -113,6 +113,11 @@ export async function publishAuctions(
     .eq("thing_id", thingId)
     .eq("status", "draft");
   if (!drafts || drafts.length === 0) return 0;
+  // Торг без пруфа открываем только у вещи, которую так отметил админ: флаг
+  // продавцу не записать, а в цепочку режим уходит навсегда.
+  const { data: thing } = await db.from("things").select("no_lockup").eq("id", thingId).maybeSingle();
+  if (!thing) return null;
+  const noLockup = thing.no_lockup === true;
 
   const coin = await platformMint();
   if (!coin || coin.decimals < 2) return null;
@@ -137,8 +142,11 @@ export async function publishAuctions(
     // Срок пруфа - один на торг: самый поздний из его мест. Программа не
     // примет срок раньше жёсткого конца торга (закрытие плюс час продления),
     // и экран цен раньше его не даёт; без срока торг не открываем вовсе.
-    const proofBy = Math.max(...lots.map((lot) => (lot.proof_by ? Date.parse(lot.proof_by as string) : 0)));
-    if (proofBy / 1000 < minProofDeadline(Date.parse(closesAt) / 1000)) return null;
+    // Ноль - торг без пруфа: выплата по закрытию.
+    const proofBy = noLockup
+      ? 0
+      : Math.max(...lots.map((lot) => (lot.proof_by ? Date.parse(lot.proof_by as string) : 0)));
+    if (!noLockup && proofBy / 1000 < minProofDeadline(Date.parse(closesAt) / 1000)) return null;
     // Торг открывается первой транзакцией вместе с первыми местами.
     batches[0]!.unshift(openSale(seller, saleId, Date.parse(closesAt), proofBy));
 
