@@ -97,7 +97,7 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
           <option value="">{sellers === null ? "Loading…" : sellers.length === 0 ? "No approved sellers" : "Pick one"}</option>
           {(sellers ?? []).map((one) => (
             <option key={one.userId} value={one.userId}>
-              {one.contact} · {one.wallet ? shortWallet(one.wallet) : "no wallet"}
+              {one.handle ? `@${one.handle} (${one.contact})` : one.contact} · {one.wallet ? shortWallet(one.wallet) : "no wallet"}
             </option>
           ))}
         </select>
