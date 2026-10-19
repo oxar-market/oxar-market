@@ -155,6 +155,9 @@ export function ThingStage({
         const { DecalGeometry } = await import(
           "three/examples/jsm/geometries/DecalGeometry.js"
         );
+        const { mergeGeometries } = await import(
+          "three/examples/jsm/utils/BufferGeometryUtils.js"
+        );
         if (stop) return;
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -486,6 +489,9 @@ export function ThingStage({
           const hit = raycaster.intersectObjects(meshes, true)[0];
           if (!hit || !hit.normal) continue;
           const surface = hit.object as InstanceType<typeof THREE.Mesh>;
+          // Место может лечь на несколько деталей: у вана корма - две
+          // створки. Детали собираем по центру и углам места.
+          const under = new Set([surface]);
 
           anchor.position.copy(hit.point);
           // Верх логотипа: у мест сверху - от зрителя на азимуте 0, иначе
@@ -527,6 +533,7 @@ export function ThingStage({
                 facing.clone().negate(),
               );
               const landed = probe.intersectObjects(meshes, true)[0];
+              if (landed) under.add(landed.object as InstanceType<typeof THREE.Mesh>);
               return landed ? landed.point : flat;
             }),
             normal: facing,
@@ -535,19 +542,24 @@ export function ThingStage({
           // Штампуем по куску вокруг места, а не по всей вещи. Запас в
           // полтора радиуса - чтобы в шар наверняка попали все грани, углы
           // которых коробка задевает.
-          const patch =
-            around(
-              surface,
+          const stamps = [...under].map((part) => {
+            const patch =
+              around(
+                part,
+                hit.point,
+                Math.max(spot.size[0], spot.size[1], thingShape.current.depth) * 1.5,
+              ) ?? part;
+            const stamp = new DecalGeometry(
+              patch,
               hit.point,
-              Math.max(spot.size[0], spot.size[1], thingShape.current.depth) * 1.5,
-            ) ?? surface;
-          const geometry = new DecalGeometry(
-            patch,
-            hit.point,
-            anchor.rotation,
-            new THREE.Vector3(spot.size[0], spot.size[1], thingShape.current.depth),
-          );
-          if (patch !== surface) patch.geometry.dispose();
+              anchor.rotation,
+              new THREE.Vector3(spot.size[0], spot.size[1], thingShape.current.depth),
+            );
+            if (patch !== part) patch.geometry.dispose();
+            return stamp;
+          });
+          const geometry = stamps.length === 1 ? stamps[0] : mergeGeometries(stamps)!;
+          if (stamps.length > 1) for (const stamp of stamps) stamp.dispose();
           // Узор ложится на длинную наклонную поверхность, и коробка нужна
           // глубокая - а глубокая цепляет изнанку. Её грани смотрят от
           // зрителя: их выбрасываем, иначе узор вышел бы и на обороте.
