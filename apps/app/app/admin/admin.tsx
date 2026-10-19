@@ -614,7 +614,7 @@ function AdminThingView({
       {/* Режим выплаты пишется в цепочку при открытии торга: после
           публикации разрешение уже ничего не меняет. Выдаёт и отзывает его
           админ своей подписью в Phantom. */}
-      {(!thing.published || thing.noLockup) && (
+      {(!thing.published || thing.noLockup) && !giveable(thing) && (
         <div className="sl-card ad-card">
           <h3>Payout</h3>
           {thing.published ? (
@@ -646,7 +646,7 @@ function AdminThingView({
 
       {/* Стикеры - не торг: цена одна, лимит и деление денег держит лист в
           цепочке. Заводит его админ своей подписью в Phantom. */}
-      {(thing.stickerSheet || thing.sellerWallet) && (
+      {(thing.stickerSheet || thing.sellerWallet) && !giveable(thing) && (
         <div className="sl-card ad-card">
           <h3>Stickers</h3>
           {thing.stickerSheet ? (
@@ -702,7 +702,7 @@ function AdminThingView({
         </div>
       )}
 
-      {!thing.house && (
+      {!thing.house && !giveable(thing) && (
       <div className="sl-card ad-card">
         <h3>Review</h3>
         {state === "approved" ? (
