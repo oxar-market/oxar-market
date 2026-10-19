@@ -246,11 +246,13 @@ export async function loadSpotPlans(spotIds: string[]): Promise<Record<string, {
 /**
  * Передать подготовленную вещь продавцу: его кошелёк - на вещь, цены - в
  * черновики лотов. Дальше как у подготовленной формой: продавец входит,
- * проверяет и публикует. Открытие черновики берут с вещи.
+ * проверяет и публикует. Открытие - одно на вещь и её черновики.
  */
 export async function giveToSeller(input: {
   thing: AdminThing;
   seller: Application;
+  /** Когда открываются ставки; null - сразу после публикации. */
+  opensAt: string | null;
   closesAt: string;
   proofBy: string;
   prices: { spotId: string; reserveCents: number; stepCents: number }[];
@@ -258,7 +260,7 @@ export async function giveToSeller(input: {
   if (!db || input.prices.length === 0) return false;
   const { error } = await db
     .from("things")
-    .update({ seller: input.seller.userId, seller_wallet: input.seller.wallet })
+    .update({ seller: input.seller.userId, seller_wallet: input.seller.wallet, opens_at: input.opensAt })
     .eq("id", input.thing.id);
   if (error) return false;
   const { error: lotError } = await db.from("lots").insert(
@@ -269,7 +271,7 @@ export async function giveToSeller(input: {
       status: "draft",
       reserve_cents: price.reserveCents,
       min_step_cents: price.stepCents,
-      opens_at: input.thing.opensAt,
+      opens_at: input.opensAt,
       closes_at: input.closesAt,
       proof_by: input.proofBy,
     })),

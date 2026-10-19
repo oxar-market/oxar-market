@@ -7,14 +7,22 @@ import { loadSellers, type Application } from "@/lib/applications";
 
 /**
  * Передать подготовленную вещь продавцу. Места и плановые цены у вещи уже
- * есть - выбрать продавца и время закрытия, цены поправить, если надо.
+ * есть: карточка подставляет их и дату открытия вещи, всё можно поправить.
  */
+
+/** Время для поля datetime-local - в местном часовом поясе, как его и вводят. */
+function localInput(iso: string | null): string {
+  if (!iso) return "";
+  const at = new Date(iso);
+  return new Date(at.getTime() - at.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
 
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () => void }) {
   const [sellers, setSellers] = useState<Application[] | null>(null);
   const [seller, setSeller] = useState("");
+  const [opens, setOpens] = useState(() => localInput(thing.opensAt));
   const [closes, setCloses] = useState("");
   const [proofDay, setProofDay] = useState("");
   const [prices, setPrices] = useState<Record<string, { reserve: string; step: string }>>({});
@@ -37,7 +45,7 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
 
   const chosen = sellers?.find((one) => one.userId === seller) ?? null;
   const closesMs = Date.parse(closes);
-  const opensMs = thing.opensAt ? Date.parse(thing.opensAt) : Date.now();
+  const opensMs = opens ? Date.parse(opens) : Date.now();
   const proofMin = Number.isFinite(closesMs) ? earliestProofDay(closes, "") : "";
   const rows = thing.spots.map((spot) => ({
     spot,
@@ -63,6 +71,7 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
     const done = await giveToSeller({
       thing,
       seller: chosen,
+      opensAt: opens ? new Date(opensMs).toISOString() : null,
       closesAt: new Date(closesMs).toISOString(),
       proofBy: new Date(`${proofDay}T${PROOF_DAY_END}`).toISOString(),
       prices: rows.map((row) => ({ spotId: row.spot.id, reserveCents: row.reserveCents!, stepCents: row.stepCents! })),
@@ -79,8 +88,7 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
       <h3>Give to a seller</h3>
       <p className="muted">
         The seller signs in with their wallet, checks the prices and publishes. Their wallet opens the auction and gets
-        the payout.
-        {thing.opensAt && ` Bidding opens ${new Date(thing.opensAt).toLocaleString()}.`}
+        the payout. Prices and dates come from the thing&apos;s plan - change any of them.
       </p>
 
       <label className="sl-field">
@@ -123,6 +131,10 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
         <p className="muted">Starting prices add up to {formatUsd(total)}.</p>
       </div>
 
+      <label className="sl-field">
+        Opens (your local time, empty - right after the seller publishes)
+        <input type="datetime-local" value={opens} onChange={(event) => setOpens(event.target.value)} />
+      </label>
       <label className="sl-field">
         Closes (your local time)
         <input type="datetime-local" value={closes} onChange={(event) => setCloses(event.target.value)} />
