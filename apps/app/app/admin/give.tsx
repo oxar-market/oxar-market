@@ -99,7 +99,7 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
   const total = rows.reduce((sum, row) => sum + (row.reserveCents ?? 0), 0);
 
   return (
-    <div className="sl-card ad-card ad-prepare">
+    <div className="sl-card ad-card ad-prepare ad-give">
       <h3>Give to a seller</h3>
       <p className="muted">
         The seller signs in with their wallet, checks the prices and publishes. Their wallet opens the auction and gets
@@ -120,14 +120,13 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
       </label>
 
       <div className="ad-rows">
-        <div className="ad-row ad-row-head" aria-hidden="true">
+        <div className="ad-row priced ad-row-head" aria-hidden="true">
           <span>Spot</span>
           <span>Start, $</span>
           <span>Step, $</span>
-          <span />
         </div>
         {thing.spots.map((spot) => (
-          <div className="ad-row" key={spot.id}>
+          <div className="ad-row priced" key={spot.id}>
             <span className="ad-row-name">{spot.label}</span>
             <input
               value={prices[spot.id]?.reserve ?? ""}
@@ -141,7 +140,6 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
               aria-label={`${spot.label}: bid step, $`}
               onChange={(event) => setPrices({ ...prices, [spot.id]: { ...prices[spot.id]!, step: event.target.value } })}
             />
-            <span />
           </div>
         ))}
         <p className="muted">Starting prices add up to {formatUsd(total)}.</p>
@@ -155,9 +153,12 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
         Closes (your local time)
         <input type="datetime-local" value={closes} onChange={(event) => setCloses(event.target.value)} />
       </label>
-      <label className="ad-lockup">
+      <label className="ad-check">
         <input type="checkbox" checked={noLockup} onChange={(event) => setNoLockup(event.target.checked)} />
-        No money lockup: the seller is paid at close, without proof.
+        <span>
+          <b>No money lockup</b>
+          <span className="muted">The seller is paid at close, without proof.</span>
+        </span>
       </label>
       {!noLockup && (
         <label className="sl-field">
@@ -166,36 +167,30 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
         </label>
       )}
 
-      <div className="ad-row ad-row-head" aria-hidden="true">
-        <span>Stickers</span>
-        <span>Price, $</span>
-        <span>How many</span>
-        <span />
-      </div>
-      <div className="ad-row">
-        <span className="ad-row-name">Fixed price, 0 - none</span>
-        <input
-          value={stickers.price}
-          inputMode="decimal"
-          aria-label="Sticker price, $"
-          onChange={(event) => setStickers({ ...stickers, price: event.target.value })}
-        />
-        <input
-          value={stickers.count}
-          inputMode="numeric"
-          aria-label="How many stickers"
-          onChange={(event) => setStickers({ ...stickers, count: event.target.value })}
-        />
-        <span />
+      <div className="ad-pair">
+        <label className="sl-field">
+          Sticker price, $
+          <input
+            value={stickers.price}
+            inputMode="decimal"
+            onChange={(event) => setStickers({ ...stickers, price: event.target.value })}
+          />
+        </label>
+        <label className="sl-field">
+          Stickers, 0 = none
+          <input
+            value={stickers.count}
+            inputMode="numeric"
+            onChange={(event) => setStickers({ ...stickers, count: event.target.value })}
+          />
+        </label>
       </div>
 
       {problem && <p className="muted">{problem}</p>}
       {error && <p className="bad">{error}</p>}
-      <div className="ad-decide">
-        <button type="button" className="sl-btn dark" disabled={busy || problem !== null} onClick={() => void submit()}>
-          {busy ? "Signing…" : "Give to the seller and sign"}
-        </button>
-      </div>
+      <button type="button" className="sl-btn dark ad-go" disabled={busy || problem !== null} onClick={() => void submit()}>
+        {busy ? "Signing…" : "Give and sign in Phantom"}
+      </button>
     </div>
   );
 }
