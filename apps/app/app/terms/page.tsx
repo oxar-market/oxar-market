@@ -100,6 +100,17 @@ export default function Terms() {
           </li>
         </ul>
 
+        <h2>Credits</h2>
+        <p>
+          The 3D model of the van is{" "}
+          <a href="https://sketchfab.com/3d-models/mercedes-benz-sprinter-2006-f69de1315bb049c8946d57f6006acd73">
+            Mercedes Benz Sprinter 2006
+          </a>{" "}
+          by <a href="https://sketchfab.com/Max-7215">Max</a>, licensed under{" "}
+          <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. We turned it, closed the doors and
+          made it lighter for the web.
+        </p>
+
         <p className="muted">
           Step by step: <a href="/how">how it works</a>. Questions: <a href="mailto:support@oxar.app">support@oxar.app</a>
         </p>
