@@ -289,6 +289,8 @@ export type PreparedSpot = { label: string; reserveCents: number; stepCents: num
 export async function prepareThing(input: {
   seller: Application;
   title: string;
+  /** Когда открываются ставки; null - сразу после публикации. */
+  opensAt: string | null;
   closesAt: string;
   proofBy: string;
   spots: PreparedSpot[];
@@ -306,6 +308,7 @@ export async function prepareThing(input: {
     stage: "ready",
     active: false,
     prepared: true,
+    opens_at: input.opensAt,
     worn_by: input.worn.by || null,
     worn_where: input.worn.where || null,
     worn_when: input.worn.when || null,
@@ -329,6 +332,7 @@ export async function prepareThing(input: {
       status: "draft",
       reserve_cents: spot.reserveCents,
       min_step_cents: spot.stepCents,
+      opens_at: input.opensAt,
       closes_at: input.closesAt,
       proof_by: input.proofBy,
     })),

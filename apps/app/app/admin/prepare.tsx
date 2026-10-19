@@ -20,6 +20,7 @@ export function PrepareThing({ onCancel, onPrepared }: { onCancel: () => void; o
   const [sellers, setSellers] = useState<Application[] | null>(null);
   const [seller, setSeller] = useState("");
   const [title, setTitle] = useState("");
+  const [opens, setOpens] = useState("");
   const [closes, setCloses] = useState("");
   const [proofDay, setProofDay] = useState("");
   const [rows, setRows] = useState<Row[]>([{ label: "", reserve: "", step: "5" }]);
@@ -31,6 +32,7 @@ export function PrepareThing({ onCancel, onPrepared }: { onCancel: () => void; o
 
   const chosen = sellers?.find((one) => one.userId === seller) ?? null;
   const closesMs = Date.parse(closes);
+  const opensMs = opens ? Date.parse(opens) : Date.now();
   const proofMin = Number.isFinite(closesMs) ? earliestProofDay(closes, "") : "";
   const spots = rows.map((row) => ({
     label: row.label.trim(),
@@ -42,8 +44,8 @@ export function PrepareThing({ onCancel, onPrepared }: { onCancel: () => void; o
     ? "Pick the seller."
     : !title.trim()
       ? "Name the thing."
-      : !Number.isFinite(closesMs) || closesMs <= Date.now()
-        ? "The close has to be in the future."
+      : !Number.isFinite(closesMs) || closesMs <= Math.max(Date.now(), opensMs)
+        ? "The close has to be after now and after the opening."
         : closesMs > Date.now() + MONTH_MS
           ? "An auction cannot run longer than a month."
           : spots.some((spot) => !spot.label || !spot.reserveCents || !spot.stepCents)
@@ -61,6 +63,7 @@ export function PrepareThing({ onCancel, onPrepared }: { onCancel: () => void; o
     const id = await prepareThing({
       seller: chosen,
       title: title.trim(),
+      opensAt: opens ? new Date(opensMs).toISOString() : null,
       closesAt: new Date(closesMs).toISOString(),
       proofBy: new Date(`${proofDay}T${PROOF_DAY_END}`).toISOString(),
       spots: spots.map((spot) => ({
@@ -152,6 +155,10 @@ export function PrepareThing({ onCancel, onPrepared }: { onCancel: () => void; o
         </button>
       </div>
 
+      <label className="sl-field">
+        Opens (your local time, empty - right after the seller publishes)
+        <input type="datetime-local" value={opens} onChange={(event) => setOpens(event.target.value)} />
+      </label>
       <label className="sl-field">
         Closes (your local time)
         <input type="datetime-local" value={closes} onChange={(event) => setCloses(event.target.value)} />
