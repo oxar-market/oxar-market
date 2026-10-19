@@ -153,6 +153,36 @@ async function loadLive(): Promise<Live | null> {
   };
 }
 
+/** Анонс: вещь, подготовленная нами под торг с объявленной датой. */
+type Next = {
+  id: string;
+  title: string;
+  model: string | null;
+  opensAt: number;
+  worn: { by: string | null; where: string | null; when: string | null };
+};
+
+/**
+ * Ближайший анонс. Места подготовленной вещи до публикации - черновики,
+ * публике их не видно, поэтому дата открытия берётся с самой вещи.
+ */
+async function loadNext(): Promise<Next | null> {
+  const rows = (await rest(
+    `things?prepared=eq.true&active=eq.true&opens_at=gt.${new Date().toISOString()}&select=id,title,model_url,opens_at,worn_by,worn_where,worn_when&order=opens_at.asc&limit=1`,
+  )) as
+    | { id: string; title: string; model_url: string | null; opens_at: string; worn_by: string | null; worn_where: string | null; worn_when: string | null }[]
+    | null;
+  const one = rows?.[0];
+  if (!one) return null;
+  return {
+    id: one.id,
+    title: one.title,
+    model: one.model_url || null,
+    opensAt: Date.parse(one.opens_at),
+    worn: { by: one.worn_by, where: one.worn_where, when: one.worn_when },
+  };
+}
+
 /** Последний закрытый торг нашей вещи: что продали, кому и на ком она будет. */
 type Past = {
   title: string;
@@ -221,6 +251,7 @@ type Theme = "light" | "dark";
 
 export default function Home() {
   const [live, setLive] = useState<Live | null>(null);
+  const [next, setNext] = useState<Next | null>(null);
   // Торги доехали: до этого «торга нет» - не факт, а ожидание.
   const [loaded, setLoaded] = useState(false);
   const [past, setPast] = useState<Past | null>(null);
@@ -247,6 +278,7 @@ export default function Home() {
       setLoaded(true);
     });
     void loadPast().then(setPast);
+    void loadNext().then(setNext);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, []);
@@ -363,7 +395,36 @@ export default function Home() {
         {/* Ключи разные: обе карточки стоят в одной позиции дерева, и без
             ключа React оставлял сцену от первой, с футболкой, а знак вопроса
             так и не появлялся - сцена не меняет модель на лету. */}
-        {between ? (
+        {between && next ? (
+          // Между торгами, но следующий уже объявлен: голограмма его модели
+          // и отсчёт до открытия.
+          <div className="live-card" key={`next-${next.id}`}>
+            <div className="live-photo in3d">
+              <div className="live-stage">
+                <ThingStage
+                  shape={next.model ? { ...SOON, model: next.model, noun: "thing" } : SOON}
+                  picked={null}
+                  onPick={() => {}}
+                  stage={stage}
+                  onReady={() => stage.current?.look("ghost")}
+                />
+              </div>
+              <span className="now-pill">
+                <span className="dot" />
+                NEXT UP
+              </span>
+            </div>
+            <a className="live-info" href={`${APP_URL}/?thing=${next.id}`}>
+              <span className="live-name">{next.title}</span>
+              <span className="live-cd" suppressHydrationWarning>
+                {countdown(Math.max(0, next.opensAt - now))}
+              </span>
+              <span className="live-sub">Bidding opens</span>
+              <span className="live-sub" />
+              <WornRows worn={next.worn} />
+            </a>
+          </div>
+        ) : between ? (
           <div className="live-card" key="soon">
             <div className="live-photo in3d">
               <div className="live-stage">

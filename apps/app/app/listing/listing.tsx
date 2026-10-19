@@ -37,6 +37,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const stage = useRef<Stage | null>(null);
   const { wallets } = useConnectedStandardWallets();
   const admin = useAdmin();
+  // Админ до открытия смотрит вещь как есть: голограмма - для всех остальных.
+  const [peek, setPeek] = useState(false);
   // Снимок модели вместо фото: у нашей вещи без снимков фото-режим
   // показывает её саму, снятую сценой при переключении.
   const [still, setStill] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     void loadListedThing(thingId).then((loaded) => {
       setThing(loaded);
       if (!loaded) return;
-      if (loaded.shape) setLook("live");
+      if (loaded.shape || loaded.model) setLook("live");
       // С «Raise your bid» торг открывается сразу на том месте.
       // Снимаем метку, только если место наше: на вкладке Auction рядом
       // грузится торг футболки, и метка могла прийти к нему.
@@ -156,15 +158,22 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   }
 
   const closesAt = lots.length ? Math.min(...lots.map((one) => Date.parse(one.closes_at))) : null;
+  // Пока места подготовленной вещи - черновики, публике их не видно, и дата
+  // открытия берётся с самой вещи.
   const opensAt = lots.length && lots.every((one) => one.opens_at)
     ? Math.min(...lots.map((one) => Date.parse(one.opens_at as string)))
-    : null;
+    : lots.length === 0 && thing.opensAt
+      ? Date.parse(thing.opensAt)
+      : null;
   const started = hasOpened(opensAt, now);
-  const soon = lots.length > 0 && !started;
-  // Наша вещь: до открытия - голограмма её модели, а не знак вопроса, и
-  // площадка не «новый продавец». Признак - флаг house из базы, его ставим
-  // только мы; по адресу модели судить нельзя - его можно подделать.
-  const ours = thing.house;
+  const soon = (lots.length > 0 || thing.prepared) && !started;
+  // Наша или подготовленная нами вещь: до открытия - голограмма её модели, а
+  // не знак вопроса. Признаки - флаги из базы, их ставим только мы; по адресу
+  // модели судить нельзя - его можно подделать.
+  const ours = thing.house || thing.prepared;
+  // Сцена и без разметки мест: модель видна, выбирать на ней пока нечего.
+  const scene = thing.shape ?? (thing.model ? { model: thing.model, spots: [], depth: 0.05, cloth: false, noun: "thing" } : null);
+  const ghost = soon && !(admin && peek);
   const top = bids[0] ?? null;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents) : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
@@ -226,14 +235,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             модель, у вещи продавца знак вопроса. Подложка светлая, как на
             экране между торгами: тёмный прямоугольник на светлой странице
             читался дырой. */}
-        {soon ? (
+        {ghost ? (
           <div className="look between-scene">
-            <SoonHologram model={ours ? thing.shape?.model : null} />
+            <SoonHologram model={ours ? scene?.model : null} />
           </div>
-        ) : look === "live" && thing.shape ? (
+        ) : look === "live" && scene ? (
           <div className="look">
             <ThingStage
-              shape={thing.shape}
+              shape={scene}
               picked={picked}
               onPick={(code) => setPicked(code)}
               stage={stage}
@@ -278,8 +287,19 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         )}
 
-        {thing.shape && !soon && (
+        {scene && (!soon || admin) && (
           <div className="looks over-scene" role="group" aria-label="How to view">
+            {/* До открытия админ переключает голограмму и вещь как есть. */}
+            {soon && (
+              <button
+                type="button"
+                className={ghost ? "look-tab on" : "look-tab"}
+                aria-pressed={ghost}
+                onClick={() => setPeek(false)}
+              >
+                Hologram
+              </button>
+            )}
             {([
               ["live", "3D"],
               ["shot", "Photo"],
@@ -287,9 +307,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               <button
                 key={which}
                 type="button"
-                className={look === which ? "look-tab on" : "look-tab"}
-                aria-pressed={look === which}
+                className={!ghost && look === which ? "look-tab on" : "look-tab"}
+                aria-pressed={!ghost && look === which}
                 onClick={() => {
+                  setPeek(true);
                   // Своих снимков нет - снимаем модель, пока сцена ещё на экране.
                   if (which === "shot" && thing.photos.length === 0) {
                     const azimuth = thing.shape?.spots.find((spot) => spot.code === picked)?.azimuth ?? 0;
@@ -305,7 +326,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         )}
       </div>
 
-      {look === "shot" && !soon && thing.photos.length > 1 && (
+      {look === "shot" && !ghost && thing.photos.length > 1 && (
         <div className="angles">
           {thing.photos.map((url, index) => (
             <button

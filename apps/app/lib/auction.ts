@@ -106,10 +106,21 @@ export async function loadThing(): Promise<{
 
 /**
  * Следующая наша вещь - та, у которой ещё не было ни одного торга. Её имя
- * экран торга показывает в паузе между аукционами.
+ * экран торга показывает в паузе между аукционами. Первой идёт вещь,
+ * подготовленная нами под торг с объявленной датой: у неё есть отсчёт.
  */
-export async function loadNextHouse(): Promise<{ title: string; model: string | null } | null> {
+export async function loadNextHouse(): Promise<{ title: string; tagline: string | null; model: string | null; opensAt: string | null } | null> {
   if (!db) return null;
+  const { data: dated } = await db
+    .from("things")
+    .select("title, tagline, model_url, opens_at")
+    .eq("prepared", true)
+    .eq("active", true)
+    .gt("opens_at", new Date().toISOString())
+    .order("opens_at")
+    .limit(1);
+  const soon = dated?.[0];
+  if (soon) return { title: soon.title, tagline: soon.tagline, model: (soon.model_url as string) || null, opensAt: soon.opens_at as string };
   const { data } = await db
     .from("things")
     .select("title, model_url, placed_on, lots(id)")
@@ -121,7 +132,7 @@ export async function loadNextHouse(): Promise<{ title: string; model: string | 
   const next = (data ?? []).find(
     (one) => ((one.lots as unknown[] | null) ?? []).length === 0 && !one.placed_on,
   );
-  return next ? { title: next.title, model: (next.model_url as string) || null } : null;
+  return next ? { title: next.title, tagline: null, model: (next.model_url as string) || null, opensAt: null } : null;
 }
 
 /** Торг на вкладке Auction и чья вещь: наша идёт своим экраном. */
@@ -341,6 +352,10 @@ export type UpcomingThing = {
   house: boolean;
   /** Модель нашей вещи: анонс показывает её голограммой. */
   model: string | null;
+  /** Вещь подготовил админ за продавца: анонс - голограммой, с датой открытия. */
+  prepared: boolean;
+  /** Когда откроется торг. Пусто - дата ещё не объявлена. */
+  opensAt: string | null;
 };
 
 /** Строка «Held earlier»: чем кончился прошедший торг. */
@@ -378,11 +393,11 @@ export async function loadMarket(): Promise<{
   // он открыл торг и админ её одобрил; до торга анонсом она не идёт.
   const { data: raw } = await db
     .from("things")
-    .select("id, title, tagline, seller, house, photos, model_url, placed_on, partner, partner_url, lots(id)")
+    .select("id, title, tagline, seller, house, prepared, opens_at, photos, model_url, placed_on, partner, partner_url, lots(id, status)")
     .eq("active", true)
     .order("created_at");
-  const catalog = (raw ?? []).filter((one) => one.house);
-  const shots = db.storage.from("things");
+  // И вещи, подготовленные нами за продавца: их анонсируем как свои.
+  const catalog = (raw ?? []).filter((one) => one.house || one.prepared);
   // Пилот - вещь без лотов, но с датой размещения: это прошедшее, не анонс.
   const pilots: HeldRow[] = catalog
     .filter((one) => one.placed_on)
@@ -396,23 +411,29 @@ export async function loadMarket(): Promise<{
       model: (one.model_url as string) || null,
       pilot: { partner: (one.partner as string | null) ?? "", partnerUrl: (one.partner_url as string | null) ?? null },
     }));
+  // Черновики считаем за отсутствие торга: админ их видит, публика - нет,
+  // и анонс у обоих должен быть одинаковым.
   const upcoming: UpcomingThing[] = catalog
-    .filter((one) => (one.lots as unknown[]).length === 0 && !one.placed_on)
+    .filter((one) => !(one.lots as { status: string }[]).some((lot) => lot.status !== "draft") && !one.placed_on)
     .map((one) => ({
       id: one.id,
       title: one.title,
       tagline: one.tagline,
-      seller: one.house ? null : one.seller,
+      seller: one.house || one.prepared ? null : one.seller,
       owner: one.seller,
       house: one.house,
-      photo: one.photos?.[0] ? shots.getPublicUrl(one.photos[0]).data.publicUrl : null,
-      model: one.house ? (one.model_url as string) || null : null,
-    }));
+      photo: one.photos?.[0] ? photoUrl(one.photos[0]) : null,
+      model: one.house || one.prepared ? (one.model_url as string) || null : null,
+      prepared: one.prepared === true,
+      opensAt: (one.opens_at as string | null) ?? null,
+    }))
+    // Анонс с датой - впереди, ближайший первым: у него уже есть отсчёт.
+    .sort((a, b) => (a.opensAt === null ? Infinity : Date.parse(a.opensAt)) - (b.opensAt === null ? Infinity : Date.parse(b.opensAt)));
 
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, photos, model_url)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, model_url)",
     )
     .in("status", ["open", "won", "unsold", "refunded"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -431,6 +452,7 @@ export async function loadMarket(): Promise<{
       active?: boolean;
       seller?: string | null;
       house?: boolean;
+      prepared?: boolean;
       photos?: string[] | null;
       model_url?: string | null;
     } | null;
@@ -457,10 +479,9 @@ export async function loadMarket(): Promise<{
           seller: info.house ? null : (info.seller ?? null),
           owner: info.seller ?? null,
           house: info.house ?? false,
-          photo: info.photos?.[0]
-            ? db.storage.from("things").getPublicUrl(info.photos[0]).data.publicUrl
-            : null,
-          model: info.house ? info.model_url || null : null,
+          photo: info.photos?.[0] ? photoUrl(info.photos[0]) : null,
+          // Подготовленная нами вещь до открытия - голограммой своей модели.
+          model: info.house || info.prepared ? info.model_url || null : null,
         });
       known.spots += 1;
       if (top) {

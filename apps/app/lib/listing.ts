@@ -41,6 +41,12 @@ export type ListedThing = {
   seller: string | null;
   /** Наша вещь. Флаг ставим только мы, поэтому на нём - сигналы доверия. */
   house: boolean;
+  /** Вещь подготовил админ: до открытия - голограмма её модели. */
+  prepared: boolean;
+  /** Модель вещи: голограмма и вид для админа, даже пока мест на ней нет. */
+  model: string | null;
+  /** Дата открытия на вещи: пока места - черновики, по лотам её не узнать. */
+  opensAt: string | null;
 };
 
 type SpotRow = {
@@ -110,7 +116,7 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
   if (!db) return null;
   const { data: thing } = await db
     .from("things")
-    .select(`id, title, tagline, seller, house, photos, model_url, thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, seller, house, prepared, opens_at, photos, model_url, thing_spots(${SPOT_COLUMNS})`)
     .eq("id", thingId)
     .maybeSingle();
   if (!thing) return null;
@@ -137,5 +143,8 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
     }),
     seller: thing.seller,
     house: thing.house === true,
+    prepared: thing.prepared === true,
+    model: (thing.model_url as string) || null,
+    opensAt: (thing.opens_at as string | null) ?? null,
   };
 }
