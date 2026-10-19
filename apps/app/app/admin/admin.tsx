@@ -182,7 +182,14 @@ export function Admin() {
 
 /** Подготовленная вещь с местами, ещё не переданная продавцу. */
 function giveable(thing: AdminThing): boolean {
-  return thing.prepared && !thing.published && thing.drafts.length === 0 && thing.spots.length > 0;
+  return (
+    thing.prepared &&
+    !thing.published &&
+    !thing.declinedReason &&
+    !thing.hidden &&
+    thing.drafts.length === 0 &&
+    thing.spots.length > 0
+  );
 }
 
 const STATE_LABEL = {

@@ -244,9 +244,16 @@ export async function loadSpotPlans(spotIds: string[]): Promise<Record<string, {
 }
 
 /**
- * Передать подготовленную вещь продавцу: его кошелёк - на вещь, цены - в
- * черновики лотов. Дальше как у подготовленной формой: продавец входит,
- * проверяет и публикует. Открытие - одно на вещь и её черновики.
+ * Передать подготовленную вещь продавцу - одним действием и одной подписью.
+ *
+ * В Phantom уходит одна транзакция: разрешение на торг без пруфа и лист
+ * стикеров, что из них нужно. Потом в базу: продавец, даты, черновики цен, и
+ * вещь сразу на маркете - её готовили мы, отдельное одобрение тут лишнее. До
+ * публикации она стоит анонсом, после - торгом.
+ *
+ * Подпись раньше записи: не подписал - ничего не изменилось. Подписал, а
+ * запись не прошла - повтор подпишет новые разрешение и лист, прежние
+ * останутся неиспользованными, деньгам это не грозит.
  */
 export async function giveToSeller(input: {
   thing: AdminThing;
@@ -256,13 +263,39 @@ export async function giveToSeller(input: {
   closesAt: string;
   proofBy: string;
   prices: { spotId: string; reserveCents: number; stepCents: number }[];
-}): Promise<boolean> {
-  if (!db || input.prices.length === 0) return false;
+  /** Платить продавцу при закрытии, без пруфа. */
+  noLockup: boolean;
+  /** Лист стикеров; null - стикеров нет. */
+  stickers: { priceCents: number; cap: number } | null;
+}): Promise<{ ok: true } | { ok: false; why: string }> {
+  if (!db || input.prices.length === 0) return { ok: false, why: "Nothing to give." };
+  if (!input.seller.wallet) return { ok: false, why: "The seller has no wallet." };
+  const seller = new PublicKey(input.seller.wallet);
+  const saleId = input.noLockup ? crypto.randomUUID() : null;
+  const sheetId = input.stickers ? crypto.randomUUID() : null;
+  if (saleId || sheetId) {
+    const sent = await signInPhantom((admin) => [
+      ...(saleId ? [permitInstruction(admin, saleId, seller)] : []),
+      ...(sheetId && input.stickers
+        ? [openStickersInstruction(admin, sheetId, seller, input.stickers.priceCents, input.stickers.cap)]
+        : []),
+    ]);
+    if (!sent.ok) return sent;
+  }
+  const failed = { ok: false as const, why: "Signed on chain, but the thing did not save. Try again." };
   const { error } = await db
     .from("things")
-    .update({ seller: input.seller.userId, seller_wallet: input.seller.wallet, opens_at: input.opensAt })
+    .update({
+      seller: input.seller.userId,
+      seller_wallet: input.seller.wallet,
+      opens_at: input.opensAt,
+      permit_sale: saleId,
+      sticker_sheet: sheetId,
+      active: true,
+      hidden: false,
+    })
     .eq("id", input.thing.id);
-  if (error) return false;
+  if (error) return failed;
   const { error: lotError } = await db.from("lots").insert(
     input.prices.map((price) => ({
       thing_id: input.thing.id,
@@ -276,7 +309,7 @@ export async function giveToSeller(input: {
       proof_by: input.proofBy,
     })),
   );
-  return !lotError;
+  return lotError ? failed : { ok: true };
 }
 
 export type PreparedSpot = { label: string; reserveCents: number; stepCents: number };
