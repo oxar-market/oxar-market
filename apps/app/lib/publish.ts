@@ -49,11 +49,11 @@ function u64(value: bigint): Uint8Array {
 }
 
 /**
- * `permitted` - торг без пруфа по разрешению админа: срок пруфа ноль, и
- * последним аккаунтом идёт разрешение. Без него на том месте адрес самой
- * программы - так Anchor читает «необязательного аккаунта нет».
+ * Последним аккаунтом - разрешение админа по адресу из id торга. Передаётся
+ * всегда, даже если его нет: программа по нему не даёт занять чужой
+ * разрешённый id, а торг без пруфа (срок ноль) без него не откроет.
  */
-function openSale(seller: PublicKey, saleId: string, closesAt: number, proofBy: number, permitted: boolean): TransactionInstruction {
+function openSale(seller: PublicKey, saleId: string, closesAt: number, proofBy: number): TransactionInstruction {
   const [config] = PublicKey.findProgramAddressSync([Buffer.from("config")], PROGRAM_ID);
   return new TransactionInstruction({
     programId: PROGRAM_ID,
@@ -63,7 +63,7 @@ function openSale(seller: PublicKey, saleId: string, closesAt: number, proofBy: 
       { pubkey: saleAddress(saleId), isSigner: false, isWritable: true },
       { pubkey: config, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-      { pubkey: permitted ? permitAddress(saleId) : PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: permitAddress(saleId), isSigner: false, isWritable: false },
     ],
   });
 }
@@ -157,7 +157,7 @@ export async function publishAuctions(
       : Math.max(...lots.map((lot) => (lot.proof_by ? Date.parse(lot.proof_by as string) : 0)));
     if (!permitSale && proofBy / 1000 < minProofDeadline(Date.parse(closesAt) / 1000)) return null;
     // Торг открывается первой транзакцией вместе с первыми местами.
-    batches[0]!.unshift(openSale(seller, saleId, Date.parse(closesAt), proofBy, permitSale !== null));
+    batches[0]!.unshift(openSale(seller, saleId, Date.parse(closesAt), proofBy));
 
     for (const [index, instructions] of batches.entries()) {
       const { blockhash } = await connection.getLatestBlockhash();

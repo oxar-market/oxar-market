@@ -138,12 +138,11 @@ async function main() {
       new anchor.BN(EXTEND_SECONDS),
       new anchor.BN(Math.floor(proofBy.getTime() / 1000)),
     )
-    // Торг с пруфом: разрешения не нужно. Без явного null клиент сам вывел бы
-    // адрес разрешения из id торга, а его нет - и открытие упало бы.
-    .accountsPartial({
+    // Адрес разрешения клиент выводит из id торга сам: торгу с пруфом оно
+    // не нужно, но программа проверяет, не занят ли этот id чужим.
+    .accounts({
       seller: seller.publicKey,
       systemProgram: SystemProgram.programId,
-      permit: null,
     })
     .rpc();
 

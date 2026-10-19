@@ -45,14 +45,14 @@ pub struct SellerOpensSale<'info> {
 
     pub system_program: Program<'info, System>,
 
-    /// Разрешение админа на торг без пруфа. Нужно только ему; адрес выводится
-    /// из id этого торга, так что чужое разрешение сюда не подставить. Стоит
-    /// последним: торги с пруфом открываются и без него.
-    #[account(
-        seeds = [b"permit", sale_id.as_ref()],
-        bump = permit.bump,
-    )]
-    pub permit: Option<Account<'info, SalePermit>>,
+    /// Разрешение админа на этот торг - по адресу из его id, так что чужое
+    /// сюда не подставить. Передаётся всегда, даже когда его нет: id
+    /// разрешённого торга виден в цепочке, и без этой проверки любой занял бы
+    /// его своим торгом раньше продавца.
+    /// CHECK: адрес задают сиды; данные читаются, только если разрешение есть
+    /// и принадлежит программе.
+    #[account(seeds = [b"permit", sale_id.as_ref()], bump)]
+    pub permit: UncheckedAccount<'info>,
 }
 
 pub fn open_sale(
@@ -89,9 +89,21 @@ pub fn open_sale(
     // открывается только по разрешению админа, выданному этому продавцу на
     // этот торг. Режим пишется здесь и после открытия не меняется.
     let hard_closes_at = closes_at.saturating_add(TOTAL_EXTEND_SECONDS);
+    let permit = &ctx.accounts.permit;
+    let permitted = if permit.owner == ctx.program_id && !permit.data_is_empty() {
+        let data = permit.try_borrow_data()?;
+        // Дискриминатор проверяется здесь: чужой тип аккаунта не прочитается.
+        Some(SalePermit::try_deserialize(&mut &data[..])?.seller)
+    } else {
+        None
+    };
+    // id, на который выдано разрешение, открывает только его продавец - в
+    // любом режиме.
+    if let Some(allowed) = permitted {
+        require_keys_eq!(allowed, ctx.accounts.seller.key(), EscrowError::SaleIdReserved);
+    }
     if proof_deadline == 0 {
-        let permit = ctx.accounts.permit.as_ref().ok_or(EscrowError::NoPermit)?;
-        require_keys_eq!(permit.seller, ctx.accounts.seller.key(), EscrowError::NoPermit);
+        require!(permitted.is_some(), EscrowError::NoPermit);
     } else {
         require!(proof_deadline > hard_closes_at, EscrowError::ProofBeforeClose);
     }

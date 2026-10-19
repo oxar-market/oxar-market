@@ -99,11 +99,15 @@ describe("oxar-escrow: торг", () => {
       .rpc();
   }
 
-  /** Открыть торг тем, кто подписал, с разрешением или без. */
-  async function openWith(saleId: number[], closesAt: number, proofDeadline: number, permit: PublicKey | null, who = seller) {
+  /**
+   * Открыть торг тем, кто подписал. Аккаунт разрешения передаётся всегда - по
+   * адресу из id торга; `permit` - подставить чужой адрес, проверить, что
+   * программа его не примет.
+   */
+  async function openWith(saleId: number[], closesAt: number, proofDeadline: number, permit?: PublicKey, who = seller) {
     await program.methods
       .sellerOpensSale(saleId, new anchor.BN(closesAt), new anchor.BN(1), new anchor.BN(proofDeadline))
-      .accountsPartial({ seller: who.publicKey, sale: salePda(saleId), permit })
+      .accountsPartial({ seller: who.publicKey, sale: salePda(saleId), permit: permit ?? permitPda(saleId) })
       .signers([who])
       .rpc();
   }
@@ -154,11 +158,7 @@ describe("oxar-escrow: торг", () => {
         new anchor.BN(extendSeconds),
         new anchor.BN(proofAfterSeconds === null ? 0 : closesAt + proofAfterSeconds),
       )
-      .accountsPartial({
-        seller: seller.publicKey,
-        sale,
-        permit: proofAfterSeconds === null ? permitPda(saleId) : null,
-      })
+      .accountsPartial({ seller: seller.publicKey, sale, permit: permitPda(saleId) })
       .signers([seller])
       .rpc();
 
@@ -451,7 +451,7 @@ describe("oxar-escrow: торг", () => {
           new anchor.BN(1),
           new anchor.BN((await now()) + month + 4_200),
         )
-        .accountsPartial({ seller: seller.publicKey, permit: null })
+        .accounts({ seller: seller.publicKey })
         .signers([seller])
         .rpc();
       assert.fail("торг на годы вперёд открылся");
@@ -467,7 +467,7 @@ describe("oxar-escrow: торг", () => {
         new anchor.BN(1),
         new anchor.BN((await now()) + month + 4_200),
       )
-      .accountsPartial({ seller: seller.publicKey, permit: null })
+      .accounts({ seller: seller.publicKey })
       .signers([seller])
       .rpc();
   });
@@ -904,12 +904,12 @@ describe("oxar-escrow: торг", () => {
     const closesAt = (await now()) + 60;
     const saleId = auctionId();
 
-    await fails(openWith(saleId, closesAt, 0, null), "NoPermit", "открыли торг без пруфа без разрешения");
+    await fails(openWith(saleId, closesAt, 0), "NoPermit", "открыли торг без пруфа без разрешения");
     await fails(grant(saleId, seller.publicKey, bob), "NotTheAdmin", "разрешение выдал не админ");
 
     // Разрешение другому продавцу не годится этому.
     await grant(saleId, bob.publicKey);
-    await fails(openWith(saleId, closesAt, 0, permitPda(saleId)), "NoPermit", "открыл не тот продавец");
+    await fails(openWith(saleId, closesAt, 0), "SaleIdReserved", "открыл не тот продавец");
 
     // Разрешение на другой торг не годится этому: адрес выводится из id торга.
     const other = auctionId();
@@ -917,11 +917,11 @@ describe("oxar-escrow: торг", () => {
     await fails(openWith(saleId, closesAt, 0, permitPda(other)), "ConstraintSeeds", "чужое разрешение подошло");
 
     // Своё разрешение на свой торг - открывается, и срок пруфа в нём ноль.
-    await openWith(other, closesAt, 0, permitPda(other));
+    await openWith(other, closesAt, 0);
     assert.equal((await program.account.sale.fetch(salePda(other))).proofDeadline.toNumber(), 0);
 
     // Второй раз тот же торг не открыть: адрес торга занят.
-    await fails(openWith(other, closesAt, 0, permitPda(other)), "already in use", "торг открыли дважды");
+    await fails(openWith(other, closesAt, 0), "already in use", "торг открыли дважды");
   });
 
   it("разрешение отзывает только админ, и отозванное не открывает торг", async () => {
@@ -936,20 +936,32 @@ describe("oxar-escrow: торг", () => {
     assert.isNull(await connection.getAccountInfo(permitPda(saleId)), "разрешение не закрылось");
     assert.isAbove(await connection.getBalance(me.publicKey), before - 10_000, "аренда не вернулась админу");
 
-    await fails(openWith(saleId, closesAt, 0, permitPda(saleId)), "AccountNotInitialized", "открыли по отозванному");
-    await fails(openWith(saleId, closesAt, 0, null), "NoPermit", "открыли без разрешения");
+    await fails(openWith(saleId, closesAt, 0), "NoPermit", "открыли по отозванному");
   });
 
   it("торг с пруфом разрешения не требует, а разрешение не делает его торгом без пруфа", async () => {
     const closesAt = (await now()) + 60;
     const saleId = auctionId();
     await grant(saleId, seller.publicKey);
-    await openWith(saleId, closesAt, closesAt + 4_200, permitPda(saleId));
+    await openWith(saleId, closesAt, closesAt + 4_200);
     assert.equal(
       (await program.account.sale.fetch(salePda(saleId))).proofDeadline.toNumber(),
       closesAt + 4_200,
       "разрешение сменило режим торга",
     );
+  });
+
+  it("id торга с разрешением не занять чужим торгом: открыть его может только тот, кому разрешено", async () => {
+    // id разрешённого торга виден в цепочке. Займи его кто-то обычным торгом
+    // раньше продавца - тот бы уже не открыл свой: адрес торга занят.
+    const closesAt = (await now()) + 60;
+    const saleId = auctionId();
+    await grant(saleId, seller.publicKey);
+
+    await fails(openWith(saleId, closesAt, closesAt + 4_200, undefined, bob), "SaleIdReserved", "чужой занял id торга с пруфом");
+    await fails(openWith(saleId, closesAt, 0, undefined, bob), "SaleIdReserved", "чужой занял id торга без пруфа");
+    await openWith(saleId, closesAt, 0);
+    assert.equal((await program.account.sale.fetch(salePda(saleId))).seller.toBase58(), seller.publicKey.toBase58());
   });
 
   it("торг без пруфа платит по закрытию кому угодно, а пруфа и спора у него нет", async () => {

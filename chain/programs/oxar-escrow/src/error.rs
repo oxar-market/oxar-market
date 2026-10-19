@@ -76,4 +76,7 @@ pub enum EscrowError {
 
     #[msg("A sale that pays at close needs the platform's permit for this seller")]
     NoPermit,
+
+    #[msg("This sale id is reserved by the platform for another seller")]
+    SaleIdReserved,
 }
