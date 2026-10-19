@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { PROOF_DAY_END, earliestProofDay, formatUsd, parseUsd, shortWallet } from "@oxar/core";
 import { giveToSeller, loadSpotPlans, type AdminThing } from "@/lib/admin";
 import { loadSellers, type Application } from "@/lib/applications";
+import { STICKER_CAP, STICKER_PRICE_CENTS } from "@/lib/stickers";
 
 /**
  * Передать подготовленную вещь продавцу. Места и плановые цены у вещи уже
  * есть: карточка подставляет их и дату открытия вещи, всё можно поправить.
+ * Всё, что подписывает админ, - одной подписью в конце.
  */
 
 /** Время для поля datetime-local - в местном часовом поясе, как его и вводят. */
@@ -25,6 +27,8 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
   const [opens, setOpens] = useState(() => localInput(thing.opensAt));
   const [closes, setCloses] = useState("");
   const [proofDay, setProofDay] = useState("");
+  const [noLockup, setNoLockup] = useState(true);
+  const [stickers, setStickers] = useState({ price: String(STICKER_PRICE_CENTS / 100), count: String(STICKER_CAP) });
   const [prices, setPrices] = useState<Record<string, { reserve: string; step: string }>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -52,6 +56,8 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
     reserveCents: parseUsd(prices[spot.id]?.reserve ?? ""),
     stepCents: parseUsd(prices[spot.id]?.step ?? ""),
   }));
+  const stickerPrice = parseUsd(stickers.price);
+  const stickerCount = stickers.count.trim() === "" ? 0 : Number(stickers.count);
   const problem = !chosen
     ? "Pick the seller."
     : !Number.isFinite(closesMs) || closesMs <= Math.max(Date.now(), opensMs)
@@ -60,25 +66,34 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
         ? "An auction cannot run longer than a month."
         : rows.some((row) => !row.reserveCents || !row.stepCents)
           ? "Every spot needs a starting price and a step."
-          : !proofDay || proofDay < proofMin
-            ? `Pick a proof day on ${proofMin || "the close day"} or later. With No money lockup it is not used.`
-            : null;
+          : !Number.isInteger(stickerCount) || stickerCount < 0 || stickerCount > 1000 || (stickerCount > 0 && !stickerPrice)
+            ? "Stickers need a whole number from 0 to 1000 and a price."
+            : !noLockup && (!proofDay || proofDay < proofMin)
+              ? `Pick a proof day on ${proofMin || "the close day"} or later.`
+              : null;
 
   async function submit() {
     if (problem || !chosen) return;
     setBusy(true);
     setError("");
+    // Без пруфа срок пруфа не нужен, но в черновиках он обязателен для торга
+    // с пруфом - ставим любой после закрытия, публикация его сотрёт.
+    const proofBy = noLockup
+      ? new Date(closesMs + 14 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date(`${proofDay}T${PROOF_DAY_END}`).toISOString();
     const done = await giveToSeller({
       thing,
       seller: chosen,
       opensAt: opens ? new Date(opensMs).toISOString() : null,
       closesAt: new Date(closesMs).toISOString(),
-      proofBy: new Date(`${proofDay}T${PROOF_DAY_END}`).toISOString(),
+      proofBy,
       prices: rows.map((row) => ({ spotId: row.spot.id, reserveCents: row.reserveCents!, stepCents: row.stepCents! })),
+      noLockup,
+      stickers: stickerCount > 0 ? { priceCents: stickerPrice!, cap: stickerCount } : null,
     });
     setBusy(false);
-    if (done) onDone();
-    else setError("Could not give it to the seller. Nothing was published - try again.");
+    if (done.ok) onDone();
+    else setError(done.why);
   }
 
   const total = rows.reduce((sum, row) => sum + (row.reserveCents ?? 0), 0);
@@ -88,7 +103,8 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
       <h3>Give to a seller</h3>
       <p className="muted">
         The seller signs in with their wallet, checks the prices and publishes. Their wallet opens the auction and gets
-        the payout. Prices and dates come from the thing&apos;s plan - change any of them.
+        the payout. Prices and dates come from the thing&apos;s plan - change any of them. One signature in Phantom at
+        the end; the thing then shows on the Market by itself.
       </p>
 
       <label className="sl-field">
@@ -139,16 +155,45 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
         Closes (your local time)
         <input type="datetime-local" value={closes} onChange={(event) => setCloses(event.target.value)} />
       </label>
-      <label className="sl-field">
-        Proof by (not used with No money lockup, pick any day)
-        <input type="date" value={proofDay} min={proofMin} onChange={(event) => setProofDay(event.target.value)} />
+      <label className="ad-lockup">
+        <input type="checkbox" checked={noLockup} onChange={(event) => setNoLockup(event.target.checked)} />
+        No money lockup: the seller is paid at close, without proof.
       </label>
+      {!noLockup && (
+        <label className="sl-field">
+          Proof by
+          <input type="date" value={proofDay} min={proofMin} onChange={(event) => setProofDay(event.target.value)} />
+        </label>
+      )}
+
+      <div className="ad-row ad-row-head" aria-hidden="true">
+        <span>Stickers</span>
+        <span>Price, $</span>
+        <span>How many</span>
+        <span />
+      </div>
+      <div className="ad-row">
+        <span className="ad-row-name">Fixed price, 0 - none</span>
+        <input
+          value={stickers.price}
+          inputMode="decimal"
+          aria-label="Sticker price, $"
+          onChange={(event) => setStickers({ ...stickers, price: event.target.value })}
+        />
+        <input
+          value={stickers.count}
+          inputMode="numeric"
+          aria-label="How many stickers"
+          onChange={(event) => setStickers({ ...stickers, count: event.target.value })}
+        />
+        <span />
+      </div>
 
       {problem && <p className="muted">{problem}</p>}
       {error && <p className="bad">{error}</p>}
       <div className="ad-decide">
         <button type="button" className="sl-btn dark" disabled={busy || problem !== null} onClick={() => void submit()}>
-          {busy ? "Giving…" : "Give to the seller"}
+          {busy ? "Signing…" : "Give to the seller and sign"}
         </button>
       </div>
     </div>

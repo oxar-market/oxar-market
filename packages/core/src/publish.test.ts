@@ -31,8 +31,9 @@ test("три места с одним сроком - один торг и одн
   assert.equal(three.keptLamports, one.keptLamports);
 });
 
-test("больше трёх мест в торге - ещё транзакция, торг один", () => {
-  assert.equal(publishCost([4], RATE).keptLamports, publishCost([1], RATE).keptLamports + 5000);
+test("больше шести мест в торге - ещё транзакция, торг один", () => {
+  assert.equal(publishCost([6], RATE).keptLamports, publishCost([1], RATE).keptLamports);
+  assert.equal(publishCost([7], RATE).keptLamports, publishCost([1], RATE).keptLamports + 5000);
 });
 
 test("разные сроки закрытия - отдельные торги, за каждый свой аккаунт", () => {
@@ -41,7 +42,7 @@ test("разные сроки закрытия - отдельные торги, 
 
 test("служебные байты аккаунта и мест на транзакцию - те, что в расчёте выше", () => {
   assert.equal(ACCOUNT_OVERHEAD, 128);
-  assert.equal(LOTS_PER_TX, 3);
+  assert.equal(LOTS_PER_TX, 6);
 });
 
 test("места делятся на торги по сроку закрытия", () => {
