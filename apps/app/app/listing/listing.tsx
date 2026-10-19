@@ -252,8 +252,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         ) : (
           // Снимки без разметки мест - целиком, без кадра 4:5: обрезать их
-          // незачем, места на них не стоят.
-          <div className={thing.photos.length > 0 && !thing.spots.some((spot) => spot.rect) ? "sl-photo ls-photo loose" : "sl-photo ls-photo"}>
+          // незачем, места на них не стоят. Снимок сцены - тоже: места на нём
+          // уже нарисованы самой моделью.
+          <div className={!thing.spots.some((spot) => spot.rect) ? "sl-photo ls-photo loose" : "sl-photo ls-photo"}>
             {thing.photos[photo] && <img src={thing.photos[photo]} alt="" />}
             {thing.photos.length === 0 && still && <img className="ls-still" src={still} alt="" />}
             {thing.photos.length === 0 && thing.spots.length === 1 && (
@@ -317,7 +318,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   // Своих снимков нет - снимаем модель, пока сцена ещё на экране.
                   if (which === "shot" && thing.photos.length === 0) {
                     const azimuth = thing.shape?.spots.find((spot) => spot.code === picked)?.azimuth ?? 0;
-                    setStill(stage.current?.snapshot(Math.round(azimuth / 90) * 90)?.toDataURL("image/png") ?? null);
+                    const shot = stage.current?.snapshot(Math.round(azimuth / 90) * 90);
+                    setStill(shot ? trimmed(shot) : null);
                   }
                   setLook(which);
                 }}
@@ -509,6 +511,36 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       )}
     </section>
   );
+}
+
+/**
+ * Снимок сцены без пустых полей: вещь на нём - по центру квадрата, и длинный
+ * ван занимал узкую полосу посередине. Поля прозрачные, по ним и режем.
+ */
+function trimmed(shot: HTMLCanvasElement): string {
+  const ink = shot.getContext("2d");
+  if (!ink) return shot.toDataURL("image/png");
+  const { width, height } = shot;
+  const alpha = ink.getImageData(0, 0, width, height).data;
+  let top = height, bottom = -1, left = width, right = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (alpha[(y * width + x) * 4 + 3] === 0) continue;
+      if (y < top) top = y;
+      if (y > bottom) bottom = y;
+      if (x < left) left = x;
+      if (x > right) right = x;
+    }
+  }
+  if (bottom < 0) return shot.toDataURL("image/png");
+  const pad = Math.round(Math.max(right - left, bottom - top) * 0.06);
+  left = Math.max(0, left - pad);
+  top = Math.max(0, top - pad);
+  const cut = document.createElement("canvas");
+  cut.width = Math.min(width, right + pad + 1) - left;
+  cut.height = Math.min(height, bottom + pad + 1) - top;
+  cut.getContext("2d")?.drawImage(shot, left, top, cut.width, cut.height, 0, 0, cut.width, cut.height);
+  return cut.toDataURL("image/png");
 }
 
 function clock(ms: number): string {

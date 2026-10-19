@@ -289,7 +289,17 @@ export function ThingStage({
         // двойной службы, он же сдвиг вбок внутри грани, и камера, поставленная
         // под него, показывала бы вещь вполоборота с первого кадра.
         const first = (Math.round(startSpot.azimuth / 90) * 90 * Math.PI) / 180;
-        const far = (reach / Math.tan(fov / 2)) * 1.35;
+        // Длинную низкую вещь - ван - кадрируем по её габариту, а не по
+        // длинной стороне: иначе кадр рассчитан на квадратную вещь, и ван
+        // занимал полоску посередине. Высота - с прежним запасом, длина - с
+        // разворотом по диагонали, чтобы ван не вылезал за край при вращении.
+        const scaled = size.clone().multiplyScalar(scale);
+        const wide = scaled.x > scaled.y * 2;
+        const across = Math.hypot(scaled.x, scaled.z) / 2;
+        const tan = Math.tan(fov / 2);
+        const far = wide
+          ? Math.max((scaled.y / 2) * 1.35 / tan, (across * 1.1) / (tan * camera.aspect))
+          : (reach / tan) * 1.35;
         // Ближе к месту, но не в упор. Первый замер ставил камеру так, что
         // клетка занимала треть кадра, - и вещь пропадала: на экране
         // оставалась стена из уголков, по которой не понять, куда ты заехал.
@@ -828,7 +838,7 @@ export function ThingStage({
             if (!ink) return null;
             const target = new THREE.WebGLRenderTarget(side, side);
             const lens = new THREE.PerspectiveCamera(camera.fov, 1, 0.1, 100);
-            const back = (reach / Math.tan(fov / 2)) * 1.12;
+            const back = wide ? (across * 1.05) / tan : (reach / Math.tan(fov / 2)) * 1.12;
             const angle = (azimuth * Math.PI) / 180;
             lens.position.set(Math.sin(angle) * back, 0, Math.cos(angle) * back);
             lens.lookAt(0, 0, 0);
