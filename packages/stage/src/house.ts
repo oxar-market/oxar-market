@@ -2,6 +2,7 @@ import type { Shape } from "./spots.ts";
 import { LAPTOP } from "./laptop.ts";
 import { SUITCASE } from "./suitcase.ts";
 import { TIE } from "./tie.ts";
+import { VAN } from "./van.ts";
 
 /**
  * Разметка наших вещей живёт в коде, а не в базе: по модели вещи - её форма.
@@ -12,6 +13,7 @@ export function houseShape(model: string | null | undefined): Shape | undefined 
   if (model?.includes("suitcase")) return SUITCASE;
   if (model?.includes("laptop")) return LAPTOP;
   if (model?.includes("tie")) return TIE;
+  if (model?.includes("/models/van.glb")) return VAN;
   return undefined;
 }
 

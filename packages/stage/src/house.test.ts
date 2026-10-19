@@ -2,9 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { houseShape, isShirt } from "./house.ts";
 import { TIE } from "./tie.ts";
+import { VAN } from "./van.ts";
 
 test("форма нашей вещи - по модели; футболке своей нет", () => {
   assert.equal(houseShape("/models/tie.glb"), TIE);
+  assert.equal(houseShape("/models/van.glb"), VAN);
   assert.equal(houseShape("/models/shirt.glb"), undefined);
   assert.equal(houseShape(null), undefined);
 });
