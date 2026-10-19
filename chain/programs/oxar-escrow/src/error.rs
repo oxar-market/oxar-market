@@ -79,4 +79,10 @@ pub enum EscrowError {
 
     #[msg("This sale id is reserved by the platform for another seller")]
     SaleIdReserved,
+
+    #[msg("A sticker sheet needs a price and at least one sticker")]
+    BadStickerTerms,
+
+    #[msg("Not enough stickers left on this sheet")]
+    StickersSoldOut,
 }

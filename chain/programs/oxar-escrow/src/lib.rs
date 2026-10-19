@@ -129,6 +129,22 @@ pub mod oxar_escrow {
         arbiter_decides::decide(ctx, seller_bps)
     }
 
+    /// Админ заводит лист стикеров: сколько, почём и кому деньги.
+    pub fn admin_opens_stickers(
+        ctx: Context<AdminOpensStickers>,
+        sheet_id: [u8; 16],
+        seller: Pubkey,
+        price: u64,
+        cap: u16,
+    ) -> Result<()> {
+        admin_opens_stickers::open_stickers(ctx, sheet_id, seller, price, cap)
+    }
+
+    /// Покупка стикеров по цене листа: продавцу и площадке сразу, без торга.
+    pub fn buyer_buys_stickers(ctx: Context<BuyerBuysStickers>, count: u16, tag: [u8; 16]) -> Result<()> {
+        buyer_buys_stickers::buy_stickers(ctx, count, tag)
+    }
+
     /// Арбитр отодвигает срок пруфа: ивент перенесли. Только позже и только
     /// пока пруфа нет и срок не вышел.
     pub fn arbiter_moves_proof(ctx: Context<ArbiterMovesProof>, new_deadline: i64) -> Result<()> {
