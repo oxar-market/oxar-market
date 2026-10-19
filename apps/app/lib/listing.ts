@@ -43,8 +43,10 @@ export type ListedThing = {
   house: boolean;
   /** Вещь подготовил админ: до открытия - голограмма её модели. */
   prepared: boolean;
-  /** Модель вещи: голограмма и вид для админа, даже пока мест на ней нет. */
+  /** Модель вещи: вид для админа, даже пока мест на ней нет. */
   model: string | null;
+  /** Лёгкая копия модели для голограммы. Пусто - голограмма по самой модели. */
+  hologram: string | null;
   /** Дата открытия на вещи: пока места - черновики, по лотам её не узнать. */
   opensAt: string | null;
 };
@@ -116,7 +118,7 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
   if (!db) return null;
   const { data: thing } = await db
     .from("things")
-    .select(`id, title, tagline, seller, house, prepared, opens_at, photos, model_url, thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, seller, house, prepared, opens_at, photos, model_url, hologram_url, thing_spots(${SPOT_COLUMNS})`)
     .eq("id", thingId)
     .maybeSingle();
   if (!thing) return null;
@@ -145,6 +147,7 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
     house: thing.house === true,
     prepared: thing.prepared === true,
     model: (thing.model_url as string) || null,
+    hologram: (thing.hologram_url as string | null) || null,
     opensAt: (thing.opens_at as string | null) ?? null,
   };
 }

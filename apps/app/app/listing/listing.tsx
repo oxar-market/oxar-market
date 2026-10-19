@@ -237,7 +237,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             читался дырой. */}
         {ghost ? (
           <div className="look between-scene">
-            <SoonHologram model={ours ? scene?.model : null} />
+            <SoonHologram model={ours ? (thing.hologram ?? scene?.model) : null} />
           </div>
         ) : look === "live" && scene ? (
           <div className="look">
