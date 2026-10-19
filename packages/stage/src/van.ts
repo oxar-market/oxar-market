@@ -34,12 +34,13 @@ export const VAN_SPOTS: Spot[] = [
   // Корма: створки над звездой (до 1.45), фонари и ручка ниже. Луч - чуть
   // вбок от середины: ровно в середине щель между створками.
   { code: "van_rear", label: "Rear", height: at(1.76), azimuth: -90, shift: len(0.03), size: [len(1.3), len(0.48)] },
-  // Сверху: сдвиг - вдоль машины, плюс - к переду. Размер - вдоль и поперёк.
+  // Сверху: сдвиг - вдоль машины, плюс - к переду. Логотип смотрит вперёд:
+  // размер - поперёк машины и вдоль неё.
   // Капот - между решётками воздухозаборника, лобовое стекло не задевает.
-  { code: "van_hood", label: "Hood", height: 1, azimuth: 0, top: true, shift: len(2.93), size: [len(0.46), len(0.54)] },
+  { code: "van_hood", label: "Hood", height: 1, azimuth: 0, top: true, shift: len(2.93), size: [len(0.54), len(0.46)] },
   // Скат высокой крыши над лобовым и сама крыша за ним, с ребром на 1.0.
-  { code: "van_roof_front", label: "Front roof", height: 1, azimuth: 0, top: true, shift: len(1.335), size: [len(0.63), len(1.4)] },
-  { code: "van_roof", label: "Roof", height: 1, azimuth: 0, top: true, shift: len(-0.575), size: [len(2.95), len(1.5)] },
+  { code: "van_roof_front", label: "Front roof", height: 1, azimuth: 0, top: true, shift: len(1.335), size: [len(1.4), len(0.63)] },
+  { code: "van_roof", label: "Roof", height: 1, azimuth: 0, top: true, shift: len(-0.575), size: [len(1.5), len(2.95)] },
 ];
 
 export const VAN: Shape = {

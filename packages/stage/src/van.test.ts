@@ -19,9 +19,10 @@ test("капот и крыша размечены сверху, остально
 
 test("места вана не вылезают за габарит: длина в сцене 0.62, ширина 0.21", () => {
   for (const spot of VAN_SPOTS) {
-    const along = spot.top ? spot.size[0] : spot.azimuth === -90 ? 0 : spot.size[0];
+    // Место сверху смотрит лицом вперёд: ширина - поперёк вана, высота - вдоль.
+    const along = spot.top ? spot.size[1] : spot.azimuth === -90 ? 0 : spot.size[0];
     assert.ok(Math.abs(spot.shift ?? 0) + along / 2 <= 0.31, spot.code);
-    if (spot.top || spot.azimuth === -90) assert.ok((spot.top ? spot.size[1] : spot.size[0]) <= 0.21, spot.code);
+    if (spot.top || spot.azimuth === -90) assert.ok(spot.size[0] <= 0.21, spot.code);
   }
 });
 

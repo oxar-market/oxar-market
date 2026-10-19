@@ -507,9 +507,11 @@ export function ThingStage({
           const under = new Set([surface]);
 
           anchor.position.copy(hit.point);
-          // Верх логотипа: у мест сверху - от зрителя на азимуте 0, иначе
-          // лицо места смотрело бы вверх, а «верх» совпал бы с ним.
-          anchor.up.set(0, spot.top ? 0 : 1, spot.top ? -1 : 0);
+          // Верх логотипа: у мест сверху - к корме, чтобы логотип читался
+          // спереди вещи, как надпись на капоте; иначе лицо места смотрело бы
+          // вверх, а «верх» совпал бы с ним.
+          if (spot.top) anchor.up.set(-1, 0, 0);
+          else anchor.up.set(0, 1, 0);
           anchor.lookAt(
             hit.point
               .clone()
