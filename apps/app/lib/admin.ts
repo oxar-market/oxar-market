@@ -1,8 +1,7 @@
 "use client";
 
-import { PublicKey } from "@solana/web3.js";
 import { hasBuyerProtection } from "@oxar/core";
-import { readSale } from "./chain.ts";
+import { readLot, readSale } from "./chain.ts";
 import { db } from "./session.ts";
 import { listedSpots, SPOT_COLUMNS, type ListedSpot } from "./listing.ts";
 import { photoUrl } from "./seller.ts";
@@ -37,8 +36,8 @@ export type AdminThing = {
   house: boolean;
   /** Торг без пруфа: деньги продавцу сразу по закрытию. Ставит только админ, до публикации. */
   noLockup: boolean;
-  /** Адреса торгов в цепочке у опубликованных мест. */
-  sales: string[];
+  /** Опубликованные места: их торг читаем из цепочки. */
+  openLots: string[];
   /**
    * Пути фото итогов в хранилище (колонка proof_photos). Это не пруф защиты
    * покупателя: тот шлёт продавец из кабинета, и деньги отпускает он.
@@ -62,7 +61,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, no_lockup, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at, chain_sale), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, no_lockup, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -91,13 +90,9 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     createdAt: row.created_at,
     house: row.house === true,
     noLockup: row.no_lockup === true,
-    sales: [
-      ...new Set(
-        ((row.lots ?? []) as { chain_sale: string | null }[])
-          .map((lot) => lot.chain_sale)
-          .filter((sale): sale is string => sale !== null),
-      ),
-    ],
+    openLots: ((row.lots ?? []) as { id: string; status: string }[])
+      .filter((lot) => lot.status === "open")
+      .map((lot) => lot.id),
     proof: (row.proof_photos as string[] | null) ?? [],
     worn: {
       by: (row.worn_by as string | null) ?? "",
@@ -143,11 +138,19 @@ export async function reviewThing(id: string, approve: boolean, reason?: string)
  * Режим торгов в цепочке совпадает с флагом вещи. Программа откроет торг без
  * пруфа любому продавцу, подписавшему его сам, мимо кабинета, - на маркет
  * такой торг выходит только у вещи, которой админ поставил «no money lockup».
- * Торг не прочитался - не одобряем: лучше переспросить, чем пропустить.
+ * Торг берём из самого места в цепочке, а не из chain_sale в базе: тот
+ * пишет продавец. Не прочиталось - не одобряем: лучше переспросить, чем
+ * пропустить. Ставка проверяет то же самое ещё раз - места продавец может
+ * открыть и после одобрения.
  */
 export async function saleModeOk(thing: AdminThing): Promise<boolean> {
   if (thing.noLockup) return true;
-  const sales = await Promise.all(thing.sales.map((sale) => readSale(new PublicKey(sale)).catch(() => null)));
+  const sales = await Promise.all(
+    thing.openLots.map(async (lotId) => {
+      const lot = await readLot(lotId).catch(() => null);
+      return lot ? readSale(lot.sale).catch(() => null) : null;
+    }),
+  );
   return sales.every((sale) => sale !== null && hasBuyerProtection(sale));
 }
 

@@ -7,16 +7,26 @@ import {
   useStandardSignTransaction,
 } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
-import { BRAND_MAX, cleanBrand, formatUsd, minNextUnits, parseUsd, spotName, unitsToCents } from "@oxar/core";
+import {
+  BRAND_MAX,
+  cleanBrand,
+  formatUsd,
+  hasBuyerProtection,
+  minNextUnits,
+  parseUsd,
+  spotName,
+  unitsToCents,
+} from "@oxar/core";
 import {
   WALLET_CHAIN,
   bidTransaction,
   readLot,
+  readSale,
   sendSigned,
   settled,
   walletUnits,
 } from "@/lib/chain";
-import { recordBid, uploadCreative, type Lot } from "@/lib/auction";
+import { lotNoLockup, recordBid, uploadCreative, type Lot } from "@/lib/auction";
 
 /**
  * Ставка.
@@ -141,6 +151,14 @@ export function BidForm({
       const chainLot = await readLot(lot.id);
       if (!chainLot) {
         return setError("This spot is not open on chain yet. Nothing to bid on.");
+      }
+      // Торг - по адресу из самого места в цепочке, а не из базы: его пишет
+      // продавец. Без пруфа деньги уходят ему сразу по закрытию, и ставить в
+      // такой торг можно, только если его так отметил админ.
+      const sale = await readSale(chainLot.sale).catch(() => null);
+      if (!sale) return setError("Could not read this auction on chain. Try again.");
+      if (!hasBuyerProtection(sale) && (await lotNoLockup(lot.id)) !== true) {
+        return setError("This auction is not set up the way OXAR approved it. Bidding on it is closed.");
       }
       const chainMin = minNextUnits({ ...chainLot, hasBid: chainLot.topBidder !== null });
       const least = Math.max(need, unitsToCents(chainMin, "ceil"));
