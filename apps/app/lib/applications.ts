@@ -10,6 +10,8 @@ export type Application = {
   contact: string;
   about: string | null;
   status: "waiting" | "approved" | "declined";
+  /** Имя на маркете, если продавец его поставил. Контакт - для нас, имя - для покупателей. */
+  handle?: string | null;
 };
 
 type Row = {
@@ -81,7 +83,14 @@ export async function loadSellers(): Promise<Application[]> {
     .eq("status", "approved")
     .not("wallet", "is", null)
     .order("created_at", { ascending: false });
-  return ((data ?? []) as Row[]).map(fromRow);
+  const sellers = ((data ?? []) as Row[]).map(fromRow);
+  if (sellers.length === 0) return sellers;
+  const { data: cards } = await db
+    .from("seller_cards")
+    .select("seller, handle")
+    .in("seller", sellers.map((one) => one.userId));
+  const handles = new Map((cards ?? []).map((card) => [card.seller as string, (card.handle as string | null) ?? null]));
+  return sellers.map((one) => ({ ...one, handle: handles.get(one.userId) ?? null }));
 }
 
 export async function decideSeller(userId: string, approve: boolean): Promise<boolean> {
