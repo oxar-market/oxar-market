@@ -5692,8 +5692,17 @@ a.sl-pill {
 
 .ad-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
+  grid-template-columns: 2fr 1fr 1fr 44px;
   gap: 8px;
+}
+
+.ad-row-head {
+  font-size: 13px;
+  color: var(--mut);
+}
+
+.ad-row-drop {
+  padding: 0;
 }
 
 .ad-row input,

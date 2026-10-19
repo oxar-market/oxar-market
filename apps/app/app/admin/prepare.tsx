@@ -101,33 +101,45 @@ export function PrepareThing({ onCancel, onPrepared }: { onCancel: () => void; o
       </label>
 
       <div className="ad-rows">
+        {/* Подписи колонок: на телефоне подсказки внутри полей обрезались до
+            «Sta», и цифра в третьем поле читалась загадкой. */}
+        <div className="ad-row ad-row-head" aria-hidden="true">
+          <span>Spot</span>
+          <span>Start, $</span>
+          <span>Step, $</span>
+          <span />
+        </div>
         {rows.map((row, at) => (
           <div className="ad-row" key={at}>
             <input
               value={row.label}
               maxLength={40}
               placeholder="Hood"
+              aria-label="Spot name"
               onChange={(event) => setRows(rows.map((one, i) => (i === at ? { ...one, label: event.target.value } : one)))}
             />
             <input
               value={row.reserve}
               inputMode="decimal"
-              placeholder="Start, $"
+              placeholder="100"
+              aria-label="Starting price, $"
               onChange={(event) => setRows(rows.map((one, i) => (i === at ? { ...one, reserve: event.target.value } : one)))}
             />
             <input
               value={row.step}
               inputMode="decimal"
-              placeholder="Step, $"
+              placeholder="5"
+              aria-label="Bid step, $"
               onChange={(event) => setRows(rows.map((one, i) => (i === at ? { ...one, step: event.target.value } : one)))}
             />
             <button
               type="button"
-              className="sl-btn light"
+              className="sl-btn light ad-row-drop"
+              aria-label="Remove this spot"
               disabled={rows.length === 1}
               onClick={() => setRows(rows.filter((_, i) => i !== at))}
             >
-              Remove
+              ×
             </button>
           </div>
         ))}
@@ -145,7 +157,7 @@ export function PrepareThing({ onCancel, onPrepared }: { onCancel: () => void; o
         <input type="datetime-local" value={closes} onChange={(event) => setCloses(event.target.value)} />
       </label>
       <label className="sl-field">
-        Proof by
+        Proof by (not used with No money lockup, pick any day)
         <input type="date" value={proofDay} min={proofMin} onChange={(event) => setProofDay(event.target.value)} />
       </label>
 
