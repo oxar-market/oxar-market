@@ -49,6 +49,8 @@ export type ListedThing = {
   hologram: string | null;
   /** Дата открытия на вещи: пока места - черновики, по лотам её не узнать. */
   opensAt: string | null;
+  /** id листа стикеров в цепочке; пусто - стикеров на вещи нет. */
+  stickerSheet: string | null;
 };
 
 type SpotRow = {
@@ -118,7 +120,7 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
   if (!db) return null;
   const { data: thing } = await db
     .from("things")
-    .select(`id, title, tagline, seller, house, prepared, opens_at, photos, model_url, hologram_url, thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, seller, house, prepared, opens_at, sticker_sheet, photos, model_url, hologram_url, thing_spots(${SPOT_COLUMNS})`)
     .eq("id", thingId)
     .maybeSingle();
   if (!thing) return null;
@@ -149,5 +151,6 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
     model: (thing.model_url as string) || null,
     hologram: (thing.hologram_url as string | null) || null,
     opensAt: (thing.opens_at as string | null) ?? null,
+    stickerSheet: (thing.sticker_sheet as string | null) ?? null,
   };
 }

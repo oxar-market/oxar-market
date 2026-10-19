@@ -2,13 +2,14 @@
 
 import { hasBuyerProtection } from "@oxar/core";
 import { PublicKey } from "@solana/web3.js";
-import { permitInstruction, readLot, readSale, revokePermitInstruction } from "./chain.ts";
+import { openStickersInstruction, permitInstruction, readLot, readSale, revokePermitInstruction } from "./chain.ts";
 import { signInPhantom } from "./arbiter.ts";
 import type { Application } from "./applications.ts";
 import { db } from "./session.ts";
 import { listedSpots, SPOT_COLUMNS, type ListedSpot } from "./listing.ts";
 import { photoUrl } from "./seller.ts";
 import { reviewState } from "./thing-review.ts";
+import { STICKER_CAP, STICKER_PRICE_CENTS } from "./stickers.ts";
 
 /**
  * Админка: мы сами. Проверяем присланные вещи, даём им имя, прикладываем
@@ -45,6 +46,8 @@ export type AdminThing = {
   prepared: boolean;
   /** Кошелёк продавца: ему выдаётся разрешение, им он и публикует. */
   sellerWallet: string | null;
+  /** id листа стикеров в цепочке; пусто - стикеров на вещи нет. */
+  stickerSheet: string | null;
   /** Черновики цен - видны, пока продавец не опубликовал. */
   drafts: { id: string; spotId: string; reserveCents: number; stepCents: number; closesAt: string }[];
   /** Опубликованные места: их торг читаем из цепочки. */
@@ -72,7 +75,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, permit_sale, prepared, seller_wallet, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, permit_sale, prepared, seller_wallet, sticker_sheet, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -104,6 +107,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     permitSale: (row.permit_sale as string | null) ?? null,
     prepared: row.prepared === true,
     sellerWallet: (row.seller_wallet as string | null) ?? null,
+    stickerSheet: (row.sticker_sheet as string | null) ?? null,
     drafts: ((row.lots ?? []) as {
       id: string; status: string; spot_id: string; reserve_cents: number; min_step_cents: number; closes_at: string;
     }[])
@@ -136,6 +140,7 @@ export async function updateThing(
     active: boolean;
     hidden: boolean;
     permit_sale: string | null;
+    sticker_sheet: string;
     model_url: string;
     proof_photos: string[];
     worn_by: string | null;
@@ -204,6 +209,23 @@ export async function dropPermit(thing: AdminThing): Promise<{ ok: true } | { ok
   return (await updateThing(thing.id, { permit_sale: null }))
     ? { ok: true }
     : { ok: false, why: "The permit is revoked on chain, but the thing did not save it. Try again." };
+}
+
+/**
+ * Завести на вещи лист стикеров: пятьдесят по $100, деньги - кошельку
+ * продавца. Подпись админа в Phantom.
+ */
+export async function openStickers(thing: AdminThing): Promise<{ ok: true } | { ok: false; why: string }> {
+  if (!thing.sellerWallet) return { ok: false, why: "The seller has no wallet on this thing yet." };
+  const seller = new PublicKey(thing.sellerWallet);
+  const sheetId = crypto.randomUUID();
+  const sent = await signInPhantom((admin) => [
+    openStickersInstruction(admin, sheetId, seller, STICKER_PRICE_CENTS, STICKER_CAP),
+  ]);
+  if (!sent.ok) return sent;
+  return (await updateThing(thing.id, { sticker_sheet: sheetId }))
+    ? { ok: true }
+    : { ok: false, why: `The sheet is on chain (${sheetId}), but the thing did not save it. Try again.` };
 }
 
 export type PreparedSpot = { label: string; reserveCents: number; stepCents: number };

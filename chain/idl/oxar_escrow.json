@@ -45,6 +45,99 @@
   ],
   "instructions": [
     {
+      "name": "admin_opens_stickers",
+      "docs": [
+        "Админ заводит лист стикеров: сколько, почём и кому деньги."
+      ],
+      "discriminator": [
+        190,
+        5,
+        188,
+        201,
+        155,
+        155,
+        175,
+        153
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "sheet",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  114,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sheet_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "sheet_id",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "seller",
+          "type": "pubkey"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "cap",
+          "type": "u16"
+        }
+      ]
+    },
+    {
       "name": "admin_permits_sale",
       "docs": [
         "Админ разрешает продавцу открыть один торг без пруфа: деньги по закрытию."
@@ -897,6 +990,304 @@
         {
           "name": "amount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "buyer_buys_stickers",
+      "docs": [
+        "Покупка стикеров по цене листа: продавцу и площадке сразу, без торга."
+      ],
+      "discriminator": [
+        81,
+        125,
+        10,
+        216,
+        9,
+        58,
+        211,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "sheet",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  114,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "sheet.id",
+                "account": "StickerSheet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "order",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  116,
+                  105,
+                  99,
+                  107,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "sheet"
+              },
+              {
+                "kind": "account",
+                "path": "sheet.sold",
+                "account": "StickerSheet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "buyer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "seller",
+          "relations": [
+            "sheet"
+          ]
+        },
+        {
+          "name": "seller_tokens",
+          "docs": [
+            "Счёт продавца заводится, если его нет: иначе продажа стояла бы, пока",
+            "продавец не заведёт его сам."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "seller"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "platform",
+          "relations": [
+            "sheet"
+          ]
+        },
+        {
+          "name": "platform_tokens",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "platform"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "sheet"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "count",
+          "type": "u16"
+        },
+        {
+          "name": "tag",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
         }
       ]
     },
@@ -1789,6 +2180,32 @@
         214,
         168
       ]
+    },
+    {
+      "name": "StickerOrder",
+      "discriminator": [
+        226,
+        79,
+        26,
+        139,
+        77,
+        119,
+        121,
+        43
+      ]
+    },
+    {
+      "name": "StickerSheet",
+      "discriminator": [
+        152,
+        176,
+        61,
+        1,
+        96,
+        181,
+        239,
+        181
+      ]
     }
   ],
   "events": [
@@ -1949,6 +2366,16 @@
       "code": 6025,
       "name": "SaleIdReserved",
       "msg": "This sale id is reserved by the platform for another seller"
+    },
+    {
+      "code": 6026,
+      "name": "BadStickerTerms",
+      "msg": "A sticker sheet needs a price and at least one sticker"
+    },
+    {
+      "code": 6027,
+      "name": "StickersSoldOut",
+      "msg": "Not enough stickers left on this sheet"
     }
   ],
   "types": [
@@ -2334,6 +2761,125 @@
               "Кому разрешено: открыть торг по разрешению может только он."
             ],
             "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StickerOrder",
+      "docs": [
+        "Покупка: кто купил и какие номера. Адрес - из листа и первого номера,",
+        "поэтому две покупки одних номеров невозможны.",
+        "",
+        "`tag` - id строки в нашей базе, где лежат логотип, название и размер. По",
+        "нему витрина находит, что печатать: строка без покупки с её тегом в цепочке",
+        "не показывается."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sheet",
+            "type": "pubkey"
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "first",
+            "type": "u16"
+          },
+          {
+            "name": "count",
+            "type": "u16"
+          },
+          {
+            "name": "tag",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StickerSheet",
+      "docs": [
+        "Лист стикеров: сколько их всего, почём и кому деньги.",
+        "",
+        "Стикер - не торг: цена одна, перебить нельзя, и деньги уходят продавцу той",
+        "же транзакцией, что и покупка. Хранилища нет. Лимит держит программа, а не",
+        "наша база: пятьдесят первый не купить, сколько бы запросов ни прислали.",
+        "",
+        "Заводит лист админ, а условия площадки - комиссию, её получателя и монету -",
+        "лист берёт из настроек при открытии и дальше не меняет, как и торг."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "docs": [
+              "Идентификатор листа - шестнадцать байт uuid; из него адрес."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "seller",
+            "docs": [
+              "Кому идёт цена стикера за вычетом комиссии."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "platform",
+            "docs": [
+              "Кому идёт комиссия."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "docs": [
+              "Цена одного стикера в базовых единицах монеты."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "cap",
+            "docs": [
+              "Сколько стикеров всего и сколько уже продано."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "sold",
+            "type": "u16"
           },
           {
             "name": "bump",

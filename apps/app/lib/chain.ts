@@ -602,3 +602,155 @@ export function moveProofInstruction(arbiter: PublicKey, saleAddress: PublicKey,
     ],
   });
 }
+
+// ---------------------------------------------------------------------------
+// Стикеры: лист с ценой и лимитом, покупка по цене листа. Порядок - как в IDL.
+
+const OPEN_STICKERS = new Uint8Array([190, 5, 188, 201, 155, 155, 175, 153]);
+const BUY_STICKERS = new Uint8Array([81, 125, 10, 216, 9, 58, 211, 234]);
+
+export type ChainSheet = {
+  seller: PublicKey;
+  platform: PublicKey;
+  mint: PublicKey;
+  /** Цена одного стикера в базовых единицах монеты. */
+  price: bigint;
+  feeBps: number;
+  cap: number;
+  sold: number;
+};
+
+export type ChainOrder = {
+  buyer: PublicKey;
+  first: number;
+  count: number;
+  /** Тег - id строки стикера в нашей базе, в виде uuid. */
+  tag: string;
+};
+
+function u16(value: number): Uint8Array {
+  const out = new Uint8Array(2);
+  new DataView(out.buffer).setUint16(0, value, true);
+  return out;
+}
+
+export function openStickersData(sheetId: string, seller: PublicKey, priceCents: number, cap: number): Uint8Array {
+  const price = new Uint8Array(8);
+  new DataView(price.buffer).setBigUint64(0, centsToUnits(priceCents), true);
+  return join(OPEN_STICKERS, auctionBytes(sheetId), seller.toBytes(), price, u16(cap));
+}
+
+export function buyStickersData(count: number, tag: string): Uint8Array {
+  return join(BUY_STICKERS, u16(count), auctionBytes(tag));
+}
+
+export function sheetAddress(sheetId: string): PublicKey {
+  return PublicKey.findProgramAddressSync([new TextEncoder().encode("stickers"), auctionBytes(sheetId)], PROGRAM_ID)[0];
+}
+
+/** Адрес покупки - из листа и первого номера в ней. */
+export function orderAddress(sheet: PublicKey, first: number): PublicKey {
+  return PublicKey.findProgramAddressSync([new TextEncoder().encode("sticker"), sheet.toBytes(), u16(first)], PROGRAM_ID)[0];
+}
+
+export function decodeSheet(data: Uint8Array): ChainSheet {
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  // Дискриминатор и шестнадцать байт id листа.
+  const at = 8 + 16;
+  return {
+    seller: new PublicKey(data.slice(at, at + 32)),
+    platform: new PublicKey(data.slice(at + 32, at + 64)),
+    mint: new PublicKey(data.slice(at + 64, at + 96)),
+    price: view.getBigUint64(at + 96, true),
+    feeBps: view.getUint16(at + 104, true),
+    cap: view.getUint16(at + 106, true),
+    sold: view.getUint16(at + 108, true),
+  };
+}
+
+export function decodeOrder(data: Uint8Array): ChainOrder {
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  // Дискриминатор и адрес листа.
+  const at = 8 + 32;
+  const hex = Array.from(data.slice(at + 36, at + 52), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return {
+    buyer: new PublicKey(data.slice(at, at + 32)),
+    first: view.getUint16(at + 32, true),
+    count: view.getUint16(at + 34, true),
+    tag: `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`,
+  };
+}
+
+export async function readSheet(sheetId: string): Promise<ChainSheet | null> {
+  const account = await connection.getAccountInfo(sheetAddress(sheetId));
+  return account ? decodeSheet(account.data) : null;
+}
+
+/**
+ * Все покупки листа одним запросом: адрес каждой выводится из номера, с
+ * которого она начинается, и номеров не больше лимита листа.
+ */
+export async function readOrders(sheetId: string, cap: number): Promise<ChainOrder[]> {
+  const sheet = sheetAddress(sheetId);
+  const addresses = Array.from({ length: cap }, (_, first) => orderAddress(sheet, first));
+  const accounts = await connection.getMultipleAccountsInfo(addresses);
+  return accounts.flatMap((account) => (account ? [decodeOrder(account.data)] : []));
+}
+
+/** Админ заводит лист стикеров: сколько, почём и кому деньги. */
+export function openStickersInstruction(
+  admin: PublicKey,
+  sheetId: string,
+  seller: PublicKey,
+  priceCents: number,
+  cap: number,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(openStickersData(sheetId, seller, priceCents, cap)),
+    keys: [
+      { pubkey: admin, isSigner: true, isWritable: true },
+      { pubkey: CONFIG, isSigner: false, isWritable: false },
+      { pubkey: sheetAddress(sheetId), isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+  });
+}
+
+/**
+ * Транзакция покупки стикеров. Номер, с которого покупка, - из листа в
+ * цепочке: успел кто-то купить раньше - программа отвергнет адрес покупки, и
+ * деньги не уйдут.
+ */
+export async function buyStickersTransaction(
+  sheetId: string,
+  sheet: ChainSheet,
+  buyer: PublicKey,
+  count: number,
+  tag: string,
+): Promise<VersionedTransaction> {
+  const address = sheetAddress(sheetId);
+  const instruction = new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(buyStickersData(count, tag)),
+    keys: [
+      { pubkey: buyer, isSigner: true, isWritable: true },
+      { pubkey: address, isSigner: false, isWritable: true },
+      { pubkey: orderAddress(address, sheet.sold), isSigner: false, isWritable: true },
+      { pubkey: ata(sheet.mint, buyer), isSigner: false, isWritable: true },
+      { pubkey: sheet.seller, isSigner: false, isWritable: false },
+      { pubkey: ata(sheet.mint, sheet.seller), isSigner: false, isWritable: true },
+      { pubkey: sheet.platform, isSigner: false, isWritable: false },
+      { pubkey: ata(sheet.mint, sheet.platform), isSigner: false, isWritable: true },
+      { pubkey: sheet.mint, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+  });
+
+  const { blockhash } = await connection.getLatestBlockhash();
+  return new VersionedTransaction(
+    new TransactionMessage({ payerKey: buyer, recentBlockhash: blockhash, instructions: [instruction] }).compileToV0Message(),
+  );
+}

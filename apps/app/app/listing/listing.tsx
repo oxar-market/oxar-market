@@ -14,6 +14,7 @@ import { TIE } from "@oxar/stage";
 import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
 import { useAdmin } from "../admin/use-admin.ts";
 import { WornInfo } from "../worn.tsx";
+import { Stickers } from "./stickers.tsx";
 
 /**
  * Торг вещи продавца.
@@ -348,6 +349,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           победителя держит программа до пруфа, и этот срок покупатель видит
           прежде, чем ставит. */}
       <WornInfo thingId={thingId} />
+
+      {/* Стикеры - не торг: показываем, когда вещь открыта, а не голограмма. */}
+      {thing.stickerSheet && !ghost && <Stickers thingId={thingId} sheetId={thing.stickerSheet} />}
 
       {/* До открытия мест не показываем: выбирать и ставить ещё нечего, а
           сетка с ценами обещала торг, который не идёт. */}

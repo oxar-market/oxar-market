@@ -1115,4 +1115,122 @@ describe("oxar-escrow: торг", () => {
     await prove(sale);
     await fails(move(me, deadline + 50 * 86_400), "ProofDeadlineFixed", "срок двигают после пруфа");
   });
+
+  // Стикеры: цена одна, перебить нельзя, деньги - продавцу и площадке сразу.
+  const PRICE = 100_000_000; // $100
+
+  const sheetPda = (id: number[]) =>
+    PublicKey.findProgramAddressSync([Buffer.from("stickers"), Buffer.from(id)], program.programId)[0];
+
+  /** Адрес покупки - из листа и первого номера в ней. */
+  const orderPda = (sheet: PublicKey, first: number) => {
+    const at = Buffer.alloc(2);
+    at.writeUInt16LE(first);
+    return PublicKey.findProgramAddressSync([Buffer.from("sticker"), sheet.toBuffer(), at], program.programId)[0];
+  };
+
+  async function openSheet(cap: number, admin?: Keypair) {
+    const who = admin ?? (provider.wallet as anchor.Wallet).payer;
+    const id = auctionId();
+    await program.methods
+      .adminOpensStickers(id, seller.publicKey, new anchor.BN(PRICE), cap)
+      .accountsPartial({ admin: who.publicKey, sheet: sheetPda(id) })
+      .signers([who])
+      .rpc();
+    return sheetPda(id);
+  }
+
+  /** Купить: `first` - номер, с которого покупка; по умолчанию - следующий свободный. */
+  async function buy(
+    sheet: PublicKey,
+    who: Keypair,
+    count: number,
+    over: { first?: number; seller?: PublicKey; platform?: PublicKey } = {},
+  ) {
+    const first = over.first ?? (await program.account.stickerSheet.fetch(sheet)).sold;
+    await program.methods
+      .buyerBuysStickers(count, Array(16).fill(count))
+      .accountsPartial({
+        buyer: who.publicKey,
+        sheet,
+        order: orderPda(sheet, first),
+        seller: over.seller ?? seller.publicKey,
+        platform: over.platform ?? platform.publicKey,
+        mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([who])
+      .rpc();
+  }
+
+  it("лист стикеров заводит только админ, условия площадки - из настроек", async () => {
+    const id = auctionId();
+    await fails(
+      program.methods
+        .adminOpensStickers(id, bob.publicKey, new anchor.BN(PRICE), 50)
+        .accountsPartial({ admin: bob.publicKey, sheet: sheetPda(id) })
+        .signers([bob])
+        .rpc(),
+      "NotTheAdmin",
+      "лист завёл не админ",
+    );
+
+    const sheet = await program.account.stickerSheet.fetch(await openSheet(50));
+    assert.equal(sheet.feeBps, FEE_BPS);
+    assert.isTrue(sheet.platform.equals(platform.publicKey));
+    assert.isTrue(sheet.mint.equals(mint));
+    assert.equal(sheet.sold, 0);
+  });
+
+  it("стикер за $100: $90 продавцу и $10 площадке той же транзакцией", async () => {
+    const sheet = await openSheet(50);
+    const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
+    const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
+    const [s0, p0, a0] = [await balance(sellerTokens), await balance(platformTokens), await balance(aliceTokens)];
+
+    await buy(sheet, alice, 1);
+    await buy(sheet, alice, 3);
+
+    assert.equal(await balance(sellerTokens), s0 + 360_000_000n, "продавец получил не $90 за стикер");
+    assert.equal(await balance(platformTokens), p0 + 40_000_000n, "площадка получила не $10 за стикер");
+    assert.equal(await balance(aliceTokens), a0 - 400_000_000n, "с покупателя списано не $100 за стикер");
+
+    const order = await program.account.stickerOrder.fetch(orderPda(sheet, 1));
+    assert.isTrue(order.buyer.equals(alice.publicKey));
+    assert.equal(order.first, 1);
+    assert.equal(order.count, 3);
+    assert.equal((await program.account.stickerSheet.fetch(sheet)).sold, 4);
+  });
+
+  it("сверх лимита не купить, ни разом, ни по одному", async () => {
+    const sheet = await openSheet(3);
+    await fails(buy(sheet, alice, 4), "StickersSoldOut", "купили больше, чем стикеров на листе");
+    await fails(buy(sheet, alice, 0), "BadStickerTerms", "купили ноль стикеров");
+    await buy(sheet, alice, 2);
+    await buy(sheet, bob, 1);
+    await fails(buy(sheet, bob, 1), "StickersSoldOut", "купили стикер сверх лимита");
+    assert.equal((await program.account.stickerSheet.fetch(sheet)).sold, 3);
+  });
+
+  it("получателей не подменить: деньги идут только тем, кто записан в листе", async () => {
+    const sheet = await openSheet(50);
+    await fails(buy(sheet, alice, 1, { seller: bob.publicKey }), "ConstraintHasOne", "цену увели не продавцу");
+    await fails(buy(sheet, alice, 1, { platform: bob.publicKey }), "ConstraintHasOne", "комиссию увели не площадке");
+  });
+
+  it("двое за одним номером: второй откатывается целиком, вместе с деньгами", async () => {
+    const sheet = await openSheet(50);
+    await buy(sheet, alice, 1);
+    const before = await balance(bobTokens);
+    // Боб собирал транзакцию, пока номер 0 был свободен.
+    await fails(buy(sheet, bob, 1, { first: 0 }), "ConstraintSeeds", "заняли уже проданный номер");
+    assert.equal(await balance(bobTokens), before, "деньги ушли без покупки");
+  });
+
+  it("перевод продавцу мимо программы - просто перевод: номер он не занимает", async () => {
+    const sheet = await openSheet(50);
+    await transfer(connection, bob, bobTokens, getAssociatedTokenAddressSync(mint, seller.publicKey), bob, 90_000_000);
+    assert.equal((await program.account.stickerSheet.fetch(sheet)).sold, 0);
+    assert.isNull(await connection.getAccountInfo(orderPda(sheet, 0)), "покупка появилась без программы");
+  });
 });

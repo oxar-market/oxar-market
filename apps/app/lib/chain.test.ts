@@ -15,6 +15,12 @@ import {
   permitData,
   revokePermitData,
   saleAddress,
+  openStickersData,
+  buyStickersData,
+  decodeSheet,
+  decodeOrder,
+  sheetAddress,
+  orderAddress,
 } from "./chain.ts";
 import { PublicKey } from "@solana/web3.js";
 
@@ -192,4 +198,47 @@ test("адрес разрешения выводится из id торга, и 
   assert.ok(permitAddress(SALE_ID).equals(permitAddress(SALE_ID)));
   assert.ok(!permitAddress(SALE_ID).equals(permitAddress("00000000-0000-0000-0000-000000000001")));
   assert.ok(!permitAddress(SALE_ID).equals(saleAddress(SALE_ID)), "адрес разрешения совпал с адресом торга");
+});
+
+// Стикеры: образцы сняты кодировщиком Anchor по нынешнему IDL. Лист 7c9e6679-…
+// за $100, пятьдесят штук, продано семь; покупка трёх с номера 4 с тегом 30ae7a23-….
+const SHEET =
+  "mLA9AWC177V8nmZ5dCVA3pRL4H/B+QrnkMm8Gv1DLh1K+2eNp+C6LJ7Pg/7DPOnhM45ksqjPD0j0l+g6ibB+eagqctazkiXrKLkJPDjePdFaa+2ksZRolcb6evO+2606PWXzaqvJdDGxu+TC0vbg5HymAgNFL11hAOH1BQAAAADoAzIABwD+";
+const ORDER =
+  "4k8ai013eSuDcvoUdY+qpQFiayU2pz1Q1ZWlCmxDk2kViC0UzEij/JDJvBr9Qy4dSvtnjafguiyez4P+wzzp4TOOZLKozw9IBAADADCueiPO1Eo5jCKUBRk9k/v9";
+const STICKER_SELLER = new PublicKey("AkC8BHHNJQ61fXVsHVnWsferBm4PC6t8oT8YwRmrwDtB");
+
+test("инструкции стикеров собираются байт в байт как у Anchor", () => {
+  const b64 = (data: Uint8Array) => Buffer.from(data).toString("base64");
+  assert.equal(
+    b64(openStickersData(SALE_ID, STICKER_SELLER, 10_000, 50)),
+    "vgW8yZubr5l8nmZ5dCVA3pRL4H/B+QrnkMm8Gv1DLh1K+2eNp+C6LJ7Pg/7DPOnhM45ksqjPD0gA4fUFAAAAADIA",
+  );
+  assert.equal(b64(buyStickersData(3, LOT_ID)), "UX0K2Ak60+oDADCueiPO1Eo5jCKUBRk9k/s=");
+});
+
+test("лист стикеров читается: цена, комиссия, лимит, продано", () => {
+  const sheet = decodeSheet(Buffer.from(SHEET, "base64"));
+  assert.ok(sheet.seller.equals(STICKER_SELLER));
+  assert.equal(sheet.platform.toBase58(), "HTnptfEEkqjr7ZiQs7E39a7a4cuo7tX9JNRych2sRJPv");
+  assert.equal(sheet.mint.toBase58(), "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+  assert.equal(sheet.price, 100_000_000n);
+  assert.equal(sheet.feeBps, 1000);
+  assert.equal(sheet.cap, 50);
+  assert.equal(sheet.sold, 7);
+});
+
+test("покупка читается: покупатель, номера и тег строки в базе", () => {
+  const order = decodeOrder(Buffer.from(ORDER, "base64"));
+  assert.ok(order.buyer.equals(STICKER_SELLER));
+  assert.equal(order.first, 4);
+  assert.equal(order.count, 3);
+  assert.equal(order.tag, LOT_ID);
+});
+
+test("адреса листа и покупок: свой у каждого номера", () => {
+  assert.equal(sheetAddress(SALE_ID).toBase58(), "9r86V2QrnnJDN6DvBTAZKRP1foS2HTitbFiz2476sgwd");
+  const sheet = sheetAddress(SALE_ID);
+  assert.ok(!orderAddress(sheet, 0).equals(orderAddress(sheet, 1)));
+  assert.ok(!sheet.equals(saleAddress(SALE_ID)), "адрес листа совпал с адресом торга");
 });

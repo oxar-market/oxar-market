@@ -8,6 +8,7 @@ import {
   reviewThing,
   dropPermit,
   grantPermit,
+  openStickers,
   loadAdminThings,
   saleModeOk,
   saveSpotGeo,
@@ -17,6 +18,7 @@ import {
   type AdminThing,
 } from "@/lib/admin";
 import { photoUrl } from "@/lib/seller";
+import { STICKER_CAP, STICKER_PRICE_CENTS } from "@/lib/stickers";
 import { Media } from "../gallery.tsx";
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
@@ -602,6 +604,40 @@ function AdminThingView({
           )}
           {!thing.published && !thing.sellerWallet && !thing.noLockup && (
             <p className="muted">The seller has no wallet on this thing yet.</p>
+          )}
+        </div>
+      )}
+
+      {/* Стикеры - не торг: цена одна, лимит и деление денег держит лист в
+          цепочке. Заводит его админ своей подписью в Phantom. */}
+      {(thing.stickerSheet || thing.sellerWallet) && (
+        <div className="sl-card ad-card">
+          <h3>Stickers</h3>
+          {thing.stickerSheet ? (
+            <p className="muted">
+              {STICKER_CAP} stickers at {formatUsd(STICKER_PRICE_CENTS)} are on sale. Sheet {thing.stickerSheet}.
+            </p>
+          ) : (
+            <>
+              <p className="muted">
+                {STICKER_CAP} stickers at {formatUsd(STICKER_PRICE_CENTS)}, no outbid. The seller's wallet gets the price minus the platform fee at once.
+              </p>
+              <button
+                type="button"
+                className="sl-btn dark"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  const done = await openStickers(thing);
+                  setBusy(false);
+                  if (!done.ok) setError(done.why);
+                  onChanged();
+                }}
+              >
+                Open stickers. Signed in Phantom.
+              </button>
+            </>
           )}
         </div>
       )}
