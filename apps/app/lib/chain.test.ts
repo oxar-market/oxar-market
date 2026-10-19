@@ -11,8 +11,12 @@ import {
   payData,
   decideData,
   moveProofData,
+  permitAddress,
+  permitData,
+  revokePermitData,
   saleAddress,
 } from "./chain.ts";
+import { PublicKey } from "@solana/web3.js";
 
 /**
  * Разбор места и торга проверяется на байтах, собранных самим Anchor, а не на
@@ -173,4 +177,19 @@ test("инструкции защиты покупателя кодируютс�
   assert.equal(b64(decideData(3000)), "fZh7Oec58Vm4Cw==");
   assert.equal(b64(moveProofData(1_795_000_000_000)), "M6wELc68K8DAhv1qAAAAAA==");
   assert.throws(() => proofData(new Uint8Array(31)), "хеш не из тридцати двух байт");
+});
+
+test("разрешение на торг без пруфа кодируется байт в байт как у Anchor", () => {
+  // Образцы сняты BorshInstructionCoder по IDL с разрешением: торг 7c9e6679-…,
+  // продавец AkC8….
+  const b64 = (data: Uint8Array) => Buffer.from(data).toString("base64");
+  const seller = new PublicKey("AkC8BHHNJQ61fXVsHVnWsferBm4PC6t8oT8YwRmrwDtB");
+  assert.equal(b64(permitData(SALE_ID, seller)), "n5xdyw+6zKd8nmZ5dCVA3pRL4H/B+QrnkMm8Gv1DLh1K+2eNp+C6LJ7Pg/7DPOnhM45ksqjPD0g=");
+  assert.equal(b64(revokePermitData(SALE_ID)), "WlxpYqyooOZ8nmZ5dCVA3pRL4H/B+Qrn");
+});
+
+test("адрес разрешения выводится из id торга, и у разных торгов он разный", () => {
+  assert.ok(permitAddress(SALE_ID).equals(permitAddress(SALE_ID)));
+  assert.ok(!permitAddress(SALE_ID).equals(permitAddress("00000000-0000-0000-0000-000000000001")));
+  assert.ok(!permitAddress(SALE_ID).equals(saleAddress(SALE_ID)), "адрес разрешения совпал с адресом торга");
 });

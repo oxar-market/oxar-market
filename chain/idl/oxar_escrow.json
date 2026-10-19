@@ -45,6 +45,164 @@
   ],
   "instructions": [
     {
+      "name": "admin_permits_sale",
+      "docs": [
+        "Админ разрешает продавцу открыть один торг без пруфа: деньги по закрытию."
+      ],
+      "discriminator": [
+        159,
+        156,
+        93,
+        203,
+        15,
+        186,
+        204,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "permit",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  114,
+                  109,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sale_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "sale_id",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "seller",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "admin_revokes_permit",
+      "docs": [
+        "Админ отзывает разрешение на торг без пруфа, аренда возвращается ему."
+      ],
+      "discriminator": [
+        90,
+        92,
+        105,
+        98,
+        172,
+        168,
+        160,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "permit",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  114,
+                  109,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sale_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "sale_id",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "admin_sets_terms",
       "docs": [
         "Задать условия площадки: комиссию и кошелёк, куда она идёт.",
@@ -1415,6 +1573,35 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "permit",
+          "docs": [
+            "Разрешение админа на этот торг - по адресу из его id, так что чужое",
+            "сюда не подставить. Передаётся всегда, даже когда его нет: id",
+            "разрешённого торга виден в цепочке, и без этой проверки любой занял бы",
+            "его своим торгом раньше продавца.",
+            "и принадлежит программе."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  114,
+                  109,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sale_id"
+              }
+            ]
+          }
         }
       ],
       "args": [
@@ -1589,6 +1776,19 @@
         34,
         183
       ]
+    },
+    {
+      "name": "SalePermit",
+      "discriminator": [
+        162,
+        210,
+        65,
+        66,
+        123,
+        92,
+        214,
+        168
+      ]
     }
   ],
   "events": [
@@ -1739,6 +1939,16 @@
       "code": 6023,
       "name": "ProofDeadlineFixed",
       "msg": "The proof deadline can only move later, before it passes and before the proof"
+    },
+    {
+      "code": 6024,
+      "name": "NoPermit",
+      "msg": "A sale that pays at close needs the platform's permit for this seller"
+    },
+    {
+      "code": 6025,
+      "name": "SaleIdReserved",
+      "msg": "This sale id is reserved by the platform for another seller"
     }
   ],
   "types": [
@@ -2100,6 +2310,34 @@
               "считается потолок переносов. Лёг на последние байты прежнего запаса."
             ],
             "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SalePermit",
+      "docs": [
+        "Разрешение площадки открыть торг без пруфа.",
+        "",
+        "Без пруфа деньги победителей уходят продавцу сразу по закрытию, и защиты",
+        "покупателя у такого торга нет. Поэтому решает не продавец, а админ: он",
+        "выдаёт разрешение на один торг (адрес выводится из его id) одному",
+        "продавцу. Тот же торг второй раз не открыть - его адрес занят, - так что",
+        "разрешение одноразовое само собой. Аренду за него админ забирает отзывом."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "seller",
+            "docs": [
+              "Кому разрешено: открыть торг по разрешению может только он."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }

@@ -97,12 +97,19 @@ export type SettledOutcome = "paid" | "refunded" | "split";
  * Чем кончилось закрытое место: выплачено продавцу, ставка вернулась или
  * арбитр поделил. Доля арбитра - если спор решён. Без неё продавцу ушло
  * только место с пруфом, которое расчёт не отметил возвратом (молчание
- * арбитра): без пруфа программа платит только назад.
+ * арбитра): без пруфа программа платит только назад. Торг без защиты
+ * (`protection: false`) пруфа не ждёт: закрытое место там выплачено.
  */
-export function settledOutcome(closed: { sellerBps: number | null; proved: boolean; refunded: boolean }): SettledOutcome {
+export function settledOutcome(closed: {
+  protection: boolean;
+  sellerBps: number | null;
+  proved: boolean;
+  refunded: boolean;
+}): SettledOutcome {
   if (closed.sellerBps !== null) {
     return closed.sellerBps === 10_000 ? "paid" : closed.sellerBps === 0 ? "refunded" : "split";
   }
+  if (!closed.protection) return closed.refunded ? "refunded" : "paid";
   return closed.proved && !closed.refunded ? "paid" : "refunded";
 }
 

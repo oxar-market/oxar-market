@@ -288,6 +288,14 @@ export type PricingThing = {
   cover: string | null;
   /** Все снимки вещи: на экране цен места видны каждое на своём. */
   photos: string[];
+  /** Админ отметил торг без пруфа: деньги продавцу сразу по закрытию. */
+  noLockup: boolean;
+  /** Вещь подготовил админ: цены уже стоят, продавцу - проверить и опубликовать. */
+  prepared: boolean;
+  /** Кошелёк, которому админ готовил вещь: разрешение без пруфа выдано ему. */
+  sellerWallet: string | null;
+  /** Черновики цен по местам - у подготовленной вещи их завёл админ. */
+  drafts: { spotId: string; reserveCents: number; stepCents: number; closesAt: string }[];
   spots: {
     id: string;
     label: string;
@@ -325,7 +333,7 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
   if (!db) return null;
   const { data } = await db
     .from("things")
-    .select("id, title, photos, worn_by, worn_where, worn_when, worn_about, thing_spots(id, label, sort, photo, outline, x, y, w, h)")
+    .select("id, title, photos, permit_sale, prepared, seller_wallet, worn_by, worn_where, worn_when, worn_about, thing_spots(id, label, sort, photo, outline, x, y, w, h), lots(spot_id, status, reserve_cents, min_step_cents, closes_at)")
     .eq("id", thingId)
     .maybeSingle();
   if (!data) return null;
@@ -351,6 +359,19 @@ export async function loadPricingThing(thingId: string): Promise<PricingThing | 
     title: data.title,
     cover: photos[0] ? photoUrl(photos[0]) : null,
     photos: photos.map(photoUrl),
+    noLockup: data.permit_sale != null,
+    prepared: data.prepared === true,
+    sellerWallet: (data.seller_wallet as string | null) ?? null,
+    drafts: ((data.lots as {
+      spot_id: string; status: string; reserve_cents: number; min_step_cents: number; closes_at: string;
+    }[] | null) ?? [])
+      .filter((lot) => lot.status === "draft")
+      .map((lot) => ({
+        spotId: lot.spot_id,
+        reserveCents: lot.reserve_cents,
+        stepCents: lot.min_step_cents,
+        closesAt: lot.closes_at,
+      })),
     spots,
     worn: {
       by: data.worn_by ?? "",

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     error::EscrowError,
-    state::{Config, Sale, MAX_EXTEND_SECONDS, MAX_SALE_SECONDS, TOTAL_EXTEND_SECONDS},
+    state::{Config, Sale, SalePermit, MAX_EXTEND_SECONDS, MAX_SALE_SECONDS, TOTAL_EXTEND_SECONDS},
 };
 
 /// Продавец открывает торг вещи.
@@ -44,6 +44,15 @@ pub struct SellerOpensSale<'info> {
     pub config: Account<'info, Config>,
 
     pub system_program: Program<'info, System>,
+
+    /// Разрешение админа на этот торг - по адресу из его id, так что чужое
+    /// сюда не подставить. Передаётся всегда, даже когда его нет: id
+    /// разрешённого торга виден в цепочке, и без этой проверки любой занял бы
+    /// его своим торгом раньше продавца.
+    /// CHECK: адрес задают сиды; данные читаются, только если разрешение есть
+    /// и принадлежит программе.
+    #[account(seeds = [b"permit", sale_id.as_ref()], bump)]
+    pub permit: UncheckedAccount<'info>,
 }
 
 pub fn open_sale(
@@ -75,8 +84,29 @@ pub fn open_sale(
     // уже не принять, а победитель забирает ставку назад. Нарочно продлить
     // торг ставками ради такого возврата мог бы сам победитель. Верхней
     // границы нет: ждать денег до далёкого ивента - выбор продавца.
+    //
+    // Ноль - торг без пруфа: выплата по закрытию, без окна спора. Такой торг
+    // открывается только по разрешению админа, выданному этому продавцу на
+    // этот торг. Режим пишется здесь и после открытия не меняется.
     let hard_closes_at = closes_at.saturating_add(TOTAL_EXTEND_SECONDS);
-    require!(proof_deadline > hard_closes_at, EscrowError::ProofBeforeClose);
+    let permit = &ctx.accounts.permit;
+    let permitted = if permit.owner == ctx.program_id && !permit.data_is_empty() {
+        let data = permit.try_borrow_data()?;
+        // Дискриминатор проверяется здесь: чужой тип аккаунта не прочитается.
+        Some(SalePermit::try_deserialize(&mut &data[..])?.seller)
+    } else {
+        None
+    };
+    // id, на который выдано разрешение, открывает только его продавец - в
+    // любом режиме.
+    if let Some(allowed) = permitted {
+        require_keys_eq!(allowed, ctx.accounts.seller.key(), EscrowError::SaleIdReserved);
+    }
+    if proof_deadline == 0 {
+        require!(permitted.is_some(), EscrowError::NoPermit);
+    } else {
+        require!(proof_deadline > hard_closes_at, EscrowError::ProofBeforeClose);
+    }
 
     let sale = &mut ctx.accounts.sale;
     sale.sale = sale_id;

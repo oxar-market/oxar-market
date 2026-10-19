@@ -534,6 +534,21 @@ export async function uploadCreative(
  * - это то, по чему ставку можно проверить, не веря нам на слово. Поэтому
  * запись идёт последней, и её неудача денег не трогает.
  */
+/**
+ * Отметил ли админ вещь этого места как торг без пруфа. Ставка сверяет это с
+ * режимом торга в цепочке: программа откроет торг без пруфа любому продавцу,
+ * подписавшему его сам, а ставить в такой можно только у отмеченной вещи.
+ * null - не прочиталось.
+ */
+export async function lotNoLockup(lotId: string): Promise<boolean | null> {
+  if (!db) return null;
+  const { data } = await db.from("lots").select("things(permit_sale)").eq("id", lotId).maybeSingle();
+  type Row = { permit_sale: string | null };
+  const thing = data?.things as Row | Row[] | null | undefined;
+  if (!thing) return null;
+  return (Array.isArray(thing) ? thing[0]?.permit_sale : thing.permit_sale) != null;
+}
+
 export async function recordBid(bid: {
   lotId: string;
   wallet: string;

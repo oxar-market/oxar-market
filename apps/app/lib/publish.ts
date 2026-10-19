@@ -11,7 +11,7 @@ import {
 import { Buffer } from "buffer";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { LOTS_PER_TX, centsToUnits, minProofDeadline } from "@oxar/core";
-import { auctionBytes, connection, lotAddress, openSaleData, saleAddress, sendSigned, settled } from "./chain.ts";
+import { auctionBytes, connection, lotAddress, openSaleData, permitAddress, saleAddress, sendSigned, settled } from "./chain.ts";
 import { db } from "./session.ts";
 
 /**
@@ -48,6 +48,11 @@ function u64(value: bigint): Uint8Array {
   return out;
 }
 
+/**
+ * Последним аккаунтом - разрешение админа по адресу из id торга. Передаётся
+ * всегда, даже если его нет: программа по нему не даёт занять чужой
+ * разрешённый id, а торг без пруфа (срок ноль) без него не откроет.
+ */
 function openSale(seller: PublicKey, saleId: string, closesAt: number, proofBy: number): TransactionInstruction {
   const [config] = PublicKey.findProgramAddressSync([Buffer.from("config")], PROGRAM_ID);
   return new TransactionInstruction({
@@ -58,6 +63,7 @@ function openSale(seller: PublicKey, saleId: string, closesAt: number, proofBy: 
       { pubkey: saleAddress(saleId), isSigner: false, isWritable: true },
       { pubkey: config, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: permitAddress(saleId), isSigner: false, isWritable: false },
     ],
   });
 }
@@ -113,6 +119,11 @@ export async function publishAuctions(
     .eq("thing_id", thingId)
     .eq("status", "draft");
   if (!drafts || drafts.length === 0) return 0;
+  // Торг без пруфа - только по разрешению админа на конкретный торг: его id
+  // лежит в вещи, и программа без разрешения такой торг не откроет.
+  const { data: thing } = await db.from("things").select("permit_sale").eq("id", thingId).maybeSingle();
+  if (!thing) return null;
+  const permitSale = (thing.permit_sale as string | null) ?? null;
 
   const coin = await platformMint();
   if (!coin || coin.decimals < 2) return null;
@@ -124,9 +135,12 @@ export async function publishAuctions(
     bySale.set(key, [...(bySale.get(key) ?? []), lot]);
   }
 
+  // Разрешение - на один торг, значит и закрытие у всех мест одно.
+  if (permitSale && bySale.size !== 1) return null;
+
   let opened = 0;
   for (const [closesAt, lots] of bySale) {
-    const saleId = crypto.randomUUID();
+    const saleId = permitSale ?? crypto.randomUUID();
     const batches: TransactionInstruction[][] = [];
     const lotIxs = lots.map((lot) =>
       openLot(seller, saleId, lot.id, coin.mint, centsToUnits(lot.reserve_cents, coin.decimals), centsToUnits(lot.min_step_cents, coin.decimals)),
@@ -137,8 +151,11 @@ export async function publishAuctions(
     // Срок пруфа - один на торг: самый поздний из его мест. Программа не
     // примет срок раньше жёсткого конца торга (закрытие плюс час продления),
     // и экран цен раньше его не даёт; без срока торг не открываем вовсе.
-    const proofBy = Math.max(...lots.map((lot) => (lot.proof_by ? Date.parse(lot.proof_by as string) : 0)));
-    if (proofBy / 1000 < minProofDeadline(Date.parse(closesAt) / 1000)) return null;
+    // Ноль - торг без пруфа: выплата по закрытию.
+    const proofBy = permitSale
+      ? 0
+      : Math.max(...lots.map((lot) => (lot.proof_by ? Date.parse(lot.proof_by as string) : 0)));
+    if (!permitSale && proofBy / 1000 < minProofDeadline(Date.parse(closesAt) / 1000)) return null;
     // Торг открывается первой транзакцией вместе с первыми местами.
     batches[0]!.unshift(openSale(seller, saleId, Date.parse(closesAt), proofBy));
 

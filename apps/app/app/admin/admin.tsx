@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUsd } from "@oxar/core";
+import { formatUsd, shortWallet } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import {
   awaitsReview,
   reviewThing,
+  dropPermit,
+  grantPermit,
   loadAdminThings,
+  saleModeOk,
   saveSpotGeo,
   updateThing,
   uploadModel,
@@ -21,6 +24,7 @@ import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
 import { Day, dayRange } from "../seller/setup.tsx";
 import { reviewState } from "@/lib/thing-review";
 import { Disputes } from "./disputes.tsx";
+import { PrepareThing } from "./prepare.tsx";
 import { loadDisputes } from "@/lib/arbiter";
 
 /**
@@ -37,6 +41,8 @@ export function Admin() {
   const [people, setPeople] = useState(0);
   // Нерешённые споры: деньги мест заморожены, пока арбитр не решит.
   const [disputes, setDisputes] = useState(0);
+  // Форма подготовленного аукциона: вещь, места и цены за продавца.
+  const [preparing, setPreparing] = useState(false);
 
   function reload() {
     void loadAdminThings().then(setThings);
@@ -113,6 +119,22 @@ export function Admin() {
         <h2>Things</h2>
         <span>{things?.length ?? ""}</span>
       </div>
+      {preparing ? (
+        <PrepareThing
+          onCancel={() => setPreparing(false)}
+          onPrepared={(id) => {
+            setPreparing(false);
+            void loadAdminThings().then((list) => {
+              setThings(list);
+              setOpen(id);
+            });
+          }}
+        />
+      ) : (
+        <button type="button" className="sl-btn light" onClick={() => setPreparing(true)}>
+          Prepare an auction for a seller
+        </button>
+      )}
       {things?.length === 0 && <p className="muted">Nothing sent yet.</p>}
       {things && things.length > 0 && (
         <div className="sl-card sl-things">
@@ -156,6 +178,9 @@ const STATE_CLASS = {
 
 /** Размер места на модели по умолчанию - в единицах сцены, вещь в ней ~0.62. */
 const SIZE = 0.1;
+
+const LOCKUP_MISMATCH =
+  "Its auction on chain pays at close without proof, but this thing is not marked No money lockup. Do not approve it.";
 
 function AdminThingView({
   thing,
@@ -529,6 +554,58 @@ function AdminThingView({
         </div>
       )}
 
+      {/* Подготовленная вещь: цены поставил админ, публикует продавец. */}
+      {thing.prepared && !thing.published && thing.drafts.length > 0 && (
+        <div className="sl-card ad-card">
+          <h3>Prepared prices</h3>
+          <p className="muted">
+            The seller ({thing.sellerWallet ? shortWallet(thing.sellerWallet) : "no wallet"}) sees these and publishes
+            from their wallet. Closes {new Date(thing.drafts[0]!.closesAt).toLocaleString()}.
+          </p>
+          <ul className="ad-prices">
+            {thing.drafts.map((draft) => (
+              <li key={draft.id}>
+                {thing.spots.find((one) => one.id === draft.spotId)?.label ?? "Spot"} · from{" "}
+                {formatUsd(draft.reserveCents)} · step {formatUsd(draft.stepCents)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Режим выплаты пишется в цепочку при открытии торга: после
+          публикации разрешение уже ничего не меняет. Выдаёт и отзывает его
+          админ своей подписью в Phantom. */}
+      {(!thing.published || thing.noLockup) && (
+        <div className="sl-card ad-card">
+          <h3>Payout</h3>
+          {thing.published ? (
+            <p className="muted">No money lockup: the seller is paid at close, without proof.</p>
+          ) : (
+            <label className="ad-lockup">
+              <input
+                type="checkbox"
+                checked={thing.noLockup}
+                disabled={busy || (!thing.noLockup && !thing.sellerWallet)}
+                onChange={async (event) => {
+                  const grant = event.target.checked;
+                  setBusy(true);
+                  setError("");
+                  const done = grant ? await grantPermit(thing) : await dropPermit(thing);
+                  setBusy(false);
+                  if (!done.ok) setError(done.why);
+                  onChanged();
+                }}
+              />
+              No money lockup: the seller is paid at close, without proof. Signed in Phantom.
+            </label>
+          )}
+          {!thing.published && !thing.sellerWallet && !thing.noLockup && (
+            <p className="muted">The seller has no wallet on this thing yet.</p>
+          )}
+        </div>
+      )}
+
       {!thing.house && (
       <div className="sl-card ad-card">
         <h3>Review</h3>
@@ -552,7 +629,10 @@ function AdminThingView({
             type="button"
             className="sl-btn dark"
             disabled={busy}
-            onClick={() => decide(() => reviewThing(thing.id, true), "Could not approve it.")}
+            onClick={async () => {
+              if (!(await saleModeOk(thing))) return setError(LOCKUP_MISMATCH);
+              void decide(() => reviewThing(thing.id, true), "Could not approve it.");
+            }}
           >
             Approve
           </button>
@@ -600,9 +680,10 @@ function AdminThingView({
             type="button"
             className="sl-btn dark"
             disabled={busy}
-            onClick={() =>
-              run(() => updateThing(thing.id, { active: true, hidden: false }), "Could not show it.")
-            }
+            onClick={async () => {
+              if (!(await saleModeOk(thing))) return setError(LOCKUP_MISMATCH);
+              void run(() => updateThing(thing.id, { active: true, hidden: false }), "Could not show it.");
+            }}
           >
             Show on Market
           </button>

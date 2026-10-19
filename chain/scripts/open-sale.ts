@@ -138,6 +138,8 @@ async function main() {
       new anchor.BN(EXTEND_SECONDS),
       new anchor.BN(Math.floor(proofBy.getTime() / 1000)),
     )
+    // Адрес разрешения клиент выводит из id торга сам: торгу с пруфом оно
+    // не нужно, но программа проверяет, не занят ли этот id чужим.
     .accounts({
       seller: seller.publicKey,
       systemProgram: SystemProgram.programId,

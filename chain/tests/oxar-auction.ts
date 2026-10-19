@@ -72,6 +72,46 @@ describe("oxar-escrow: торг", () => {
       program.programId,
     )[0];
 
+  /** Разрешение площадки открыть торг без пруфа - одно на торг. */
+  const permitPda = (saleId: number[]) =>
+    PublicKey.findProgramAddressSync(
+      [Buffer.from("permit"), Buffer.from(saleId)],
+      program.programId,
+    )[0];
+
+  /** Админ разрешает торг без пруфа конкретному продавцу. */
+  async function grant(saleId: number[], to: PublicKey, admin?: Keypair) {
+    const me = (provider.wallet as anchor.Wallet).payer;
+    const who = admin ?? me;
+    await program.methods
+      .adminPermitsSale(saleId, to)
+      .accountsPartial({ admin: who.publicKey, permit: permitPda(saleId) })
+      .signers([who])
+      .rpc();
+  }
+
+  async function revoke(saleId: number[], admin?: Keypair) {
+    const who = admin ?? (provider.wallet as anchor.Wallet).payer;
+    await program.methods
+      .adminRevokesPermit(saleId)
+      .accountsPartial({ admin: who.publicKey, permit: permitPda(saleId) })
+      .signers([who])
+      .rpc();
+  }
+
+  /**
+   * Открыть торг тем, кто подписал. Аккаунт разрешения передаётся всегда - по
+   * адресу из id торга; `permit` - подставить чужой адрес, проверить, что
+   * программа его не примет.
+   */
+  async function openWith(saleId: number[], closesAt: number, proofDeadline: number, permit?: PublicKey, who = seller) {
+    await program.methods
+      .sellerOpensSale(saleId, new anchor.BN(closesAt), new anchor.BN(1), new anchor.BN(proofDeadline))
+      .accountsPartial({ seller: who.publicKey, sale: salePda(saleId), permit: permit ?? permitPda(saleId) })
+      .signers([who])
+      .rpc();
+  }
+
   const lotVaultPda = (lot: PublicKey) =>
     PublicKey.findProgramAddressSync(
       [Buffer.from("lot_vault"), lot.toBuffer()],
@@ -98,20 +138,27 @@ describe("oxar-escrow: торг", () => {
    * продление проверяется отдельно, с боевым значением.
    */
   // Срок пруфа обязан быть позже жёсткого конца - заявленного закрытия плюс
-  // час продления. По умолчанию - ещё десять минут сверху.
-  async function openSale(closesInSeconds: number, extendSeconds = 1, proofAfterSeconds = 4_200) {
+  // час продления. По умолчанию - ещё десять минут сверху. `null` - торг без
+  // пруфа: срок ноль, выплата по закрытию.
+  async function openSale(
+    closesInSeconds: number,
+    extendSeconds = 1,
+    proofAfterSeconds: number | null = 4_200,
+  ) {
     const saleId = auctionId();
     const sale = salePda(saleId);
     const closesAt = (await now()) + closesInSeconds;
+    // Торг без пруфа открывается только по разрешению площадки.
+    if (proofAfterSeconds === null) await grant(saleId, seller.publicKey);
 
     await program.methods
       .sellerOpensSale(
         saleId,
         new anchor.BN(closesAt),
         new anchor.BN(extendSeconds),
-        new anchor.BN(closesAt + proofAfterSeconds),
+        new anchor.BN(proofAfterSeconds === null ? 0 : closesAt + proofAfterSeconds),
       )
-      .accounts({ seller: seller.publicKey })
+      .accountsPartial({ seller: seller.publicKey, sale, permit: permitPda(saleId) })
       .signers([seller])
       .rpc();
 
@@ -143,7 +190,7 @@ describe("oxar-escrow: торг", () => {
     closesInSeconds: number,
     extendSeconds = 1,
     reserve = RESERVE,
-    proofAfterSeconds = 4_200,
+    proofAfterSeconds: number | null = 4_200,
   ) {
     const { sale, closesAt } = await openSale(closesInSeconds, extendSeconds, proofAfterSeconds);
     const { id, lot, vault } = await addLot(sale, reserve);
@@ -851,6 +898,101 @@ describe("oxar-escrow: торг", () => {
     // оказаться раньше настоящего конца, и пруф стало бы не принять вовсе.
     await fails(openSale(60, 1, 1_800), "ProofBeforeClose", "срок пруфа внутри часа продления");
     await fails(openSale(60, 1, 3_600), "ProofBeforeClose", "срок пруфа ровно в жёсткий конец");
+  });
+
+  it("торг без пруфа открывается только по разрешению админа, выданному этому продавцу на этот торг", async () => {
+    const closesAt = (await now()) + 60;
+    const saleId = auctionId();
+
+    await fails(openWith(saleId, closesAt, 0), "NoPermit", "открыли торг без пруфа без разрешения");
+    await fails(grant(saleId, seller.publicKey, bob), "NotTheAdmin", "разрешение выдал не админ");
+
+    // Разрешение другому продавцу не годится этому.
+    await grant(saleId, bob.publicKey);
+    await fails(openWith(saleId, closesAt, 0), "SaleIdReserved", "открыл не тот продавец");
+
+    // Разрешение на другой торг не годится этому: адрес выводится из id торга.
+    const other = auctionId();
+    await grant(other, seller.publicKey);
+    await fails(openWith(saleId, closesAt, 0, permitPda(other)), "ConstraintSeeds", "чужое разрешение подошло");
+
+    // Своё разрешение на свой торг - открывается, и срок пруфа в нём ноль.
+    await openWith(other, closesAt, 0);
+    assert.equal((await program.account.sale.fetch(salePda(other))).proofDeadline.toNumber(), 0);
+
+    // Второй раз тот же торг не открыть: адрес торга занят.
+    await fails(openWith(other, closesAt, 0), "already in use", "торг открыли дважды");
+  });
+
+  it("разрешение отзывает только админ, и отозванное не открывает торг", async () => {
+    const closesAt = (await now()) + 60;
+    const saleId = auctionId();
+    await grant(saleId, seller.publicKey);
+
+    await fails(revoke(saleId, bob), "NotTheAdmin", "разрешение отозвал не админ");
+    const me = (provider.wallet as anchor.Wallet).payer;
+    const before = await connection.getBalance(me.publicKey);
+    await revoke(saleId);
+    assert.isNull(await connection.getAccountInfo(permitPda(saleId)), "разрешение не закрылось");
+    assert.isAbove(await connection.getBalance(me.publicKey), before - 10_000, "аренда не вернулась админу");
+
+    await fails(openWith(saleId, closesAt, 0), "NoPermit", "открыли по отозванному");
+  });
+
+  it("торг с пруфом разрешения не требует, а разрешение не делает его торгом без пруфа", async () => {
+    const closesAt = (await now()) + 60;
+    const saleId = auctionId();
+    await grant(saleId, seller.publicKey);
+    await openWith(saleId, closesAt, closesAt + 4_200);
+    assert.equal(
+      (await program.account.sale.fetch(salePda(saleId))).proofDeadline.toNumber(),
+      closesAt + 4_200,
+      "разрешение сменило режим торга",
+    );
+  });
+
+  it("id торга с разрешением не занять чужим торгом: открыть его может только тот, кому разрешено", async () => {
+    // id разрешённого торга виден в цепочке. Займи его кто-то обычным торгом
+    // раньше продавца - тот бы уже не открыл свой: адрес торга занят.
+    const closesAt = (await now()) + 60;
+    const saleId = auctionId();
+    await grant(saleId, seller.publicKey);
+
+    await fails(openWith(saleId, closesAt, closesAt + 4_200, undefined, bob), "SaleIdReserved", "чужой занял id торга с пруфом");
+    await fails(openWith(saleId, closesAt, 0, undefined, bob), "SaleIdReserved", "чужой занял id торга без пруфа");
+    await openWith(saleId, closesAt, 0);
+    assert.equal((await program.account.sale.fetch(salePda(saleId))).seller.toBase58(), seller.publicKey.toBase58());
+  });
+
+  it("торг без пруфа платит по закрытию кому угодно, а пруфа и спора у него нет", async () => {
+    const { lot, vault, sale } = await openLot(5, 1, RESERVE, null);
+    await bid(lot, alice, RESERVE);
+    await fails(pay(lot, bob), "LotStillOpen", "выплатили, пока идёт торг");
+    await sleep(6500);
+
+    await fails(prove(sale), "ProofNotTaken", "торг без пруфа принял пруф");
+    await fails(
+      program.methods
+        .winnerDisputes()
+        .accountsPartial({ winner: alice.publicKey, sale, lot })
+        .signers([alice])
+        .rpc(),
+      "AppealClosed",
+      "торг без пруфа дал оспорить",
+    );
+
+    const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
+    const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
+    const sellerBefore = await balance(sellerTokens);
+    const platformBefore = await balance(platformTokens);
+
+    // Зовёт посторонний, не победитель: выплата не ждёт ничьего «да».
+    await pay(lot, bob);
+
+    const fee = BigInt(RESERVE) / 10n;
+    assert.equal(await balance(platformTokens), platformBefore + fee, "площадка недополучила комиссию");
+    assert.equal(await balance(sellerTokens), sellerBefore + (BigInt(RESERVE) - fee), "продавец получил не остаток");
+    assert.isNull(await connection.getAccountInfo(vault), "хранилище не закрылось");
   });
 
   it("пруф присылает только продавец, только после закрытия и только один раз", async () => {

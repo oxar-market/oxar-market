@@ -72,6 +72,18 @@ export async function loadApplications(): Promise<Application[]> {
   return ((data ?? []) as Row[]).map(fromRow);
 }
 
+/** Одобренные продавцы с кошельком: для них админ готовит аукционы. */
+export async function loadSellers(): Promise<Application[]> {
+  if (!db) return [];
+  const { data } = await db
+    .from("seller_applications")
+    .select(COLUMNS)
+    .eq("status", "approved")
+    .not("wallet", "is", null)
+    .order("created_at", { ascending: false });
+  return ((data ?? []) as Row[]).map(fromRow);
+}
+
 export async function decideSeller(userId: string, approve: boolean): Promise<boolean> {
   if (!db) return false;
   const { data, error } = await db.rpc("admin_decide_seller", { applicant: userId, approve });
