@@ -5617,6 +5617,41 @@ a.sl-pill {
   height: 7px;
 }
 
+.ad-prepare {
+  display: grid;
+  gap: 12px;
+}
+
+.ad-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.ad-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 8px;
+}
+
+.ad-row input,
+.ad-prepare select {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.ad-prices {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
 .ad-lockup {
   display: flex;
   gap: 10px;
