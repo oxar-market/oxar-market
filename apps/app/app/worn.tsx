@@ -32,6 +32,10 @@ export async function loadWorn(thingId: string): Promise<Worn> {
       .from("lots")
       .select("proof_by")
       .eq("thing_id", thingId)
+      // Черновик - ещё не торг: его срок пруфа из формы подготовки, а торг
+      // без пруфа публикация сотрёт. Показывать его - обещать эскроу,
+      // которого не будет.
+      .neq("status", "draft")
       .not("proof_by", "is", null)
       .order("closes_at", { ascending: false })
       .limit(1)
