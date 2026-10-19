@@ -469,12 +469,18 @@ export function ThingStage({
         for (const spot of SPOTS) {
           const angle = (spot.azimuth * Math.PI) / 180;
           const dir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
-          const start = dir
-            .clone()
-            .multiplyScalar(1.2)
-            .add(new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle)).multiplyScalar(spot.shift ?? 0))
-            .setY(low + tall * spot.height);
-          raycaster.set(start, dir.clone().negate());
+          // Место сверху - луч вниз над точкой вдоль вещи; остальные -
+          // горизонтально к оси.
+          if (spot.top) {
+            raycaster.set(new THREE.Vector3(spot.shift ?? 0, low + tall + 1, 0), new THREE.Vector3(0, -1, 0));
+          } else {
+            const start = dir
+              .clone()
+              .multiplyScalar(1.2)
+              .add(new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle)).multiplyScalar(spot.shift ?? 0))
+              .setY(low + tall * spot.height);
+            raycaster.set(start, dir.clone().negate());
+          }
           // Целимся во все меши сразу: у вещи их бывает несколько, и какая
           // именно окажется под лучом - забота геометрии, а не разметки.
           const hit = raycaster.intersectObjects(meshes, true)[0];
@@ -482,6 +488,9 @@ export function ThingStage({
           const surface = hit.object as InstanceType<typeof THREE.Mesh>;
 
           anchor.position.copy(hit.point);
+          // Верх логотипа: у мест сверху - от зрителя на азимуте 0, иначе
+          // лицо места смотрело бы вверх, а «верх» совпал бы с ним.
+          anchor.up.set(0, spot.top ? 0 : 1, spot.top ? -1 : 0);
           anchor.lookAt(
             hit.point
               .clone()
