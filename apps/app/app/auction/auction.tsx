@@ -961,10 +961,14 @@ function spanOf(ms: number): string {
  * здесь не показываем, он живёт на маркете.
  */
 export function Between() {
-  const [next, setNext] = useState<{ title: string; model: string | null } | null>(null);
+  const [next, setNext] = useState<{ title: string; tagline: string | null; model: string | null; opensAt: string | null } | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     void loadNextHouse().then(setNext);
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
   }, []);
+  const opensAt = next?.opensAt ? Date.parse(next.opensAt) : null;
 
   return (
     <section className="lot">
@@ -988,14 +992,22 @@ export function Between() {
           <div>
             <h2 className="hero-name">{next?.title ?? "Not announced yet"}</h2>
             <p className="hero-who">
-              {next
+              {next?.tagline
+                ? next.tagline
+                : next
                 ? "Who has it, where and when show up here before bidding opens."
                 : "The thing is not decided yet. Details show up here before bidding opens."}
             </p>
           </div>
           <div className="hero-stat">
-            <span className="muted">Bidding opens</span>
-            <span className="hero-top word">Soon</span>
+            <span className="muted">{opensAt !== null && opensAt > now ? "Bidding opens in" : "Bidding opens"}</span>
+            {opensAt !== null && opensAt > now ? (
+              <span className="hero-top" suppressHydrationWarning>
+                {clockOf(opensAt, now)}
+              </span>
+            ) : (
+              <span className="hero-top word">Soon</span>
+            )}
           </div>
           {/* Шаги в той же карточке: под ней они читались выпавшими. */}
           <ol className="between-steps">

@@ -169,14 +169,25 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
     });
     byDay.set(key, group);
   });
+  // Анонс с объявленной датой стоит в дне открытия, как назначенный торг.
+  upcoming.forEach((one, at) => {
+    const opens = one.opensAt === null ? null : Date.parse(one.opensAt);
+    if (opens === null || hasOpened(opens, now)) return;
+    mark(opens, "open");
+    const key = dayKey(opens);
+    const group = byDay.get(key) ?? { at: opens, title: dayTitle(opens, now), rows: [] };
+    group.rows.push({ id: one.id, slide: things.length + at, name: one.title, price: "-", time: `opens in ${left(opens, now)}` });
+    byDay.set(key, group);
+  });
   const groups = [...byDay.entries()].sort((a, b) => a[1].at - b[1].at);
-  if (upcoming.length > 0) {
+  const undated = upcoming.flatMap((one, at) => (one.opensAt === null ? [{ one, at }] : []));
+  if (undated.length > 0) {
     groups.push([
       "tba",
       {
         at: Infinity,
         title: "Date to be announced",
-        rows: upcoming.map((one, at) => ({
+        rows: undated.map(({ one, at }) => ({
           id: one.id,
           slide: things.length + at,
           name: one.title,
@@ -251,9 +262,10 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
               }
             >
               {one.seller && opensLater ? (
-                // Торг продавца назначен, но не открыт - знак вопроса.
+                // Торг продавца назначен, но не открыт - знак вопроса. Вещь,
+                // подготовленную нами, - голограммой её модели.
                 <div className="hero-stage">
-                  <SoonHologram />
+                  <SoonHologram model={one.model} />
                 </div>
               ) : one.seller ? (
                 // Вещь продавца: снимок, который он прислал. Модель к ней
@@ -557,8 +569,22 @@ function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void 
             {thing.tagline && <p className="hero-who">{thing.tagline}</p>}
             {thing.owner && <SellerLine seller={thing.owner} house={thing.house} />}
           </div>
-          <span className="muted">Opening date to be announced.</span>
-          {thing.seller && (
+          {thing.opensAt ? (
+            <span className="muted">
+              Bidding opens{" "}
+              {new Date(thing.opensAt).toLocaleString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+              .
+            </span>
+          ) : (
+            <span className="muted">Opening date to be announced.</span>
+          )}
+          {(thing.seller || thing.prepared) && (
             <button type="button" className="primary wide" onClick={onOpen}>
               Open
             </button>
