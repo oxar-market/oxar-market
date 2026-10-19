@@ -109,11 +109,18 @@ export async function loadThing(): Promise<{
  * экран торга показывает в паузе между аукционами. Первой идёт вещь,
  * подготовленная нами под торг с объявленной датой: у неё есть отсчёт.
  */
-export async function loadNextHouse(): Promise<{ title: string; tagline: string | null; model: string | null; opensAt: string | null } | null> {
+export async function loadNextHouse(): Promise<{
+  title: string;
+  tagline: string | null;
+  model: string | null;
+  opensAt: string | null;
+  /** Подготовленная вещь с датой: у неё своя страница, её и показываем. */
+  thingId?: string;
+} | null> {
   if (!db) return null;
   const { data: dated } = await db
     .from("things")
-    .select("title, tagline, model_url, hologram_url, opens_at")
+    .select("id, title, tagline, model_url, hologram_url, opens_at")
     .eq("prepared", true)
     .eq("active", true)
     .gt("opens_at", new Date().toISOString())
@@ -122,7 +129,7 @@ export async function loadNextHouse(): Promise<{ title: string; tagline: string 
   const soon = dated?.[0];
   if (soon) {
     const model = (soon.hologram_url as string | null) || (soon.model_url as string) || null;
-    return { title: soon.title, tagline: soon.tagline, model, opensAt: soon.opens_at as string };
+    return { title: soon.title, tagline: soon.tagline, model, opensAt: soon.opens_at as string, thingId: soon.id as string };
   }
   const { data } = await db
     .from("things")

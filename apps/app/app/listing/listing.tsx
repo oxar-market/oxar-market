@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatUsd, hasOpened, isOpen, minBidCents, shortWallet } from "@oxar/core";
-import { ThingStage, type Stage } from "@oxar/stage";
+import { ThingStage, type Stage, type Views } from "@oxar/stage";
 import { loadBids, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
+import { PhotoView } from "../auction/photo.tsx";
 import { ShareAuction, ShareBid } from "../auction/share.tsx";
 import { TIE } from "@oxar/stage";
 import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
@@ -40,9 +41,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const admin = useAdmin();
   // Админ до открытия смотрит вещь как есть: голограмма - для всех остальных.
   const [peek, setPeek] = useState(false);
-  // Снимок модели вместо фото: у нашей вещи без снимков фото-режим
-  // показывает её саму, снятую сценой при переключении.
-  const [still, setStill] = useState<string | null>(null);
+  // Ракурсы модели, снятые сценой: у вещи без своих снимков фото-режим
+  // показывает их, и места на них нажимаются - как у футболки.
+  const [views, setViews] = useState<Views>({ shots: [], quads: [] });
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
   const [shared, setShared] = useState<{ cents: number; brand: string; mine: boolean } | null>(null);
@@ -182,6 +183,13 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const leading = Boolean(lot && running && top && wallets[0] && top.bidder_wallet === wallets[0].address);
   const pot = lots.reduce((sum, one) => sum + (tops[one.id]?.amount_cents ?? 0), 0);
   const spotLabel = thing.spots.find((spot) => spot.code === picked)?.label ?? "";
+  // Что лежит в месте на фото: своя примерка или креатив лидера.
+  const shownArt = Object.fromEntries(
+    thing.spots.map((spot) => {
+      const one = lotOf(spot.code);
+      return [spot.code, art[spot.code]?.url ?? (one ? tops[one.id]?.media_url : undefined)];
+    }),
+  );
 
   return (
     <section className="lot">
@@ -240,23 +248,40 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           <div className="look between-scene">
             <SoonHologram model={ours ? (thing.hologram ?? scene?.model) : null} />
           </div>
-        ) : look === "live" && scene ? (
-          <div className="look">
-            <ThingStage
-              shape={scene}
-              picked={picked}
-              onPick={(code) => setPicked(code)}
-              stage={stage}
-              onReady={dress}
-            />
-          </div>
+        ) : scene && (look === "live" || thing.photos.length === 0) ? (
+          <>
+            {/* Сцена остаётся собранной и в фото-режиме, только спрятана: у
+                вещи без своих снимков её ракурсы и есть фото. */}
+            <div className={look === "live" ? "look" : "look away"}>
+              <ThingStage
+                shape={scene}
+                picked={picked}
+                onPick={(code) => setPicked(code)}
+                stage={stage}
+                onReady={(ready) => {
+                  setViews(ready);
+                  dress();
+                }}
+              />
+            </div>
+            {look === "shot" && views.shots[photo] && (
+              <div className="ls-shots">
+                <PhotoView
+                  shot={views.shots[photo]!}
+                  quads={views.quads[photo] ?? {}}
+                  picked={picked ?? ""}
+                  onPick={(code) => setPicked(code)}
+                  art={shownArt}
+                  spots={scene.spots}
+                />
+              </div>
+            )}
+          </>
         ) : (
           // Снимки без разметки мест - целиком, без кадра 4:5: обрезать их
-          // незачем, места на них не стоят. Снимок сцены - тоже: места на нём
-          // уже нарисованы самой моделью.
-          <div className={!thing.spots.some((spot) => spot.rect) ? "sl-photo ls-photo loose" : "sl-photo ls-photo"}>
+          // незачем, места на них не стоят.
+          <div className={thing.photos.length > 0 && !thing.spots.some((spot) => spot.rect) ? "sl-photo ls-photo loose" : "sl-photo ls-photo"}>
             {thing.photos[photo] && <img src={thing.photos[photo]} alt="" />}
-            {thing.photos.length === 0 && still && <img className="ls-still" src={still} alt="" />}
             {thing.photos.length === 0 && thing.spots.length === 1 && (
               // Место у вещи одно и занимает её целиком: выбрать - нажать на вещь.
               <button
@@ -291,7 +316,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         )}
 
-        {scene && (!soon || admin) && (
+        {/* Правило одно на все вещи: до открытия - голограмма, а админ
+            переключает её на 3D и фото, если они у вещи есть. */}
+        {(scene || thing.photos.length > 0) && (!soon || admin) && (
           <div className="looks over-scene" role="group" aria-label="How to view">
             {/* До открытия админ переключает голограмму и вещь как есть. */}
             {soon && (
@@ -304,10 +331,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                 Hologram
               </button>
             )}
-            {([
-              ["live", "3D"],
-              ["shot", "Photo"],
-            ] as const).map(([which, name]) => (
+            {(scene ? (["live", "shot"] as const) : (["shot"] as const)).map((which) => (
               <button
                 key={which}
                 type="button"
@@ -315,25 +339,19 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                 aria-pressed={!ghost && look === which}
                 onClick={() => {
                   setPeek(true);
-                  // Своих снимков нет - снимаем модель, пока сцена ещё на экране.
-                  if (which === "shot" && thing.photos.length === 0) {
-                    const azimuth = thing.shape?.spots.find((spot) => spot.code === picked)?.azimuth ?? 0;
-                    const shot = stage.current?.snapshot(Math.round(azimuth / 90) * 90);
-                    setStill(shot ? trimmed(shot) : null);
-                  }
                   setLook(which);
                 }}
               >
-                {name}
+                {which === "live" ? "3D" : "Photo"}
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {look === "shot" && !ghost && thing.photos.length > 1 && (
+      {look === "shot" && !ghost && (thing.photos.length || views.shots.length) > 1 && (
         <div className="angles">
-          {thing.photos.map((url, index) => (
+          {(thing.photos.length ? thing.photos : views.shots).map((url, index) => (
             <button
               type="button"
               key={url}
@@ -511,36 +529,6 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       )}
     </section>
   );
-}
-
-/**
- * Снимок сцены без пустых полей: вещь на нём - по центру квадрата, и длинный
- * ван занимал узкую полосу посередине. Поля прозрачные, по ним и режем.
- */
-function trimmed(shot: HTMLCanvasElement): string {
-  const ink = shot.getContext("2d");
-  if (!ink) return shot.toDataURL("image/png");
-  const { width, height } = shot;
-  const alpha = ink.getImageData(0, 0, width, height).data;
-  let top = height, bottom = -1, left = width, right = -1;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (alpha[(y * width + x) * 4 + 3] === 0) continue;
-      if (y < top) top = y;
-      if (y > bottom) bottom = y;
-      if (x < left) left = x;
-      if (x > right) right = x;
-    }
-  }
-  if (bottom < 0) return shot.toDataURL("image/png");
-  const pad = Math.round(Math.max(right - left, bottom - top) * 0.06);
-  left = Math.max(0, left - pad);
-  top = Math.max(0, top - pad);
-  const cut = document.createElement("canvas");
-  cut.width = Math.min(width, right + pad + 1) - left;
-  cut.height = Math.min(height, bottom + pad + 1) - top;
-  cut.getContext("2d")?.drawImage(shot, left, top, cut.width, cut.height, 0, 0, cut.width, cut.height);
-  return cut.toDataURL("image/png");
 }
 
 function clock(ms: number): string {
