@@ -87,7 +87,10 @@ export function SellerFlow({
   const [problem, setProblem] = useState("");
   const { wallets } = useConnectedStandardWallets();
   const { signTransaction } = useStandardSignTransaction();
-  const wallet = wallets[0];
+  // Кошельков у человека бывает несколько: внешний и встроенный от Privy.
+  // Подготовленный торг выдан одному - им и открываем, а не первым в списке.
+  const owed = view.name === "prepared" ? view.thing.sellerWallet : null;
+  const wallet = wallets.find((one) => one.address === owed) ?? wallets[0];
 
   const reload = useCallback(() => {
     void loadSellerScore().then(setScore);
