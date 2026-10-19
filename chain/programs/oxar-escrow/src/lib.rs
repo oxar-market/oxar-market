@@ -63,6 +63,16 @@ pub mod oxar_escrow {
         admin_sets_terms::set_terms(ctx, fee_bps, new_admin)
     }
 
+    /// Админ разрешает продавцу открыть один торг без пруфа: деньги по закрытию.
+    pub fn admin_permits_sale(ctx: Context<AdminPermitsSale>, sale_id: [u8; 16], seller: Pubkey) -> Result<()> {
+        admin_permits_sale::permit_sale(ctx, sale_id, seller)
+    }
+
+    /// Админ отзывает разрешение на торг без пруфа, аренда возвращается ему.
+    pub fn admin_revokes_permit(ctx: Context<AdminRevokesPermit>, sale_id: [u8; 16]) -> Result<()> {
+        admin_revokes_permit::revoke_permit(ctx, sale_id)
+    }
+
     /// Продавец открывает торг вещи: срок и продление - на всю вещь.
     ///
     /// Комиссии среди входных данных нет намеренно: её и получателя берём из

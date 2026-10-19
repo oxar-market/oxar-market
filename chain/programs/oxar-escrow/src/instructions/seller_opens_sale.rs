@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     error::EscrowError,
-    state::{Config, Sale, MAX_EXTEND_SECONDS, MAX_SALE_SECONDS, TOTAL_EXTEND_SECONDS},
+    state::{Config, Sale, SalePermit, MAX_EXTEND_SECONDS, MAX_SALE_SECONDS, TOTAL_EXTEND_SECONDS},
 };
 
 /// Продавец открывает торг вещи.
@@ -44,6 +44,15 @@ pub struct SellerOpensSale<'info> {
     pub config: Account<'info, Config>,
 
     pub system_program: Program<'info, System>,
+
+    /// Разрешение админа на торг без пруфа. Нужно только ему; адрес выводится
+    /// из id этого торга, так что чужое разрешение сюда не подставить. Стоит
+    /// последним: торги с пруфом открываются и без него.
+    #[account(
+        seeds = [b"permit", sale_id.as_ref()],
+        bump = permit.bump,
+    )]
+    pub permit: Option<Account<'info, SalePermit>>,
 }
 
 pub fn open_sale(
@@ -76,14 +85,16 @@ pub fn open_sale(
     // торг ставками ради такого возврата мог бы сам победитель. Верхней
     // границы нет: ждать денег до далёкого ивента - выбор продавца.
     //
-    // Ноль - торг без пруфа: выплата по закрытию, без окна спора. Кому такой
-    // торг открывать, решает админ площадки на сайте, а не программа: здесь
-    // режим только записывается, и после открытия его не сменить.
+    // Ноль - торг без пруфа: выплата по закрытию, без окна спора. Такой торг
+    // открывается только по разрешению админа, выданному этому продавцу на
+    // этот торг. Режим пишется здесь и после открытия не меняется.
     let hard_closes_at = closes_at.saturating_add(TOTAL_EXTEND_SECONDS);
-    require!(
-        proof_deadline == 0 || proof_deadline > hard_closes_at,
-        EscrowError::ProofBeforeClose
-    );
+    if proof_deadline == 0 {
+        let permit = ctx.accounts.permit.as_ref().ok_or(EscrowError::NoPermit)?;
+        require_keys_eq!(permit.seller, ctx.accounts.seller.key(), EscrowError::NoPermit);
+    } else {
+        require!(proof_deadline > hard_closes_at, EscrowError::ProofBeforeClose);
+    }
 
     let sale = &mut ctx.accounts.sale;
     sale.sale = sale_id;
