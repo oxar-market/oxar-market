@@ -9,7 +9,6 @@ import { db } from "./session.ts";
 import { listedSpots, SPOT_COLUMNS, type ListedSpot } from "./listing.ts";
 import { photoUrl } from "./seller.ts";
 import { reviewState } from "./thing-review.ts";
-import { STICKER_CAP, STICKER_PRICE_CENTS } from "./stickers.ts";
 
 /**
  * Админка: мы сами. Проверяем присланные вещи, даём им имя, прикладываем
@@ -212,15 +211,19 @@ export async function dropPermit(thing: AdminThing): Promise<{ ok: true } | { ok
 }
 
 /**
- * Завести на вещи лист стикеров: пятьдесят по $100, деньги - кошельку
- * продавца. Подпись админа в Phantom.
+ * Завести на вещи лист стикеров: сколько и почём, деньги - кошельку
+ * продавца. Подпись админа в Phantom. Лист в цепочке потом не правится.
  */
-export async function openStickers(thing: AdminThing): Promise<{ ok: true } | { ok: false; why: string }> {
+export async function openStickers(
+  thing: AdminThing,
+  priceCents: number,
+  cap: number,
+): Promise<{ ok: true } | { ok: false; why: string }> {
   if (!thing.sellerWallet) return { ok: false, why: "The seller has no wallet on this thing yet." };
   const seller = new PublicKey(thing.sellerWallet);
   const sheetId = crypto.randomUUID();
   const sent = await signInPhantom((admin) => [
-    openStickersInstruction(admin, sheetId, seller, STICKER_PRICE_CENTS, STICKER_CAP),
+    openStickersInstruction(admin, sheetId, seller, priceCents, cap),
   ]);
   if (!sent.ok) return sent;
   return (await updateThing(thing.id, { sticker_sheet: sheetId }))
