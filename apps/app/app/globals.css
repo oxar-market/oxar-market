@@ -124,7 +124,8 @@ h1 {
 }
 
 /* Кнопка-ссылка внутри строки ошибки: «повторить» тем же цветом и шрифтом. */
-.bad .link {
+.bad .link,
+.ad-sets .link {
   border: 0;
   padding: 0;
   background: none;
@@ -132,6 +133,10 @@ h1 {
   color: inherit;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.ad-sets .link {
+  color: var(--ink);
 }
 
 /* Экран упавшего рендера. Тесно посередине, текст ошибки читаемым моноширинным
