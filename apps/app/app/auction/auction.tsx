@@ -28,6 +28,7 @@ import { NoEmailHint } from "../notify.tsx";
 import { PhotoView } from "./photo.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
+import { ListingAuction } from "../listing/listing.tsx";
 import { WornInfo } from "../worn.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
 // надо удалить, - в шапке temp-photo.ts.
@@ -960,8 +961,8 @@ function spanOf(ms: number): string {
  * (вещь не объявлена, знак вопроса), ниже - как это пойдёт. Прошедший торг
  * здесь не показываем, он живёт на маркете.
  */
-export function Between() {
-  const [next, setNext] = useState<{ title: string; tagline: string | null; model: string | null; opensAt: string | null } | null>(null);
+export function Between({ onBack }: { onBack?: () => void } = {}) {
+  const [next, setNext] = useState<Awaited<ReturnType<typeof loadNextHouse>>>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     void loadNextHouse().then(setNext);
@@ -969,6 +970,11 @@ export function Between() {
     return () => clearInterval(tick);
   }, []);
   const opensAt = next?.opensAt ? Date.parse(next.opensAt) : null;
+
+  // У подготовленной вещи с датой есть своя страница - та же, что с маркета:
+  // голограмма для всех и переключатели для админа. Два разных экрана одной
+  // вещи показывали бы её по-разному в зависимости от того, откуда пришёл.
+  if (next?.thingId && onBack) return <ListingAuction thingId={next.thingId} onBack={onBack} />;
 
   return (
     <section className="lot">

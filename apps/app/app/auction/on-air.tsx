@@ -82,7 +82,7 @@ export function AuctionTab({ house, onBack }: { house: boolean; onBack: () => vo
       </section>
     );
   }
-  if (air.length === 0) return <Between />;
+  if (air.length === 0) return <Between onBack={onBack} />;
 
   // Свой экран - только у нашей футболки: он держит её фото-режим. Остальные
   // наши вещи идут общим экраном торга со своей разметкой.

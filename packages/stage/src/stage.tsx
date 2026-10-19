@@ -297,8 +297,11 @@ export function ThingStage({
         const wide = scaled.x > scaled.y * 2;
         const across = Math.hypot(scaled.x, scaled.z) / 2;
         const tan = Math.tan(fov / 2);
+        // Сцена, собранная спрятанной (фото-режим без 3D), ширины ещё не
+        // знает: тогда кадр считаем квадратным.
+        const aspect = Number.isFinite(camera.aspect) && camera.aspect > 0 ? camera.aspect : 1;
         const far = wide
-          ? Math.max((scaled.y / 2) * 1.35 / tan, (across * 1.1) / (tan * camera.aspect))
+          ? Math.max((scaled.y / 2) * 1.35 / tan, (across * 1.1) / (tan * aspect))
           : (reach / tan) * 1.35;
         // Ближе к месту, но не в упор. Первый замер ставил камеру так, что
         // клетка занимала треть кадра, - и вещь пропадала: на экране
@@ -893,7 +896,14 @@ export function ThingStage({
           const target = new THREE.WebGLRenderTarget(side, side);
           const lens = new THREE.PerspectiveCamera(camera.fov, 1, 0.1, 100);
           // Кадр теснее, чем на сцене: в кнопке каждый пиксель на счету.
-          const back = (reach / Math.tan(fov / 2)) * 1.12;
+          // Длинную вещь сбоку снимаем по её длине, спереди и сзади - по
+          // ширине и высоте: иначе ван занимал бы полоску посреди квадрата.
+          const backAt = (quarter: number) =>
+            !wide
+              ? (reach / Math.tan(fov / 2)) * 1.12
+              : quarter % 2 === 0
+                ? (across * 1.05) / tan
+                : (Math.max(scaled.z, scaled.y) / 2) * 1.25 / tan;
           const pixels = new Uint8Array(side * side * 4);
           const shots: string[] = [];
           // Куда попали места на каждом кадре: доля от стороны, чтобы кадр
@@ -905,6 +915,7 @@ export function ThingStage({
 
           for (let quarter = 0; quarter < 4; quarter++) {
             const angle = (quarter * Math.PI) / 2;
+            const back = backAt(quarter);
             lens.position.set(Math.sin(angle) * back, 0, Math.cos(angle) * back);
             lens.lookAt(0, 0, 0);
             renderer.setRenderTarget(target);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fitInside, quadTransform, SPOTS, type Corners } from "@oxar/stage";
+import { fitInside, quadTransform, SPOTS, type Corners, type Spot } from "@oxar/stage";
 
 /**
  * Вещь кадром, а не сценой.
@@ -33,6 +33,7 @@ export function PhotoView({
   onPick,
   art,
   drawFrames = false,
+  spots = SPOTS,
 }: {
   shot: string;
   /** Углы каждого места на этом кадре, долями стороны. */
@@ -49,6 +50,8 @@ export function PhotoView({
    * рисовать некому, и тогда это единственное, чем место видно.
    */
   drawFrames?: boolean;
+  /** Места вещи на кадре. По умолчанию - футболки: её экран их не передаёт. */
+  spots?: Spot[];
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState({ side: 0, left: 0, top: 0 });
@@ -111,7 +114,7 @@ export function PhotoView({
       <img className="photo-shot" src={shot} alt="" draggable={false} />
 
       {fit.side > 0 &&
-        SPOTS.map((spot) => {
+        spots.map((spot) => {
           const quad = quads[spot.code];
           // Места с этой стороны не видно - накладки нет вовсе. Прозрачная
           // кнопка на дальней стороне ловила бы клики сквозь вещь.
