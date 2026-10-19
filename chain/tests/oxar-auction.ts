@@ -98,8 +98,13 @@ describe("oxar-escrow: торг", () => {
    * продление проверяется отдельно, с боевым значением.
    */
   // Срок пруфа обязан быть позже жёсткого конца - заявленного закрытия плюс
-  // час продления. По умолчанию - ещё десять минут сверху.
-  async function openSale(closesInSeconds: number, extendSeconds = 1, proofAfterSeconds = 4_200) {
+  // час продления. По умолчанию - ещё десять минут сверху. `null` - торг без
+  // пруфа: срок ноль, выплата по закрытию.
+  async function openSale(
+    closesInSeconds: number,
+    extendSeconds = 1,
+    proofAfterSeconds: number | null = 4_200,
+  ) {
     const saleId = auctionId();
     const sale = salePda(saleId);
     const closesAt = (await now()) + closesInSeconds;
@@ -109,7 +114,7 @@ describe("oxar-escrow: торг", () => {
         saleId,
         new anchor.BN(closesAt),
         new anchor.BN(extendSeconds),
-        new anchor.BN(closesAt + proofAfterSeconds),
+        new anchor.BN(proofAfterSeconds === null ? 0 : closesAt + proofAfterSeconds),
       )
       .accounts({ seller: seller.publicKey })
       .signers([seller])
@@ -143,7 +148,7 @@ describe("oxar-escrow: торг", () => {
     closesInSeconds: number,
     extendSeconds = 1,
     reserve = RESERVE,
-    proofAfterSeconds = 4_200,
+    proofAfterSeconds: number | null = 4_200,
   ) {
     const { sale, closesAt } = await openSale(closesInSeconds, extendSeconds, proofAfterSeconds);
     const { id, lot, vault } = await addLot(sale, reserve);
@@ -851,6 +856,37 @@ describe("oxar-escrow: торг", () => {
     // оказаться раньше настоящего конца, и пруф стало бы не принять вовсе.
     await fails(openSale(60, 1, 1_800), "ProofBeforeClose", "срок пруфа внутри часа продления");
     await fails(openSale(60, 1, 3_600), "ProofBeforeClose", "срок пруфа ровно в жёсткий конец");
+  });
+
+  it("торг без пруфа платит по закрытию кому угодно, а пруфа и спора у него нет", async () => {
+    const { lot, vault, sale } = await openLot(5, 1, RESERVE, null);
+    await bid(lot, alice, RESERVE);
+    await fails(pay(lot, bob), "LotStillOpen", "выплатили, пока идёт торг");
+    await sleep(6500);
+
+    await fails(prove(sale), "ProofNotTaken", "торг без пруфа принял пруф");
+    await fails(
+      program.methods
+        .winnerDisputes()
+        .accountsPartial({ winner: alice.publicKey, sale, lot })
+        .signers([alice])
+        .rpc(),
+      "AppealClosed",
+      "торг без пруфа дал оспорить",
+    );
+
+    const sellerTokens = getAssociatedTokenAddressSync(mint, seller.publicKey);
+    const platformTokens = getAssociatedTokenAddressSync(mint, platform.publicKey);
+    const sellerBefore = await balance(sellerTokens);
+    const platformBefore = await balance(platformTokens);
+
+    // Зовёт посторонний, не победитель: выплата не ждёт ничьего «да».
+    await pay(lot, bob);
+
+    const fee = BigInt(RESERVE) / 10n;
+    assert.equal(await balance(platformTokens), platformBefore + fee, "площадка недополучила комиссию");
+    assert.equal(await balance(sellerTokens), sellerBefore + (BigInt(RESERVE) - fee), "продавец получил не остаток");
+    assert.isNull(await connection.getAccountInfo(vault), "хранилище не закрылось");
   });
 
   it("пруф присылает только продавец, только после закрытия и только один раз", async () => {

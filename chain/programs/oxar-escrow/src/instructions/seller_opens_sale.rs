@@ -75,8 +75,15 @@ pub fn open_sale(
     // уже не принять, а победитель забирает ставку назад. Нарочно продлить
     // торг ставками ради такого возврата мог бы сам победитель. Верхней
     // границы нет: ждать денег до далёкого ивента - выбор продавца.
+    //
+    // Ноль - торг без пруфа: выплата по закрытию, без окна спора. Кому такой
+    // торг открывать, решает админ площадки на сайте, а не программа: здесь
+    // режим только записывается, и после открытия его не сменить.
     let hard_closes_at = closes_at.saturating_add(TOTAL_EXTEND_SECONDS);
-    require!(proof_deadline > hard_closes_at, EscrowError::ProofBeforeClose);
+    require!(
+        proof_deadline == 0 || proof_deadline > hard_closes_at,
+        EscrowError::ProofBeforeClose
+    );
 
     let sale = &mut ctx.accounts.sale;
     sale.sale = sale_id;
