@@ -180,6 +180,10 @@ export async function publishAuctions(
             chain_lot: lotAddress(lot.id).toBase58(),
             chain_sale: saleAddress(saleId).toBase58(),
             mint: coin.mint.toBase58(),
+            // Торг без пруфа: срок пруфа в цепочке ноль, и в базе его нет.
+            // Иначе страница, письма и напоминания говорили бы о пруфе,
+            // которого этот торг не ждёт.
+            ...(permitSale ? { proof_by: null } : {}),
           })
           .eq("id", lot.id);
         if (error) return null;

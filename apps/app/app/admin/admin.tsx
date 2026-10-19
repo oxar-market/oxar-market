@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUsd, shortWallet } from "@oxar/core";
+import { formatUsd, parseUsd, shortWallet } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import {
   awaitsReview,
@@ -209,6 +209,7 @@ function AdminThingView({
   // «Когда» - тем же календарём, что у продавца: первый день и, если носят
   // несколько дней, последний. В базу уходит тем же текстом, что пишет он.
   const [days, setDays] = useState({ from: "", to: "" });
+  const [stickers, setStickers] = useState({ price: String(STICKER_PRICE_CENTS / 100), count: String(STICKER_CAP) });
   function pickDays(next: { from: string; to: string }) {
     const to = next.to && next.to > next.from ? next.to : "";
     setDays({ from: next.from, to });
@@ -614,22 +615,46 @@ function AdminThingView({
         <div className="sl-card ad-card">
           <h3>Stickers</h3>
           {thing.stickerSheet ? (
-            <p className="muted">
-              {STICKER_CAP} stickers at {formatUsd(STICKER_PRICE_CENTS)} are on sale. Sheet {thing.stickerSheet}.
-            </p>
+            <p className="muted">Stickers are on sale. Sheet {thing.stickerSheet}.</p>
           ) : (
             <>
               <p className="muted">
-                {STICKER_CAP} stickers at {formatUsd(STICKER_PRICE_CENTS)}, no outbid. The seller's wallet gets the price minus the platform fee at once.
+                Fixed price, no outbid. The seller's wallet gets the price minus the platform fee at once. Price and count
+                cannot change once the sheet is on chain.
               </p>
+              <label className="sl-field">
+                Price, USDC
+                <span className="sl-input soft">
+                  <input
+                    inputMode="decimal"
+                    value={stickers.price}
+                    onChange={(event) => setStickers({ ...stickers, price: event.target.value })}
+                  />
+                </span>
+              </label>
+              <label className="sl-field">
+                How many
+                <span className="sl-input soft">
+                  <input
+                    inputMode="numeric"
+                    value={stickers.count}
+                    onChange={(event) => setStickers({ ...stickers, count: event.target.value })}
+                  />
+                </span>
+              </label>
               <button
                 type="button"
                 className="sl-btn dark"
                 disabled={busy}
                 onClick={async () => {
+                  const price = parseUsd(stickers.price);
+                  const count = Number(stickers.count);
+                  if (!price || !Number.isInteger(count) || count < 1 || count > 1000) {
+                    return setError("Stickers need a price and a whole number from 1 to 1000.");
+                  }
                   setBusy(true);
                   setError("");
-                  const done = await openStickers(thing);
+                  const done = await openStickers(thing, price, count);
                   setBusy(false);
                   if (!done.ok) setError(done.why);
                   onChanged();
