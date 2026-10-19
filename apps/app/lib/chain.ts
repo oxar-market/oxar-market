@@ -145,6 +145,9 @@ const DISPUTE = new Uint8Array([100, 80, 101, 176, 187, 14, 90, 123]);
 const PAY = new Uint8Array([36, 169, 202, 43, 22, 233, 147, 190]);
 const DECIDE = new Uint8Array([125, 152, 123, 57, 231, 57, 241, 89]);
 const MOVE_PROOF = new Uint8Array([51, 172, 4, 45, 206, 188, 43, 192]);
+/** Разрешение админа на торг без пруфа - из IDL. */
+const PERMIT_SALE = new Uint8Array([159, 156, 93, 203, 15, 186, 204, 167]);
+const REVOKE_PERMIT = new Uint8Array([90, 92, 105, 98, 172, 168, 160, 230]);
 
 function join(...parts: Uint8Array[]): Uint8Array {
   const out = new Uint8Array(parts.reduce((sum, one) => sum + one.length, 0));
@@ -539,6 +542,50 @@ export function decideInstruction(
       { pubkey: ata(lot.mint, lot.topBidder), isSigner: false, isWritable: true },
       { pubkey: lot.mint, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+  });
+}
+
+/** Разрешение на торг без пруфа: id торга и продавец, которому разрешено. */
+export function permitData(saleId: string, seller: PublicKey): Uint8Array {
+  return join(PERMIT_SALE, auctionBytes(saleId), seller.toBytes());
+}
+
+export function revokePermitData(saleId: string): Uint8Array {
+  return join(REVOKE_PERMIT, auctionBytes(saleId));
+}
+
+/** Адрес разрешения выводится из id торга: на один торг - одно. */
+export function permitAddress(saleId: string): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [new TextEncoder().encode("permit"), auctionBytes(saleId)],
+    PROGRAM_ID,
+  )[0];
+}
+
+/** Админ разрешает продавцу открыть торг без пруфа: деньги по закрытию. */
+export function permitInstruction(admin: PublicKey, saleId: string, seller: PublicKey): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(permitData(saleId, seller)),
+    keys: [
+      { pubkey: admin, isSigner: true, isWritable: true },
+      { pubkey: CONFIG, isSigner: false, isWritable: false },
+      { pubkey: permitAddress(saleId), isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+  });
+}
+
+/** Админ отзывает разрешение, аренда возвращается ему. */
+export function revokePermitInstruction(admin: PublicKey, saleId: string): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(revokePermitData(saleId)),
+    keys: [
+      { pubkey: admin, isSigner: true, isWritable: true },
+      { pubkey: CONFIG, isSigner: false, isWritable: false },
+      { pubkey: permitAddress(saleId), isSigner: false, isWritable: true },
     ],
   });
 }

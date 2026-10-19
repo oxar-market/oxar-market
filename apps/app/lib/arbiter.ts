@@ -37,7 +37,7 @@ function phantom(): Phantom | null {
 }
 
 /** Подписать в Phantom после холостого прогона. Возвращает подпись или текст ошибки. */
-async function signInPhantom(
+export async function signInPhantom(
   build: (arbiter: PublicKey) => ReturnType<typeof decideInstruction>[],
 ): Promise<{ ok: true; signature: string } | { ok: false; why: string }> {
   const wallet = phantom();

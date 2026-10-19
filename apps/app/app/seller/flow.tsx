@@ -39,6 +39,7 @@ import { Bar } from "./parts.tsx";
 import { RateBuyer, RateSeller } from "./rate.tsx";
 import { RequestView } from "./request.tsx";
 import { SetUpSpots } from "./setup.tsx";
+import { PreparedReview } from "./prepared.tsx";
 import { db } from "@/lib/session";
 import { Reviews } from "../reviews.tsx";
 import { Winners } from "../winners.tsx";
@@ -50,6 +51,7 @@ type View =
   | { name: "desktop" }
   | { name: "mark"; photos: (Blob | string)[]; previews: string[] }
   | { name: "setup"; thing: PricingThing }
+  | { name: "prepared"; thing: PricingThing }
   | { name: "request"; request: SellerRequest }
   | { name: "rate"; deal: DealToRate }
   | { name: "winners"; thing: SellerThing }
@@ -104,6 +106,42 @@ export function SellerFlow({
     onView?.(view.name);
     window.scrollTo({ top: 0 });
   }, [view.name, onView]);
+
+  /**
+   * Открыть аукционы вещи кошельком продавца: он платит залог за аккаунты и
+   * он же получит выплату. Нет кошелька или SOL - причина словами.
+   */
+  async function publishMine(thingId: string, closes: string[]): Promise<boolean> {
+    if (!wallet) {
+      setBusy(false);
+      setProblem("No wallet connected. Sign in again to get one.");
+      return false;
+    }
+    const owner = new PublicKey(wallet.address);
+    // Лоты, хранилища и торг создаются за счёт продавца (залог
+    // Solana). Нет SOL - транзакция не пройдёт.
+    const cost = publishCost(spotsPerSale(closes), await rentPerByte());
+    const lamports = await connection.getBalance(owner);
+    if (lamports < cost.totalLamports) {
+      setBusy(false);
+      setProblem(`${costLine(cost)} You have ${formatSol(lamports, 3)} - top up the wallet and publish again.`);
+      return false;
+    }
+    const opened = await publishAuctions(thingId, owner, async (transaction) => {
+      const { signedTransaction } = await signTransaction({
+        transaction: transaction.serialize(),
+        wallet,
+        chain: WALLET_CHAIN,
+      });
+      return signedTransaction;
+    }).catch(() => null);
+    if (opened === null) {
+      setBusy(false);
+      setProblem("The auctions did not open. Prices are saved - try Publish again.");
+      return false;
+    }
+    return true;
+  }
 
   function go(next: View) {
     setFailed(false);
@@ -188,43 +226,25 @@ export function SellerFlow({
             }
             // Аукционы открывает кошелёк продавца: он и получит выплату.
             // Аренда в цепочку не ходит - ей хватило сохранения.
-            const auctions = plans.filter((one) => one.plan.kind === "auction").length;
-            if (auctions > 0) {
-              if (!wallet) {
-                setBusy(false);
-                return setProblem("No wallet connected. Sign in again to get one.");
-              }
-              const owner = new PublicKey(wallet.address);
-              // Лоты, хранилища и торг создаются за счёт продавца (залог
-              // Solana). Нет SOL - транзакция не пройдёт.
-              const cost = publishCost(
-                spotsPerSale(
-                  plans.flatMap((one) => (one.plan.kind === "auction" ? [one.plan.closesAt] : [])),
-                ),
-                await rentPerByte(),
-              );
-              const lamports = await connection.getBalance(owner);
-              if (lamports < cost.totalLamports) {
-                setBusy(false);
-                return setProblem(
-                  `${costLine(cost)} You have ${formatSol(lamports, 3)} - top up the wallet and publish again.`,
-                );
-              }
-              const opened = await publishAuctions(view.thing.id, owner, async (transaction) => {
-                const { signedTransaction } = await signTransaction({
-                  transaction: transaction.serialize(),
-                  wallet,
-                  chain: WALLET_CHAIN,
-                });
-                return signedTransaction;
-              }).catch(() => null);
-              if (opened === null) {
-                setBusy(false);
-                return setProblem(
-                  "The auctions did not open. Prices are saved - try Publish again.",
-                );
-              }
-            }
+            const closes = plans.flatMap((one) => (one.plan.kind === "auction" ? [one.plan.closesAt] : []));
+            if (closes.length > 0 && !(await publishMine(view.thing.id, closes))) return;
+            setBusy(false);
+            home();
+          }}
+        />
+      );
+    case "prepared":
+      return column(
+        <PreparedReview
+          thing={view.thing}
+          wallet={wallet?.address ?? null}
+          publishing={busy}
+          problem={problem}
+          onBack={home}
+          onPublish={async () => {
+            setBusy(true);
+            setProblem("");
+            if (!(await publishMine(view.thing.id, view.thing.drafts.map((one) => one.closesAt)))) return;
             setBusy(false);
             home();
           }}
@@ -337,7 +357,9 @@ export function SellerFlow({
             onOpen={onOpen}
             onSetup={async (thingId) => {
               const thing = await loadPricingThing(thingId);
-              if (thing) go({ name: "setup", thing });
+              // Подготовленную админом вещь продавец не размечает заново:
+              // проверяет цены и публикует.
+              if (thing) go({ name: thing.prepared ? "prepared" : "setup", thing });
             }}
             onAdd={() =>
               // Телефон снимает сам; у ноутбука камера смотрит на человека,

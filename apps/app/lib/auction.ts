@@ -542,10 +542,11 @@ export async function uploadCreative(
  */
 export async function lotNoLockup(lotId: string): Promise<boolean | null> {
   if (!db) return null;
-  const { data } = await db.from("lots").select("things(no_lockup)").eq("id", lotId).maybeSingle();
-  const thing = data?.things as { no_lockup: boolean } | { no_lockup: boolean }[] | null | undefined;
+  const { data } = await db.from("lots").select("things(permit_sale)").eq("id", lotId).maybeSingle();
+  type Row = { permit_sale: string | null };
+  const thing = data?.things as Row | Row[] | null | undefined;
   if (!thing) return null;
-  return (Array.isArray(thing) ? thing[0]?.no_lockup : thing.no_lockup) === true;
+  return (Array.isArray(thing) ? thing[0]?.permit_sale : thing.permit_sale) != null;
 }
 
 export async function recordBid(bid: {
