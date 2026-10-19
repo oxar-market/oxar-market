@@ -5195,6 +5195,20 @@ a.sl-pill {
   margin: 0 auto;
 }
 
+.ls-photo.loose {
+  max-width: 40rem;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.ls-photo.loose img {
+  position: static;
+  height: auto;
+  object-fit: contain;
+}
+
 .sl-spot.ls-spot {
   padding: 0;
   border: 0;

@@ -250,7 +250,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             />
           </div>
         ) : (
-          <div className="sl-photo ls-photo">
+          // Снимки без разметки мест - целиком, без кадра 4:5: обрезать их
+          // незачем, места на них не стоят.
+          <div className={thing.photos.length > 0 && !thing.spots.some((spot) => spot.rect) ? "sl-photo ls-photo loose" : "sl-photo ls-photo"}>
             {thing.photos[photo] && <img src={thing.photos[photo]} alt="" />}
             {thing.photos.length === 0 && still && <img className="ls-still" src={still} alt="" />}
             {thing.photos.length === 0 && thing.spots.length === 1 && (
