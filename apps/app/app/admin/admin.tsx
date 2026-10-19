@@ -27,6 +27,7 @@ import { Day, dayRange } from "../seller/setup.tsx";
 import { reviewState } from "@/lib/thing-review";
 import { Disputes } from "./disputes.tsx";
 import { PrepareThing } from "./prepare.tsx";
+import { GiveToSeller } from "./give.tsx";
 import { loadDisputes } from "@/lib/arbiter";
 
 /**
@@ -555,6 +556,11 @@ function AdminThingView({
             })}
           </ul>
         </div>
+      )}
+
+      {/* Подготовленная вещь без черновиков - её ещё не передали продавцу. */}
+      {thing.prepared && !thing.published && thing.drafts.length === 0 && thing.spots.length > 0 && (
+        <GiveToSeller thing={thing} onDone={onChanged} />
       )}
 
       {/* Подготовленная вещь: цены поставил админ, публикует продавец. */}

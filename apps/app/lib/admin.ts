@@ -47,6 +47,8 @@ export type AdminThing = {
   sellerWallet: string | null;
   /** id листа стикеров в цепочке; пусто - стикеров на вещи нет. */
   stickerSheet: string | null;
+  /** Дата открытия на вещи: черновики при передаче продавцу берут её. */
+  opensAt: string | null;
   /** Черновики цен - видны, пока продавец не опубликовал. */
   drafts: { id: string; spotId: string; reserveCents: number; stepCents: number; closesAt: string }[];
   /** Опубликованные места: их торг читаем из цепочки. */
@@ -74,7 +76,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, permit_sale, prepared, seller_wallet, sticker_sheet, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, permit_sale, prepared, seller_wallet, sticker_sheet, opens_at, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -107,6 +109,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     prepared: row.prepared === true,
     sellerWallet: (row.seller_wallet as string | null) ?? null,
     stickerSheet: (row.sticker_sheet as string | null) ?? null,
+    opensAt: (row.opens_at as string | null) ?? null,
     drafts: ((row.lots ?? []) as {
       id: string; status: string; spot_id: string; reserve_cents: number; min_step_cents: number; closes_at: string;
     }[])
@@ -229,6 +232,49 @@ export async function openStickers(
   return (await updateThing(thing.id, { sticker_sheet: sheetId }))
     ? { ok: true }
     : { ok: false, why: `The sheet is on chain (${sheetId}), but the thing did not save it. Try again.` };
+}
+
+/** Плановые цены мест вещи: старт и шаг по месту. Видит только админ. */
+export async function loadSpotPlans(spotIds: string[]): Promise<Record<string, { reserveCents: number; stepCents: number }>> {
+  if (!db || spotIds.length === 0) return {};
+  const { data } = await db.from("spot_plans").select("spot_id, reserve_cents, step_cents").in("spot_id", spotIds);
+  return Object.fromEntries(
+    (data ?? []).map((row) => [row.spot_id as string, { reserveCents: row.reserve_cents as number, stepCents: row.step_cents as number }]),
+  );
+}
+
+/**
+ * Передать подготовленную вещь продавцу: его кошелёк - на вещь, цены - в
+ * черновики лотов. Дальше как у подготовленной формой: продавец входит,
+ * проверяет и публикует. Открытие черновики берут с вещи.
+ */
+export async function giveToSeller(input: {
+  thing: AdminThing;
+  seller: Application;
+  closesAt: string;
+  proofBy: string;
+  prices: { spotId: string; reserveCents: number; stepCents: number }[];
+}): Promise<boolean> {
+  if (!db || input.prices.length === 0) return false;
+  const { error } = await db
+    .from("things")
+    .update({ seller: input.seller.userId, seller_wallet: input.seller.wallet })
+    .eq("id", input.thing.id);
+  if (error) return false;
+  const { error: lotError } = await db.from("lots").insert(
+    input.prices.map((price) => ({
+      thing_id: input.thing.id,
+      spot_id: price.spotId,
+      kind: "auction",
+      status: "draft",
+      reserve_cents: price.reserveCents,
+      min_step_cents: price.stepCents,
+      opens_at: input.thing.opensAt,
+      closes_at: input.closesAt,
+      proof_by: input.proofBy,
+    })),
+  );
+  return !lotError;
 }
 
 export type PreparedSpot = { label: string; reserveCents: number; stepCents: number };
