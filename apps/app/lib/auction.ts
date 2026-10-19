@@ -113,14 +113,17 @@ export async function loadNextHouse(): Promise<{ title: string; tagline: string 
   if (!db) return null;
   const { data: dated } = await db
     .from("things")
-    .select("title, tagline, model_url, opens_at")
+    .select("title, tagline, model_url, hologram_url, opens_at")
     .eq("prepared", true)
     .eq("active", true)
     .gt("opens_at", new Date().toISOString())
     .order("opens_at")
     .limit(1);
   const soon = dated?.[0];
-  if (soon) return { title: soon.title, tagline: soon.tagline, model: (soon.model_url as string) || null, opensAt: soon.opens_at as string };
+  if (soon) {
+    const model = (soon.hologram_url as string | null) || (soon.model_url as string) || null;
+    return { title: soon.title, tagline: soon.tagline, model, opensAt: soon.opens_at as string };
+  }
   const { data } = await db
     .from("things")
     .select("title, model_url, placed_on, lots(id)")
@@ -393,7 +396,7 @@ export async function loadMarket(): Promise<{
   // он открыл торг и админ её одобрил; до торга анонсом она не идёт.
   const { data: raw } = await db
     .from("things")
-    .select("id, title, tagline, seller, house, prepared, opens_at, photos, model_url, placed_on, partner, partner_url, lots(id, status)")
+    .select("id, title, tagline, seller, house, prepared, opens_at, photos, model_url, hologram_url, placed_on, partner, partner_url, lots(id, status)")
     .eq("active", true)
     .order("created_at");
   // И вещи, подготовленные нами за продавца: их анонсируем как свои.
@@ -423,7 +426,12 @@ export async function loadMarket(): Promise<{
       owner: one.seller,
       house: one.house,
       photo: one.photos?.[0] ? photoUrl(one.photos[0]) : null,
-      model: one.house || one.prepared ? (one.model_url as string) || null : null,
+      // Анонс подготовленной вещи - голограммой: ей хватает лёгкой копии модели.
+      model: one.house
+        ? (one.model_url as string) || null
+        : one.prepared
+          ? (one.hologram_url as string | null) || (one.model_url as string) || null
+          : null,
       prepared: one.prepared === true,
       opensAt: (one.opens_at as string | null) ?? null,
     }))
@@ -433,7 +441,7 @@ export async function loadMarket(): Promise<{
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, model_url)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, model_url, hologram_url)",
     )
     .in("status", ["open", "won", "unsold", "refunded"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -455,6 +463,7 @@ export async function loadMarket(): Promise<{
       prepared?: boolean;
       photos?: string[] | null;
       model_url?: string | null;
+      hologram_url?: string | null;
     } | null;
     // Лоты с открытым торгом видны всем, а вещь - только одобренная. Вещь
     // продавца, которую мы ещё не вывели на маркет, в показ не идёт, даже
@@ -481,7 +490,7 @@ export async function loadMarket(): Promise<{
           house: info.house ?? false,
           photo: info.photos?.[0] ? photoUrl(info.photos[0]) : null,
           // Подготовленная нами вещь до открытия - голограммой своей модели.
-          model: info.house || info.prepared ? info.model_url || null : null,
+          model: info.house ? info.model_url || null : info.prepared ? info.hologram_url || info.model_url || null : null,
         });
       known.spots += 1;
       if (top) {

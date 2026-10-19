@@ -168,16 +168,17 @@ type Next = {
  */
 async function loadNext(): Promise<Next | null> {
   const rows = (await rest(
-    `things?prepared=eq.true&active=eq.true&opens_at=gt.${new Date().toISOString()}&select=id,title,model_url,opens_at,worn_by,worn_where,worn_when&order=opens_at.asc&limit=1`,
+    `things?prepared=eq.true&active=eq.true&opens_at=gt.${new Date().toISOString()}&select=id,title,model_url,hologram_url,opens_at,worn_by,worn_where,worn_when&order=opens_at.asc&limit=1`,
   )) as
-    | { id: string; title: string; model_url: string | null; opens_at: string; worn_by: string | null; worn_where: string | null; worn_when: string | null }[]
+    | { id: string; title: string; model_url: string | null; hologram_url: string | null; opens_at: string; worn_by: string | null; worn_where: string | null; worn_when: string | null }[]
     | null;
   const one = rows?.[0];
   if (!one) return null;
   return {
     id: one.id,
     title: one.title,
-    model: one.model_url || null,
+    // Голограмме хватает лёгкой копии: настоящая модель на первом экране тяжела.
+    model: one.hologram_url || one.model_url || null,
     opensAt: Date.parse(one.opens_at),
     worn: { by: one.worn_by, where: one.worn_where, when: one.worn_when },
   };
