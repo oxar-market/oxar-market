@@ -142,8 +142,7 @@ export function Stickers({ thingId, sheetId }: { thingId: string; sheetId: strin
         </span>
       </div>
       <p className="muted small">
-        Your logo and project name as a sticker on the van. Fixed price, no outbid. The crew gets{" "}
-        {formatUsd(price - (price * sheet.feeBps) / 10_000)} of every sticker, OXAR keeps the rest.
+        Your logo and project name as a sticker on the van. Fixed price, no outbid.
       </p>
 
       {paid.length > 0 && (

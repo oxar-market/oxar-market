@@ -265,8 +265,12 @@ export async function giveToSeller(input: {
   prices: { spotId: string; reserveCents: number; stepCents: number }[];
   /** Платить продавцу при закрытии, без пруфа. */
   noLockup: boolean;
-  /** Лист стикеров; null - стикеров нет. */
-  stickers: { priceCents: number; cap: number } | null;
+  /**
+   * Лист стикеров; null - стикеров нет. `toAdmin` - цена стикера идёт не
+   * продавцу, а подписывающему админу; комиссия по-прежнему в кассу из
+   * настроек площадки.
+   */
+  stickers: { priceCents: number; cap: number; toAdmin: boolean } | null;
 }): Promise<{ ok: true } | { ok: false; why: string }> {
   if (!db || input.prices.length === 0) return { ok: false, why: "Nothing to give." };
   if (!input.seller.wallet) return { ok: false, why: "The seller has no wallet." };
@@ -277,7 +281,15 @@ export async function giveToSeller(input: {
     const sent = await signInPhantom((admin) => [
       ...(saleId ? [permitInstruction(admin, saleId, seller)] : []),
       ...(sheetId && input.stickers
-        ? [openStickersInstruction(admin, sheetId, seller, input.stickers.priceCents, input.stickers.cap)]
+        ? [
+            openStickersInstruction(
+              admin,
+              sheetId,
+              input.stickers.toAdmin ? admin : seller,
+              input.stickers.priceCents,
+              input.stickers.cap,
+            ),
+          ]
         : []),
     ]);
     if (!sent.ok) return sent;
