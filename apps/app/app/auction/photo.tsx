@@ -136,7 +136,9 @@ export function PhotoView({
           // (ещё не загрузился) занимаем место целиком.
           const aspect = ratio[spot.code];
           let place: React.CSSProperties = { width: "100%", height: "100%" };
-          if (image && aspect) {
+          // Оклейка: картинка покрывает всё место, как на сцене.
+          if (spot.wrap) place = { width: "100%", height: "100%", objectFit: "cover" };
+          else if (image && aspect) {
             const [wide, tall] = spot.size;
             const laid = fitInside({ width: aspect, height: 1 }, { width: wide, height: tall });
             place = {
