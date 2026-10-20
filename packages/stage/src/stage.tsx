@@ -554,6 +554,18 @@ export function ThingStage({
             normal: facing,
           });
 
+          // Детали под местом - по сетке точек внутри него, а не только по
+          // углам: угол на стыке створок кормы промахивался мимо левой, и
+          // печать ложилась на одну створку из двух.
+          for (const across of [-0.5, 0, 0.5]) {
+            for (const down of [-0.5, 0, 0.5]) {
+              const inside = new THREE.Vector3(across * half[0], down * half[1], 0).applyMatrix4(anchor.matrixWorld);
+              const probe = new THREE.Raycaster(inside.clone().addScaledVector(facing, 0.2), facing.clone().negate());
+              const landed = probe.intersectObjects(meshes, true)[0];
+              if (landed) under.add(landed.object as InstanceType<typeof THREE.Mesh>);
+            }
+          }
+
           // Штампуем по куску вокруг места, а не по всей вещи. Запас в
           // полтора радиуса - чтобы в шар наверняка попали все грани, углы
           // которых коробка задевает.
@@ -598,6 +610,17 @@ export function ThingStage({
               THREE,
               geometry,
               new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld),
+            );
+          }
+          // Оклейка - только лицо панели: грани, почти параллельные
+          // проекции (борта у кормы, скругления крыши), растягивали печать в
+          // полосы-разводы. Оставляем то, что смотрит на зрителя круче ~65°.
+          if (spot.wrap && geometry.getAttribute("normal")) {
+            facingOnly(
+              THREE,
+              geometry,
+              new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld),
+              0.42,
             );
           }
           const material = new THREE.MeshStandardMaterial({
@@ -1391,6 +1414,8 @@ function facingOnly(
   THREE: typeof import("three"),
   geometry: InstanceType<typeof THREE.BufferGeometry>,
   toward: InstanceType<typeof THREE.Vector3>,
+  /** Насколько прямо грань должна смотреть на зрителя: косинус угла. */
+  least = 0,
 ) {
   const names = ["position", "normal", "uv"] as const;
   // DecalGeometry отдаёт обычные Float32-атрибуты, без чередования.
@@ -1402,7 +1427,7 @@ function facingOnly(
     for (let v = at; v < at + 3; v++) {
       dot += normal.getX(v) * toward.x + normal.getY(v) * toward.y + normal.getZ(v) * toward.z;
     }
-    if (dot <= 0) continue;
+    if (dot <= least * 3) continue;
     names.forEach((_, i) => {
       const attr = from[i];
       for (let v = at; v < at + 3; v++) {

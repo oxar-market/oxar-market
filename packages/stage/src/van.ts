@@ -31,9 +31,9 @@ export const VAN_SPOTS: Spot[] = [
   { code: "van_side_l", label: "Side panel driver", height: at(1.53), azimuth: 180, shift: len(0.63), size: [len(3.38), len(1.54)], wrap: true },
   { code: "van_door_l", label: "L door", height: at(1.035), azimuth: 180, shift: len(-1.625), size: [len(1.09), len(0.55)], wrap: true },
   { code: "van_fender_l", label: "L fender", height: at(1.1), azimuth: 180, shift: len(-2.515), size: [len(0.69), len(0.3)], wrap: true },
-  // Корма: обе створки от низа до верха. Луч - чуть вбок от середины:
+  // Корма: обе створки от бампера до верха. Луч - чуть вбок от середины:
   // ровно в середине щель между створками.
-  { code: "van_rear", label: "Rear", height: at(1.455), azimuth: -90, shift: len(0.03), size: [len(1.64), len(1.93)], wrap: true },
+  { code: "van_rear", label: "Rear", height: at(1.49), azimuth: -90, shift: len(0.03), size: [len(1.64), len(1.82)], wrap: true },
   // Сверху: сдвиг - вдоль машины, плюс - к переду. Логотип смотрит вперёд:
   // размер - поперёк машины и вдоль неё.
   { code: "van_hood", label: "Hood", height: 1, azimuth: 0, top: true, shift: len(2.99), size: [len(1.7), len(0.74)], wrap: true },
