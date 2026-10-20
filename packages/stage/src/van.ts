@@ -28,11 +28,11 @@ export const VAN_SPOTS: Spot[] = [
   { code: "van_sliding", label: "Sliding door", height: at(1.59), azimuth: 0, shift: len(0.295), size: [len(1.53), len(1.66)], wrap: true },
   { code: "van_side_r", label: "Side panel passenger", height: at(1.59), azimuth: 0, shift: len(-1.4), size: [len(1.84), len(1.66)], wrap: true },
   { code: "van_door_r", label: "R door", height: at(1.035), azimuth: 0, shift: len(1.625), size: [len(1.09), len(0.55)], wrap: true },
-  { code: "van_fender_r", label: "R fender", height: at(1.1), azimuth: 0, shift: len(2.515), size: [len(0.69), len(0.3)], wrap: true },
+  { code: "van_fender_r", label: "R fender", height: at(1.045), azimuth: 0, shift: len(2.515), size: [len(0.69), len(0.41)], wrap: true },
   // Левый борт: плюс сдвига - к корме, зритель смотрит с другой стороны.
   { code: "van_side_l", label: "Side panel driver", height: at(1.59), azimuth: 180, shift: len(0.63), size: [len(3.38), len(1.66)], wrap: true },
   { code: "van_door_l", label: "L door", height: at(1.035), azimuth: 180, shift: len(-1.625), size: [len(1.09), len(0.55)], wrap: true },
-  { code: "van_fender_l", label: "L fender", height: at(1.1), azimuth: 180, shift: len(-2.515), size: [len(0.69), len(0.3)], wrap: true },
+  { code: "van_fender_l", label: "L fender", height: at(1.045), azimuth: 180, shift: len(-2.515), size: [len(0.69), len(0.41)], wrap: true },
   // Корма: обе створки от бампера до верха. Луч - чуть вбок от середины:
   // ровно в середине щель между створками.
   { code: "van_rear", label: "Rear", height: at(1.46), azimuth: -90, shift: len(0.03), size: [len(1.5), len(1.68)], wrap: true },
