@@ -524,7 +524,7 @@ export function ThingStage({
           anchor.updateMatrixWorld(true);
           // Поля те же, что у рисунка рамки, поэтому углы ложатся ровно на
           // пунктир: обводка в фото-режиме обязана совпасть с ним.
-          const pad = Math.min(spot.size[0], spot.size[1]) * FRAME_PAD;
+          const pad = spot.wrap ? 0 : Math.min(spot.size[0], spot.size[1]) * FRAME_PAD;
           const half = [spot.size[0] / 2 - pad, spot.size[1] / 2 - pad];
           const facing = new THREE.Vector3(0, 0, 1).transformDirection(
             anchor.matrixWorld,
@@ -554,6 +554,18 @@ export function ThingStage({
             normal: facing,
           });
 
+          // Детали под местом - по сетке точек внутри него, а не только по
+          // углам: угол на стыке створок кормы промахивался мимо левой, и
+          // печать ложилась на одну створку из двух.
+          for (const across of [-0.5, 0, 0.5]) {
+            for (const down of [-0.5, 0, 0.5]) {
+              const inside = new THREE.Vector3(across * half[0], down * half[1], 0).applyMatrix4(anchor.matrixWorld);
+              const probe = new THREE.Raycaster(inside.clone().addScaledVector(facing, 0.2), facing.clone().negate());
+              const landed = probe.intersectObjects(meshes, true)[0];
+              if (landed) under.add(landed.object as InstanceType<typeof THREE.Mesh>);
+            }
+          }
+
           // Штампуем по куску вокруг места, а не по всей вещи. Запас в
           // полтора радиуса - чтобы в шар наверняка попали все грани, углы
           // которых коробка задевает.
@@ -573,8 +585,23 @@ export function ThingStage({
             if (patch !== part) patch.geometry.dispose();
             return stamp;
           });
-          const geometry = stamps.length === 1 ? stamps[0] : mergeGeometries(stamps)!;
-          if (stamps.length > 1) for (const stamp of stamps) stamp.dispose();
+          // Склеиваются только куски с одинаковым набором атрибутов: у деталей
+          // модели он разный, и склейка с лишним атрибутом падала - сцена
+          // не собиралась вовсе. Оставляем общее, пустые выбрасываем, а не
+          // склеилось - берём кусок под центральным лучом.
+          const filled = stamps.filter((stamp) => (stamp.getAttribute("position")?.count ?? 0) > 0);
+          const common = filled.reduce<string[]>(
+            (names, stamp) => names.filter((name) => name in stamp.attributes),
+            filled[0] ? Object.keys(filled[0].attributes) : [],
+          );
+          for (const stamp of filled) {
+            for (const name of Object.keys(stamp.attributes)) {
+              if (!common.includes(name)) stamp.deleteAttribute(name);
+            }
+          }
+          const merged = filled.length > 1 ? mergeGeometries(filled) : null;
+          const geometry = merged ?? filled[0] ?? stamps[0]!;
+          for (const stamp of stamps) if (stamp !== geometry) stamp.dispose();
           // Узор ложится на длинную наклонную поверхность, и коробка нужна
           // глубокая - а глубокая цепляет изнанку. Её грани смотрят от
           // зрителя: их выбрасываем, иначе узор вышел бы и на обороте.
@@ -583,6 +610,17 @@ export function ThingStage({
               THREE,
               geometry,
               new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld),
+            );
+          }
+          // Оклейка - только лицо панели: грани, почти параллельные
+          // проекции (борта у кормы, скругления крыши), растягивали печать в
+          // полосы-разводы. Оставляем то, что смотрит на зрителя круче ~65°.
+          if (spot.wrap && geometry.getAttribute("normal")) {
+            facingOnly(
+              THREE,
+              geometry,
+              new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld),
+              0.42,
             );
           }
           const material = new THREE.MeshStandardMaterial({
@@ -1107,7 +1145,7 @@ const sheets = new Map<string, InstanceType<typeof import("three").CanvasTexture
 function placeholder(THREE: typeof import("three"), spot: Spot) {
   const [wide, tall] = spot.size;
   // Ключ - размер и номер: клетки одного размера отличаются только им.
-  const key = `${wide}x${tall}:${spot.label}`;
+  const key = `${wide}x${tall}:${spot.label}:${spot.wrap ? "wrap" : ""}`;
   const known = sheets.get(key);
   if (known) return known;
 
@@ -1145,7 +1183,17 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   if (!ctx) throw new Error("нет 2d-контекста");
 
   const short = Math.min(canvas.width, canvas.height);
-  const pad = short * FRAME_PAD;
+  const pad = spot.wrap ? 0 : short * FRAME_PAD;
+
+  // Оклейка: зона залита и обведена по краю целиком - вещь читается сеткой
+  // зон, а не россыпью отметок.
+  if (spot.wrap) {
+    ctx.fillStyle = "rgba(255,255,255,0.16)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = Math.max(2, short * 0.012);
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+  }
 
   // Уголки, а не рамка по всему периметру, и линия волосяная.
   //
@@ -1223,7 +1271,7 @@ const marks = new Map<string, InstanceType<typeof import("three").CanvasTexture>
 
 function selectionSheet(THREE: typeof import("three"), spot: Spot) {
   const [wide, tall] = spot.size;
-  const key = `${wide}x${tall}`;
+  const key = `${wide}x${tall}:${spot.wrap ? "wrap" : ""}`;
   const known = marks.get(key);
   if (known) return known;
 
@@ -1235,7 +1283,7 @@ function selectionSheet(THREE: typeof import("three"), spot: Spot) {
   if (!ctx) throw new Error("нет 2d-контекста");
 
   const short = Math.min(canvas.width, canvas.height);
-  const pad = short * FRAME_PAD;
+  const pad = spot.wrap ? 0 : short * FRAME_PAD;
   // Толще пустой рамки и чуть длиннее плечо: это активный сигнал, он обязан
   // читаться поверх пёстрого логотипа, а не теряться в нём.
   const line = Math.max(4, short * 0.045);
@@ -1286,12 +1334,26 @@ function artwork(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("нет 2d-контекста");
 
+  const source = { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
+  // Оклейка: картинка покрывает всю панель, лишнее по краям срезается -
+  // так её и напечатают, от края до края.
+  if (spot.wrap) {
+    const scale = Math.max(canvas.width / source.width, canvas.height / source.height);
+    const width = source.width * scale;
+    const height = source.height * scale;
+    ctx.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+    const wrapped = new THREE.CanvasTexture(canvas);
+    wrapped.colorSpace = THREE.SRGBColorSpace;
+    wrapped.anisotropy = 8;
+    return wrapped;
+  }
+
   // Креатив ложится внутрь рамки, а не на весь штамп. Рамка - это и есть
   // проданное место: напечатать обязаны ровно то, что обведено, иначе
   // человек видит одну площадь, а получает другую.
   const pad = Math.min(canvas.width, canvas.height) * FRAME_PAD;
   const box = fitInside(
-    { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height },
+    source,
     { width: canvas.width - pad * 2, height: canvas.height - pad * 2 },
   );
   ctx.drawImage(image, pad + box.x, pad + box.y, box.width, box.height);
@@ -1352,6 +1414,8 @@ function facingOnly(
   THREE: typeof import("three"),
   geometry: InstanceType<typeof THREE.BufferGeometry>,
   toward: InstanceType<typeof THREE.Vector3>,
+  /** Насколько прямо грань должна смотреть на зрителя: косинус угла. */
+  least = 0,
 ) {
   const names = ["position", "normal", "uv"] as const;
   // DecalGeometry отдаёт обычные Float32-атрибуты, без чередования.
@@ -1363,7 +1427,7 @@ function facingOnly(
     for (let v = at; v < at + 3; v++) {
       dot += normal.getX(v) * toward.x + normal.getY(v) * toward.y + normal.getZ(v) * toward.z;
     }
-    if (dot <= 0) continue;
+    if (dot <= least * 3) continue;
     names.forEach((_, i) => {
       const attr = from[i];
       for (let v = at; v < at + 3; v++) {
