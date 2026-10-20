@@ -252,11 +252,14 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         const clock = heroClock(opensAt, Date.parse(one.closesAt), now);
         // Наша вещь не футболка: снимков для фото-режима у неё нет, только сцена.
         const ownModel = !one.seller && !isShirt(one.model);
+        // Вещь продавца без снимков, но с моделью (ван): показываем модель,
+        // а не пустую рамку.
+        const sellerScene = Boolean(one.seller && !one.photo && houseShape(one.model));
         return (
           <div className="hero" key={one.id}>
             <div
               className={
-                ((heroLook === "live" || ownModel) && !one.seller) || (one.seller && opensLater)
+                ((heroLook === "live" || ownModel) && !one.seller) || (one.seller && (opensLater || sellerScene))
                   ? "hero-photo in3d"
                   : "hero-photo"
               }
@@ -265,7 +268,17 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
                 // Торг продавца назначен, но не открыт - знак вопроса. Вещь,
                 // подготовленную нами, - голограммой её модели.
                 <div className="hero-stage">
-                  <SoonHologram model={one.model} />
+                  <SoonHologram model={one.hologram} />
+                </div>
+              ) : sellerScene ? (
+                <div className="hero-stage">
+                  <ThingStage
+                    shape={houseShape(one.model)}
+                    picked={null}
+                    onPick={() => {}}
+                    stage={heroStage}
+                    onReady={dressHero}
+                  />
                 </div>
               ) : one.seller ? (
                 // Вещь продавца: снимок, который он прислал. Модель к ней

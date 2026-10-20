@@ -346,8 +346,10 @@ export type MarketThing = {
   /** Кого оценивают покупатели, и наша ли это вещь - для строки «Sold by». */
   owner: string | null;
   house: boolean;
-  /** Модель нашей вещи: по ней сцена и её разметка. */
+  /** Модель вещи: по ней сцена и её разметка. */
   model: string | null;
+  /** Лёгкая копия модели подготовленной нами вещи - голограмма до открытия. */
+  hologram: string | null;
 };
 
 /** Анонс: вещь уже в каталоге, но торга на неё ещё не заводили. */
@@ -496,8 +498,11 @@ export async function loadMarket(): Promise<{
           owner: info.seller ?? null,
           house: info.house ?? false,
           photo: info.photos?.[0] ? photoUrl(info.photos[0]) : null,
-          // Подготовленная нами вещь до открытия - голограммой своей модели.
-          model: info.house ? info.model_url || null : info.prepared ? info.hologram_url || info.model_url || null : null,
+          // Модель - у любой вещи, где она есть: у вещи продавца без снимков
+          // карточка показывает её, а не пустую рамку. Голограмма - только у
+          // подготовленной нами, до открытия.
+          model: info.model_url || null,
+          hologram: info.prepared ? info.hologram_url || info.model_url || null : null,
         });
       known.spots += 1;
       if (top) {
