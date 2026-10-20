@@ -29,6 +29,7 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
   const [proofDay, setProofDay] = useState("");
   const [noLockup, setNoLockup] = useState(true);
   const [stickers, setStickers] = useState({ price: String(STICKER_PRICE_CENTS / 100), count: String(STICKER_CAP) });
+  const [stickersToAdmin, setStickersToAdmin] = useState(false);
   const [prices, setPrices] = useState<Record<string, { reserve: string; step: string }>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -89,7 +90,7 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
       proofBy,
       prices: rows.map((row) => ({ spotId: row.spot.id, reserveCents: row.reserveCents!, stepCents: row.stepCents! })),
       noLockup,
-      stickers: stickerCount > 0 ? { priceCents: stickerPrice!, cap: stickerCount } : null,
+      stickers: stickerCount > 0 ? { priceCents: stickerPrice!, cap: stickerCount, toAdmin: stickersToAdmin } : null,
     });
     setBusy(false);
     if (done.ok) onDone();
@@ -185,6 +186,13 @@ export function GiveToSeller({ thing, onDone }: { thing: AdminThing; onDone: () 
           />
         </label>
       </div>
+      <label className="sl-field">
+        Sticker money goes to
+        <select value={stickersToAdmin ? "admin" : "seller"} onChange={(event) => setStickersToAdmin(event.target.value === "admin")}>
+          <option value="seller">The seller, minus the platform fee</option>
+          <option value="admin">OXAR: the admin wallet you sign with, minus the platform fee</option>
+        </select>
+      </label>
 
       {problem && <p className="muted">{problem}</p>}
       {error && <p className="bad">{error}</p>}
