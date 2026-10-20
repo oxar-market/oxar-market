@@ -580,7 +580,13 @@ export function ThingStage({
               patch,
               hit.point,
               anchor.rotation,
-              new THREE.Vector3(spot.size[0], spot.size[1], thingShape.current.depth),
+              // Оклейка сверху - неглубокой коробкой: глубокая стекала по
+              // скруглению крыши к бортам полосами; мелкая режет край ровно.
+              new THREE.Vector3(
+                spot.size[0],
+                spot.size[1],
+                spot.wrap && spot.top ? Math.min(thingShape.current.depth, 0.02) : thingShape.current.depth,
+              ),
             );
             if (patch !== part) patch.geometry.dispose();
             return stamp;
@@ -620,7 +626,9 @@ export function ThingStage({
               THREE,
               geometry,
               new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld),
-              0.42,
+              // Сверху - мягче: край там задаёт неглубокая коробка, а строгий
+              // отбор рвал скругление пилой.
+              spot.top ? 0.3 : 0.42,
             );
           }
           const material = new THREE.MeshStandardMaterial({
