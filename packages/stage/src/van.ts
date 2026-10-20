@@ -18,29 +18,27 @@ const at = (meters: number) => Math.round((meters / H) * 1000) / 1000;
 const len = (meters: number) => Math.round(meters * M * 1000) / 1000;
 
 export const VAN_SPOTS: Spot[] = [
-  // Правый борт. Сдвижная дверь и грузовой борт - одной полосой над ручкой
-  // двери и над хромовой планкой салазок (1.38): ниже наклейка легла бы на них.
-  { code: "van_sliding", label: "Sliding door", height: at(1.725), azimuth: 0, shift: len(0.22), size: [len(1.2), len(0.55)] },
-  { code: "van_side_r", label: "Side panel passenger", height: at(1.725), azimuth: 0, shift: len(-1.275), size: [len(1.35), len(0.55)] },
-  // Двери кабины: между ручкой (1.2) и чёрной полосой понизу (до 0.75).
-  { code: "van_door_r", label: "R door", height: at(0.98), azimuth: 0, shift: len(1.55), size: [len(0.8), len(0.32)] },
-  // Крыло: над аркой колеса, позади фары, под косой линией капота.
-  { code: "van_fender_r", label: "R fender", height: at(1.06), azimuth: 0, shift: len(2.45), size: [len(0.46), len(0.2)] },
+  // Места - панели целиком, как оклейка: сдвижная дверь, борта и двери
+  // кабины - от чёрной полосы понизу (0.78) до верха борта или окна; корма -
+  // обе створки; капот и крыша - во всю ширину. Ручки и молдинги - под
+  // оклейкой, как на настоящей машине; стёкла, фары и колёса - нет.
+  // Правый борт.
+  { code: "van_sliding", label: "Sliding door", height: at(1.5), azimuth: 0, shift: len(0.285), size: [len(1.47), len(1.44)] },
+  { code: "van_side_r", label: "Side panel passenger", height: at(1.5), azimuth: 0, shift: len(-1.305), size: [len(1.63), len(1.44)] },
+  { code: "van_door_r", label: "R door", height: at(1.04), azimuth: 0, shift: len(1.62), size: [len(1.04), len(0.52)] },
+  { code: "van_fender_r", label: "R fender", height: at(1.085), azimuth: 0, shift: len(2.515), size: [len(0.67), len(0.3)] },
   // Левый борт: плюс сдвига - к корме, зритель смотрит с другой стороны.
-  // Грузовой борт целиком - от двери кабины до фонаря, над чёрной полосой.
-  { code: "van_side_l", label: "Side panel driver", height: at(1.435), azimuth: 180, shift: len(0.6), size: [len(2.8), len(1.17)] },
-  { code: "van_door_l", label: "L door", height: at(0.98), azimuth: 180, shift: len(-1.55), size: [len(0.8), len(0.32)] },
-  { code: "van_fender_l", label: "L fender", height: at(1.06), azimuth: 180, shift: len(-2.45), size: [len(0.46), len(0.2)] },
-  // Корма: створки над звездой (до 1.45), фонари и ручка ниже. Луч - чуть
-  // вбок от середины: ровно в середине щель между створками.
-  { code: "van_rear", label: "Rear", height: at(1.76), azimuth: -90, shift: len(0.03), size: [len(1.3), len(0.48)] },
+  { code: "van_side_l", label: "Side panel driver", height: at(1.5), azimuth: 180, shift: len(0.56), size: [len(3.12), len(1.44)] },
+  { code: "van_door_l", label: "L door", height: at(1.04), azimuth: 180, shift: len(-1.62), size: [len(1.04), len(0.52)] },
+  { code: "van_fender_l", label: "L fender", height: at(1.085), azimuth: 180, shift: len(-2.515), size: [len(0.67), len(0.3)] },
+  // Корма: обе створки целиком, между фонарями. Луч - чуть вбок от
+  // середины: ровно в середине щель между створками.
+  { code: "van_rear", label: "Rear", height: at(1.465), azimuth: -90, shift: len(0.03), size: [len(1.48), len(1.83)] },
   // Сверху: сдвиг - вдоль машины, плюс - к переду. Логотип смотрит вперёд:
   // размер - поперёк машины и вдоль неё.
-  // Капот - между решётками воздухозаборника, лобовое стекло не задевает.
-  { code: "van_hood", label: "Hood", height: 1, azimuth: 0, top: true, shift: len(2.93), size: [len(0.54), len(0.46)] },
-  // Скат высокой крыши над лобовым и сама крыша за ним, с ребром на 1.0.
-  { code: "van_roof_front", label: "Front roof", height: 1, azimuth: 0, top: true, shift: len(1.335), size: [len(1.4), len(0.63)] },
-  { code: "van_roof", label: "Roof", height: 1, azimuth: 0, top: true, shift: len(-0.575), size: [len(1.5), len(2.95)] },
+  { code: "van_hood", label: "Hood", height: 1, azimuth: 0, top: true, shift: len(2.94), size: [len(1.36), len(0.56)] },
+  { code: "van_roof_front", label: "Front roof", height: 1, azimuth: 0, top: true, shift: len(1.375), size: [len(1.7), len(0.75)] },
+  { code: "van_roof", label: "Roof", height: 1, azimuth: 0, top: true, shift: len(-0.625), size: [len(1.7), len(3.25)] },
 ];
 
 export const VAN: Shape = {
