@@ -585,7 +585,9 @@ export function ThingStage({
               new THREE.Vector3(
                 spot.size[0],
                 spot.size[1],
-                spot.wrap && spot.top ? Math.min(thingShape.current.depth, 0.02) : thingShape.current.depth,
+                // Оклейка - неглубокой коробкой: глубокая доставала до
+                // скруглений соседних граней, и край рвался пилой.
+                spot.wrap ? Math.min(thingShape.current.depth, spot.top ? 0.02 : 0.03) : thingShape.current.depth,
               ),
             );
             if (patch !== part) patch.geometry.dispose();

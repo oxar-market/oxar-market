@@ -20,21 +20,22 @@ const len = (meters: number) => Math.round(meters * M * 1000) / 1000;
 export const VAN_SPOTS: Spot[] = [
   // Оклейка: каждое место - панель целиком, зоны стыкуются без промежутков,
   // как у печати по всему вану. Борта - от чёрной полосы понизу (0.76) до
-  // скругления к крыше (2.2); двери кабины - под окном; корма - обе створки;
+  // края крыши (2.42); двери кабины - под окном; корма - обе створки, не
+  // заходя на скругление к бортам;
   // капот и крыша - по ровной части. На скруглениях печать рвалась пилой,
   // поэтому зоны до них не доходят. Стёкла, фары, колёса и бампер не трогаем.
   // Правый борт.
-  { code: "van_sliding", label: "Sliding door", height: at(1.48), azimuth: 0, shift: len(0.295), size: [len(1.53), len(1.44)], wrap: true },
-  { code: "van_side_r", label: "Side panel passenger", height: at(1.48), azimuth: 0, shift: len(-1.4), size: [len(1.84), len(1.44)], wrap: true },
+  { code: "van_sliding", label: "Sliding door", height: at(1.59), azimuth: 0, shift: len(0.295), size: [len(1.53), len(1.66)], wrap: true },
+  { code: "van_side_r", label: "Side panel passenger", height: at(1.59), azimuth: 0, shift: len(-1.4), size: [len(1.84), len(1.66)], wrap: true },
   { code: "van_door_r", label: "R door", height: at(1.035), azimuth: 0, shift: len(1.625), size: [len(1.09), len(0.55)], wrap: true },
   { code: "van_fender_r", label: "R fender", height: at(1.1), azimuth: 0, shift: len(2.515), size: [len(0.69), len(0.3)], wrap: true },
   // Левый борт: плюс сдвига - к корме, зритель смотрит с другой стороны.
-  { code: "van_side_l", label: "Side panel driver", height: at(1.48), azimuth: 180, shift: len(0.63), size: [len(3.38), len(1.44)], wrap: true },
+  { code: "van_side_l", label: "Side panel driver", height: at(1.59), azimuth: 180, shift: len(0.63), size: [len(3.38), len(1.66)], wrap: true },
   { code: "van_door_l", label: "L door", height: at(1.035), azimuth: 180, shift: len(-1.625), size: [len(1.09), len(0.55)], wrap: true },
   { code: "van_fender_l", label: "L fender", height: at(1.1), azimuth: 180, shift: len(-2.515), size: [len(0.69), len(0.3)], wrap: true },
   // Корма: обе створки от бампера до верха. Луч - чуть вбок от середины:
   // ровно в середине щель между створками.
-  { code: "van_rear", label: "Rear", height: at(1.49), azimuth: -90, shift: len(0.03), size: [len(1.64), len(1.82)], wrap: true },
+  { code: "van_rear", label: "Rear", height: at(1.46), azimuth: -90, shift: len(0.03), size: [len(1.5), len(1.68)], wrap: true },
   // Сверху: сдвиг - вдоль машины, плюс - к переду. Логотип смотрит вперёд:
   // размер - поперёк машины и вдоль неё.
   { code: "van_hood", label: "Hood", height: 1, azimuth: 0, top: true, shift: len(2.99), size: [len(1.6), len(0.74)], wrap: true },
