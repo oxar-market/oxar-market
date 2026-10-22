@@ -167,7 +167,9 @@ export function PhotoView({
               type="button"
               className={[
                 "photo-spot",
-                spot.code === picked ? "on" : "",
+                // Оклейке обводки нет: рамка коробки - прямоугольник, а
+                // панель нет, и обводка ложилась мимо её контура.
+                spot.code === picked && !spot.wrap ? "on" : "",
                 drawFrames ? "drawn" : "",
               ]
                 .filter(Boolean)
