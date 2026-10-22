@@ -59,9 +59,20 @@ function solve(matrix: number[][], right: number[]): number[] | null {
  * CSS. `null`, если четырёхугольник выродился: три точки на одной прямой или
  * место, повёрнутое к нам ребром. Звать такое ошибкой нельзя - место на
  * дальней стороне вещи именно так и выглядит, - поэтому его просто не рисуем.
+ *
+ * Перекрученный или вогнутый четырёхугольник - тоже `null`. Матрица по нему
+ * находится, но в такой обход квадрат без разрыва не ляжет, и картинку
+ * выносит далеко за углы: капот вана спереди рисовал галку шире машины.
  */
 export function quadTransform(corners: Corners): number[] | null {
   const [a, b, c, d] = corners;
+  // Выпуклый - когда на каждом углу обход поворачивает в одну и ту же сторону.
+  const turns = corners.map(([x, y], at) => {
+    const [nx, ny] = corners[(at + 1) % 4];
+    const [px, py] = corners[(at + 3) % 4];
+    return (x - px) * (ny - y) - (y - py) * (nx - x);
+  });
+  if (!turns.every((turn) => turn > 0) && !turns.every((turn) => turn < 0)) return null;
   // Единичный квадрат в том же порядке обхода, что и углы.
   const from: [number, number][] = [
     [0, 0],

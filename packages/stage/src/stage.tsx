@@ -468,6 +468,9 @@ export function ThingStage({
           return stand;
         }
         const anchor = new THREE.Object3D();
+        // Места, чья оклейка захватила стекло: подпись у них - на кузове под
+        // окнами, а не посередине.
+        const glazed = new Set<string>();
         const decals: {
           code: string;
           mesh: InstanceType<typeof THREE.Mesh>;
@@ -596,7 +599,7 @@ export function ThingStage({
                 spot.size[1],
                 // Оклейка - неглубокой коробкой: глубокая доставала до
                 // скруглений соседних граней, и край рвался пилой.
-                spot.wrap ? Math.min(thingShape.current.depth, spot.top ? 0.02 : 0.03) : thingShape.current.depth,
+                spot.reach ?? (spot.wrap ? Math.min(thingShape.current.depth, spot.top ? 0.02 : 0.03) : thingShape.current.depth),
               ),
             );
             if (patch !== part) patch.geometry.dispose();
@@ -618,7 +621,8 @@ export function ThingStage({
             filled.forEach((stamp) => {
               const from = parts.get(stamp);
               const glass = /glass/i.test((from?.material as { name?: string } | undefined)?.name ?? "");
-              if (!glass && stamp.getAttribute("normal")) facingOnly(THREE, stamp, toward, spot.top ? 0.3 : 0.42);
+              if (glass) glazed.add(spot.code);
+              if (!glass && stamp.getAttribute("normal")) facingOnly(THREE, stamp, toward, spot.top ? 0.3 : 0.35);
             });
             filled = filled.filter((stamp) => (stamp.getAttribute("position")?.count ?? 0) > 0);
           }
@@ -634,6 +638,7 @@ export function ThingStage({
           const merged = filled.length > 1 ? mergeGeometries(filled) : null;
           const geometry = merged ?? filled[0] ?? stamps[0]!;
           for (const stamp of stamps) if (stamp !== geometry) stamp.dispose();
+          if (spot.wrap && geometry.getAttribute("position")) dropCrumbs(THREE, geometry);
           // Узор ложится на длинную наклонную поверхность, и коробка нужна
           // глубокая - а глубокая цепляет изнанку. Её грани смотрят от
           // зрителя: их выбрасываем, иначе узор вышел бы и на обороте.
@@ -645,7 +650,7 @@ export function ThingStage({
             );
           }
           const material = new THREE.MeshStandardMaterial({
-            map: placeholder(THREE, spot),
+            map: placeholder(THREE, spot, glazed.has(spot.code)),
             color: tint.idle,
             roughness: 0.95,
             metalness: 0,
@@ -659,10 +664,10 @@ export function ThingStage({
             // Декаль лежит ровно на поверхности, поэтому её надо чуть
             // приподнять - иначе они спорят и пятно мерцает полосами.
             polygonOffset: true,
-            polygonOffsetFactor: -4,
+            polygonOffsetFactor: spot.wrap ? -1 : -4,
             // Factor сдвигает по наклону грани, а плоскую крышку ноутбука
             // видно в лоб - наклона нет, и без units декаль тонула в ней.
-            polygonOffsetUnits: -4,
+            polygonOffsetUnits: spot.wrap ? -1 : -4,
             depthWrite: false,
           });
           const mesh = new THREE.Mesh(geometry, material);
@@ -713,7 +718,9 @@ export function ThingStage({
             // У места-узора рамки нет: оно - вся вещь, и уголки коробки,
             // срезанные краем вещи, торчали бы рыжими огрызками.
             const whole = SPOTS.find((spot) => spot.code === decal.code)?.tile;
-            decal.frame.visible = !showingGhost && decal.code === chosen && !whole;
+            // У оклейки уголков нет: выбор виден заливкой всей панели.
+            const wrapped = SPOTS.find((spot) => spot.code === decal.code)?.wrap;
+            decal.frame.visible = !showingGhost && decal.code === chosen && !whole && !wrapped;
             // Место с примеренной картинкой подсветка цвета не трогает: цвет
             // там принадлежит логотипу, а не рамке.
             if (mine.has(decal.code)) continue;
@@ -832,7 +839,7 @@ export function ThingStage({
 
             if (!image) {
               mine.delete(code);
-              material.map = placeholder(THREE, spot);
+              material.map = placeholder(THREE, spot, glazed.has(spot.code));
               // Рамке цвет возвращает общая подсветка.
               restyle();
               return;
@@ -947,9 +954,14 @@ export function ThingStage({
         const views = (() => {
           // Крупнее, чем нужно кнопке: этот же кадр показывает фото-режим во
           // всю сцену, и там триста двадцать точек читались бы как каша.
-          const side = 1024;
+          // Длинную вещь снимаем широким кадром: в квадрате ван сбоку был
+          // полоской посередине и терялся в полях.
+          const shape = wide ? 1.6 : 1;
+          const tall = wide ? 1000 : 1024;
+          const broad = Math.round(tall * shape);
           const paper = document.createElement("canvas");
-          paper.width = paper.height = side;
+          paper.width = broad;
+          paper.height = tall;
           const ink = paper.getContext("2d");
           if (!ink) return { shots: [], quads: [] };
 
@@ -957,28 +969,35 @@ export function ThingStage({
           // равно пишет в неё рабочий линейный цвет, а не то, что здесь
           // попросишь, - ветка на sRGB есть только у холста и у XR. Прежняя
           // строка выглядела как настройка, а не делала ничего.
-          const target = new THREE.WebGLRenderTarget(side, side);
-          const lens = new THREE.PerspectiveCamera(camera.fov, 1, 0.1, 100);
+          // Сглаживание: без него кромки кузова и стёкол шли лесенкой, и
+          // кадр выглядел дешевле сцены.
+          const target = new THREE.WebGLRenderTarget(broad, tall, { samples: 4 });
+          const lens = new THREE.PerspectiveCamera(camera.fov, shape, 0.1, 100);
           // Кадр теснее, чем на сцене: в кнопке каждый пиксель на счету.
           // Длинную вещь сбоку снимаем по её длине, спереди и сзади - по
-          // ширине и высоте: иначе ван занимал бы полоску посреди квадрата.
-          // Ближняя к камере грань вещи стоит на полгабарита ближе центра: у
-          // вана спереди это половина его длины, и без поправки перед и
-          // крыша вылезали за кадр.
+          // высоте: она там выше, чем шире кадра. Ближняя к камере грань вещи
+          // стоит на полгабарита ближе центра: у вана спереди это половина
+          // его длины, и без поправки перед и крыша вылезали за кадр.
           const backAt = (quarter: number) =>
             !wide
               ? (reach / Math.tan(fov / 2)) * 1.12
               : quarter % 2 === 0
-                ? (across * 1.05) / tan + scaled.z / 2
-                : (Math.max(scaled.z, scaled.y) / 2) * 1.2 / tan + scaled.x / 2;
-          const pixels = new Uint8Array(side * side * 4);
+                ? Math.max((scaled.x / 2) * 1.06 / shape, (scaled.y / 2) * 1.12) / tan + scaled.z / 2
+                : (Math.max(scaled.z / shape, scaled.y) / 2) * 1.1 / tan + scaled.x / 2;
+          const pixels = new Uint8Array(broad * tall * 4);
           const shots: string[] = [];
-          // Куда попали места на каждом кадре: доля от стороны, чтобы кадр
-          // можно было показывать любого размера.
+          // Куда попали места на каждом кадре: доля ширины и высоты, чтобы
+          // кадр можно было показывать любого размера.
           const quads: Record<string, Corners | null>[] = [];
 
           ring.visible = false;
           if (shadow) shadow.visible = false;
+          // Снимок - без выбора: кадр делается один раз, и место, выбранное
+          // в эту секунду, осталось бы подсвеченным на нём навсегда. Выбор на
+          // кадре показывает обводка накладки.
+          const wasChosen = chosen;
+          chosen = null;
+          restyle();
 
           for (let quarter = 0; quarter < 4; quarter++) {
             const angle = (quarter * Math.PI) / 2;
@@ -987,7 +1006,7 @@ export function ThingStage({
             lens.lookAt(0, 0, 0);
             renderer.setRenderTarget(target);
             renderer.render(scene, lens);
-            renderer.readRenderTargetPixels(target, 0, 0, side, side, pixels);
+            renderer.readRenderTargetPixels(target, 0, 0, broad, tall, pixels);
 
             // Плёночная кривая и перевод в sRGB - руками: в рендер-цель three
             // последний проход не выполняет, и без проявки светлая вещь на
@@ -995,15 +1014,15 @@ export function ThingStage({
             // чтобы снимок не разошёлся со сценой при её правке.
             develop(pixels, renderer.toneMappingExposure);
 
-            const image = ink.createImageData(side, side);
+            const image = ink.createImageData(broad, tall);
             // Строки переворачиваются: GL считает их от нижнего края кадра,
             // канвас - от верхнего, и без этого вещь встаёт на голову.
-            for (let row = 0; row < side; row++) {
-              const from = (side - 1 - row) * side * 4;
-              image.data.set(pixels.subarray(from, from + side * 4), row * side * 4);
+            for (let row = 0; row < tall; row++) {
+              const from = (tall - 1 - row) * broad * 4;
+              image.data.set(pixels.subarray(from, from + broad * 4), row * broad * 4);
             }
             ink.putImageData(image, 0, 0);
-            shots.push(paper.toDataURL("image/webp", 0.82));
+            shots.push(paper.toDataURL("image/webp", 0.9));
 
             // Где на этом кадре лежат места. Считается той же камерой, что
             // снимала, поэтому совпадает с картинкой точно, а не примерно.
@@ -1034,6 +1053,8 @@ export function ThingStage({
           target.dispose();
           ring.visible = true;
           if (shadow) shadow.visible = true;
+          chosen = wasChosen;
+          restyle();
           return { shots, quads };
         })();
 
@@ -1166,10 +1187,10 @@ export function ThingStage({
  */
 const sheets = new Map<string, InstanceType<typeof import("three").CanvasTexture>>();
 
-function placeholder(THREE: typeof import("three"), spot: Spot) {
+function placeholder(THREE: typeof import("three"), spot: Spot, glazed = false) {
   const [wide, tall] = spot.size;
   // Ключ - размер и номер: клетки одного размера отличаются только им.
-  const key = `${wide}x${tall}:${spot.label}:${spot.wrap ? "wrap" : ""}`;
+  const key = `${wide}x${tall}:${spot.label}:${spot.wrap ? "wrap" : ""}:${glazed ? "low" : ""}`;
   const known = sheets.get(key);
   if (known) return known;
 
@@ -1257,7 +1278,9 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  const room = canvas.width - (pad + arm) * 2;
+  // На оклейке подпись уже зоны: края панели загибаются (крыло - к фаре),
+  // и буквы с краю уходили на изгиб.
+  const room = spot.wrap ? canvas.width * 0.55 : canvas.width - (pad + arm) * 2;
   // Шрифт берём у страницы: в канвас переменная из CSS не приходит, а имя
   // семейства next/font собирает сам и на каждой сборке заново.
   const font = (size: number) => `500 ${size}px ${getComputedStyle(document.body).fontFamily}`;
@@ -1270,7 +1293,11 @@ function placeholder(THREE: typeof import("three"), spot: Spot) {
     ctx.letterSpacing = `${size * 0.18}px`;
     ctx.font = font(size);
   }
-  ctx.fillText(spot.label, canvas.width / 2, canvas.height / 2);
+  // Зона со стеклом - во всю высоту, и её середина приходилась на складку
+  // под окнами, которая рвала буквы: подпись - ниже, на кузове. Борт без
+  // стекла - крыло, его середина над колесом, и арка срезала буквы: выше.
+  const at = glazed ? 0.68 : spot.wrap && !spot.top ? 0.42 : 0.5;
+  ctx.fillText(spot.label, canvas.width / 2, canvas.height * at);
 
   const made = new THREE.CanvasTexture(canvas);
   made.colorSpace = THREE.SRGBColorSpace;
@@ -1475,6 +1502,63 @@ function pattern(
 }
 
 /** Оставить у декали только грани, что смотрят туда же, куда место. */
+/**
+ * Выбросить крошки печати: клочки, оторванные от зоны.
+ *
+ * Коробка оклейки задевает мелкие грани под зоной - нишу номера, кромку
+ * стыка, - и они светились на чёрном кузове отдельными значками. Кусок
+ * считается крошкой, если он не связан с остальной печатью и меньше доли
+ * `least` от её площади.
+ */
+function dropCrumbs(
+  THREE: typeof import("three"),
+  geometry: InstanceType<typeof THREE.BufferGeometry>,
+  least = 0.02,
+) {
+  const position = geometry.getAttribute("position") as InstanceType<typeof THREE.BufferAttribute>;
+  const count = position.count / 3;
+  const parent = Array.from({ length: count }, (_, at) => at);
+  const root = (at: number): number => {
+    while (parent[at] !== at) at = parent[at] = parent[parent[at]]!;
+    return at;
+  };
+  // Треугольники связаны, если делят вершину. Вершины у декали не общие, а
+  // повторены в каждом треугольнике, поэтому сравниваем по координатам.
+  const owner = new Map<string, number>();
+  for (let v = 0; v < position.count; v++) {
+    const key = `${position.getX(v).toFixed(5)},${position.getY(v).toFixed(5)},${position.getZ(v).toFixed(5)}`;
+    const other = owner.get(key);
+    if (other === undefined) owner.set(key, Math.floor(v / 3));
+    else parent[root(Math.floor(v / 3))] = root(other);
+  }
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  const areas = new Float64Array(count);
+  const piece = new Map<number, number>();
+  let total = 0;
+  for (let at = 0; at < count; at++) {
+    a.fromBufferAttribute(position, at * 3);
+    b.fromBufferAttribute(position, at * 3 + 1);
+    c.fromBufferAttribute(position, at * 3 + 2);
+    areas[at] = b.sub(a).cross(c.sub(a)).length() / 2;
+    total += areas[at]!;
+    piece.set(root(at), (piece.get(root(at)) ?? 0) + areas[at]!);
+  }
+  const keep = (at: number) => piece.get(root(at))! >= total * least;
+  for (const name of Object.keys(geometry.attributes)) {
+    const from = geometry.getAttribute(name) as InstanceType<typeof THREE.BufferAttribute>;
+    const kept: number[] = [];
+    for (let at = 0; at < count; at++) {
+      if (!keep(at)) continue;
+      for (let v = at * 3; v < at * 3 + 3; v++) {
+        for (let k = 0; k < from.itemSize; k++) kept.push(from.array[v * from.itemSize + k] as number);
+      }
+    }
+    geometry.setAttribute(name, new THREE.Float32BufferAttribute(kept, from.itemSize));
+  }
+}
+
 function facingOnly(
   THREE: typeof import("three"),
   geometry: InstanceType<typeof THREE.BufferGeometry>,
