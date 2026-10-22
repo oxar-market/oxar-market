@@ -371,7 +371,8 @@ export function ThingStage({
         // читался бы интерфейсом поверх вещи, а место под нанесение - часть
         // самой вещи. Выбранное берёт краску погуще, свободные - пожиже,
         // чтобы пятнадцать отметок разом не забивали футболку.
-        const tint = { idle: 0xe0381c, hot: 0x96210c };
+        // Цвет мест - свой у вещи, если задан: на чёрном ване рыжий сливался.
+        const tint = thingShape.current.mark ?? { idle: 0xe0381c, hot: 0x96210c };
         const raycaster = new THREE.Raycaster();
 
         /**
@@ -498,8 +499,15 @@ export function ThingStage({
             raycaster.set(start, dir.clone().negate());
           }
           // Целимся во все меши сразу: у вещи их бывает несколько, и какая
-          // именно окажется под лучом - забота геометрии, а не разметки.
-          const hit = raycaster.intersectObjects(meshes, true)[0];
+          // именно окажется под лучом - забота геометрии, а не разметки. Если
+          // у вещи названы поверхности под печать - только в них.
+          const allowed = thingShape.current.surfaces;
+          const targets = meshes.filter(
+            (mesh) =>
+              (!allowed || allowed.includes((mesh.material as { name?: string }).name ?? "")) &&
+              (!spot.parts || spot.parts.some((part) => mesh.name.startsWith(part))),
+          );
+          const hit = raycaster.intersectObjects(targets, true)[0];
           if (!hit || !hit.normal) continue;
           const surface = hit.object as InstanceType<typeof THREE.Mesh>;
           // Место может лечь на несколько деталей: у вана корма - две
@@ -547,7 +555,7 @@ export function ThingStage({
                 flat.clone().addScaledVector(facing, 0.2),
                 facing.clone().negate(),
               );
-              const landed = probe.intersectObjects(meshes, true)[0];
+              const landed = probe.intersectObjects(targets, true)[0];
               if (landed) under.add(landed.object as InstanceType<typeof THREE.Mesh>);
               return landed ? landed.point : flat;
             }),
@@ -557,11 +565,11 @@ export function ThingStage({
           // Детали под местом - по сетке точек внутри него, а не только по
           // углам: угол на стыке створок кормы промахивался мимо левой, и
           // печать ложилась на одну створку из двух.
-          for (const across of [-0.5, 0, 0.5]) {
-            for (const down of [-0.5, 0, 0.5]) {
+          for (const across of [-0.9, -0.45, 0, 0.45, 0.9]) {
+            for (const down of [-0.9, -0.45, 0, 0.45, 0.9]) {
               const inside = new THREE.Vector3(across * half[0], down * half[1], 0).applyMatrix4(anchor.matrixWorld);
               const probe = new THREE.Raycaster(inside.clone().addScaledVector(facing, 0.2), facing.clone().negate());
-              const landed = probe.intersectObjects(meshes, true)[0];
+              const landed = probe.intersectObjects(targets, true)[0];
               if (landed) under.add(landed.object as InstanceType<typeof THREE.Mesh>);
             }
           }
@@ -569,6 +577,7 @@ export function ThingStage({
           // Штампуем по куску вокруг места, а не по всей вещи. Запас в
           // полтора радиуса - чтобы в шар наверняка попали все грани, углы
           // которых коробка задевает.
+          const parts = new Map<InstanceType<typeof THREE.BufferGeometry>, InstanceType<typeof THREE.Mesh>>();
           const stamps = [...under].map((part) => {
             const patch =
               around(
@@ -591,13 +600,28 @@ export function ThingStage({
               ),
             );
             if (patch !== part) patch.geometry.dispose();
+            parts.set(stamp, part);
             return stamp;
           });
           // Склеиваются только куски с одинаковым набором атрибутов: у деталей
           // модели он разный, и склейка с лишним атрибутом падала - сцена
           // не собиралась вовсе. Оставляем общее, пустые выбрасываем, а не
           // склеилось - берём кусок под центральным лучом.
-          const filled = stamps.filter((stamp) => (stamp.getAttribute("position")?.count ?? 0) > 0);
+          let filled = stamps.filter((stamp) => (stamp.getAttribute("position")?.count ?? 0) > 0);
+          // Оклейка - только лицо панели: грани, почти параллельные проекции
+          // (борта у кормы, скругления крыши), растягивали печать в
+          // полосы-разводы. Оставляем то, что смотрит на зрителя круче ~65°.
+          // Стекло - тонкий лист, и нормали у него в моделях бывают внутрь
+          // салона: отбор выбросил бы его целиком, поэтому стекло не отбираем.
+          if (spot.wrap) {
+            const toward = new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld);
+            filled.forEach((stamp) => {
+              const from = parts.get(stamp);
+              const glass = /glass/i.test((from?.material as { name?: string } | undefined)?.name ?? "");
+              if (!glass && stamp.getAttribute("normal")) facingOnly(THREE, stamp, toward, spot.top ? 0.3 : 0.42);
+            });
+            filled = filled.filter((stamp) => (stamp.getAttribute("position")?.count ?? 0) > 0);
+          }
           const common = filled.reduce<string[]>(
             (names, stamp) => names.filter((name) => name in stamp.attributes),
             filled[0] ? Object.keys(filled[0].attributes) : [],
@@ -620,19 +644,6 @@ export function ThingStage({
               new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld),
             );
           }
-          // Оклейка - только лицо панели: грани, почти параллельные
-          // проекции (борта у кормы, скругления крыши), растягивали печать в
-          // полосы-разводы. Оставляем то, что смотрит на зрителя круче ~65°.
-          if (spot.wrap && geometry.getAttribute("normal")) {
-            facingOnly(
-              THREE,
-              geometry,
-              new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld),
-              // Сверху - мягче: край там задаёт неглубокая коробка, а строгий
-              // отбор рвал скругление пилой.
-              spot.top ? 0.3 : 0.42,
-            );
-          }
           const material = new THREE.MeshStandardMaterial({
             map: placeholder(THREE, spot),
             color: tint.idle,
@@ -642,6 +653,9 @@ export function ThingStage({
             // Отметка чуть прозрачная: она на ткани, а не поверх неё, и
             // складка под ней обязана читаться.
             opacity: 0.88,
+            // Стекло в моделях бывает вывернуто внутрь салона: печать на нём
+            // видна с обеих сторон.
+            side: spot.wrap ? THREE.DoubleSide : THREE.FrontSide,
             // Декаль лежит ровно на поверхности, поэтому её надо чуть
             // приподнять - иначе они спорят и пятно мерцает полосами.
             polygonOffset: true,
@@ -1345,13 +1359,24 @@ function artwork(
   if (!ctx) throw new Error("нет 2d-контекста");
 
   const source = { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
-  // Оклейка: картинка покрывает всю панель, лишнее по краям срезается -
-  // так её и напечатают, от края до края.
+  // Оклейка: панель целиком - фирменным цветом картинки, знак - целиком по
+  // центру, с запасом от краёв: края зоны заходят на арки и стёкла, и знак во
+  // всю зону упирался бы в них. Обрезать чужой знак нельзя.
   if (spot.wrap) {
-    const scale = Math.max(canvas.width / source.width, canvas.height / source.height);
-    const width = source.width * scale;
-    const height = source.height * scale;
-    ctx.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+    const backdrop = brandColor(image, source);
+    if (backdrop) {
+      ctx.fillStyle = backdrop;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    const room = { width: canvas.width * 0.72, height: canvas.height * 0.72 };
+    const box = fitInside(source, room);
+    ctx.drawImage(
+      image,
+      (canvas.width - room.width) / 2 + box.x,
+      (canvas.height - room.height) / 2 + box.y,
+      box.width,
+      box.height,
+    );
     const wrapped = new THREE.CanvasTexture(canvas);
     wrapped.colorSpace = THREE.SRGBColorSpace;
     wrapped.anisotropy = 8;
@@ -1372,6 +1397,36 @@ function artwork(
   made.colorSpace = THREE.SRGBColorSpace;
   made.anisotropy = 8;
   return made;
+}
+
+/**
+ * Фирменный цвет картинки: самый частый среди непрозрачных пикселей. Им
+ * заливается панель вокруг знака. Пустая или прозрачная картинка - null.
+ */
+function brandColor(image: HTMLImageElement, size: { width: number; height: number }): string | null {
+  const side = 64;
+  const probe = document.createElement("canvas");
+  probe.width = probe.height = side;
+  const ctx = probe.getContext("2d", { willReadFrequently: true });
+  if (!ctx || !size.width || !size.height) return null;
+  ctx.drawImage(image, 0, 0, side, side);
+  const data = ctx.getImageData(0, 0, side, side).data;
+  const bins = new Map<number, { count: number; sum: [number, number, number] }>();
+  for (let o = 0; o < data.length; o += 4) {
+    if (data[o + 3]! < 200) continue;
+    const r = data[o]!, g = data[o + 1]!, b = data[o + 2]!;
+    const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+    const bin = bins.get(key) ?? { count: 0, sum: [0, 0, 0] };
+    bin.count += 1;
+    bin.sum[0] += r;
+    bin.sum[1] += g;
+    bin.sum[2] += b;
+    bins.set(key, bin);
+  }
+  let best: { count: number; sum: [number, number, number] } | null = null;
+  for (const bin of bins.values()) if (!best || bin.count > best.count) best = bin;
+  if (!best) return null;
+  return `rgb(${best.sum.map((v) => Math.round(v / best!.count)).join(",")})`;
 }
 
 /**
