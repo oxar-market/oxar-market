@@ -1002,7 +1002,13 @@ export function ThingStage({
           for (let quarter = 0; quarter < 4; quarter++) {
             const angle = (quarter * Math.PI) / 2;
             const back = backAt(quarter);
-            lens.position.set(Math.sin(angle) * back, 0, Math.cos(angle) * back);
+            // Перед длинной вещи снимаем чуть сверху: в лоб капот вана
+            // виден ребром, и место на нём не разглядеть.
+            // Сверху видна и крыша, кадр по высоте растёт - отходим дальше.
+            const above = wide && quarter === 1 ? (15 * Math.PI) / 180 : 0;
+            const away = above ? back * 1.3 : back;
+            const flat = away * Math.cos(above);
+            lens.position.set(Math.sin(angle) * flat, away * Math.sin(above), Math.cos(angle) * flat);
             lens.lookAt(0, 0, 0);
             renderer.setRenderTarget(target);
             renderer.render(scene, lens);
