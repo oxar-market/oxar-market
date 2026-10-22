@@ -36,7 +36,7 @@ export function PhotoView({
   spots = SPOTS,
 }: {
   shot: string;
-  /** Углы каждого места на этом кадре, долями стороны. */
+  /** Углы каждого места на этом кадре, долями ширины и высоты. */
   quads: Record<string, Corners | null>;
   picked: string;
   onPick: (code: string) => void;
@@ -54,7 +54,9 @@ export function PhotoView({
   spots?: Spot[];
 }) {
   const box = useRef<HTMLDivElement>(null);
-  const [fit, setFit] = useState({ side: 0, left: 0, top: 0 });
+  // Пропорции самого кадра: у длинной вещи он широкий, у остальных квадратный.
+  const [shape, setShape] = useState(1);
+  const [fit, setFit] = useState({ width: 0, height: 0, left: 0, top: 0 });
   // Пропорции каждой картинки: ширина к высоте. Нужны, чтобы вписать логотип в
   // место с полями, а не растянуть его на всю площадь - как это делает сцена.
   const [ratio, setRatio] = useState<Record<string, number>>({});
@@ -82,8 +84,8 @@ export function PhotoView({
   /**
    * Куда именно легла картинка внутри рамки.
    *
-   * Рамка повторяет сцену, а кадр квадратный, и лежит он в ней целиком, с
-   * полями. Стыка не видно, потому что фона у снимка нет вовсе: он вырезан,
+   * Рамка повторяет сцену, а кадр своих пропорций, и лежит он в ней
+   * целиком, с полями. Стыка не видно, потому что фона у снимка нет вовсе: он вырезан,
    * и вещь лежит на той же подложке, что и вещь на сцене.
    *
    * Разметка задана долями кадра, а не рамки, поэтому без этой поправки
@@ -96,24 +98,35 @@ export function PhotoView({
     const host = box.current;
     if (!host) return;
     const measure = () => {
-      const side = Math.min(host.clientWidth, host.clientHeight);
+      const width = Math.min(host.clientWidth, host.clientHeight * shape);
+      const height = width / shape;
       setFit({
-        side,
-        left: (host.clientWidth - side) / 2,
-        top: (host.clientHeight - side) / 2,
+        width,
+        height,
+        left: (host.clientWidth - width) / 2,
+        top: (host.clientHeight - height) / 2,
       });
     };
     const watch = new ResizeObserver(measure);
     watch.observe(host);
     measure();
     return () => watch.disconnect();
-  }, []);
+  }, [shape]);
 
   return (
     <div className="photo" ref={box}>
-      <img className="photo-shot" src={shot} alt="" draggable={false} />
+      <img
+        className="photo-shot"
+        src={shot}
+        alt=""
+        draggable={false}
+        onLoad={(event) => {
+          const image = event.currentTarget;
+          if (image.naturalHeight > 0) setShape(image.naturalWidth / image.naturalHeight);
+        }}
+      />
 
-      {fit.side > 0 &&
+      {fit.width > 0 &&
         spots.map((spot) => {
           const quad = quads[spot.code];
           // Места с этой стороны не видно - накладки нет вовсе. Прозрачная
@@ -122,8 +135,8 @@ export function PhotoView({
 
           const matrix = quadTransform(
             quad.map(([x, y]) => [
-              fit.left + x * fit.side,
-              fit.top + y * fit.side,
+              fit.left + x * fit.width,
+              fit.top + y * fit.height,
             ]) as Corners,
           );
           if (!matrix) return null;
