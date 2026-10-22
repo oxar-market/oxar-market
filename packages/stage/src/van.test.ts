@@ -11,18 +11,18 @@ test("у вана одиннадцать мест с разными кодами
 
 test("капот и крыша размечены сверху, остальное - на бортах и корме", () => {
   const top = VAN_SPOTS.filter((spot) => spot.top).map((spot) => spot.code).sort();
-  assert.deepEqual(top, ["van_hood", "van_roof", "van_roof_front"]);
+  assert.deepEqual(top, ["van_hood", "van_roof"]);
   for (const spot of VAN_SPOTS.filter((one) => !one.top)) {
     assert.ok([0, 180, -90].includes(spot.azimuth), spot.code);
   }
 });
 
-test("места вана не вылезают за габарит: длина в сцене 0.62, ширина 0.21", () => {
+test("места вана не вылезают за габарит: длина в сцене 0.62, ширина 0.24", () => {
   for (const spot of VAN_SPOTS) {
     // Место сверху смотрит лицом вперёд: ширина - поперёк вана, высота - вдоль.
     const along = spot.top ? spot.size[1] : spot.azimuth === -90 ? 0 : spot.size[0];
     assert.ok(Math.abs(spot.shift ?? 0) + along / 2 <= 0.31, spot.code);
-    if (spot.top || spot.azimuth === -90) assert.ok(spot.size[0] <= 0.21, spot.code);
+    if (spot.top || spot.azimuth === -90) assert.ok(spot.size[0] <= 0.24, spot.code);
   }
 });
 

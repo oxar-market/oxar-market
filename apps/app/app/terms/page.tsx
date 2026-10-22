@@ -103,12 +103,12 @@ export default function Terms() {
         <h2>Credits</h2>
         <p>
           The 3D model of the van is{" "}
-          <a href="https://sketchfab.com/3d-models/mercedes-benz-sprinter-2006-f69de1315bb049c8946d57f6006acd73">
-            Mercedes Benz Sprinter 2006
+          <a href="https://sketchfab.com/3d-models/mercedes-benz-v-class-61583f5c172f4e25a963e52e1e67c11a">
+            Mercedes Benz V Class
           </a>{" "}
-          by <a href="https://sketchfab.com/Max-7215">Max</a>, licensed under{" "}
-          <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. We turned it, closed the doors and
-          made it lighter for the web.
+          by <a href="https://sketchfab.com/Car2022">Mona x Supercars</a>, licensed under{" "}
+          <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. We turned it, tuned the paint and glass
+          and made it lighter for the web.
         </p>
 
         <p className="muted">
