@@ -1392,15 +1392,11 @@ function artwork(
   if (!ctx) throw new Error("нет 2d-контекста");
 
   const source = { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
-  // Оклейка: панель целиком - фирменным цветом картинки, знак - целиком по
-  // центру, с запасом от краёв: края зоны заходят на арки и стёкла, и знак во
-  // всю зону упирался бы в них. Обрезать чужой знак нельзя.
+  // Оклейка: знак целиком по центру, с запасом от краёв: края зоны заходят
+  // на арки и стёкла, и знак во всю зону упирался бы в них. Обрезать чужой
+  // знак нельзя. Панель вокруг не заливаем: прозрачное в знаке остаётся
+  // кузовом, иначе круглый логотип превращался в сплошной цветной борт.
   if (spot.wrap) {
-    const backdrop = brandColor(image, source);
-    if (backdrop) {
-      ctx.fillStyle = backdrop;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
     const room = { width: canvas.width * 0.72, height: canvas.height * 0.72 };
     const box = fitInside(source, room);
     ctx.drawImage(
@@ -1430,36 +1426,6 @@ function artwork(
   made.colorSpace = THREE.SRGBColorSpace;
   made.anisotropy = 8;
   return made;
-}
-
-/**
- * Фирменный цвет картинки: самый частый среди непрозрачных пикселей. Им
- * заливается панель вокруг знака. Пустая или прозрачная картинка - null.
- */
-function brandColor(image: HTMLImageElement, size: { width: number; height: number }): string | null {
-  const side = 64;
-  const probe = document.createElement("canvas");
-  probe.width = probe.height = side;
-  const ctx = probe.getContext("2d", { willReadFrequently: true });
-  if (!ctx || !size.width || !size.height) return null;
-  ctx.drawImage(image, 0, 0, side, side);
-  const data = ctx.getImageData(0, 0, side, side).data;
-  const bins = new Map<number, { count: number; sum: [number, number, number] }>();
-  for (let o = 0; o < data.length; o += 4) {
-    if (data[o + 3]! < 200) continue;
-    const r = data[o]!, g = data[o + 1]!, b = data[o + 2]!;
-    const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
-    const bin = bins.get(key) ?? { count: 0, sum: [0, 0, 0] };
-    bin.count += 1;
-    bin.sum[0] += r;
-    bin.sum[1] += g;
-    bin.sum[2] += b;
-    bins.set(key, bin);
-  }
-  let best: { count: number; sum: [number, number, number] } | null = null;
-  for (const bin of bins.values()) if (!best || bin.count > best.count) best = bin;
-  if (!best) return null;
-  return `rgb(${best.sum.map((v) => Math.round(v / best!.count)).join(",")})`;
 }
 
 /**
