@@ -64,27 +64,16 @@ export function SetUpSpots({
   // Кто носит вещь, где и когда: без этого покупатель места не знает,
   // кто увидит его логотип, и публиковать нельзя.
   const [worn, setWorn] = useState<Worn>(thing.worn);
-  // «Когда» выбирают в календаре: первый день и, если вещь носят несколько
-  // дней, последний. В базу уходит текстом, как его читают покупатели.
-  // Носить вещь с логотипами можно только после торга: раньше дня закрытия
-  // календарь дней не даёт.
-  const [days, setDays] = useState({ from: "", to: "" });
-  const closesOn = drafts.map((one) => one.closes.slice(0, 10)).sort().at(-1) ?? "";
-  const early = days.from !== "" && days.from < closesOn;
-  function pickDays(next: { from: string; to: string }) {
-    const to = next.to && next.to > next.from ? next.to : "";
-    setDays({ from: next.from, to });
-    setWorn({ ...worn, when: next.from ? dayRange(next.from, to) : thing.worn.when });
-  }
-  const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0) && !early;
+  // «Когда» пишут словами, как его прочтут покупатели: «November 1 through
+  // 20», «all of Breakpoint week». Календарь одного дня или пары дней не
+  // описывал поездку на три недели.
+  const described = [worn.by, worn.where, worn.when].every((one) => one.trim().length > 0);
   // Срок пруфа - день, до конца которого продавец покажет вещь в деле: не
-  // раньше последнего дня, когда её носят, и не раньше, чем примет программа
-  // (правило в core). Пока продавец сам не выбрал - неделя после последнего
-  // дня носки, а без него две недели после закрытия.
+  // раньше, чем примет программа (правило в core). Пока продавец сам не
+  // выбрал - две недели после закрытия.
   const lastCloses = drafts.map((one) => one.closes).filter((one) => Number.isFinite(Date.parse(one))).sort().at(-1) ?? local(new Date());
-  const lastWorn = days.to || days.from;
-  const proofMin = earliestProofDay(lastCloses, lastWorn);
-  const suggested = shiftDay(lastWorn || lastCloses.slice(0, 10), lastWorn ? 7 : 14);
+  const proofMin = earliestProofDay(lastCloses, "");
+  const suggested = shiftDay(lastCloses.slice(0, 10), 14);
   // Выбранный день не подменяем молча: один и тот же день и в подписи, и в
   // календаре, и в торге. Ставший слишком ранним (закрытие или «когда»
   // сдвинули) - причина словами, а не другой день.
@@ -93,9 +82,7 @@ export function SetUpSpots({
   const proofOk = thing.noLockup || proofBy >= proofMin;
   const proofProblem = proofOk
     ? null
-    : lastWorn && proofBy < lastWorn
-      ? `Proof shows the thing in use with the logos, so it cannot be before the last day it is worn. Pick ${dayRange(proofMin, "")} or later.`
-      : `The auction can run an hour past its close, and proof comes after that. Pick ${dayRange(proofMin, "")} or later.`;
+    : `The auction can run an hour past its close, and proof comes after that. Pick ${dayRange(proofMin, "")} or later.`;
   const plans = drafts.map((one, index) => {
     const plan = toPlan(one);
     return {
@@ -204,22 +191,7 @@ export function SetUpSpots({
         </div>
         <Text label="Who has it" value={worn.by} example="Our founder" onChange={(by) => setWorn({ ...worn, by })} />
         <Text label="Where" value={worn.where} example="Demo Day, Kyiv" onChange={(where) => setWorn({ ...worn, where })} />
-        <Day
-          label="When"
-          value={days.from}
-          shown={days.from ? dayRange(days.from, "") : worn.when || "Pick a day"}
-          min={closesOn}
-          onChange={(from) => pickDays({ from, to: days.to })}
-        />
-        <Day
-          label="Last day (optional)"
-          value={days.to}
-          shown={days.to ? dayRange(days.to, "") : "One day"}
-          min={days.from || closesOn}
-          disabled={!days.from}
-          onChange={(to) => pickDays({ from: days.from, to })}
-        />
-        {early && <p className="bad sl-plan-note">Pick a day after the auction closes - the logos are printed after it.</p>}
+        <Text label="When" value={worn.when} example="November 1 through 20" onChange={(when) => setWorn({ ...worn, when })} />
         <Note
           label="What makes it special (optional)"
           value={worn.about}
@@ -279,11 +251,9 @@ export function SetUpSpots({
           <p className="bad sl-plan-note">
             {!valid
               ? "Fix the spot above: its price or dates are not right yet."
-              : early
-                ? "When must be on or after the day the auction closes."
-                : !described
-                  ? "Fill in who has it, where and when."
-                  : "Pick a later proof day: see Proof above."}
+              : !described
+                ? "Fill in who has it, where and when."
+                : "Pick a later proof day: see Proof above."}
           </p>
         )}
       </div>
@@ -376,7 +346,7 @@ function Note({
     <label className="sl-field wide">
       {label}
       <span className="sl-input tall">
-        <textarea rows={3} value={value} maxLength={300} placeholder={example} onChange={(event) => onChange(event.target.value)} />
+        <textarea rows={6} value={value} maxLength={1000} placeholder={example} onChange={(event) => onChange(event.target.value)} />
       </span>
     </label>
   );
