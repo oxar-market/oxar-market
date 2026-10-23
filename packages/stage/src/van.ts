@@ -40,15 +40,17 @@ export const VAN_SPOTS: Spot[] = [
   // 0.13, передняя дверь до 1.18, дальше переднее крыло до фары. Двери - по
   // своим деталям, поэтому печать идёт ровно по их контуру; крылья - по
   // кузову, вместе с аркой: колёса и фары не кузов, их печать не трогает.
-  { code: "van_side_r", label: "R side panel", height: at(1.05), azimuth: 0, shift: len(-1.7675), size: [len(1.365), len(1.6)], wrap: true, parts: BODY },
+  // Снизу крылья и боковины кончаются над бампером (0.5): боковые концы
+  // бамперов отданы под стикеры.
+  { code: "van_side_r", label: "R side panel", height: at(1.175), azimuth: 0, shift: len(-1.7675), size: [len(1.365), len(1.35)], wrap: true, parts: BODY },
   { code: "van_sliding", label: "R sliding door", height: at(0.98), azimuth: 0, shift: len(-0.475), size: [len(1.2), len(1.62)], wrap: true, parts: SLIDING_R, reach: DOOR_REACH },
   { code: "van_door_r", label: "R door", height: at(0.965), azimuth: 0, shift: len(0.655), size: [len(1.04), len(1.61)], wrap: true, parts: FRONT_R, reach: DOOR_REACH },
-  { code: "van_fender_r", label: "R fender", height: at(0.75), azimuth: 0, shift: len(1.765), size: [len(1.16), len(0.9)], wrap: true, parts: BODY },
+  { code: "van_fender_r", label: "R fender", height: at(0.85), azimuth: 0, shift: len(1.765), size: [len(1.16), len(0.7)], wrap: true, parts: BODY },
   // Левый борт - то же зеркально: плюс сдвига - к корме.
-  { code: "van_side_l", label: "L side panel", height: at(1.05), azimuth: 180, shift: len(1.7675), size: [len(1.365), len(1.6)], wrap: true, parts: BODY },
+  { code: "van_side_l", label: "L side panel", height: at(1.175), azimuth: 180, shift: len(1.7675), size: [len(1.365), len(1.35)], wrap: true, parts: BODY },
   { code: "van_sliding_l", label: "L sliding door", height: at(0.98), azimuth: 180, shift: len(0.475), size: [len(1.2), len(1.62)], wrap: true, parts: SLIDING_L, reach: DOOR_REACH },
   { code: "van_door_l", label: "L door", height: at(0.965), azimuth: 180, shift: len(-0.655), size: [len(1.04), len(1.61)], wrap: true, parts: FRONT_L, reach: DOOR_REACH },
-  { code: "van_fender_l", label: "L fender", height: at(0.75), azimuth: 180, shift: len(-1.765), size: [len(1.16), len(0.9)], wrap: true, parts: BODY },
+  { code: "van_fender_l", label: "L fender", height: at(0.85), azimuth: 180, shift: len(-1.765), size: [len(1.16), len(0.7)], wrap: true, parts: BODY },
   // Корма: задняя дверь целиком, со стеклом.
   { code: "van_rear", label: "Rear", height: at(1.135), azimuth: -90, shift: 0, size: [len(1.82), len(1.35)], wrap: true, parts: TAILGATE, reach: DOOR_REACH },
   // Сверху: сдвиг - вдоль машины, плюс - к переду. Логотип смотрит вперёд:
@@ -58,25 +60,36 @@ export const VAN_SPOTS: Spot[] = [
 ];
 
 /**
- * Стикеры - на бамперах, спереди и сзади поровну. Ячейки - сеткой по ровной
- * части бампера, в метрах модели: задний - плоскость 0.30-0.46 почти во всю
- * ширину; передний - ряд под номером, ряды по бокам от него и середина низа.
- * Скругления по краям не трогаем: стикер на них заворачивается. Шаг сетки
- * чуть больше стикера (12 см), чтобы соседние не налезали.
+ * Стикеры - на бамперах, спереди и сзади поровну, по пятьдесят. Ячейки -
+ * сеткой с шагом 10.5 см: стикер 10 на 10, между соседними полсантиметра.
+ * Ряды - по ровной части бампера, в метрах модели:
+ *
+ * - перёд: под номером (0.37), по бокам от номера (0.475), под фарами
+ *   (0.575), середина низа (0.265) - по краям низ уходит в воздухозаборник;
+ * - корма: два ряда во всю ширину бампера (0.33, 0.435) и колонки под
+ *   фонарями, сбоку от крышки багажника;
+ * - боковые концы обоих бамперов - перед передними колёсами и за задними,
+ *   до высоты 0.47: выше начинаются крылья и боковины, проданные оклейкой.
+ *
+ * Сдвиг у ячейки - как у места: на лице бампера - поперёк машины, на боку -
+ * вдоль неё (плюс - к переду у правого борта, к корме у левого).
  *
  * Порядок ячеек перемешан один раз фиксированным зерном, а бамперы
  * чередуются: стикеры ложатся вразброс, и любые первые n покупок делятся
  * между бамперами поровну. Зерно в коде, а не случай при загрузке - у всех
  * зрителей стикер на одном и том же месте.
  */
-function bumper(azimuth: number, rows: { height: number; from: number; to: number }[]): StickerSlot[] {
-  const cells: StickerSlot[] = [];
+const PITCH = 0.105;
+
+function cells(azimuth: number, rows: { height: number; from: number; to: number }[]): StickerSlot[] {
+  const out: StickerSlot[] = [];
   for (const row of rows) {
-    for (let z = row.from; z <= row.to + 1e-9; z += 0.13) {
-      cells.push({ azimuth, height: at(row.height), shift: len(Math.round(z * 100) / 100) });
+    for (let step = 0; row.from + step * PITCH <= row.to + 1e-9; step++) {
+      const shift = Math.round((row.from + step * PITCH) * 1000) / 1000;
+      out.push({ azimuth, height: at(row.height), shift: len(shift) });
     }
   }
-  return cells;
+  return out;
 }
 
 /** Перемешать по зерну: простой линейный конгруэнтный счётчик. */
@@ -91,21 +104,40 @@ function shuffled<T>(items: T[], seed: number): T[] {
   return out;
 }
 
+/** Боковой конец бампера: два ряда ниже крыльев и боковин. */
+const bumperEnd = (from: number, to: number) => [
+  { height: 0.31, from, to },
+  { height: 0.415, from, to },
+];
+
 const FRONT_BUMPER = shuffled(
-  bumper(90, [
-    { height: 0.37, from: -0.65, to: 0.65 },
-    { height: 0.475, from: -0.62, to: -0.36 },
-    { height: 0.475, from: 0.36, to: 0.62 },
-    // Низ - только середина: по краям он загибается и уходит в воздухозаборник.
-    { height: 0.265, from: -0.455, to: 0.455 },
-  ]),
+  [
+    ...cells(90, [
+      { height: 0.37, from: -0.735, to: 0.735 },
+      { height: 0.475, from: -0.655, to: -0.34 },
+      { height: 0.475, from: 0.34, to: 0.655 },
+      { height: 0.575, from: -0.66, to: -0.45 },
+      { height: 0.575, from: 0.45, to: 0.66 },
+      { height: 0.265, from: -0.42, to: 0.42 },
+    ]),
+    ...cells(0, bumperEnd(2.06, 2.27)),
+    ...cells(180, bumperEnd(-2.27, -2.06)),
+  ],
   7,
 );
 const REAR_BUMPER = shuffled(
-  bumper(-90, [
-    { height: 0.33, from: -0.78, to: 0.78 },
-    { height: 0.43, from: -0.78, to: 0.78 },
-  ]),
+  [
+    ...cells(-90, [
+      { height: 0.33, from: -0.735, to: 0.735 },
+      { height: 0.435, from: -0.735, to: 0.735 },
+      { height: 0.53, from: -0.87, to: -0.87 },
+      { height: 0.635, from: -0.87, to: -0.87 },
+      { height: 0.53, from: 0.87, to: 0.87 },
+      { height: 0.635, from: 0.87, to: 0.87 },
+    ]),
+    ...cells(0, bumperEnd(-2.315, -2.0)),
+    ...cells(180, bumperEnd(2.0, 2.315)),
+  ],
   11,
 );
 
