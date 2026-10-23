@@ -16,6 +16,7 @@ import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
 import { useAdmin } from "../admin/use-admin.ts";
 import { WornInfo } from "../worn.tsx";
 import { Stickers } from "./stickers.tsx";
+import type { PaidSticker } from "@/lib/stickers";
 
 /**
  * Торг вещи продавца.
@@ -44,6 +45,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // Ракурсы модели, снятые сценой: у вещи без своих снимков фото-режим
   // показывает их, и места на них нажимаются - как у футболки.
   const [views, setViews] = useState<Views>({ shots: [], quads: [] });
+  // Купленные стикеры: сцена клеит их на вещь, когда соберётся.
+  const [stuck, setStuck] = useState<PaidSticker[]>([]);
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
   const [shared, setShared] = useState<{ cents: number; brand: string; mine: boolean } | null>(null);
@@ -109,6 +112,33 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     if (look === "live") dress();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tops, art, look]);
+
+  // Стикеры - на вещь, когда сцена собралась (тогда приходят и ракурсы).
+  // Каждый стикер покупки - отдельная наклейка: купил три - три на бампере.
+  useEffect(() => {
+    if (views.shots.length === 0 || stuck.length === 0) return;
+    let live = true;
+    const units = stuck.flatMap((one) => Array.from({ length: one.count }, () => one));
+    void Promise.all(
+      units.map(
+        (one) =>
+          new Promise<{ image: HTMLImageElement; size: [number, number] } | null>((done) => {
+            const image = new Image();
+            image.crossOrigin = "anonymous";
+            image.onload = () => done({ image, size: one.size === "12x6" ? [12, 6] : [10, 10] });
+            image.onerror = () => done(null);
+            image.src = one.logoUrl;
+          }),
+      ),
+    ).then((loaded) => {
+      // Не загрузившийся логотип оставляет свою ячейку пустой, а не сдвигает
+      // остальных: у каждого стикера своё место на бампере.
+      if (live) stage.current?.stickers(loaded);
+    });
+    return () => {
+      live = false;
+    };
+  }, [stuck, views]);
 
   function refresh() {
     if (lot) void loadBids(lot.id).then(setBids);
@@ -371,7 +401,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       <WornInfo thingId={thingId} />
 
       {/* Стикеры - не торг: показываем, когда вещь открыта, а не голограмма. */}
-      {thing.stickerSheet && !ghost && <Stickers thingId={thingId} sheetId={thing.stickerSheet} />}
+      {thing.stickerSheet && !ghost && <Stickers thingId={thingId} sheetId={thing.stickerSheet} onPaid={setStuck} />}
 
       {/* До открытия мест не показываем: выбирать и ставить ещё нечего, а
           сетка с ценами обещала торг, который не идёт. */}

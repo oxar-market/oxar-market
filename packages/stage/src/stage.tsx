@@ -67,6 +67,12 @@ export type Stage = {
    * прозрачном фоне. Для картинки, которой делятся ставкой.
    */
   snapshot(azimuth: number): HTMLCanvasElement | null;
+  /**
+   * Наклеить купленные стикеры: по одному на ячейку вещи, в порядке покупок,
+   * в настоящий размер в сантиметрах. Зов заново заменяет прежние. Вещь без
+   * ячеек и стикеры сверх ячеек не рисует. `null` - ячейка остаётся пустой.
+   */
+  stickers(list: ({ image: HTMLImageElement; size: [number, number] } | null)[]): void;
 };
 
 export function ThingStage({
@@ -823,6 +829,11 @@ export function ThingStage({
         // вовсе: каждый кадр тянул бы камеру обратно.
         let arriving = false;
 
+        // Стикеры - отдельной группой: у них нет ни выбора, ни подсветки, ни
+        // места на снимках ракурсов, только сама наклейка.
+        const stuck = new THREE.Group();
+        scene.add(stuck);
+
         stage.current = {
           show(code, image) {
             const decal = decals.find((one) => one.code === code);
@@ -878,7 +889,55 @@ export function ThingStage({
               if (ghosting) decal.frame.visible = false;
             }
             if (!ghosting) restyle();
+            stuck.visible = !ghosting;
             if (shadow) shadow.visible = !ghosting;
+          },
+          stickers(list) {
+            for (const one of [...stuck.children] as InstanceType<typeof THREE.Mesh>[]) {
+              one.geometry.dispose();
+              const material = one.material as InstanceType<typeof THREE.MeshStandardMaterial>;
+              material.map?.dispose();
+              material.dispose();
+              stuck.remove(one);
+            }
+            const plan = thingShape.current.stickers;
+            if (!plan) return;
+            list.slice(0, plan.slots.length).forEach((one, at) => {
+              if (!one) return;
+              const slot = plan.slots[at]!;
+              const angle = (slot.azimuth * Math.PI) / 180;
+              const dir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+              raycaster.set(
+                dir
+                  .clone()
+                  .multiplyScalar(1.2)
+                  .add(new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle)).multiplyScalar(slot.shift))
+                  .setY(low + tall * slot.height),
+                dir.clone().negate(),
+              );
+              const hit = raycaster.intersectObjects(meshes, true)[0];
+              if (!hit || !hit.normal) return;
+              const surface = hit.object as InstanceType<typeof THREE.Mesh>;
+              anchor.position.copy(hit.point);
+              anchor.up.set(0, 1, 0);
+              anchor.lookAt(hit.point.clone().add(hit.normal.clone().transformDirection(surface.matrixWorld)));
+              const size = new THREE.Vector3(one.size[0] * plan.centimeter, one.size[1] * plan.centimeter, plan.centimeter * 4);
+              const patch = around(surface, hit.point, Math.max(size.x, size.y) * 1.5) ?? surface;
+              const geometry = new DecalGeometry(patch, hit.point, anchor.rotation, size);
+              if (patch !== surface) patch.geometry.dispose();
+              const material = new THREE.MeshStandardMaterial({
+                map: sticker(THREE, one.image, one.size),
+                transparent: true,
+                roughness: 0.5,
+                metalness: 0,
+                polygonOffset: true,
+                polygonOffsetFactor: -4,
+                polygonOffsetUnits: -4,
+                depthWrite: false,
+              });
+              stuck.add(new THREE.Mesh(geometry, material));
+            });
+            stuck.visible = !showingGhost;
           },
           face(azimuth) {
             const target = (azimuth * Math.PI) / 180;
@@ -1192,6 +1251,33 @@ export function ThingStage({
  * один color, а не пересобирает текстуру.
  */
 const sheets = new Map<string, InstanceType<typeof import("three").CanvasTexture>>();
+
+/**
+ * Картинка стикера: логотип целиком, вписан в стикер с полями, вокруг -
+ * прозрачно. Обрезать чужой знак нельзя, а растянуть - значит исказить.
+ */
+function sticker(THREE: typeof import("three"), image: HTMLImageElement, size: [number, number]) {
+  const span = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size[0] >= size[1] ? span : Math.round((span * size[0]) / size[1]);
+  canvas.height = size[0] >= size[1] ? Math.round((span * size[1]) / size[0]) : span;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("нет 2d-контекста");
+  const source = { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
+  const room = { width: canvas.width * 0.92, height: canvas.height * 0.92 };
+  const box = fitInside(source, room);
+  ctx.drawImage(
+    image,
+    (canvas.width - room.width) / 2 + box.x,
+    (canvas.height - room.height) / 2 + box.y,
+    box.width,
+    box.height,
+  );
+  const made = new THREE.CanvasTexture(canvas);
+  made.colorSpace = THREE.SRGBColorSpace;
+  made.anisotropy = 8;
+  return made;
+}
 
 function placeholder(THREE: typeof import("three"), spot: Spot, glazed = false) {
   const [wide, tall] = spot.size;

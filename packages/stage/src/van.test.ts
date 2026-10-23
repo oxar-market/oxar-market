@@ -34,3 +34,23 @@ test("места на одном борту не налезают друг на 
     assert.ok(gap >= (right[at].size[0] + right[at - 1].size[0]) / 2, right[at].code);
   }
 });
+
+test("стикеры на ване: по очереди перёд и корма, ячейки не повторяются", () => {
+  const slots = VAN.stickers!.slots;
+  assert.ok(slots.length >= 50, `ячеек ${slots.length}`);
+  // Любые первые n покупок делятся между бамперами поровну, с разницей не
+  // больше одной.
+  for (let n = 1; n <= slots.length; n++) {
+    const front = slots.slice(0, n).filter((slot) => slot.azimuth === 90).length;
+    assert.ok(Math.abs(front - (n - front)) <= 1, `на ${n}`);
+  }
+  for (const slot of slots) assert.ok([90, -90].includes(slot.azimuth));
+  const keys = slots.map((slot) => `${slot.azimuth}:${slot.height}:${slot.shift}`);
+  assert.equal(new Set(keys).size, keys.length);
+});
+
+test("стикеры вразброс: подряд не идут ячейки одного ряда", () => {
+  const front = VAN.stickers!.slots.filter((slot) => slot.azimuth === 90);
+  // Не построчно слева направо: хоть одна пара соседних покупок - в разных рядах.
+  assert.ok(front.slice(0, 6).some((slot, at, all) => at > 0 && slot.height !== all[at - 1]!.height));
+});

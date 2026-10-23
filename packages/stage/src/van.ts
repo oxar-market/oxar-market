@@ -1,4 +1,4 @@
-import type { Shape, Spot } from "./spots.ts";
+import type { Shape, Spot, StickerSlot } from "./spots.ts";
 
 /**
  * Ван Solana Got Motion: Mercedes-Benz V-Class (W447), модель Mona x Supercars
@@ -57,6 +57,64 @@ export const VAN_SPOTS: Spot[] = [
   { code: "van_roof", label: "Roof", height: 1, azimuth: 0, top: true, shift: len(-0.8), size: [len(1.9), len(3.1)], wrap: true, parts: BODY },
 ];
 
+/**
+ * Стикеры - на бамперах, спереди и сзади поровну. Ячейки - сеткой по ровной
+ * части бампера, в метрах модели: задний - плоскость 0.30-0.46 почти во всю
+ * ширину; передний - ряд под номером, ряды по бокам от него и середина низа.
+ * Скругления по краям не трогаем: стикер на них заворачивается. Шаг сетки
+ * чуть больше стикера (12 см), чтобы соседние не налезали.
+ *
+ * Порядок ячеек перемешан один раз фиксированным зерном, а бамперы
+ * чередуются: стикеры ложатся вразброс, и любые первые n покупок делятся
+ * между бамперами поровну. Зерно в коде, а не случай при загрузке - у всех
+ * зрителей стикер на одном и том же месте.
+ */
+function bumper(azimuth: number, rows: { height: number; from: number; to: number }[]): StickerSlot[] {
+  const cells: StickerSlot[] = [];
+  for (const row of rows) {
+    for (let z = row.from; z <= row.to + 1e-9; z += 0.13) {
+      cells.push({ azimuth, height: at(row.height), shift: len(Math.round(z * 100) / 100) });
+    }
+  }
+  return cells;
+}
+
+/** Перемешать по зерну: простой линейный конгруэнтный счётчик. */
+function shuffled<T>(items: T[], seed: number): T[] {
+  const out = items.slice();
+  let state = seed;
+  for (let at = out.length - 1; at > 0; at--) {
+    state = (state * 1103515245 + 12345) % 2147483648;
+    const pick = state % (at + 1);
+    [out[at], out[pick]] = [out[pick]!, out[at]!];
+  }
+  return out;
+}
+
+const FRONT_BUMPER = shuffled(
+  bumper(90, [
+    { height: 0.37, from: -0.65, to: 0.65 },
+    { height: 0.475, from: -0.62, to: -0.36 },
+    { height: 0.475, from: 0.36, to: 0.62 },
+    // Низ - только середина: по краям он загибается и уходит в воздухозаборник.
+    { height: 0.265, from: -0.455, to: 0.455 },
+  ]),
+  7,
+);
+const REAR_BUMPER = shuffled(
+  bumper(-90, [
+    { height: 0.33, from: -0.78, to: 0.78 },
+    { height: 0.43, from: -0.78, to: 0.78 },
+  ]),
+  11,
+);
+
+// Ячеек с каждой стороны поровну: лишние на одном бампере сбили бы ровный
+// счёт в конце листа.
+export const VAN_STICKER_SLOTS: StickerSlot[] = FRONT_BUMPER.slice(0, REAR_BUMPER.length).flatMap((front, at) =>
+  REAR_BUMPER[at] ? [front, REAR_BUMPER[at]!] : [],
+);
+
 export const VAN: Shape = {
   model: "/models/van.glb",
   spots: VAN_SPOTS,
@@ -71,4 +129,5 @@ export const VAN: Shape = {
   // На чёрном кузове лучше всего читается белый, как плёнка оклейки;
   // выбранная зона - зелёным Соланы.
   mark: { idle: 0xffffff, hot: 0x14f195 },
+  stickers: { slots: VAN_STICKER_SLOTS, centimeter: len(0.01) },
 };
