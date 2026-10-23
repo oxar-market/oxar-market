@@ -33,7 +33,16 @@ import {
  * раньше денег намеренно: её id уходит в покупку тегом, и витрина покажет её,
  * только когда покупка с этим тегом есть в цепочке.
  */
-export function Stickers({ thingId, sheetId }: { thingId: string; sheetId: string }) {
+export function Stickers({
+  thingId,
+  sheetId,
+  onPaid,
+}: {
+  thingId: string;
+  sheetId: string;
+  /** Оплаченные стикеры в порядке покупок - сцена клеит их на вещь. */
+  onPaid?: (paid: PaidSticker[]) => void;
+}) {
   const { authenticated } = usePrivy();
   const { login } = useLogin();
   const { wallets } = useConnectedStandardWallets();
@@ -57,10 +66,12 @@ export function Stickers({ thingId, sheetId }: { thingId: string; sheetId: strin
       if (!live || !loaded) return;
       setSheet(loaded.sheet);
       setPaid(loaded.paid);
+      onPaid?.(loaded.paid);
     });
     return () => {
       live = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thingId, sheetId, bought]);
 
   useEffect(() => {
@@ -79,6 +90,9 @@ export function Stickers({ thingId, sheetId }: { thingId: string; sheetId: strin
   const price = unitsToCents(sheet.price);
   const left = sheet.cap - sheet.sold;
   const total = price * count;
+  // На стене - последние десять, свежие первыми: сотня плиток растянула бы
+  // страницу, а все стикеры и так видны на самой вещи.
+  const recent = paid.slice(-10).reverse();
 
   async function buy() {
     setError("");
@@ -136,18 +150,18 @@ export function Stickers({ thingId, sheetId }: { thingId: string; sheetId: strin
   return (
     <div className="stickers">
       <div className="pick-head">
-        <span className="pick-title">Stickers</span>
+        <span className="pick-title">Logo on the bumper</span>
         <span className="muted small">
           {left > 0 ? `${left} of ${sheet.cap} left` : `All ${sheet.cap} sold`} · {formatUsd(price)} each
         </span>
       </div>
       <p className="muted small">
-        Your logo and project name as a sticker on the van. Fixed price, no outbid.
+        Your logo as a sticker on the van&apos;s front or rear bumper, for the whole road trip. Fixed price, no outbid.
       </p>
 
-      {paid.length > 0 && (
-        <div className="sticker-wall" role="list" aria-label="Stickers on the van">
-          {paid.map((sticker) => (
+      {recent.length > 0 && (
+        <div className="sticker-wall" role="list" aria-label="Latest stickers on the van">
+          {recent.map((sticker) => (
             <div key={sticker.id} className="sticker-tile" role="listitem">
               <img src={sticker.logoUrl} alt="" />
               <span>{sticker.name}</span>

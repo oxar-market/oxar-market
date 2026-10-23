@@ -164,7 +164,15 @@ export type Shape = {
   surfaces?: string[];
   /** Цвет мест: пустого и выбранного. Пусто - общий рыжий. */
   mark?: { idle: number; hot: number };
+  /**
+   * Куда клеятся купленные стикеры: ячейки по очереди покупок и сколько
+   * единиц сцены в сантиметре - стикер рисуется в настоящий размер.
+   */
+  stickers?: { slots: StickerSlot[]; centimeter: number };
 };
+
+/** Ячейка стикера: как у места - высота долей вещи, угол и сдвиг вбок. */
+export type StickerSlot = { azimuth: number; height: number; shift: number };
 
 export const SHIRT: Shape = {
   model: "/models/shirt.glb",
