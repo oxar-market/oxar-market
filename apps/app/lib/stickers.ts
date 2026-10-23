@@ -12,16 +12,15 @@ import { readOrders, readSheet, type ChainSheet } from "./chain.ts";
  * покупка с её id тегом: строка без оплаты - черновик, которого никто не видит.
  */
 
-/** Ван: пятьдесят по $100 - их админка предлагает по умолчанию; цена и лимит уходят в лист. */
+/** Ван: сто по $100 - их админка предлагает по умолчанию; цена и лимит уходят в лист. */
 export const STICKER_PRICE_CENTS = 10_000;
-export const STICKER_CAP = 50;
+export const STICKER_CAP = 100;
 
-/** Размеры в сантиметрах; цена у обоих одна. */
-export const STICKER_SIZES = [
-  { code: "10x10", label: "10 × 10 cm" },
-  { code: "12x6", label: "12 × 6 cm" },
-] as const;
-export type StickerSize = (typeof STICKER_SIZES)[number]["code"];
+/**
+ * Размер в сантиметрах. Выбора нет: все стикеры 10 на 10. Полоса 12 на 6
+ * осталась в схеме базы и у ранних тестовых покупок, поэтому тип её знает.
+ */
+export type StickerSize = "10x10" | "12x6";
 
 export type PaidSticker = {
   id: string;
