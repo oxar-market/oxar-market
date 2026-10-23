@@ -23,7 +23,6 @@ import { Media } from "../gallery.tsx";
 import { shapeOf } from "@/lib/listing";
 import { decideSeller, loadApplications, type Application } from "@/lib/applications";
 import { Bar, SpotMark, Thumb } from "../seller/parts.tsx";
-import { Day, dayRange } from "../seller/setup.tsx";
 import { reviewState } from "@/lib/thing-review";
 import { Disputes } from "./disputes.tsx";
 import { PrepareThing } from "./prepare.tsx";
@@ -236,15 +235,7 @@ function AdminThingView({
   // «Кто, где, когда, особенность» правит и админ: продавец пишет это до
   // публикации, а поправить после неё, когда торг уже идёт, можем только мы.
   const [worn, setWorn] = useState(thing.worn);
-  // «Когда» - тем же календарём, что у продавца: первый день и, если носят
-  // несколько дней, последний. В базу уходит тем же текстом, что пишет он.
-  const [days, setDays] = useState({ from: "", to: "" });
   const [stickers, setStickers] = useState({ price: String(STICKER_PRICE_CENTS / 100), count: String(STICKER_CAP) });
-  function pickDays(next: { from: string; to: string }) {
-    const to = next.to && next.to > next.from ? next.to : "";
-    setDays({ from: next.from, to });
-    setWorn({ ...worn, when: next.from ? dayRange(next.from, to) : thing.worn.when });
-  }
   // Спрятать вещь с идущим торгом - с подтверждением: торг в цепочке не
   // останавливается, и админ должен это прочитать до нажатия.
   const [confirmHide, setConfirmHide] = useState(false);
@@ -319,9 +310,9 @@ function AdminThingView({
 
       <div className="sl-card ad-card">
         <h3>Who, where and when</h3>
-        {(["by", "where"] as const).map((key) => (
+        {(["by", "where", "when"] as const).map((key) => (
           <label className="sl-field" key={key}>
-            {key === "by" ? "Who has it" : "Where"}
+            {key === "by" ? "Who has it" : key === "where" ? "Where" : "When it's worn"}
             <span className="sl-input soft">
               <input
                 value={worn[key]}
@@ -331,26 +322,11 @@ function AdminThingView({
             </span>
           </label>
         ))}
-        <Day
-          label="When it's worn"
-          value={days.from}
-          shown={days.from ? dayRange(days.from, "") : worn.when || "Pick a day"}
-          min=""
-          onChange={(from) => pickDays({ from, to: days.to })}
-        />
-        <Day
-          label="Last day (optional)"
-          value={days.to}
-          shown={days.to ? dayRange(days.to, "") : "One day"}
-          min={days.from}
-          disabled={!days.from}
-          onChange={(to) => pickDays({ from: days.from, to })}
-        />
         <label className="sl-field ad-reason">
           What makes it special (optional)
           <textarea
             value={worn.about}
-            maxLength={300}
+            maxLength={1000}
             rows={3}
             onChange={(event) => setWorn({ ...worn, about: event.target.value })}
           />
