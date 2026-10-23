@@ -624,12 +624,19 @@ export function ThingStage({
           // салона: отбор выбросил бы его целиком, поэтому стекло не отбираем.
           if (spot.wrap) {
             const toward = new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld);
+            let glassArea = 0;
+            let allArea = 0;
             filled.forEach((stamp) => {
               const from = parts.get(stamp);
               const glass = /glass/i.test((from?.material as { name?: string } | undefined)?.name ?? "");
-              if (glass) glazed.add(spot.code);
               if (!glass && stamp.getAttribute("normal")) facingOnly(THREE, stamp, toward, spot.top ? 0.3 : 0.35);
+              const area = areaOf(THREE, stamp);
+              allArea += area;
+              if (glass) glassArea += area;
             });
+            // Со стеклом - зона, где стекло - заметная доля печати (окно), а
+            // не пара граней стекла фары, попавших в коробку крыла.
+            if (glassArea > allArea * 0.15) glazed.add(spot.code);
             filled = filled.filter((stamp) => (stamp.getAttribute("position")?.count ?? 0) > 0);
           }
           const common = filled.reduce<string[]>(
@@ -1376,7 +1383,9 @@ function placeholder(THREE: typeof import("three"), spot: Spot, glazed = false) 
   // Шрифт берём у страницы: в канвас переменная из CSS не приходит, а имя
   // семейства next/font собирает сам и на каждой сборке заново.
   const font = (size: number) => `500 ${size}px ${getComputedStyle(document.body).fontFamily}`;
-  let size = short * 0.19;
+  // На оклейке подпись мельче: зона - целая панель, и крупная подпись на узком
+  // крыле не помещалась между аркой и складкой.
+  let size = short * (spot.wrap ? 0.12 : 0.19);
   ctx.letterSpacing = `${size * 0.18}px`;
   ctx.font = font(size);
   const width = ctx.measureText(spot.label).width;
@@ -1386,10 +1395,8 @@ function placeholder(THREE: typeof import("three"), spot: Spot, glazed = false) 
     ctx.font = font(size);
   }
   // Зона со стеклом - во всю высоту, и её середина приходилась на складку
-  // под окнами, которая рвала буквы: подпись - ниже, на кузове. Борт без
-  // стекла - крыло, его середина над колесом, и арка срезала буквы: выше.
-  const at = glazed ? 0.68 : spot.wrap && !spot.top ? 0.42 : 0.5;
-  ctx.fillText(spot.label, canvas.width / 2, canvas.height * at);
+  // под окнами, которая рвала буквы: подпись - ниже, на кузове.
+  ctx.fillText(spot.label, canvas.width / 2, canvas.height * (glazed ? 0.68 : 0.5));
 
   const made = new THREE.CanvasTexture(canvas);
   made.colorSpace = THREE.SRGBColorSpace;
@@ -1560,6 +1567,23 @@ function pattern(
 }
 
 /** Оставить у декали только грани, что смотрят туда же, куда место. */
+/** Площадь штампа: сумма площадей его треугольников. */
+function areaOf(THREE: typeof import("three"), geometry: InstanceType<typeof THREE.BufferGeometry>) {
+  const position = geometry.getAttribute("position") as InstanceType<typeof THREE.BufferAttribute> | undefined;
+  if (!position) return 0;
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  let total = 0;
+  for (let at = 0; at + 2 < position.count; at += 3) {
+    a.fromBufferAttribute(position, at);
+    b.fromBufferAttribute(position, at + 1);
+    c.fromBufferAttribute(position, at + 2);
+    total += b.sub(a).cross(c.sub(a)).length() / 2;
+  }
+  return total;
+}
+
 /**
  * Выбросить крошки печати: клочки, оторванные от зоны.
  *

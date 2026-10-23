@@ -35,22 +35,37 @@ test("места на одном борту не налезают друг на 
   }
 });
 
-test("стикеры на ване: по очереди перёд и корма, ячейки не повторяются", () => {
+/** Ячейка на переднем бампере: на лице или на его боковом конце. */
+const atFront = (slot: { azimuth: number; shift: number }) =>
+  slot.azimuth === 90 || (slot.azimuth === 0 && slot.shift > 0) || (slot.azimuth === 180 && slot.shift < 0);
+
+test("стикеры на ване: сто ячеек, по очереди перёд и корма, не повторяются", () => {
   const slots = VAN.stickers!.slots;
-  assert.ok(slots.length >= 50, `ячеек ${slots.length}`);
+  assert.ok(slots.length >= 100, `ячеек ${slots.length}`);
   // Любые первые n покупок делятся между бамперами поровну, с разницей не
   // больше одной.
   for (let n = 1; n <= slots.length; n++) {
-    const front = slots.slice(0, n).filter((slot) => slot.azimuth === 90).length;
+    const front = slots.slice(0, n).filter(atFront).length;
     assert.ok(Math.abs(front - (n - front)) <= 1, `на ${n}`);
   }
-  for (const slot of slots) assert.ok([90, -90].includes(slot.azimuth));
+  for (const slot of slots) assert.ok([90, -90, 0, 180].includes(slot.azimuth));
   const keys = slots.map((slot) => `${slot.azimuth}:${slot.height}:${slot.shift}`);
   assert.equal(new Set(keys).size, keys.length);
 });
 
 test("стикеры вразброс: подряд не идут ячейки одного ряда", () => {
-  const front = VAN.stickers!.slots.filter((slot) => slot.azimuth === 90);
+  const front = VAN.stickers!.slots.filter(atFront);
   // Не построчно слева направо: хоть одна пара соседних покупок - в разных рядах.
   assert.ok(front.slice(0, 6).some((slot, at, all) => at > 0 && slot.height !== all[at - 1]!.height));
+});
+
+test("на боковых концах бамперов стикеры не лезут в зоны крыльев и боковин", () => {
+  const sides = VAN.stickers!.slots.filter((slot) => slot.azimuth === 0 || slot.azimuth === 180);
+  assert.ok(sides.length > 0);
+  for (const code of ["van_fender_r", "van_fender_l", "van_side_r", "van_side_l"]) {
+    const spot = VAN_SPOTS.find((one) => one.code === code)!;
+    const bottom = spot.height - spot.size[1] / 2 / ((1.866 * 0.62) / 5.138);
+    // Стикер 10 см с центром на высоте ячейки не доходит до низа зоны.
+    for (const slot of sides) assert.ok(slot.height + 0.05 / 1.866 <= bottom + 1e-3, `${code}: ${slot.height}`);
+  }
 });
