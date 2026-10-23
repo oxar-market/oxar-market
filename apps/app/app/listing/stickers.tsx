@@ -19,11 +19,9 @@ import {
 } from "@/lib/chain";
 import { uploadCreative } from "@/lib/auction";
 import {
-  STICKER_SIZES,
   draftSticker,
   loadStickers,
   type PaidSticker,
-  type StickerSize,
 } from "@/lib/stickers";
 
 /**
@@ -52,7 +50,6 @@ export function Stickers({
   const [sheet, setSheet] = useState<ChainSheet | null>(null);
   const [paid, setPaid] = useState<PaidSticker[]>([]);
   const [name, setName] = useState("");
-  const [size, setSize] = useState<StickerSize>("10x10");
   const [count, setCount] = useState(1);
   const [logo, setLogo] = useState<{ url: string; file: File } | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
@@ -115,7 +112,7 @@ export function Stickers({
       const logoUrl = await uploadCreative(`stickers-${thingId}`, logo.file);
       if (!logoUrl) return setError("Could not upload the logo. Try again.");
       const id = crypto.randomUUID();
-      if (!(await draftSticker({ id, thingId, name: brand, size, logoUrl }))) {
+      if (!(await draftSticker({ id, thingId, name: brand, size: "10x10", logoUrl }))) {
         return setError("Could not save the sticker. Nothing was charged. Try again.");
       }
 
@@ -156,7 +153,8 @@ export function Stickers({
         </span>
       </div>
       <p className="muted small">
-        Your logo as a sticker on the van&apos;s front or rear bumper, for the whole road trip. Fixed price, no outbid.
+        Your logo as a 10 × 10 cm sticker on the van&apos;s front or rear bumper, for the whole road trip. Fixed
+        price. Once you buy, the spot is yours and nobody can outbid it.
       </p>
 
       {recent.length > 0 && (
@@ -211,20 +209,6 @@ export function Stickers({
                 </>
               )}
             </label>
-
-            <div className="bumps" role="group" aria-label="Sticker size">
-              {STICKER_SIZES.map((one) => (
-                <button
-                  key={one.code}
-                  type="button"
-                  className={one.code === size ? "bump on" : "bump"}
-                  aria-pressed={one.code === size}
-                  onClick={() => setSize(one.code)}
-                >
-                  {one.label}
-                </button>
-              ))}
-            </div>
 
             <div className="bumps" role="group" aria-label="How many stickers">
               <button type="button" className="bump" disabled={count <= 1} onClick={() => setCount(count - 1)}>
