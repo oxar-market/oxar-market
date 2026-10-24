@@ -30,6 +30,14 @@ import type { PaidSticker } from "@/lib/stickers";
 export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: () => void }) {
   const [thing, setThing] = useState<ListedThing | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  // На широком экране правая карточка - в два шага, как в конфигураторе:
+  // список мест, а выбрал место - форма ставки на него, без прокрутки.
+  // На телефоне видно и то, и другое одной колонкой.
+  const [choosing, setChoosing] = useState(true);
+  function choose(code: string) {
+    setPicked(code);
+    setChoosing(false);
+  }
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
   const [bids, setBids] = useState<Bid[]>([]);
   const [photo, setPhoto] = useState(0);
@@ -296,7 +304,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               <ThingStage
                 shape={scene}
                 picked={picked}
-                onPick={(code) => setPicked(code)}
+                onPick={choose}
                 stage={stage}
                 onReady={(ready) => {
                   setViews(ready);
@@ -310,7 +318,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   shot={views.shots[photo]!}
                   quads={views.quads[photo] ?? {}}
                   picked={picked ?? ""}
-                  onPick={(code) => setPicked(code)}
+                  onPick={choose}
                   art={shownArt}
                   spots={scene.spots}
                 />
@@ -411,7 +419,12 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       <WornInfo thingId={thingId} />
       </div>
 
-      <div className="lot-right">
+      <div className={choosing ? "lot-right choosing" : "lot-right chosen"}>
+      {lot && running && (
+        <button type="button" className="spot-back" onClick={() => setChoosing(true)}>
+          &larr; All spots
+        </button>
+      )}
       {/* До открытия мест не показываем: выбирать и ставить ещё нечего, а
           сетка с ценами обещала торг, который не идёт. */}
       {started && lots.length > 0 && (
@@ -430,7 +443,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   type="button"
                   className={spot.code === picked ? "pick-cell on" : "pick-cell"}
                   aria-pressed={spot.code === picked}
-                  onClick={() => setPicked(spot.code)}
+                  onClick={() => choose(spot.code)}
                 >
                   <span className="pick-n">{spot.label}</span>
                   <span className="pick-price">
@@ -440,7 +453,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                         : `from ${formatUsd(one.reserve_cents)}`
                       : "-"}
                   </span>
-                  <span className="pick-count">
+                  <span className={one && !holder ? "pick-count empty" : "pick-count"}>
                     {one ? holder?.brand || "No bids yet" : "not for sale"}
                   </span>
                 </button>

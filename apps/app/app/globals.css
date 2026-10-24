@@ -6147,6 +6147,11 @@ body::after {
   z-index: 9;
 }
 
+/* Шаг назад к списку мест - только у двухшаговой карточки широкого экрана. */
+.spot-back {
+  display: none;
+}
+
 /* ── Торг в три колонки ──────────────────────────────────────────────────
    Телефон: одна колонка в порядке разметки - вещь, места и ставка, история.
    Широкий экран: живые ставки слева, вещь по центру, места и ставка справа,
@@ -6251,16 +6256,20 @@ body::after {
 
   /* Сцена: светлая студия во всю ширину. Холст с вещью - в средней полосе
      между карточками, с тем же воздухом по краям. */
+  /* Холст во всю ширину сцены, а вещь кадрируется между карточками:
+     сцена передаёт ширины карточек камере (в rem, без единиц). При
+     приближении вещь уходит под карточки, а не обрезается по краю полосы. */
   .lot-center .lot-scene {
+    --frame-left: 22.5;
+    --frame-right: 21.5;
     height: var(--scene-h);
-    padding: 0 calc(var(--right) + var(--inset)) 0 calc(var(--left) + var(--inset));
     border-radius: 28px;
     background: radial-gradient(55% 65% at 50% 60%, var(--card) 0%, var(--soft) 70%, var(--line2) 100%);
     overflow: hidden;
   }
 
   .lot-body.two .lot-center .lot-scene {
-    padding-left: var(--inset);
+    --frame-left: 1.25;
   }
 
   .lot-center .lot-scene > .look,
@@ -6293,7 +6302,7 @@ body::after {
   .lot-left .list-head,
   .lot-right .pick-head {
     margin: 0;
-    padding: 0 0 0.75rem;
+    padding: 0 0 0.625rem;
     border-bottom: 1px solid var(--ink);
   }
 
@@ -6378,7 +6387,7 @@ body::after {
     align-items: center;
     column-gap: 1rem;
     row-gap: 1px;
-    padding: 0.5625rem 0;
+    padding: 0.4375rem 0;
     border: 0;
     border-bottom: 1px solid var(--line);
     border-radius: 0;
@@ -6401,9 +6410,15 @@ body::after {
     text-overflow: ellipsis;
   }
 
+  /* Без ставок строка в одну линию: «from $300» и так говорит, что ставок
+     нет, а одиннадцать мест помещаются без прокрутки. */
+  .lot-right .pick-count.empty {
+    display: none;
+  }
+
   .lot-right .pick-price {
     grid-area: price;
-    font-size: 1.0625rem;
+    font-size: 1rem;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.01em;
@@ -6461,6 +6476,36 @@ body::after {
     padding: 0;
     border-radius: 0;
     background: transparent;
+  }
+
+  /* Два шага одной карточки: список мест или ставка на выбранное. */
+  .lot-right.choosing .bidding,
+  .lot-right.choosing .share-lead,
+  .lot-right.chosen .pick-head,
+  .lot-right.chosen .pick-grid,
+  .lot-right.chosen .stickers {
+    display: none;
+  }
+
+  .lot-right.chosen .spot-back {
+    display: block;
+    align-self: flex-start;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.875rem;
+    color: var(--mut);
+    cursor: pointer;
+  }
+
+  .lot-right.chosen .spot-back:hover {
+    color: var(--ink);
+  }
+
+  .lot-right.chosen .bidding {
+    margin-top: 0;
   }
 
   .lot-right .stickers {
