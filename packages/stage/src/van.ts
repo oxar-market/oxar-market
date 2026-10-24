@@ -148,7 +148,9 @@ export const VAN_STICKER_SLOTS: StickerSlot[] = FRONT_BUMPER.slice(0, REAR_BUMPE
 );
 
 export const VAN: Shape = {
-  model: "/models/van.glb",
+  // Версия в адресе: под этим же именем раньше лежал Sprinter, и Cloudflare
+  // отдавал на лендинге его кэш недельной давности вместо V-Class.
+  model: "/models/van.glb?v=vclass",
   spots: VAN_SPOTS,
   // Панели плоские, капот под наклоном: коробки хватает на скат капота, а
   // на другой борт через всю ширину она не достаёт.
