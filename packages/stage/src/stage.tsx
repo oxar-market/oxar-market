@@ -195,6 +195,30 @@ export function ThingStage({
           0.1,
           100,
         );
+        // Кадр уже холста. Страница может положить поверх холста панели по
+        // бокам (--frame-left, --frame-right - в rem, без единиц): тогда вещь
+        // кадрируется в полосе между ними, а холст остаётся во всю ширину -
+        // при приближении вещь уходит под панели, а не обрезается по краю
+        // полосы.
+        const frameCamera = () => {
+          const width = host.clientWidth;
+          const height = host.clientHeight;
+          if (!width || !height) return;
+          const style = getComputedStyle(host);
+          const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+          const left = (parseFloat(style.getPropertyValue("--frame-left")) || 0) * rem;
+          const right = (parseFloat(style.getPropertyValue("--frame-right")) || 0) * rem;
+          const strip = width - left - right;
+          if ((left || right) && strip > 0) {
+            camera.aspect = strip / height;
+            camera.setViewOffset(strip, height, -left, 0, width, height);
+          } else {
+            camera.aspect = width / height;
+            camera.clearViewOffset();
+          }
+          camera.updateProjectionMatrix();
+        };
+        frameCamera();
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enablePan = false;
@@ -1137,8 +1161,7 @@ export function ThingStage({
 
         const resize = () => {
           if (!host.clientWidth || !host.clientHeight) return;
-          camera.aspect = host.clientWidth / host.clientHeight;
-          camera.updateProjectionMatrix();
+          frameCamera();
           renderer.setSize(host.clientWidth, host.clientHeight);
         };
         const observer = new ResizeObserver(resize);
