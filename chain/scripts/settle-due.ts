@@ -314,7 +314,50 @@ async function main() {
     }
   }
 
+  // Оплаченные стикеры - отметкой в базу. Строка стикера заводится до
+  // оплаты, и лендинг с внешними витринами без цепочки не отличили бы
+  // оплаченную от черновика. Покупка в цепочке несёт id строки (тег), номер
+  // первого стикера и сколько их: это и ставим строке, один раз.
+  // Раскладка покупки (StickerOrder): дискриминатор 8, лист 32, покупатель
+  // 32, первый номер u16, сколько u16, тег 16 байт.
+  async function markPaidStickers() {
+    const things = (await rest("things?sticker_sheet=not.is.null&active=eq.true&select=id,sticker_sheet")) as
+      { id: string; sticker_sheet: string }[];
+    for (const thing of things) {
+      const [sheet] = PublicKey.findProgramAddressSync(
+        [Buffer.from("stickers"), Buffer.from(thing.sticker_sheet.replace(/-/g, ""), "hex")],
+        program.programId,
+      );
+      const orders = await connection.getProgramAccounts(program.programId, {
+        filters: [
+          // Дискриминатор StickerOrder [226,79,26,139,77,119,121,43] в base58.
+          { memcmp: { offset: 0, bytes: "erUtKr2VANN" } },
+          { memcmp: { offset: 8, bytes: sheet.toBase58() } },
+        ],
+      });
+      for (const { account } of orders) {
+        const data = account.data;
+        const hex = data.subarray(76, 92).toString("hex");
+        const tag = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+        const marked = (await rest(
+          `stickers?id=eq.${tag}&thing_id=eq.${thing.id}&paid_first=is.null`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({ paid_first: data.readUInt16LE(72), paid_count: data.readUInt16LE(74) }),
+          },
+        )) as unknown[] | null;
+        if (marked?.length) console.log(`стикер ${tag}: оплачен, отмечен`);
+      }
+    }
+  }
+
   await sweepProceeds();
+
+  try {
+    await markPaidStickers();
+  } catch (error) {
+    console.error("стикеры не отмечены -", error);
+  }
 
   // Напоминания по времени - в очередь уведомлений: конец торга через час,
   // последние сутки на проверку пруфа, срок пруфа у продавца. Упало - расчёт
