@@ -891,7 +891,12 @@ input:focus {
   background: var(--glass);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 12px 32px rgba(15, 18, 25, 0.1);
+  /* Меню висит над страницей, и с лёгкой тенью сливалось с карточками под
+     ним. Тень глубже и граница плотнее - панель читается предметом поверх. */
+  border-color: rgba(22, 24, 29, 0.12);
+  box-shadow:
+    0 2px 6px rgba(15, 18, 25, 0.08),
+    0 16px 40px rgba(15, 18, 25, 0.2);
 
   /* Слой выделен насовсем. Без этого браузер пересобирает панель на каждый
      переезд подсветки, и в этот миг скруглённый клип теряется - панель
@@ -2853,7 +2858,8 @@ input:focus {
 }
 
 :root[data-theme="dark"] .tabs {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
 }
 
 
@@ -6124,4 +6130,114 @@ a.sl-pill {
   text-align: left;
   overflow-wrap: anywhere;
   cursor: copy;
+}
+
+/* Низ экрана под меню гаснет в фон: контент уходит под панель, а не
+   упирается в неё, и меню отделено от страницы. */
+body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Полоса - на высоту самой панели: выше она гасила кнопки над меню. */
+  height: calc(4.25rem + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 60%);
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* ── Торг в три колонки ──────────────────────────────────────────────────
+   Телефон: одна колонка в порядке разметки - вещь, места и ставка, история.
+   Широкий экран: живые ставки слева, вещь по центру, места и ставка справа,
+   всё на одном экране. Страница торга для этого шире остальных. */
+.lot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lot-center,
+.lot-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (min-width: 72rem) {
+  .app:has(.lot-body) {
+    max-width: 86rem;
+  }
+
+  .lot-body {
+    display: grid;
+    grid-template-columns: 20rem minmax(0, 1fr) 21rem;
+    grid-template-areas: "left center right";
+    gap: 1.75rem;
+    align-items: start;
+  }
+
+  /* До открытия ставок нет: вещь и правая колонка. */
+  .lot-body.two {
+    grid-template-columns: minmax(0, 1fr) 21rem;
+    grid-template-areas: "center right";
+  }
+
+  .lot-center {
+    grid-area: center;
+  }
+
+  .lot-right {
+    grid-area: right;
+  }
+
+  .lot-left {
+    grid-area: left;
+  }
+
+  .lot-center .stage {
+    aspect-ratio: 4 / 3;
+    max-height: 66vh;
+  }
+
+  /* Колонки по краям держатся на экране, пока листаешь вещь и её описание.
+     Снизу кончаются над меню: иначе низ колонки - кнопка ставки - уходил
+     под затемнение у панели. */
+  .lot-left,
+  .lot-right {
+    position: sticky;
+    top: 1.5rem;
+    max-height: calc(100vh - 9rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .lot-left.lot-bids {
+    margin-top: 0;
+  }
+
+  .lot-right .pick-head {
+    margin-top: 0;
+  }
+
+  .lot-right .pick-title {
+    font-size: 1.25rem;
+  }
+
+  .lot-right .pick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  /* Ячейки плотнее: одиннадцать мест вана в две колонки иначе уводили
+     кнопку ставки к самому низу экрана, под меню. */
+  .lot-right .pick-cell {
+    gap: 0.125rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .lot-left .bid-row-who {
+    font-size: 0.875rem;
+  }
 }
