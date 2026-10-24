@@ -221,6 +221,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     }),
   );
 
+  // Колонка ставок - пока идёт торг: до открытия ставить некуда, и пустая
+  // колонка слева только сдвигала бы вещь.
+  const showBids = started && lots.length > 0;
+
   return (
     <section className="lot">
       <div className="lot-brandbar">
@@ -269,6 +273,12 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         </div>
       </header>
 
+      {/* На широком экране три колонки: живые ставки слева, вещь по центру,
+          места и ставка справа - всё на одном экране, без прокрутки вниз к
+          истории. На телефоне одна колонка в порядке разметки: вещь, ставка,
+          история. */}
+      <div className={showBids ? "lot-body" : "lot-body two"}>
+      <div className="lot-center">
       <div className="lot-scene">
         {/* Торг назначен, но ещё не открылся - голограмма: у нашей вещи её
             модель, у вещи продавца знак вопроса. Подложка светлая, как на
@@ -399,10 +409,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           победителя держит программа до пруфа, и этот срок покупатель видит
           прежде, чем ставит. */}
       <WornInfo thingId={thingId} />
+      </div>
 
-      {/* Стикеры - не торг: показываем, когда вещь открыта, а не голограмма. */}
-      {thing.stickerSheet && !ghost && <Stickers thingId={thingId} sheetId={thing.stickerSheet} onPaid={setStuck} />}
-
+      <div className="lot-right">
       {/* До открытия мест не показываем: выбирать и ставить ещё нечего, а
           сетка с ценами обещала торг, который не идёт. */}
       {started && lots.length > 0 && (
@@ -532,12 +541,17 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         </p>
       )}
 
-      {bids.length > 0 && (
-        <div className="lot-bids">
+      {/* Стикеры - не торг: показываем, когда вещь открыта, а не голограмма. */}
+      {thing.stickerSheet && !ghost && <Stickers thingId={thingId} sheetId={thing.stickerSheet} onPaid={setStuck} />}
+      </div>
+
+      {showBids && (
+        <div className="lot-left lot-bids">
           <p className="list-head">
             Bids on {spotLabel}
             <span>{bids.length === 1 ? "1 bid" : `${bids.length} bids`}</span>
           </p>
+          {bids.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
           {bids.map((bid, index) => (
             <div key={bid.id} className="bid-row">
               <img className="bid-row-art" src={bid.media_url} alt="" />
@@ -557,6 +571,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           ))}
         </div>
       )}
+      </div>
     </section>
   );
 }
