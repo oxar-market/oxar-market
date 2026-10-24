@@ -6170,12 +6170,26 @@ body::after {
     max-width: 86rem;
   }
 
+  /* Шапка - одна линия: имя слева, часы справа на той же базовой линии, и
+     тонкая черта под ней. Колонки начинаются под чертой с одной высоты. */
+  .lot:has(.lot-body) .lot-top {
+    align-items: flex-end;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--line2);
+  }
+
+  .lot:has(.lot-body) .lot-cd-num {
+    font-size: 2.25rem;
+    letter-spacing: -0.02em;
+  }
+
   .lot-body {
     display: grid;
-    grid-template-columns: 20rem minmax(0, 1fr) 21rem;
+    grid-template-columns: 19rem minmax(0, 1fr) 21rem;
     grid-template-areas: "left center right";
-    gap: 1.75rem;
+    gap: 1.5rem;
     align-items: start;
+    padding-top: 0.5rem;
   }
 
   /* До открытия ставок нет: вещь и правая колонка. */
@@ -6196,48 +6210,197 @@ body::after {
     grid-area: left;
   }
 
-  .lot-center .stage {
-    aspect-ratio: 4 / 3;
-    max-height: 66vh;
-  }
-
-  /* Колонки по краям держатся на экране, пока листаешь вещь и её описание.
-     Снизу кончаются над меню: иначе низ колонки - кнопка ставки - уходил
-     под затемнение у панели. */
+  /* Боковые колонки - тихие панели одной выделки: рамка, отступ, скругление
+     одни и те же, заголовок одного кегля. Держатся на экране при прокрутке. */
   .lot-left,
   .lot-right {
     position: sticky;
     top: 1.5rem;
-    max-height: calc(100vh - 9rem);
+    max-height: calc(100vh - 8rem);
     overflow-y: auto;
     scrollbar-width: thin;
+    padding: 1.125rem;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--card);
   }
 
   .lot-left.lot-bids {
     margin-top: 0;
+    gap: 0.25rem;
   }
 
+  .lot-left .list-head,
   .lot-right .pick-head {
-    margin-top: 0;
+    margin: 0 0 0.5rem;
+    padding: 0 0.375rem;
   }
 
-  .lot-right .pick-title {
-    font-size: 1.25rem;
+  .lot-right .pick-title,
+  .lot-right .bid-head-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0;
   }
 
-  .lot-right .pick-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+  /* Ставки слева - строки без лишних рамок, как лента. */
+  /* Статус - под суммой, а не рядом: так имя получает всю ширину и не
+     режется многоточием. */
+  .lot-left .bid-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "art who amt"
+      "art who tag";
+    column-gap: 0.625rem;
+    row-gap: 2px;
+    align-items: center;
+    margin: 0;
+    width: 100%;
+    padding: 0.625rem 0.375rem;
   }
 
-  /* Ячейки плотнее: одиннадцать мест вана в две колонки иначе уводили
-     кнопку ставки к самому низу экрана, под меню. */
-  .lot-right .pick-cell {
-    gap: 0.125rem;
-    padding: 0.5rem 0.75rem;
+  .lot-left .bid-row-art {
+    grid-area: art;
+  }
+
+  .lot-left .bid-row-who {
+    grid-area: who;
+  }
+
+  .lot-left .bid-row-amt {
+    grid-area: amt;
+    justify-self: end;
+  }
+
+  .lot-left .bid-row .tagchip {
+    grid-area: tag;
+    justify-self: end;
+  }
+
+  .lot-left .bid-row:last-child {
+    border-bottom: 0;
   }
 
   .lot-left .bid-row-who {
     font-size: 0.875rem;
+  }
+
+  /* Вещь - на своей сцене: мягкая подложка той же высоты, что и колонки,
+     переключатель вида внутри неё. */
+  .lot-center .lot-scene {
+    border-radius: 24px;
+    border: 1px solid var(--line2);
+    background: radial-gradient(120% 90% at 50% 75%, var(--card) 0%, var(--soft) 100%);
+    overflow: hidden;
+  }
+
+  .lot-center .stage {
+    aspect-ratio: 4 / 3;
+    max-height: calc(100vh - 16rem);
+  }
+
+  /* Места - строками опций, как в конфигураторе: имя и лидер слева, цена
+     справа. Одиннадцать плиток читались мозаикой. */
+  /* Прокручивается только список мест, а ставка под ним всегда на экране:
+     на ноутбуке одиннадцать строк уводили кнопку ставки за край. */
+  .lot-right {
+    display: flex;
+    flex-direction: column;
+    /* Колонка начинается под шапкой: высота считается от неё, чтобы с
+       первого экрана низ колонки - ставка - был виден целиком. */
+    max-height: calc(100vh - 17rem);
+  }
+
+  .lot-right > * {
+    flex-shrink: 0;
+  }
+
+  .lot-right .pick-grid {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    flex: 0 1 auto;
+    min-height: 12rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .lot-right .pick-cell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "n price"
+      "count price";
+    align-items: center;
+    column-gap: 0.75rem;
+    row-gap: 1px;
+    padding: 0.4375rem 0.625rem;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+  }
+
+  .lot-right .pick-n {
+    grid-area: n;
+    font-size: 0.9375rem;
+    color: var(--ink);
+  }
+
+  .lot-right .pick-count {
+    grid-area: count;
+    font-size: 0.8125rem;
+    color: var(--mut);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lot-right .pick-price {
+    grid-area: price;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lot-right .pick-cell:hover {
+    background: var(--soft);
+  }
+
+  /* Выбранное место - подложка и черта слева, а не залитая чёрным плитка. */
+  .lot-right .pick-cell.on {
+    background: var(--soft);
+    color: var(--ink);
+    box-shadow: inset 3px 0 0 var(--ink);
+  }
+
+  .lot-right .pick-cell.on .pick-n {
+    color: var(--ink);
+    opacity: 1;
+  }
+
+  .lot-right .pick-cell.on .pick-count {
+    color: var(--mut);
+    opacity: 1;
+  }
+
+  /* Ставка - продолжение той же панели под чертой, а не вторая рамка в
+     рамке. */
+  .lot-right .bidding {
+    margin-top: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line2);
+  }
+
+  .lot-right .bid-card {
+    border: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .lot-right .stickers {
+    margin-top: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line2);
   }
 }
