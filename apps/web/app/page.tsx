@@ -101,7 +101,7 @@ async function rest(path: string): Promise<unknown[] | null> {
 
 async function loadLive(): Promise<Live | null> {
   const lots = (await rest(
-    "lots?status=eq.open&select=id,opens_at,closes_at,thing_id,thing_spots(code),things:thing_id(title,tagline,model_url,house,active)",
+    "lots?status=eq.open&select=id,opens_at,closes_at,thing_id,thing_spots(code),things:thing_id(title,tagline,model_url,house,prepared,active)",
   )) as
     | {
         id: string;
@@ -109,12 +109,14 @@ async function loadLive(): Promise<Live | null> {
         closes_at: string;
         thing_id: string;
         thing_spots: { code: string } | null;
-        things: { title: string; tagline: string | null; model_url: string | null; house: boolean; active: boolean } | null;
+        things: { title: string; tagline: string | null; model_url: string | null; house: boolean; prepared: boolean; active: boolean } | null;
       }[]
     | null;
   // Лендинг - витрина наших вещей: афиша рисует футболку по нашей модели
-  // и снимку, и вещь продавца на ней легла бы чужими пятнами.
-  const ours = (lots ?? []).filter((one) => one.things && one.things.active && one.things.house);
+  // и снимку, и вещь продавца на ней легла бы чужими пятнами. Вещь, которую
+  // мы подготовили и передали продавцу (ван Superteam), - тоже наша модель
+  // и разметка: без неё идущий торг вана прятался за «Not announced yet».
+  const ours = (lots ?? []).filter((one) => one.things && one.things.active && (one.things.house || one.things.prepared));
   if (ours.length === 0) return null;
 
   // Верхняя ставка каждого лота: строки уже от высокой к низкой.
