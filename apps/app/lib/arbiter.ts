@@ -51,7 +51,11 @@ export async function signInPhantom(
       instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: 250_000 }), ...build(arbiter)],
     }).compileToV0Message(),
   );
-  const sim = await connection.simulateTransaction(transaction, { sigVerify: false });
+  // Блокхеш для прогона берёт сам узел: публичный RPC - несколько узлов, и
+  // отстающий не знал только что выданного блокхеша - прогон падал
+  // «BlockhashNotFound» на верной транзакции. Подписывается и уходит та же
+  // транзакция с нашим блокхешем.
+  const sim = await connection.simulateTransaction(transaction, { sigVerify: false, replaceRecentBlockhash: true });
   if (sim.value.err) {
     const logs = (sim.value.logs ?? []).filter((one) => one.includes("Error") || one.includes("failed")).join(" ");
     return { ok: false, why: `The program would reject it: ${logs || JSON.stringify(sim.value.err)}` };
