@@ -335,18 +335,26 @@ async function main() {
           { memcmp: { offset: 8, bytes: sheet.toBase58() } },
         ],
       });
+      // Теги строк видны всем, и покупок с одним тегом может быть несколько:
+      // кто-то заплатил за чужую строку. Отметка - сумма всех покупок с
+      // тегом и самый ранний номер, а не первая попавшаяся: иначе чужая
+      // покупка на один стикер скрыла бы настоящую на три.
+      const paid = new Map<string, { first: number; count: number }>();
       for (const { account } of orders) {
         const data = account.data;
         const hex = data.subarray(76, 92).toString("hex");
         const tag = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+        const was = paid.get(tag);
+        const first = data.readUInt16LE(72);
+        const count = data.readUInt16LE(74);
+        paid.set(tag, { first: Math.min(was?.first ?? first, first), count: (was?.count ?? 0) + count });
+      }
+      for (const [tag, { first, count }] of paid) {
         const marked = (await rest(
-          `stickers?id=eq.${tag}&thing_id=eq.${thing.id}&paid_first=is.null`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({ paid_first: data.readUInt16LE(72), paid_count: data.readUInt16LE(74) }),
-          },
+          `stickers?id=eq.${tag}&thing_id=eq.${thing.id}&or=(paid_first.is.null,paid_first.neq.${first},paid_count.neq.${count})`,
+          { method: "PATCH", body: JSON.stringify({ paid_first: first, paid_count: count }) },
         )) as unknown[] | null;
-        if (marked?.length) console.log(`стикер ${tag}: оплачен, отмечен`);
+        if (marked?.length) console.log(`стикер ${tag}: оплачен, отмечен (${count})`);
       }
     }
   }
