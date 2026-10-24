@@ -488,16 +488,21 @@ export default function Home() {
           <div className={liveLook === "live" ? "live-photo in3d" : "live-photo"}>
             {liveLook === "live" ? (
               <div className="live-stage">
-                <ThingStage
-                  // Сцена читает вещь один раз: модель приезжает с данными, и
-                  // тогда сцена собирается заново уже её.
-                  key={live?.model ?? "shirt"}
-                  shape={liveShape}
-                  picked={null}
-                  onPick={() => {}}
-                  stage={stage}
-                  onReady={dress}
-                />
+                {/* Сцену собираем, когда данные пришли: до них она собиралась
+                    футболкой по умолчанию, писала «Loading the shirt» и
+                    пересобиралась вещью торга - вторая загрузка подряд. */}
+                {loaded && (
+                  <ThingStage
+                    // Сцена читает вещь один раз: модель приезжает с данными, и
+                    // тогда сцена собирается заново уже её.
+                    key={live?.model ?? "shirt"}
+                    shape={liveShape}
+                    picked={null}
+                    onPick={() => {}}
+                    stage={stage}
+                    onReady={dress}
+                  />
+                )}
               </div>
             ) : (
               <>
