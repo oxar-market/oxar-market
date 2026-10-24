@@ -74,6 +74,7 @@ const CELLS: [number, number, number, number][] = [
 ];
 
 type Live = {
+  id: string;
   title: string;
   tagline: string | null;
   /** Модель вещи: по ней сцена и разметка. Футболка - сцена по умолчанию. */
@@ -145,6 +146,7 @@ async function loadLive(): Promise<Live | null> {
   // Открытие - по самому раннему лоту; лот без срока открытия уже идёт.
   const opens = featured.map((one) => (one.opens_at ? Date.parse(one.opens_at) : null));
   return {
+    id: featured[0].thing_id,
     title: featured[0].things?.title ?? "Shirt No. 1",
     tagline: featured[0].things?.tagline ?? null,
     model: featured[0].things?.model_url || null,
@@ -333,6 +335,32 @@ export default function Home() {
       image.onload = () => stage.current?.show(code, image);
       image.src = art;
     }
+    void stick(live.id);
+  }
+
+  // Купленные стикеры - туда же, где их клеит приложение: только
+  // оплаченные (отметку ставит бот выплат по цепочке), в порядке покупок, по
+  // наклейке на каждый купленный стикер. Не загрузившийся логотип оставляет
+  // свою ячейку пустой, а не сдвигает остальных.
+  async function stick(thingId: string) {
+    const rows = (await rest(
+      `stickers?thing_id=eq.${thingId}&paid_first=not.is.null&select=logo_url,size,paid_count&order=paid_first.asc`,
+    )) as { logo_url: string; size: string; paid_count: number }[] | null;
+    if (!rows?.length) return;
+    const units = rows.flatMap((row) => Array.from({ length: row.paid_count }, () => row));
+    const loaded = await Promise.all(
+      units.map(
+        (row) =>
+          new Promise<{ image: HTMLImageElement; size: [number, number] } | null>((done) => {
+            const image = new Image();
+            image.crossOrigin = "anonymous";
+            image.onload = () => done({ image, size: row.size === "12x6" ? [12, 6] : [10, 10] });
+            image.onerror = () => done(null);
+            image.src = row.logo_url;
+          }),
+      ),
+    );
+    stage.current?.stickers(loaded);
   }
 
   /** То же для прошлого торга: на вещи стоят логотипы, которые победили. */
