@@ -6167,149 +6167,193 @@ body::after {
 
 @media (min-width: 72rem) {
   .app:has(.lot-body) {
-    max-width: 86rem;
+    max-width: 88rem;
   }
 
-  /* Шапка - одна линия: имя слева, часы справа на той же базовой линии, и
-     тонкая черта под ней. Колонки начинаются под чертой с одной высоты. */
+  /* Шапка - как у дорогой вещи в каталоге: крупное имя, часы того же роста
+     на той же линии, под ними одна волосяная черта. */
   .lot:has(.lot-body) .lot-top {
     align-items: flex-end;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--line2);
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .lot:has(.lot-body) .lot-title h1 {
+    font-size: 3rem;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1;
   }
 
   .lot:has(.lot-body) .lot-cd-num {
-    font-size: 2.25rem;
-    letter-spacing: -0.02em;
+    font-size: 3rem;
+    font-weight: 500;
+    letter-spacing: -0.035em;
   }
 
+  /* Конфигуратор: сцена с вещью во всю ширину, ставки и места - стеклянными
+     карточками поверх неё, с одним и тем же отступом от краёв сцены. Сама
+     вещь рисуется только между карточками - они её не закрывают. */
   .lot-body {
+    --inset: 1.25rem;
+    --left: 21rem;
+    --right: 20rem;
+    /* Сцена кончается над нижним меню. */
+    --scene-h: clamp(32rem, calc(100vh - 20rem), 50rem);
     display: grid;
-    grid-template-columns: 19rem minmax(0, 1fr) 21rem;
-    grid-template-areas: "left center right";
-    gap: 1.5rem;
+    grid-template-columns: var(--left) minmax(0, 1fr) var(--right);
     align-items: start;
     padding-top: 0.5rem;
   }
 
-  /* До открытия ставок нет: вещь и правая колонка. */
   .lot-body.two {
-    grid-template-columns: minmax(0, 1fr) 21rem;
-    grid-template-areas: "center right";
+    grid-template-columns: minmax(0, 1fr) var(--right);
   }
 
   .lot-center {
-    grid-area: center;
-  }
-
-  .lot-right {
-    grid-area: right;
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 
   .lot-left {
-    grid-area: left;
+    grid-column: 1;
+    grid-row: 1;
+    margin: var(--inset) 0 0 var(--inset);
   }
 
-  /* Боковые колонки - тихие панели одной выделки: рамка, отступ, скругление
-     одни и те же, заголовок одного кегля. Держатся на экране при прокрутке. */
+  .lot-right {
+    grid-column: -2;
+    grid-row: 1;
+    margin: var(--inset) var(--inset) 0 0;
+  }
+
   .lot-left,
   .lot-right {
-    position: sticky;
-    top: 1.5rem;
-    max-height: calc(100vh - 8rem);
+    position: relative;
+    z-index: 2;
+    /* Обе карточки одной высоты: от верхнего отступа до нижнего. */
+    height: calc(var(--scene-h) - 2 * var(--inset));
     overflow-y: auto;
-    scrollbar-width: thin;
-    padding: 1.125rem;
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    background: var(--card);
+    scrollbar-width: none;
+    padding: 1.125rem 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--card) 60%, transparent);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--card) 76%, transparent);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    box-shadow: 0 20px 50px rgba(15, 18, 25, 0.12);
   }
 
   .lot-left.lot-bids {
-    margin-top: 0;
-    gap: 0.25rem;
+    margin-top: var(--inset);
+    gap: 0;
+  }
+
+  /* Сцена: светлая студия во всю ширину. Холст с вещью - в средней полосе
+     между карточками, с тем же воздухом по краям. */
+  .lot-center .lot-scene {
+    height: var(--scene-h);
+    padding: 0 calc(var(--right) + var(--inset)) 0 calc(var(--left) + var(--inset));
+    border-radius: 28px;
+    background: radial-gradient(55% 65% at 50% 60%, var(--card) 0%, var(--soft) 70%, var(--line2) 100%);
+    overflow: hidden;
+  }
+
+  .lot-body.two .lot-center .lot-scene {
+    padding-left: var(--inset);
+  }
+
+  .lot-center .lot-scene > .look,
+  .lot-center .lot-scene > .ls-shots {
+    height: 100%;
+  }
+
+  .lot-center .stage {
+    aspect-ratio: auto;
+    height: 100%;
+    max-height: none;
+  }
+
+  /* Переключатель вида - внизу сцены, между карточками. */
+  /* Переключатель вида - внизу сцены, по центру полосы с вещью (общее
+     правило десктопа прижимало его вправо, под карточку). */
+  .lot-center .looks.over-scene {
+    top: auto;
+    right: auto;
+    bottom: var(--inset);
+    left: calc(var(--left) + (100% - var(--left) - var(--right)) / 2);
+    transform: translateX(-50%);
+  }
+
+  .lot-body.two .lot-center .looks.over-scene {
+    left: calc((100% - var(--right)) / 2);
+  }
+
+  /* Заголовки колонок - тихие подписи над чертой. */
+  .lot-left .list-head,
+  .lot-right .pick-head {
+    margin: 0;
+    padding: 0 0 0.75rem;
+    border-bottom: 1px solid var(--ink);
   }
 
   .lot-left .list-head,
-  .lot-right .pick-head {
-    margin: 0 0 0.5rem;
-    padding: 0 0.375rem;
-  }
-
   .lot-right .pick-title,
   .lot-right .bid-head-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 500;
     letter-spacing: 0;
   }
 
-  /* Ставки слева - строки без лишних рамок, как лента. */
-  /* Статус - под суммой, а не рядом: так имя получает всю ширину и не
-     режется многоточием. */
   .lot-left .bid-row {
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) auto;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
     grid-template-areas:
       "art who amt"
       "art who tag";
-    column-gap: 0.625rem;
+    column-gap: 0.75rem;
     row-gap: 2px;
     align-items: center;
     margin: 0;
     width: 100%;
-    padding: 0.625rem 0.375rem;
+    padding: 0.875rem 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   .lot-left .bid-row-art {
     grid-area: art;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--soft);
   }
 
   .lot-left .bid-row-who {
     grid-area: who;
+    font-size: 0.9375rem;
   }
 
   .lot-left .bid-row-amt {
     grid-area: amt;
     justify-self: end;
+    font-size: 1.0625rem;
+    font-weight: 500;
   }
 
   .lot-left .bid-row .tagchip {
     grid-area: tag;
     justify-self: end;
+    font-weight: 500;
+    letter-spacing: 0.02em;
   }
 
-  .lot-left .bid-row:last-child {
-    border-bottom: 0;
-  }
+  /* Места - строками под волосяными чертами, как опции в конфигураторе. */
 
-  .lot-left .bid-row-who {
-    font-size: 0.875rem;
-  }
-
-  /* Вещь - на своей сцене: мягкая подложка той же высоты, что и колонки,
-     переключатель вида внутри неё. */
-  .lot-center .lot-scene {
-    border-radius: 24px;
-    border: 1px solid var(--line2);
-    background: radial-gradient(120% 90% at 50% 75%, var(--card) 0%, var(--soft) 100%);
-    overflow: hidden;
-  }
-
-  .lot-center .stage {
-    aspect-ratio: 4 / 3;
-    max-height: calc(100vh - 16rem);
-  }
-
-  /* Места - строками опций, как в конфигураторе: имя и лидер слева, цена
-     справа. Одиннадцать плиток читались мозаикой. */
-  /* Прокручивается только список мест, а ставка под ним всегда на экране:
-     на ноутбуке одиннадцать строк уводили кнопку ставки за край. */
   .lot-right {
     display: flex;
     flex-direction: column;
-    /* Колонка начинается под шапкой: высота считается от неё, чтобы с
-       первого экрана низ колонки - ставка - был виден целиком. */
-    max-height: calc(100vh - 17rem);
   }
 
   .lot-right > * {
@@ -6318,7 +6362,7 @@ body::after {
 
   .lot-right .pick-grid {
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: 0;
     flex: 0 1 auto;
     min-height: 12rem;
     overflow-y: auto;
@@ -6332,12 +6376,14 @@ body::after {
       "n price"
       "count price";
     align-items: center;
-    column-gap: 0.75rem;
+    column-gap: 1rem;
     row-gap: 1px;
-    padding: 0.4375rem 0.625rem;
+    padding: 0.5625rem 0;
     border: 0;
-    border-radius: 12px;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
     background: transparent;
+    transition: padding 0.18s ease-out, color 0.18s;
   }
 
   .lot-right .pick-n {
@@ -6357,24 +6403,47 @@ body::after {
 
   .lot-right .pick-price {
     grid-area: price;
-    font-size: 0.9375rem;
-    font-weight: 600;
+    font-size: 1.0625rem;
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
 
-  .lot-right .pick-cell:hover {
-    background: var(--soft);
+  @media (hover: hover) {
+    .lot-right .pick-cell:hover {
+      padding-left: 0.375rem;
+    }
   }
 
-  /* Выбранное место - подложка и черта слева, а не залитая чёрным плитка. */
+  .lot-right .pick-cell:active {
+    transform: none;
+  }
+
+  /* Выбранное место - точка и сдвиг, без заливки: выбор виден, а строка
+     остаётся строкой. */
   .lot-right .pick-cell.on {
-    background: var(--soft);
+    background: transparent;
     color: var(--ink);
-    box-shadow: inset 3px 0 0 var(--ink);
+    padding-left: 1rem;
+    box-shadow: none;
+    position: relative;
+  }
+
+  .lot-right .pick-cell.on::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-radius: 50%;
+    background: var(--ink);
   }
 
   .lot-right .pick-cell.on .pick-n {
     color: var(--ink);
+    font-weight: 600;
     opacity: 1;
   }
 
@@ -6383,12 +6452,8 @@ body::after {
     opacity: 1;
   }
 
-  /* Ставка - продолжение той же панели под чертой, а не вторая рамка в
-     рамке. */
   .lot-right .bidding {
-    margin-top: 0.75rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--line2);
+    margin-top: 1.25rem;
   }
 
   .lot-right .bid-card {
@@ -6399,8 +6464,8 @@ body::after {
   }
 
   .lot-right .stickers {
-    margin-top: 0.75rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--line2);
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
   }
 }
