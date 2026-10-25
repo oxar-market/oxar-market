@@ -466,7 +466,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   aria-pressed={spot.code === picked}
                   onClick={() => choose(spot.code)}
                 >
-                  <SpotThumb views={views} code={spot.code} />
+                  <SpotThumb views={views} code={spot.code} width={48} height={38} />
                   <span className="pick-n">{spot.label}</span>
                   <span className="pick-price">
                     {one ? (

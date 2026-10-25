@@ -6785,7 +6785,7 @@ body::after {
   .lot-right .pick-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-height: 12rem;
     overflow-x: hidden;
     overflow-y: auto;
@@ -6793,8 +6793,23 @@ body::after {
   }
 
   /* Правой карточке - больше воздуха по краям: в ней больше всего строк. */
+  /* Строки мест того же ритма, что лента ставок слева: та же высота и
+     воздух, список прокручивается так же. Отступы карточек одинаковые. */
+  .lot-left,
   .lot-right {
-    padding: 1.375rem 1.75rem;
+    padding: 1.375rem 1.625rem;
+  }
+
+  .lot-right .pick-cell {
+    min-height: 4.3125rem;
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+  }
+
+  .lot-right .pick-cell .pick-thumb {
+    width: 48px !important;
+    height: 38px !important;
+    border-radius: 10px;
   }
 
   /* Шаг ставки в карточке плотнее: форма целиком без прокрутки. */
