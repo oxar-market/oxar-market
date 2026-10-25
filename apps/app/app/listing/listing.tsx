@@ -45,6 +45,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [feed, setFeed] = useState<Bid[]>([]);
   const [feedOf, setFeedOf] = useState<"all" | "spot">("all");
   const [photo, setPhoto] = useState(0);
+  // Какой ракурс вещи сейчас перед зрителем: для полоски ракурсов и кнопки
+  // поворота.
+  const [angle, setAngle] = useState(0);
   const [look, setLook] = useState<"live" | "shot">("shot");
   const [art, setArt] = useState<Record<string, { url: string; file: File }>>({});
   const [artError, setArtError] = useState("");
@@ -245,13 +248,13 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         <span className="mk-title">
           OXAR <span>Auction</span>
         </span>
-        <button type="button" className="case-back" onClick={onBack}>
-          &larr; Market
-        </button>
       </div>
 
       <header className="lot-top">
         <div className="lot-title">
+          <button type="button" className="case-back" onClick={onBack}>
+            &larr; Market
+          </button>
           {started && closesAt !== null && closesAt > now && (
             <span className="live-badge">
               <i aria-hidden />
@@ -278,7 +281,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           )}
           {started && closesAt !== null && (
             <div className="lot-cd">
-              <span className="lot-cd-cap">Ends in</span>
+              <span className="lot-cd-cap">Auction ends in</span>
               <span className="lot-cd-num" suppressHydrationWarning>
                 {clock(closesAt - now)}
               </span>
@@ -372,6 +375,61 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
 
         {/* Правило одно на все вещи: до открытия - голограмма, а админ
             переключает её на 3D и фото, если они у вещи есть. */}
+        {/* Кнопки сцены: во весь экран и повернуть вещь на четверть. */}
+        {scene && !ghost && look === "live" && (
+          <div className="scene-tools">
+            <button
+              type="button"
+              className="scene-tool"
+              aria-label="Full screen"
+              onClick={(event) => {
+                const box = (event.currentTarget.closest(".lot-scene") as HTMLElement | null) ?? null;
+                if (!box) return;
+                if (document.fullscreenElement) void document.exitFullscreen();
+                else void box.requestFullscreen?.();
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden>
+                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="scene-tool"
+              aria-label="Turn"
+              onClick={() => {
+                const next = (angle + 1) % 4;
+                setAngle(next);
+                stage.current?.face(next * 90);
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden>
+                <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" />
+              </svg>
+            </button>
+          </div>
+        )}
+        {/* Ракурсы под вещью - снимки самой сцены; нажатие поворачивает вещь
+            или листает фото. */}
+        {scene && !ghost && thing.photos.length === 0 && views.shots.length > 1 && (
+          <div className="scene-angles" role="group" aria-label="Angles">
+            {views.shots.map((url, index) => (
+              <button
+                type="button"
+                key={index}
+                className={(look === "live" ? angle : photo) === index ? "scene-angle on" : "scene-angle"}
+                aria-label={`Angle ${index + 1}`}
+                onClick={() => {
+                  setAngle(index);
+                  setPhoto(index);
+                  if (look === "live") stage.current?.face(index * 90);
+                }}
+              >
+                <img src={url} alt="" />
+              </button>
+            ))}
+          </div>
+        )}
         {(scene || thing.photos.length > 0) && (!soon || admin) && (
           <div className="looks over-scene" role="group" aria-label="How to view">
             {/* До открытия админ переключает голограмму и вещь как есть. */}
@@ -403,7 +461,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         )}
       </div>
 
-      {look === "shot" && !ghost && (thing.photos.length || views.shots.length) > 1 && (
+      {look === "shot" && !ghost && thing.photos.length > 1 && (
         <div className="angles">
           {(thing.photos.length ? thing.photos : views.shots).map((url, index) => (
             <button
