@@ -6582,97 +6582,95 @@ body::after {
      на той же линии, под ними одна волосяная черта. */
   .lot:has(.lot-body) .lot-top {
     align-items: flex-end;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--line);
+    padding-bottom: 1rem;
+    border-bottom: 0;
+  }
+
+  .lot:has(.lot-body) .lot-brandbar {
+    margin-bottom: 0;
+  }
+
+  .lot:has(.lot-body) .lot-title {
+    gap: 0.25rem;
+  }
+
+  .lot:has(.lot-body) .share-auction {
+    margin-top: 0.25rem;
   }
 
   .lot:has(.lot-body) .lot-title h1 {
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 600;
     letter-spacing: -0.035em;
     line-height: 1;
   }
 
   .lot:has(.lot-body) .lot-cd-num {
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 500;
     letter-spacing: -0.035em;
   }
 
-  /* Конфигуратор: сцена с вещью во всю ширину, ставки и места - стеклянными
-     карточками поверх неё, с одним и тем же отступом от краёв сцены. Сама
-     вещь рисуется только между карточками - они её не закрывают. */
+  /* Три карточки рядом: живые ставки, вещь, места. Одной высоты, с одним
+     отступом между собой. */
   .lot-body {
-    --inset: 1.25rem;
-    --left: 21rem;
-    --right: 23.5rem;
-    /* Сцена кончается над нижним меню. */
-    --scene-h: clamp(32rem, calc(100vh - 20rem), 50rem);
+    --scene-h: clamp(26rem, calc(100vh - 22.5rem), 46rem);
     display: grid;
-    grid-template-columns: var(--left) minmax(0, 1fr) var(--right);
-    align-items: start;
-    padding-top: 0.5rem;
+    grid-template-columns: 21rem minmax(0, 1fr) 23.5rem;
+    gap: 1.25rem;
+    align-items: stretch;
+    padding-top: 0.25rem;
   }
 
   .lot-body.two {
-    grid-template-columns: minmax(0, 1fr) var(--right);
-  }
-
-  .lot-center {
-    grid-column: 1 / -1;
-    grid-row: 1;
+    grid-template-columns: minmax(0, 1fr) 23.5rem;
   }
 
   .lot-left {
     grid-column: 1;
     grid-row: 1;
-    margin: var(--inset) 0 0 var(--inset);
+  }
+
+  .lot-center {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .lot-body.two .lot-center {
+    grid-column: 1;
   }
 
   .lot-right {
     grid-column: -2;
     grid-row: 1;
-    margin: var(--inset) var(--inset) 0 0;
   }
 
   .lot-left,
   .lot-right {
-    position: relative;
-    z-index: 2;
-    /* Обе карточки одной высоты: от верхнего отступа до нижнего. */
-    height: calc(var(--scene-h) - 2 * var(--inset));
+    height: var(--scene-h);
     overflow-y: auto;
     scrollbar-width: none;
-    padding: 1.125rem 1.25rem;
-    border: 1px solid color-mix(in srgb, var(--card) 60%, transparent);
+    border: 1px solid var(--line);
     border-radius: 22px;
-    background: color-mix(in srgb, var(--card) 76%, transparent);
-    backdrop-filter: blur(24px) saturate(160%);
-    -webkit-backdrop-filter: blur(24px) saturate(160%);
-    box-shadow: 0 20px 50px rgba(15, 18, 25, 0.12);
+    background: var(--card);
+    box-shadow: 0 1px 2px rgba(15, 18, 25, 0.04), 0 12px 32px rgba(15, 18, 25, 0.05);
   }
 
   .lot-left.lot-bids {
-    margin-top: var(--inset);
+    margin-top: 0;
     gap: 0;
   }
 
-  /* Сцена: светлая студия во всю ширину. Холст с вещью - в средней полосе
-     между карточками, с тем же воздухом по краям. */
-  /* Холст во всю ширину сцены, а вещь кадрируется между карточками:
-     сцена передаёт ширины карточек камере (в rem, без единиц). При
-     приближении вещь уходит под карточки, а не обрезается по краю полосы. */
+  /* Вещь - в своей карточке: мягкая студия, вид слева сверху, кнопки справа
+     сверху, ракурсы внизу. */
   .lot-center .lot-scene {
-    --frame-left: 22.5;
-    --frame-right: 25;
     height: var(--scene-h);
-    border-radius: 28px;
-    background: radial-gradient(55% 65% at 50% 60%, var(--card) 0%, var(--soft) 70%, var(--line2) 100%);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: radial-gradient(70% 70% at 50% 55%, var(--card) 0%, var(--soft) 100%);
     overflow: hidden;
-  }
-
-  .lot-body.two .lot-center .lot-scene {
-    --frame-left: 1.25;
+    box-shadow: 0 1px 2px rgba(15, 18, 25, 0.04), 0 12px 32px rgba(15, 18, 25, 0.05);
   }
 
   .lot-center .lot-scene > .look,
@@ -6686,19 +6684,12 @@ body::after {
     max-height: none;
   }
 
-  /* Переключатель вида - внизу сцены, между карточками. */
-  /* Переключатель вида - внизу сцены, по центру полосы с вещью (общее
-     правило десктопа прижимало его вправо, под карточку). */
   .lot-center .looks.over-scene {
-    top: auto;
+    top: 1rem;
+    left: 1rem;
     right: auto;
-    bottom: var(--inset);
-    left: calc(var(--left) + (100% - var(--left) - var(--right)) / 2);
-    transform: translateX(-50%);
-  }
-
-  .lot-body.two .lot-center .looks.over-scene {
-    left: calc((100% - var(--right)) / 2);
+    bottom: auto;
+    transform: none;
   }
 
   /* Заголовки колонок - тихие подписи над чертой. */
@@ -6800,16 +6791,26 @@ body::after {
     padding: 1.375rem 1.625rem;
   }
 
+  /* Строки мест плотные, как на макете: одиннадцать видно почти целиком. */
   .lot-right .pick-cell {
-    min-height: 4.3125rem;
-    padding-top: 0.875rem;
-    padding-bottom: 0.875rem;
+    min-height: 2.875rem;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
   }
 
   .lot-right .pick-cell .pick-thumb {
-    width: 48px !important;
-    height: 38px !important;
-    border-radius: 10px;
+    width: 44px !important;
+    height: 34px !important;
+    border-radius: 9px;
+  }
+
+  .lot-right .pick-n,
+  .lot-right .pick-price {
+    font-size: 0.875rem;
+  }
+
+  .lot-left .bid-row {
+    padding: 0.625rem 0;
   }
 
   /* Шаг ставки в карточке плотнее: форма целиком без прокрутки. */
@@ -6864,5 +6865,211 @@ body::after {
     margin-top: 1.5rem;
     padding-top: 1.25rem;
     border-top: 1px solid var(--line);
+  }
+}
+
+/* ── Страница торга по макету: шапка, кнопки сцены, ракурсы, статусы ── */
+
+/* «← Market» - над LIVE, а не в строке бренда. */
+.lot-title .case-back {
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+
+/* Таймер - в своей карточке с часами. */
+.lot:has(.lot-body) .lot-cd {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1rem 1.375rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.lot:has(.lot-body) .lot-cd-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lot:has(.lot-body) .lot-cd-cap::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* «Share auction» - со значком, без подчёркивания. */
+.lot:has(.lot-body) .share-auction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.lot:has(.lot-body) .share-auction::before {
+  content: "";
+  width: 15px;
+  height: 15px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Ccircle cx='6' cy='12' r='3'/%3E%3Ccircle cx='18' cy='19' r='3'/%3E%3Cpath d='m8.6 13.5 6.8 4M15.4 6.5l-6.8 4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Ccircle cx='6' cy='12' r='3'/%3E%3Ccircle cx='18' cy='19' r='3'/%3E%3Cpath d='m8.6 13.5 6.8 4M15.4 6.5l-6.8 4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Кнопки сцены - круглые, справа сверху. Знак «вертеть» внизу сцены
+   заменён кнопкой поворота. */
+.scene-tools {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 3;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.scene-tool {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 18, 25, 0.06);
+}
+
+.scene-tool svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lot:has(.lot-body) .lot-scene .stage-hint-turn {
+  display: none;
+}
+
+/* Ракурсы - ровной полоской внизу сцены. */
+.scene-angles {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  z-index: 3;
+  display: flex;
+  gap: 0.5rem;
+  transform: translateX(-50%);
+}
+
+.scene-angle {
+  width: 64px;
+  height: 44px;
+  padding: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  cursor: pointer;
+}
+
+.scene-angle.on {
+  border-color: #7b6cf6;
+  box-shadow: 0 0 0 1px #7b6cf6;
+}
+
+.scene-angle img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Статусы ставок - таблетками: лидер зелёным, перебитый серым. */
+.lot-left .tagchip {
+  padding: 0.125rem 0.5rem;
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--mut);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+}
+
+.lot-left .tagchip.red {
+  background: rgba(20, 184, 109, 0.12);
+  color: #0f8a52;
+}
+
+/* Телефон: таймер и вещь - карточками на всю ширину, ракурсы помельче. */
+@media (max-width: 71.99rem) {
+  .lot:has(.lot-body) .lot-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lot:has(.lot-body) .lot-side,
+  .lot:has(.lot-body) .lot-cd {
+    width: 100%;
+  }
+
+  .lot:has(.lot-body) .lot-cd-num {
+    font-size: 2.25rem;
+  }
+
+  .lot-center .lot-scene {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: radial-gradient(70% 70% at 50% 55%, var(--card) 0%, var(--soft) 100%);
+    overflow: hidden;
+    padding-bottom: 3.5rem;
+  }
+
+  /* Длинная вещь на телефоне - в низком кадре: в высоком под ваном и над
+     ним стояла пустота на пол-экрана. */
+  .lot-center .lot-scene .stage {
+    aspect-ratio: 4 / 3.4;
+  }
+
+  .lot:has(.lot-body) .lot-cd {
+    padding: 0.875rem 1.125rem;
+  }
+
+  .lot:has(.lot-body) .lot-title {
+    gap: 0.25rem;
+  }
+
+  .lot-center .looks.over-scene {
+    top: 0.75rem;
+    left: 0.75rem;
+    right: auto;
+    transform: none;
+  }
+
+  .scene-tools {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .scene-angles {
+    bottom: 0.75rem;
+  }
+
+  .scene-angle {
+    width: 54px;
+    height: 38px;
+  }
+
+  .lot-left.lot-bids {
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--card);
   }
 }
