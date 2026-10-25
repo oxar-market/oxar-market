@@ -250,19 +250,6 @@ export function BidForm({
           </span>
         </div>
 
-        {/* Чьё лого - вопрос той же важности, что сумма: картинка без имени
-            остаётся картинкой без хозяина, по кошельку его не узнать.
-            Поэтому имя стоит в той же рамке, а не отдельным шагом. */}
-        <label className="bid-brand">
-          <input
-            value={brand}
-            maxLength={BRAND_MAX}
-            placeholder="Startup name"
-            aria-label="Whose logo is this"
-            onChange={(event) => setBrand(event.target.value)}
-          />
-        </label>
-
         {/* Поле суммы и под ним баланс - одним блоком, чтобы баланс читался
             как свойство этой суммы, а не как отдельная строка где-то ниже.
             Ставить, не видя своих денег, - вслепую; красным, когда набранной
@@ -302,11 +289,29 @@ export function BidForm({
         {/* Минимум и судьба денег - одной строкой, как в направлении
             дизайна: куда уходят деньги, сказано до нажатия. */}
         <span className="muted small bid-note">
-          Minimum {formatUsd(need)}. Locked in escrow until the auction ends
-          or you are outbid.
+          Minimum {formatUsd(need)}
+          <span className="tip" tabIndex={0} aria-label="Locked in escrow until the auction ends or you are outbid.">
+            ?
+            <span className="tip-text" role="tooltip">
+              Locked in escrow until the auction ends or you are outbid.
+            </span>
+          </span>
         </span>
 
         {children}
+
+        {/* Чьё лого - сразу под самим логотипом: картинка без имени остаётся
+            картинкой без хозяина, по кошельку его не узнать. */}
+        <label className="bid-brand">
+          <input
+            value={brand}
+            maxLength={BRAND_MAX}
+            placeholder="Startup name"
+            aria-label="Whose logo is this"
+            onChange={(event) => setBrand(event.target.value)}
+          />
+        </label>
+
 
         {balance !== null && (
           <span className="bal-row">
@@ -349,11 +354,9 @@ export function BidForm({
         </button>
       </div>
 
-      {!error && (
+      {!error && !(needsArt && needsName) && (
         <p className="muted" id="bid-hint">
-          {needsArt && needsName
-            ? "Two things before you can bid: your artwork, and the name of the startup it belongs to."
-            : needsArt
+          {needsArt
               ? "Add your artwork first - a bid without it has nothing to print."
               : needsName
                 ? "Name the startup - people have to know whose logo they are looking at."
