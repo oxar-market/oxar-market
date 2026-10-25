@@ -447,13 +447,26 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                 >
                   <span className="pick-n">{spot.label}</span>
                   <span className="pick-price">
-                    {one
-                      ? holder
-                        ? formatUsd(holder.amount_cents)
-                        : `from ${formatUsd(one.reserve_cents)}`
-                      : "-"}
+                    {one ? (
+                      holder ? (
+                        <>
+                          {/* Лидер на широком экране - логотипом у цены: строка
+                              одной высоты, есть ставка или нет. */}
+                          {holder.media_url && (
+                            <img className="pick-logo" src={holder.media_url} alt="" title={holder.brand ?? ""} />
+                          )}
+                          {formatUsd(holder.amount_cents)}
+                        </>
+                      ) : (
+                        <>
+                          <span className="pick-from">from</span> {formatUsd(one.reserve_cents)}
+                        </>
+                      )
+                    ) : (
+                      "-"
+                    )}
                   </span>
-                  <span className={one && !holder ? "pick-count empty" : "pick-count"}>
+                  <span className="pick-count">
                     {one ? holder?.brand || "No bids yet" : "not for sale"}
                   </span>
                 </button>
