@@ -6263,7 +6263,7 @@ body::after {
 }
 
 .spot-chip.lead {
-  background: rgba(123, 108, 246, 0.1);
+  background: rgba(139, 92, 255, 0.12);
   color: #5a4bd6;
 }
 
@@ -6297,8 +6297,8 @@ body::after {
 }
 
 .spot-preview polygon {
-  fill: rgba(123, 108, 246, 0.28);
-  stroke: #7b6cf6;
+  fill: rgba(139, 92, 255, 0.4);
+  stroke: #8b5cff;
   stroke-width: 2px;
   vector-effect: non-scaling-stroke;
   stroke-linejoin: round;
@@ -6349,7 +6349,7 @@ body::after {
 }
 
 .lot-right .bump.min {
-  border-color: #7b6cf6;
+  border-color: #8b5cff;
 }
 
 .lot-right .bid-note {
@@ -6519,9 +6519,9 @@ body::after {
 
 /* Выбор - тем же фиолетовым, что и зона на вещи. */
 .lot-right .pick-cell.on {
-  background: rgba(123, 108, 246, 0.08);
+  background: rgba(139, 92, 255, 0.1);
   color: var(--ink);
-  box-shadow: inset 2px 0 0 #7b6cf6;
+  box-shadow: inset 3px 0 0 #8b5cff;
 }
 
 .lot-right .bidding {
@@ -6856,9 +6856,17 @@ body::after {
     font-size: 0.8125rem;
   }
 
-  /* На широком экране вещь и так перед глазами - снимок с местом не нужен. */
+  /* Шаг ставки - на всю высоту карточки: снимок вещи с обведённым местом
+     забирает свободное место, кнопка ставки - внизу. */
   .lot-right.chosen .spot-preview {
-    display: none;
+    flex: 1 1 0;
+    min-height: 6rem;
+    aspect-ratio: auto;
+    margin-bottom: 0.75rem;
+  }
+
+  .lot-right.chosen .bidding {
+    flex: none;
   }
 
   .lot-right .stickers {
@@ -7065,8 +7073,8 @@ body::after {
 }
 
 .scene-angle.on {
-  border-color: #7b6cf6;
-  box-shadow: 0 0 0 1px #7b6cf6;
+  border-color: #8b5cff;
+  box-shadow: 0 0 0 1px #8b5cff;
 }
 
 .scene-angle img {
