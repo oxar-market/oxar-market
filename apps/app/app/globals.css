@@ -6179,8 +6179,11 @@ body::after {
   color: var(--mut2);
 }
 
-/* Логотип лидера у цены - только в строках мест широкого экрана. */
-.pick-logo {
+/* Логотип лидера у цены, миниатюра детали и стрелка - только в строках мест
+   широкого экрана. */
+.pick-logo,
+.pick-thumb,
+.pick-go {
   display: none;
 }
 
@@ -6239,7 +6242,7 @@ body::after {
   .lot-body {
     --inset: 1.25rem;
     --left: 21rem;
-    --right: 20rem;
+    --right: 23.5rem;
     /* Сцена кончается над нижним меню. */
     --scene-h: clamp(32rem, calc(100vh - 20rem), 50rem);
     display: grid;
@@ -6298,7 +6301,7 @@ body::after {
      приближении вещь уходит под карточки, а не обрезается по краю полосы. */
   .lot-center .lot-scene {
     --frame-left: 22.5;
-    --frame-right: 21.5;
+    --frame-right: 25;
     height: var(--scene-h);
     border-radius: 28px;
     background: radial-gradient(55% 65% at 50% 60%, var(--card) 0%, var(--soft) 70%, var(--line2) 100%);
@@ -6344,11 +6347,21 @@ body::after {
   }
 
   .lot-left .list-head,
-  .lot-right .pick-title,
   .lot-right .bid-head-title {
     font-size: 0.875rem;
     font-weight: 500;
     letter-spacing: 0;
+  }
+
+  .lot-right .pick-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .lot-right .pick-head {
+    align-items: baseline;
+    border-bottom-color: var(--line);
   }
 
   .lot-left .bid-row {
@@ -6407,10 +6420,11 @@ body::after {
   }
 
   .lot-right .pick-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0;
     flex: 0 1 auto;
     min-height: 12rem;
+    overflow-x: hidden;
     overflow-y: auto;
     scrollbar-width: thin;
   }
@@ -6418,20 +6432,59 @@ body::after {
   /* Места - строками одной высоты и одного кегля: имя слева, цена справа.
      Лидер - его логотипом у цены, без второй строки. Выбранное - чертой
      слева, без жирного и без сдвига: строки стоят ровно. */
+  /* Правой карточке - больше воздуха по краям: в ней больше всего строк. */
+  .lot-right {
+    padding: 1.375rem 1.75rem;
+  }
+
   .lot-right .pick-cell {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 0.75rem;
     min-height: 2.5rem;
-    padding: 0 0 0 0.75rem;
+    padding: 0.1875rem 0.25rem 0.1875rem 0.5rem;
     border: 0;
     border-bottom: 1px solid var(--line);
     border-radius: 0;
     background: transparent;
     box-shadow: inset 2px 0 0 transparent;
     transition: box-shadow 0.18s, background 0.18s;
+  }
+
+  /* Миниатюра детали - кусок снимка самой вещи на светлой плашке. */
+  .lot-right .pick-thumb {
+    display: block;
+    position: relative;
+    flex: none;
+    width: 44px;
+    height: 34px;
+    overflow: hidden;
+    border-radius: 9px;
+    background: var(--soft);
+  }
+
+  .lot-right .pick-thumb img {
+    position: absolute;
+    max-width: none;
+  }
+
+  .lot-right .pick-go {
+    display: block;
+    flex: none;
+    margin-left: -0.125rem;
+    font-size: 1.125rem;
+    line-height: 1;
+    color: var(--mut2);
+    transition: transform 0.18s ease-out, color 0.18s;
+  }
+
+  @media (hover: hover) {
+    .lot-right .pick-cell:hover .pick-go {
+      color: var(--ink);
+      transform: translateX(2px);
+    }
   }
 
   .lot-right .pick-n,
@@ -6445,6 +6498,13 @@ body::after {
 
   .lot-right .pick-count {
     display: none;
+  }
+
+  .lot-right .pick-n {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .lot-right .pick-price {
@@ -6482,10 +6542,11 @@ body::after {
     transform: none;
   }
 
+  /* Выбор - тем же фиолетовым, что и зона на вещи. */
   .lot-right .pick-cell.on {
-    background: transparent;
+    background: rgba(123, 108, 246, 0.08);
     color: var(--ink);
-    box-shadow: inset 2px 0 0 var(--ink);
+    box-shadow: inset 2px 0 0 #7b6cf6;
   }
 
   .lot-right .bidding {

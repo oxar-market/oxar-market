@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatUsd, hasOpened, isOpen, minBidCents, shortWallet } from "@oxar/core";
-import { ThingStage, type Stage, type Views } from "@oxar/stage";
+import { ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
 import { loadBids, loadFeed, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
 import { SellerLine } from "../reviews.tsx";
@@ -451,6 +451,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   aria-pressed={spot.code === picked}
                   onClick={() => choose(spot.code)}
                 >
+                  <SpotThumb views={views} code={spot.code} />
                   <span className="pick-n">{spot.label}</span>
                   <span className="pick-price">
                     {one ? (
@@ -474,6 +475,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   </span>
                   <span className="pick-count">
                     {one ? holder?.brand || "No bids yet" : "not for sale"}
+                  </span>
+                  <span className="pick-go" aria-hidden>
+                    ›
                   </span>
                 </button>
               );
@@ -676,4 +680,68 @@ function ago(at: string, now: number): string {
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86_400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86_400)}d ago`;
+}
+
+/**
+ * Миниатюра места - кусок снимка самой вещи, где это место видно крупнее
+ * всего. Не отдельная картинка: снимки и углы мест на них уже сняла сцена, и
+ * миниатюра совпадает с вещью по определению. Пока снимков нет - пустая
+ * плашка того же размера, строка не прыгает.
+ */
+const THUMB = { width: 44, height: 34 };
+
+function SpotThumb({ views, code }: { views: Views; code: string }) {
+  let best: { shot: string; box: [number, number, number, number]; area: number } | null = null;
+  views.quads.forEach((quads, at) => {
+    const quad: Corners | null | undefined = quads[code];
+    const shot = views.shots[at];
+    if (!quad || !shot) return;
+    const xs = quad.map(([x]) => x);
+    const ys = quad.map(([, y]) => y);
+    const box: [number, number, number, number] = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+    const area = (box[2] - box[0]) * (box[3] - box[1]);
+    if (!best || area > best.area) best = { shot, box, area };
+  });
+  const found = best as { shot: string; box: [number, number, number, number] } | null;
+  // Пропорции снимка узнаём загрузкой: у длинной вещи он широкий, у
+  // остальных квадратный, а доли углов - от ширины и высоты снимка.
+  const [ratio, setRatio] = useState<number | null>(null);
+  useEffect(() => {
+    if (!found) return;
+    let live = true;
+    const image = new Image();
+    image.onload = () => live && image.naturalHeight > 0 && setRatio(image.naturalWidth / image.naturalHeight);
+    image.src = found.shot;
+    return () => {
+      live = false;
+    };
+  }, [found?.shot]);
+  if (!found || !ratio) return <span className="pick-thumb" aria-hidden />;
+  const { shot, box } = found;
+  // Между «вписать» и «заполнить»: деталь крупно, но с краем вещи вокруг -
+  // по нему и узнаётся, что это за деталь.
+  const pad = 0.06;
+  const w = (box[2] - box[0]) * (1 + pad * 2);
+  const h = (box[3] - box[1]) * (1 + pad * 2);
+  const fitW = THUMB.width / (w * ratio);
+  const fitH = THUMB.height / h;
+  const scale = Math.sqrt(fitW * fitH);
+  const imgW = ratio * scale;
+  const imgH = scale;
+  const cx = ((box[0] + box[2]) / 2) * imgW;
+  const cy = ((box[1] + box[3]) / 2) * imgH;
+  return (
+    <span className="pick-thumb" aria-hidden>
+      <img
+        src={shot}
+        alt=""
+        style={{
+          width: imgW,
+          height: imgH,
+          left: THUMB.width / 2 - cx,
+          top: THUMB.height / 2 - cy,
+        }}
+      />
+    </span>
+  );
 }
