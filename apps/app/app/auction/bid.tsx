@@ -269,6 +269,7 @@ export function BidForm({
             ставки не хватает, до нажатия, а не после отказа. Нет числа -
             строки нет: пустого «$0.00» на непрочитанном балансе быть не должно. */}
         <div className="bid-amount">
+          <span className="bid-cap">Your bid</span>
           <label className="bid-field">
             <span className="bid-sign">$</span>
             <input
@@ -286,7 +287,7 @@ export function BidForm({
               которую примет программа. */}
           <button
             type="button"
-            className="bump"
+            className="bump min"
             onClick={() => setAmount((need / 100).toFixed(2))}
           >
             Min {formatUsd(need)}
@@ -300,7 +301,7 @@ export function BidForm({
 
         {/* Минимум и судьба денег - одной строкой, как в направлении
             дизайна: куда уходят деньги, сказано до нажатия. */}
-        <span className="muted small">
+        <span className="muted small bid-note">
           Minimum {formatUsd(need)}. Locked in escrow until the auction ends
           or you are outbid.
         </span>
@@ -351,9 +352,9 @@ export function BidForm({
       {!error && (
         <p className="muted" id="bid-hint">
           {needsArt && needsName
-            ? "Two things before you can bid: your artwork on the shirt, and the name of the startup it belongs to."
+            ? "Two things before you can bid: your artwork, and the name of the startup it belongs to."
             : needsArt
-              ? "Try your artwork on the shirt first - a bid without it has nothing to print."
+              ? "Add your artwork first - a bid without it has nothing to print."
               : needsName
                 ? "Name the startup - people have to know whose logo they are looking at."
                 : "Your artwork goes public with the bid. The money leaves your wallet now and comes back if someone outbids you."}

@@ -431,6 +431,21 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           &larr; All spots
         </button>
       )}
+      {lot && running && picked && (
+        <>
+          <div className="spot-card">
+            <SpotThumb views={views} code={picked} width={64} height={48} />
+            <span className="spot-card-text">
+              <b>{spotLabel}</b>
+              <span>{thing.title}</span>
+            </span>
+            <span className={top ? "spot-chip lead" : "spot-chip"}>
+              {top ? `Leading ${formatUsd(top.amount_cents)}` : `Reserve ${formatUsd(lot.reserve_cents)}`}
+            </span>
+          </div>
+          <SpotPreview views={views} code={picked} />
+        </>
+      )}
       {/* До открытия мест не показываем: выбирать и ставить ещё нечего, а
           сетка с ценами обещала торг, который не идёт. */}
       {started && lots.length > 0 && (
@@ -682,16 +697,9 @@ function ago(at: string, now: number): string {
   return `${Math.floor(s / 86_400)}d ago`;
 }
 
-/**
- * Миниатюра места - кусок снимка самой вещи, где это место видно крупнее
- * всего. Не отдельная картинка: снимки и углы мест на них уже сняла сцена, и
- * миниатюра совпадает с вещью по определению. Пока снимков нет - пустая
- * плашка того же размера, строка не прыгает.
- */
-const THUMB = { width: 44, height: 34 };
-
-function SpotThumb({ views, code }: { views: Views; code: string }) {
-  let best: { shot: string; box: [number, number, number, number]; area: number } | null = null;
+/** Снимок, где место видно крупнее всего, и его углы на нём (доли). */
+function bestShot(views: Views, code: string) {
+  let best: { shot: string; quad: Corners; box: [number, number, number, number]; area: number } | null = null;
   views.quads.forEach((quads, at) => {
     const quad: Corners | null | undefined = quads[code];
     const shot = views.shots[at];
@@ -700,48 +708,68 @@ function SpotThumb({ views, code }: { views: Views; code: string }) {
     const ys = quad.map(([, y]) => y);
     const box: [number, number, number, number] = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
     const area = (box[2] - box[0]) * (box[3] - box[1]);
-    if (!best || area > best.area) best = { shot, box, area };
+    if (!best || area > best.area) best = { shot, quad, box, area };
   });
-  const found = best as { shot: string; box: [number, number, number, number] } | null;
-  // Пропорции снимка узнаём загрузкой: у длинной вещи он широкий, у
-  // остальных квадратный, а доли углов - от ширины и высоты снимка.
+  return best as { shot: string; quad: Corners; box: [number, number, number, number]; area: number } | null;
+}
+
+/** Пропорции снимка: у длинной вещи он широкий, у остальных квадратный. */
+function useShotRatio(shot: string | undefined) {
   const [ratio, setRatio] = useState<number | null>(null);
   useEffect(() => {
-    if (!found) return;
+    if (!shot) return;
     let live = true;
     const image = new Image();
     image.onload = () => live && image.naturalHeight > 0 && setRatio(image.naturalWidth / image.naturalHeight);
-    image.src = found.shot;
+    image.src = shot;
     return () => {
       live = false;
     };
-  }, [found?.shot]);
-  if (!found || !ratio) return <span className="pick-thumb" aria-hidden />;
+  }, [shot]);
+  return ratio;
+}
+
+/**
+ * Миниатюра места - кусок снимка самой вещи, где это место видно крупнее
+ * всего. Не отдельная картинка: снимки и углы мест на них уже сняла сцена, и
+ * миниатюра совпадает с вещью по определению. Пока снимков нет - пустая
+ * плашка того же размера, строка не прыгает.
+ */
+function SpotThumb({ views, code, width = 44, height = 34 }: { views: Views; code: string; width?: number; height?: number }) {
+  const found = bestShot(views, code);
+  const ratio = useShotRatio(found?.shot);
+  if (!found || !ratio) return <span className="pick-thumb" style={{ width, height }} aria-hidden />;
   const { shot, box } = found;
   // Между «вписать» и «заполнить»: деталь крупно, но с краем вещи вокруг -
   // по нему и узнаётся, что это за деталь.
   const pad = 0.06;
   const w = (box[2] - box[0]) * (1 + pad * 2);
   const h = (box[3] - box[1]) * (1 + pad * 2);
-  const fitW = THUMB.width / (w * ratio);
-  const fitH = THUMB.height / h;
-  const scale = Math.sqrt(fitW * fitH);
+  const scale = Math.sqrt((width / (w * ratio)) * (height / h));
   const imgW = ratio * scale;
   const imgH = scale;
   const cx = ((box[0] + box[2]) / 2) * imgW;
   const cy = ((box[1] + box[3]) / 2) * imgH;
   return (
-    <span className="pick-thumb" aria-hidden>
-      <img
-        src={shot}
-        alt=""
-        style={{
-          width: imgW,
-          height: imgH,
-          left: THUMB.width / 2 - cx,
-          top: THUMB.height / 2 - cy,
-        }}
-      />
+    <span className="pick-thumb" style={{ width, height }} aria-hidden>
+      <img src={shot} alt="" style={{ width: imgW, height: imgH, left: width / 2 - cx, top: height / 2 - cy }} />
     </span>
+  );
+}
+
+/** Снимок вещи с выбранным местом, обведённым цветом выбора. */
+function SpotPreview({ views, code }: { views: Views; code: string }) {
+  const found = bestShot(views, code);
+  const ratio = useShotRatio(found?.shot);
+  if (!found || !ratio) return null;
+  return (
+    <div className="spot-preview" aria-hidden>
+      <div className="spot-preview-frame" style={{ aspectRatio: String(ratio) }}>
+        <img src={found.shot} alt="" />
+        <svg viewBox="0 0 1 1" preserveAspectRatio="none">
+          <polygon points={found.quad.map(([x, y]) => `${x},${y}`).join(" ")} />
+        </svg>
+      </div>
+    </div>
   );
 }
