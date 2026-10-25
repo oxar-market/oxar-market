@@ -534,7 +534,7 @@ export function ThingStage({
           // Целимся во все меши сразу: у вещи их бывает несколько, и какая
           // именно окажется под лучом - забота геометрии, а не разметки. Если
           // у вещи названы поверхности под печать - только в них.
-          const allowed = thingShape.current.surfaces;
+          const allowed = spot.surfaces ?? thingShape.current.surfaces;
           const targets = meshes.filter(
             (mesh) =>
               (!allowed || allowed.includes((mesh.material as { name?: string }).name ?? "")) &&
@@ -772,6 +772,16 @@ export function ThingStage({
             const hot = decal.code === over || decal.code === chosen;
             material.color.set(hot ? tint.hot : tint.idle);
             material.opacity = hot ? 1 : 0.88;
+            // Выбранная оклейка - плотной заливкой с яркой обводкой и свечением:
+            // на чёрном кузове прозрачная заливка того же цвета терялась.
+            const spot = SPOTS.find((one) => one.code === decal.code);
+            if (spot?.wrap) {
+              material.map = placeholder(THREE, spot, glazed.has(spot.code), hot);
+              material.emissive.set(hot ? tint.hot : 0x000000);
+              material.emissiveMap = hot ? material.map : null;
+              material.emissiveIntensity = hot ? 0.9 : 0;
+              material.needsUpdate = true;
+            }
           }
         };
         mark.current = (code) => {
@@ -1314,10 +1324,10 @@ function sticker(THREE: typeof import("three"), image: HTMLImageElement, size: [
   return made;
 }
 
-function placeholder(THREE: typeof import("three"), spot: Spot, glazed = false) {
+function placeholder(THREE: typeof import("three"), spot: Spot, glazed = false, hot = false) {
   const [wide, tall] = spot.size;
   // Ключ - размер и номер: клетки одного размера отличаются только им.
-  const key = `${wide}x${tall}:${spot.label}:${spot.wrap ? "wrap" : ""}:${glazed ? "low" : ""}`;
+  const key = `${wide}x${tall}:${spot.label}:${spot.wrap ? "wrap" : ""}:${glazed ? "low" : ""}:${hot ? "hot" : ""}`;
   const known = sheets.get(key);
   if (known) return known;
 
@@ -1360,10 +1370,11 @@ function placeholder(THREE: typeof import("three"), spot: Spot, glazed = false) 
   // Оклейка: зона залита и обведена по краю целиком - вещь читается сеткой
   // зон, а не россыпью отметок.
   if (spot.wrap) {
-    ctx.fillStyle = "rgba(255,255,255,0.16)";
+    // Выбранная - плотнее и с жирной обводкой, как выделение в макете.
+    ctx.fillStyle = hot ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.16)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "rgba(255,255,255,0.7)";
-    ctx.lineWidth = Math.max(2, short * 0.012);
+    ctx.strokeStyle = hot ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.7)";
+    ctx.lineWidth = Math.max(2, short * (hot ? 0.03 : 0.012));
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
   }
 
