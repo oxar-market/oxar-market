@@ -6866,6 +6866,83 @@ body::after {
     padding-top: 1.25rem;
     border-top: 1px solid var(--line);
   }
+
+  /* Одна сетка для обеих колонок: шапка одной высоты и с одной чертой, под
+     ней один отступ, строки одной высоты. Разнобой в несколько пикселей и
+     делал колонки неровными рядом друг с другом. */
+  .lot-left .feed-head,
+  .lot-right .pick-head {
+    display: flex;
+    align-items: center;
+    height: 2.5rem;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .lot-left .feed-tab,
+  .lot-right .pick-title {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .lot-left .feed-tab:not(.on) {
+    font-weight: 500;
+  }
+
+  .lot-left .feed-count,
+  .lot-right .pick-head .muted {
+    margin-left: auto;
+    font-size: 0.8125rem;
+  }
+
+  .lot-left .bid-row,
+  .lot-right .pick-cell {
+    box-sizing: border-box;
+    height: 3.75rem;
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .lot-left .bid-row-art,
+  .lot-right .pick-cell .pick-thumb {
+    width: 44px !important;
+    height: 36px !important;
+    border-radius: 9px;
+  }
+
+  .lot-left .bid-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-content: center;
+    row-gap: 3px;
+  }
+
+  .lot-left .bid-row-art {
+    align-self: center;
+  }
+
+  .lot-left .bid-row-amt {
+    align-self: end;
+    line-height: 1.2;
+  }
+
+  .lot-left .bid-row .tagchip {
+    align-self: start;
+  }
+
+  .lot-left .bid-row-who {
+    align-self: center;
+  }
+
+  /* Зазоры между блоками задают сами блоки - у колонки свой gap давал
+     справа лишние 16px под шапкой. */
+  .lot-left,
+  .lot-right {
+    gap: 0;
+  }
 }
 
 /* ── Страница торга по макету: шапка, кнопки сцены, ракурсы, статусы ── */
