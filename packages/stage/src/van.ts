@@ -30,6 +30,11 @@ const SLIDING_L = ["redglass010"];
 const TAILGATE = ["redglass007"];
 /** У дверей и кормы печать и на рамке окна: она - отдельная чёрная деталь. */
 const DOOR_SURFACES = ["carpaint", "windowglass", "material_5"];
+/**
+ * У кормы - ещё хромовая планка над номером: она стоит поверх крышки, и
+ * без неё планка торчала поверх картинки во всю ширину.
+ */
+const REAR_SURFACES = [...DOOR_SURFACES, "2glossy"];
 
 /**
  * Двери - отдельные детали: штамп глубже, а коробка ниже низа двери, чтобы
@@ -57,7 +62,7 @@ export const VAN_SPOTS: Spot[] = [
   { code: "van_door_l", label: "L door", height: at(0.965), azimuth: 180, shift: len(-0.655), size: [len(1.04), len(1.61)], wrap: true, parts: FRONT_L, reach: DOOR_REACH, surfaces: DOOR_SURFACES },
   { code: "van_fender_l", label: "L fender", height: at(0.85), azimuth: 180, shift: len(-1.765), size: [len(1.16), len(0.7)], wrap: true, parts: BODY },
   // Корма: задняя дверь целиком, со стеклом.
-  { code: "van_rear", label: "Rear", height: at(1.135), azimuth: -90, shift: 0, size: [len(1.82), len(1.35)], wrap: true, parts: TAILGATE, reach: DOOR_REACH, surfaces: DOOR_SURFACES },
+  { code: "van_rear", label: "Rear", height: at(1.135), azimuth: -90, shift: 0, size: [len(1.82), len(1.35)], wrap: true, parts: TAILGATE, reach: DOOR_REACH, surfaces: REAR_SURFACES },
   // Сверху: сдвиг - вдоль машины, плюс - к переду. Логотип смотрит вперёд:
   // размер - поперёк машины и вдоль неё.
   { code: "van_hood", label: "Hood", height: 1, azimuth: 0, top: true, shift: len(2.06), size: [len(1.9), len(0.88)], wrap: true, parts: BODY },
