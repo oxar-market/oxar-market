@@ -119,7 +119,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       const url = art[spot.code]?.url ?? (one ? tops[one.id]?.media_url : undefined);
       if (!url) continue;
       const image = new Image();
-      image.crossOrigin = "anonymous";
+      // CORS - только логотипам из хранилища. Своя примерка - blob-ссылка, и
+      // Safari на iPhone с crossOrigin на ней картинку не грузил: на телефоне
+      // загруженное фото на вещи не появлялось.
+      if (!url.startsWith("blob:")) image.crossOrigin = "anonymous";
       image.onload = () => stage.current?.show(spot.code, image);
       image.src = url;
     }
@@ -523,21 +526,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   <SpotThumb views={views} code={spot.code} width={48} height={38} />
                   <span className="pick-n">{spot.label}</span>
                   <span className="pick-price">
+                    {/* Цена места - сколько поставить сейчас: старт, пока
+                        ставок нет, и следующая ставка, когда есть лидер. Логотип
+                        лидера у цены убран: его и так видно на самой вещи. */}
                     {one ? (
-                      holder ? (
-                        <>
-                          {/* Лидер на широком экране - логотипом у цены: строка
-                              одной высоты, есть ставка или нет. */}
-                          {holder.media_url && (
-                            <img className="pick-logo" src={holder.media_url} alt="" title={holder.brand ?? ""} />
-                          )}
-                          {formatUsd(holder.amount_cents)}
-                        </>
-                      ) : (
-                        <>
-                          <span className="pick-from">from</span> {formatUsd(one.reserve_cents)}
-                        </>
-                      )
+                      <>
+                        <span className="pick-from">from</span>{" "}
+                        {formatUsd(minBidCents(one.reserve_cents, holder?.amount_cents ?? null, one.min_step_cents))}
+                      </>
                     ) : (
                       "-"
                     )}
@@ -813,9 +809,16 @@ function SpotThumb({ views, code, width = 44, height = 34 }: { views: Views; cod
   const imgH = scale;
   const cx = ((box[0] + box[2]) / 2) * imgW;
   const cy = ((box[1] + box[3]) / 2) * imgH;
+  // Кусок снимка - в долях плашки, а не в точках: сетка мест на телефоне
+  // растягивает плашку на ширину карточки, и кусок растёт вместе с ней.
+  const pct = (part: number, whole: number) => `${(part / whole) * 100}%`;
   return (
     <span className="pick-thumb" style={{ width, height }} aria-hidden>
-      <img src={shot} alt="" style={{ width: imgW, height: imgH, left: width / 2 - cx, top: height / 2 - cy }} />
+      <img
+        src={shot}
+        alt=""
+        style={{ width: pct(imgW, width), height: pct(imgH, height), left: pct(width / 2 - cx, width), top: pct(height / 2 - cy, height) }}
+      />
     </span>
   );
 }
