@@ -6147,6 +6147,38 @@ body::after {
   z-index: 9;
 }
 
+/* Лента ставок: все места или выбранное - вкладками над списком. */
+.feed-head {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.feed-tab {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--mut);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.feed-tab.on {
+  color: var(--ink);
+}
+
+.feed-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--mut2);
+}
+
 /* Логотип лидера у цены - только в строках мест широкого экрана. */
 .pick-logo {
   display: none;
