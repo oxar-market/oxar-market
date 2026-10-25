@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatUsd, hasOpened, isOpen, minBidCents, shortWallet } from "@oxar/core";
 import { ThingStage, type Stage, type Views } from "@oxar/stage";
-import { loadBids, loadTopBids, type Bid } from "@/lib/auction";
+import { loadBids, loadFeed, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
@@ -40,6 +40,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   }
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
   const [bids, setBids] = useState<Bid[]>([]);
+  // Общая лента: все ставки на все места, чтобы было видно, где идёт торг,
+  // а не только историю выбранного места.
+  const [feed, setFeed] = useState<Bid[]>([]);
+  const [feedOf, setFeedOf] = useState<"all" | "spot">("all");
   const [photo, setPhoto] = useState(0);
   const [look, setLook] = useState<"live" | "shot">("shot");
   const [art, setArt] = useState<Record<string, { url: string; file: File }>>({});
@@ -91,6 +95,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   useEffect(() => {
     if (lots.length === 0) return;
     void loadTopBids(lots.map((one) => one.id)).then(setTops);
+    void loadFeed(lots.map((one) => one.id)).then(setFeed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [thing]);
 
@@ -151,6 +156,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   function refresh() {
     if (lot) void loadBids(lot.id).then(setBids);
     void loadTopBids(lots.map((one) => one.id)).then(setTops);
+    void loadFeed(lots.map((one) => one.id)).then(setFeed);
   }
 
   async function tryOn(file: File | undefined) {
@@ -573,28 +579,82 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
 
       {showBids && (
         <div className="lot-left lot-bids">
-          <p className="list-head">
-            Bids on {spotLabel}
-            <span>{bids.length === 1 ? "1 bid" : `${bids.length} bids`}</span>
-          </p>
-          {bids.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
-          {bids.map((bid, index) => (
-            <div key={bid.id} className="bid-row">
-              <img className="bid-row-art" src={bid.media_url} alt="" />
-              <span className="bid-row-who">
-                <span>{bid.brand}</span>
-                <em>
-                  <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
-                  {" · "}
-                  {ago(bid.created_at, now)}
-                </em>
-              </span>
-              <span className={index === 0 ? "tagchip red" : "tagchip"}>
-                {index === 0 ? "LEADING" : "REFUNDED"}
-              </span>
-              <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
-            </div>
-          ))}
+          <div className="feed-head" role="tablist" aria-label="Which bids">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={feedOf === "all"}
+              className={feedOf === "all" ? "feed-tab on" : "feed-tab"}
+              onClick={() => setFeedOf("all")}
+            >
+              All bids
+            </button>
+            {picked && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={feedOf === "spot"}
+                className={feedOf === "spot" ? "feed-tab on" : "feed-tab"}
+                onClick={() => setFeedOf("spot")}
+              >
+                {spotLabel}
+              </button>
+            )}
+            <span className="feed-count">
+              {(feedOf === "all" ? feed : bids).length}
+            </span>
+          </div>
+          {feedOf === "all" ? (
+            <>
+              {feed.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
+              {feed.map((bid) => {
+                const where = lots.find((one) => one.id === bid.lot_id);
+                const spot = thing.spots.find((one) => one.code === where?.spot_code);
+                const leads = tops[bid.lot_id]?.id === bid.id;
+                return (
+                  <button
+                    type="button"
+                    key={bid.id}
+                    className="bid-row"
+                    onClick={() => spot && choose(spot.code)}
+                  >
+                    <img className="bid-row-art" src={bid.media_url} alt="" />
+                    <span className="bid-row-who">
+                      <span>{bid.brand}</span>
+                      <em>
+                        {spot?.label ?? "Spot"}
+                        {" · "}
+                        {ago(bid.created_at, now)}
+                      </em>
+                    </span>
+                    <span className={leads ? "tagchip red" : "tagchip"}>{leads ? "LEADING" : "OUTBID"}</span>
+                    <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
+                  </button>
+                );
+              })}
+            </>
+          ) : (
+            <>
+              {bids.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
+              {bids.map((bid, index) => (
+                <div key={bid.id} className="bid-row">
+                  <img className="bid-row-art" src={bid.media_url} alt="" />
+                  <span className="bid-row-who">
+                    <span>{bid.brand}</span>
+                    <em>
+                      <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
+                      {" · "}
+                      {ago(bid.created_at, now)}
+                    </em>
+                  </span>
+                  <span className={index === 0 ? "tagchip red" : "tagchip"}>
+                    {index === 0 ? "LEADING" : "REFUNDED"}
+                  </span>
+                  <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
       </div>

@@ -200,6 +200,22 @@ export async function loadBids(lotId: string): Promise<Bid[]> {
   return (data ?? []) as Bid[];
 }
 
+/** Все ставки всех мест вещи, свежие первыми: общая лента торга. */
+export async function loadFeed(lotIds: string[]): Promise<Bid[]> {
+  if (!db || lotIds.length === 0) return [];
+
+  const { data } = await db
+    .from("lot_bids")
+    .select(
+      "id, created_at, lot_id, bidder_wallet, amount_cents, media_url, brand",
+    )
+    .in("lot_id", lotIds)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  return (data ?? []) as Bid[];
+}
+
 /** Верхние ставки всех лотов разом: для кружков в списке мест. */
 export async function loadTopBids(
   lotIds: string[],
