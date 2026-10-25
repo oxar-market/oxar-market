@@ -1176,6 +1176,12 @@ input:focus {
   margin-top: 1.75rem;
 }
 
+/* Обёртка строк ленты. На телефоне её как будто нет, на десктопе в ней
+   своя прокрутка под шапкой. */
+.feed-list {
+  display: contents;
+}
+
 /* Строка состояния выбранного места: что это, почём и сколько осталось. */
 .lot-state {
   margin: 0;
@@ -6957,6 +6963,69 @@ body::after {
      мест справа. Лишние ставки - прокруткой. */
   .lot-left > * {
     flex-shrink: 0;
+  }
+
+  /* Строки ленты прокручиваются под шапкой, как места справа. */
+  .lot-left.lot-bids {
+    overflow: hidden;
+  }
+
+  .lot-left .feed-list {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .lot-left .feed-list > * {
+    flex-shrink: 0;
+  }
+
+  /* Строки у верхнего и нижнего края списка уходят в туман. Туман только
+     там, куда ещё есть прокрутка: в начале списка верх чистый, в конце -
+     низ. Без поддержки scroll-timeline списки просто без тумана. */
+  .lot-left .feed-list,
+  .lot-right .pick-grid {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--fog-top),
+      #000 calc(100% - var(--fog-bottom)),
+      transparent
+    );
+    animation: fog linear both;
+    animation-timeline: scroll(self);
+  }
+}
+
+@property --fog-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fog-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes fog {
+  0% {
+    --fog-top: 0px;
+    --fog-bottom: 3rem;
+  }
+  8% {
+    --fog-top: 3rem;
+  }
+  92% {
+    --fog-bottom: 3rem;
+  }
+  100% {
+    --fog-top: 3rem;
+    --fog-bottom: 0px;
   }
 }
 
