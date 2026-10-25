@@ -6529,6 +6529,13 @@ body::after {
     margin-top: 0;
   }
 
+  /* Без входа во втором шаге только кнопка и подпись - по центру карточки,
+     а не прижатые к верху над пустотой. Форма ставки остаётся наверху. */
+  .lot-right.chosen .bidding:not(:has(.bid-card)) {
+    margin-block: auto;
+    text-align: center;
+  }
+
   .lot-right .stickers {
     margin-top: 1.5rem;
     padding-top: 1.25rem;
