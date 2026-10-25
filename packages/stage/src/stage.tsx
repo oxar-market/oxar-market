@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { fitInside } from "./fit.ts";
+import { fitCover, fitInside } from "./fit.ts";
 import {
   FRAME_PAD,
   REPAINT,
@@ -608,6 +608,10 @@ export function ThingStage({
               if (landed) under.add(landed.object as InstanceType<typeof THREE.Mesh>);
             }
           }
+          // Место с названными деталями и поверхностями (двери, корма) - это
+          // они все: тонкую хромовую планку кормы ни один луч сетки не
+          // находил, и она торчала поверх картинки. Лишнее срежет коробка.
+          if (spot.parts && spot.surfaces) for (const mesh of targets) under.add(mesh);
 
           // Штампуем по куску вокруг места, а не по всей вещи. Запас в
           // полтора радиуса - чтобы в шар наверняка попали все грани, углы
@@ -911,6 +915,11 @@ export function ThingStage({
             // бы как часть печати, а печатать будут именно то, что видно.
             material.color.set(0xffffff);
             material.opacity = 1;
+            // Свечение выбранной оклейки - тоже налёт: restyle занятое место
+            // не трогает, и фиолетовое свечение оставалось поверх картинки.
+            material.emissive.set(0x000000);
+            material.emissiveMap = null;
+            material.emissiveIntensity = 0;
             material.needsUpdate = true;
             // Место только что стало занятым - подсветку выбора вернуть ему
             // здесь же, иначе выбранное занятое место засветится лишь при
@@ -1566,7 +1575,8 @@ function artwork(
 ) {
   if (spot.tile) return pattern(THREE, spot, image);
   const [wide, tall] = spot.size;
-  const span = 512;
+  // Фото во всю панель - крупнее: при 512 точках на борт вана оно мылилось.
+  const span = spot.wrap ? 1024 : 512;
   const canvas = document.createElement("canvas");
   canvas.width = wide >= tall ? span : Math.round((span * wide) / tall);
   canvas.height = wide >= tall ? Math.round((span * tall) / wide) : span;
@@ -1574,9 +1584,21 @@ function artwork(
   if (!ctx) throw new Error("нет 2d-контекста");
 
   const source = { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
-  // Оклейка: знак целиком по центру, с запасом от краёв: края зоны заходят
-  // на арки и стёкла, и знак во всю зону упирался бы в них. Обрезать чужой
-  // знак нельзя. Панель вокруг не заливаем: прозрачное в знаке остаётся
+  // Оклейка фото - во всю панель: картинка без прозрачности - это сама
+  // плёнка, а не знак, и поля вокруг неё смотрелись наклейкой посреди борта.
+  // Что выходит за край, срезает панель.
+  if (spot.wrap && opaque(image)) {
+    const box = fitCover(source, canvas);
+    ctx.drawImage(image, box.x, box.y, box.width, box.height);
+    const wrapped = new THREE.CanvasTexture(canvas);
+    wrapped.colorSpace = THREE.SRGBColorSpace;
+    wrapped.anisotropy = 8;
+    return wrapped;
+  }
+
+  // Оклейка знаком: знак целиком по центру, с запасом от краёв: края зоны
+  // заходят на арки и стёкла, и знак во всю зону упирался бы в них. Обрезать
+  // чужой знак нельзя. Панель вокруг не заливаем: прозрачное в знаке остаётся
   // кузовом, иначе круглый логотип превращался в сплошной цветной борт.
   if (spot.wrap) {
     const room = { width: canvas.width * 0.72, height: canvas.height * 0.72 };
@@ -1608,6 +1630,27 @@ function artwork(
   made.colorSpace = THREE.SRGBColorSpace;
   made.anisotropy = 8;
   return made;
+}
+
+/**
+ * Картинка без прозрачности - фото, а не знак. Смотрим уменьшенную копию:
+ * хватит, чтобы заметить прозрачный фон. Чужая картинка без CORS не даёт
+ * читать пиксели - такую считаем знаком, ей поля не повредят.
+ */
+function opaque(image: HTMLImageElement): boolean {
+  const probe = document.createElement("canvas");
+  probe.width = 32;
+  probe.height = 32;
+  const ctx = probe.getContext("2d");
+  if (!ctx) return false;
+  try {
+    ctx.drawImage(image, 0, 0, 32, 32);
+    const { data } = ctx.getImageData(0, 0, 32, 32);
+    for (let at = 3; at < data.length; at += 4) if (data[at]! < 250) return false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**

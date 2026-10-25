@@ -36,3 +36,31 @@ export function fitInside(
     height,
   };
 }
+
+/**
+ * Закрыть место картинкой целиком, сохранив пропорции: по одной оси она
+ * упирается в край, по другой выходит за него поровну с обеих сторон. Так
+ * ложится фото во всю панель - что вышло за край, срезает сама панель.
+ */
+export function fitCover(
+  image: { width: number; height: number },
+  box: { width: number; height: number },
+): Box {
+  if (image.width <= 0 || image.height <= 0) {
+    throw new Error("у картинки должны быть положительные размеры");
+  }
+  if (box.width <= 0 || box.height <= 0) {
+    throw new Error("у места должны быть положительные размеры");
+  }
+
+  const scale = Math.max(box.width / image.width, box.height / image.height);
+  const width = image.width * scale;
+  const height = image.height * scale;
+
+  return {
+    x: (box.width - width) / 2,
+    y: (box.height - height) / 2,
+    width,
+    height,
+  };
+}

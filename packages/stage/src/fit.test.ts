@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fitInside } from "./fit.ts";
+import { fitCover, fitInside } from "./fit.ts";
 
 test("широкая картинка упирается в бока, поля сверху и снизу", () => {
   const box = fitInside({ width: 200, height: 100 }, { width: 100, height: 100 });
@@ -39,3 +39,20 @@ test("пустая картинка - это ошибка, а не молча п
   assert.throws(() => fitInside({ width: 0, height: 10 }, { width: 10, height: 10 }));
   assert.throws(() => fitInside({ width: 10, height: 10 }, { width: 10, height: 0 }));
 });
+
+test("фото на всю панель: широкое закрывает место по высоте, бока уходят за край", () => {
+  const box = fitCover({ width: 200, height: 100 }, { width: 100, height: 100 });
+  assert.equal(box.width, 200);
+  assert.equal(box.height, 100);
+  assert.equal(box.x, -50);
+  assert.equal(box.y, 0);
+});
+
+test("фото на всю панель: высокое закрывает место по ширине, верх и низ уходят за край", () => {
+  const box = fitCover({ width: 100, height: 400 }, { width: 200, height: 100 });
+  assert.equal(box.width, 200);
+  assert.equal(box.height, 800);
+  assert.equal(box.x, 0);
+  assert.equal(box.y, -350);
+});
+
