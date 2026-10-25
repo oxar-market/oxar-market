@@ -33,6 +33,8 @@ export type Views = {
   shots: string[];
   /** На ракурс - по углу на место. `null`, если с этой стороны не видно. */
   quads: Record<string, Corners | null>[];
+  /** Кадр с подсвеченной оклейкой - по месту. Только у мест-оклеек. */
+  marked?: Record<string, string>;
 };
 
 export type Stage = {
@@ -1104,7 +1106,15 @@ export function ThingStage({
           chosen = null;
           restyle();
 
-          for (let quarter = 0; quarter < 4; quarter++) {
+          // Кадр с ракурса quarter: снимает той же линзой в цель нужного
+          // размера и отдаёт картинку.
+          const shoot = (
+            quarter: number,
+            into: typeof target,
+            sheet: HTMLCanvasElement,
+            pen: CanvasRenderingContext2D,
+            buffer: Uint8Array,
+          ) => {
             const angle = (quarter * Math.PI) / 2;
             const back = backAt(quarter);
             // Перед длинной вещи снимаем чуть сверху: в лоб капот вана
@@ -1115,25 +1125,30 @@ export function ThingStage({
             const flat = away * Math.cos(above);
             lens.position.set(Math.sin(angle) * flat, away * Math.sin(above), Math.cos(angle) * flat);
             lens.lookAt(0, 0, 0);
-            renderer.setRenderTarget(target);
+            renderer.setRenderTarget(into);
             renderer.render(scene, lens);
-            renderer.readRenderTargetPixels(target, 0, 0, broad, tall, pixels);
+            renderer.readRenderTargetPixels(into, 0, 0, sheet.width, sheet.height, buffer);
 
             // Плёночная кривая и перевод в sRGB - руками: в рендер-цель three
             // последний проход не выполняет, и без проявки светлая вещь на
             // кнопке выбивалась в чистый белый. Выдержку берём у рендерера,
             // чтобы снимок не разошёлся со сценой при её правке.
-            develop(pixels, renderer.toneMappingExposure);
+            develop(buffer, renderer.toneMappingExposure);
 
-            const image = ink.createImageData(broad, tall);
+            const image = pen.createImageData(sheet.width, sheet.height);
             // Строки переворачиваются: GL считает их от нижнего края кадра,
             // канвас - от верхнего, и без этого вещь встаёт на голову.
-            for (let row = 0; row < tall; row++) {
-              const from = (tall - 1 - row) * broad * 4;
-              image.data.set(pixels.subarray(from, from + broad * 4), row * broad * 4);
+            const line = sheet.width * 4;
+            for (let row = 0; row < sheet.height; row++) {
+              const from = (sheet.height - 1 - row) * line;
+              image.data.set(buffer.subarray(from, from + line), row * line);
             }
-            ink.putImageData(image, 0, 0);
-            shots.push(paper.toDataURL("image/webp", 0.9));
+            pen.putImageData(image, 0, 0);
+            return sheet.toDataURL("image/webp", 0.9);
+          };
+
+          for (let quarter = 0; quarter < 4; quarter++) {
+            shots.push(shoot(quarter, target, paper, ink, pixels));
 
             // Где на этом кадре лежат места. Считается той же камерой, что
             // снимала, поэтому совпадает с картинкой точно, а не примерно.
@@ -1160,13 +1175,48 @@ export function ThingStage({
             quads.push(seen);
           }
 
+          // Превью выбранной оклейки - отдельным кадром с этим местом,
+          // подсвеченным как на сцене. Трапеция по углам коробки огибающую
+          // капот или крыло панель не повторяла и резала её криво.
+          // Кадр меньше основного: превью - узкая карточка, а не вся сцена.
+          const marked: Record<string, string> = {};
+          const small = document.createElement("canvas");
+          small.width = Math.round(broad * 0.6);
+          small.height = Math.round(tall * 0.6);
+          const smallInk = small.getContext("2d");
+          const smallTarget = new THREE.WebGLRenderTarget(small.width, small.height, { samples: 4 });
+          const smallPixels = new Uint8Array(small.width * small.height * 4);
+          for (const spot of SPOTS) {
+            if (!spot.wrap || !smallInk) continue;
+            // Ракурс, где место крупнее всего, - тот же выбор, что у
+            // миниатюры в списке.
+            let best = -1;
+            let most = 0;
+            quads.forEach((seen, at) => {
+              const quad = seen[spot.code];
+              if (!quad) return;
+              const xs = quad.map(([x]) => x);
+              const ys = quad.map(([, y]) => y);
+              const area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+              if (area > most) {
+                most = area;
+                best = at;
+              }
+            });
+            if (best < 0) continue;
+            chosen = spot.code;
+            restyle();
+            marked[spot.code] = shoot(best, smallTarget, small, smallInk, smallPixels);
+          }
+          smallTarget.dispose();
+
           renderer.setRenderTarget(null);
           target.dispose();
           ring.visible = true;
           if (shadow) shadow.visible = true;
           chosen = wasChosen;
           restyle();
-          return { shots, quads };
+          return { shots, quads, marked };
         })();
 
         const resize = () => {

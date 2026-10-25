@@ -477,10 +477,6 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         </div>
       )}
 
-      {/* Кто носит вещь, где, когда и срок пруфа - до выбора места: деньги
-          победителя держит программа до пруфа, и этот срок покупатель видит
-          прежде, чем ставит. */}
-      <WornInfo thingId={thingId} />
       </div>
 
       <div className={choosing ? "lot-right choosing" : "lot-right chosen"}>
@@ -678,7 +674,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               </button>
             )}
             <span className="feed-count">
-              {(feedOf === "all" ? feed : bids).length}
+              {(feedOf === "all" ? feed : bids).length} {(feedOf === "all" ? feed : bids).length === 1 ? "bid" : "bids"}
             </span>
           </div>
           <div className="feed-list">
@@ -736,6 +732,13 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         </div>
       )}
+      {/* Кто носит вещь, где, когда и срок пруфа - до выбора места: деньги
+          победителя держит программа до пруфа, и этот срок покупатель видит
+          прежде, чем ставит. На широком экране - под всеми тремя колонками,
+          на телефоне - сразу под вещью. */}
+      <div className="lot-info">
+        <WornInfo thingId={thingId} />
+      </div>
       </div>
     </section>
   );
@@ -820,15 +823,20 @@ function SpotThumb({ views, code, width = 44, height = 34 }: { views: Views; cod
 /** Снимок вещи с выбранным местом, обведённым цветом выбора. */
 function SpotPreview({ views, code }: { views: Views; code: string }) {
   const found = bestShot(views, code);
-  const ratio = useShotRatio(found?.shot);
+  // Оклейку сцена сняла отдельным кадром, уже подсвеченной: обводка по углам
+  // коробки огибающую панель не повторяет.
+  const marked = views.marked?.[code];
+  const ratio = useShotRatio(marked ?? found?.shot);
   if (!found || !ratio) return null;
   return (
     <div className="spot-preview" aria-hidden>
       <div className="spot-preview-frame" style={{ aspectRatio: String(ratio) }}>
-        <img src={found.shot} alt="" />
-        <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-          <polygon points={found.quad.map(([x, y]) => `${x},${y}`).join(" ")} />
-        </svg>
+        <img src={marked ?? found.shot} alt="" />
+        {!marked && (
+          <svg viewBox="0 0 1 1" preserveAspectRatio="none">
+            <polygon points={found.quad.map(([x, y]) => `${x},${y}`).join(" ")} />
+          </svg>
+        )}
       </div>
     </div>
   );
