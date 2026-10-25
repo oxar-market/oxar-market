@@ -654,12 +654,19 @@ export function ThingStage({
           // салона: отбор выбросил бы его целиком, поэтому стекло не отбираем.
           if (spot.wrap) {
             const toward = new THREE.Vector3(0, 0, 1).transformDirection(anchor.matrixWorld);
+            // Боковому месту - только борт: грани, смотрящие вверх круче ~33°,
+            // - это капот и крыша над ним. Кузов вана одним куском, и фото
+            // на крыле заходило на скругление капота.
+            const down = new THREE.Vector3(0, -1, 0);
             let glassArea = 0;
             let allArea = 0;
             filled.forEach((stamp) => {
               const from = parts.get(stamp);
               const glass = /glass/i.test((from?.material as { name?: string } | undefined)?.name ?? "");
-              if (!glass && stamp.getAttribute("normal")) facingOnly(THREE, stamp, toward, spot.top ? 0.3 : 0.35);
+              if (!glass && stamp.getAttribute("normal")) {
+                facingOnly(THREE, stamp, toward, spot.top ? 0.3 : 0.35);
+                if (!spot.top) facingOnly(THREE, stamp, down, -0.55);
+              }
               const area = areaOf(THREE, stamp);
               allArea += area;
               if (glass) glassArea += area;
