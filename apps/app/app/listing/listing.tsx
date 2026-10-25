@@ -681,57 +681,59 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               {(feedOf === "all" ? feed : bids).length}
             </span>
           </div>
-          {feedOf === "all" ? (
-            <>
-              {feed.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
-              {feed.map((bid) => {
-                const where = lots.find((one) => one.id === bid.lot_id);
-                const spot = thing.spots.find((one) => one.code === where?.spot_code);
-                const leads = tops[bid.lot_id]?.id === bid.id;
-                return (
-                  <button
-                    type="button"
-                    key={bid.id}
-                    className="bid-row"
-                    onClick={() => spot && choose(spot.code)}
-                  >
+          <div className="feed-list">
+            {feedOf === "all" ? (
+              <>
+                {feed.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
+                {feed.map((bid) => {
+                  const where = lots.find((one) => one.id === bid.lot_id);
+                  const spot = thing.spots.find((one) => one.code === where?.spot_code);
+                  const leads = tops[bid.lot_id]?.id === bid.id;
+                  return (
+                    <button
+                      type="button"
+                      key={bid.id}
+                      className="bid-row"
+                      onClick={() => spot && choose(spot.code)}
+                    >
+                      <img className="bid-row-art" src={bid.media_url} alt="" />
+                      <span className="bid-row-who">
+                        <span>{bid.brand}</span>
+                        <em>
+                          {spot?.label ?? "Spot"}
+                          {" · "}
+                          {ago(bid.created_at, now)}
+                        </em>
+                      </span>
+                      <span className={leads ? "tagchip red" : "tagchip"}>{leads ? "LEADING" : "OUTBID"}</span>
+                      <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
+                    </button>
+                  );
+                })}
+              </>
+            ) : (
+              <>
+                {bids.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
+                {bids.map((bid, index) => (
+                  <div key={bid.id} className="bid-row">
                     <img className="bid-row-art" src={bid.media_url} alt="" />
                     <span className="bid-row-who">
                       <span>{bid.brand}</span>
                       <em>
-                        {spot?.label ?? "Spot"}
+                        <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
                         {" · "}
                         {ago(bid.created_at, now)}
                       </em>
                     </span>
-                    <span className={leads ? "tagchip red" : "tagchip"}>{leads ? "LEADING" : "OUTBID"}</span>
+                    <span className={index === 0 ? "tagchip red" : "tagchip"}>
+                      {index === 0 ? "LEADING" : "REFUNDED"}
+                    </span>
                     <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
-                  </button>
-                );
-              })}
-            </>
-          ) : (
-            <>
-              {bids.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
-              {bids.map((bid, index) => (
-                <div key={bid.id} className="bid-row">
-                  <img className="bid-row-art" src={bid.media_url} alt="" />
-                  <span className="bid-row-who">
-                    <span>{bid.brand}</span>
-                    <em>
-                      <span className="mono">{shortWallet(bid.bidder_wallet)}</span>
-                      {" · "}
-                      {ago(bid.created_at, now)}
-                    </em>
-                  </span>
-                  <span className={index === 0 ? "tagchip red" : "tagchip"}>
-                    {index === 0 ? "LEADING" : "REFUNDED"}
-                  </span>
-                  <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
-                </div>
-              ))}
-            </>
-          )}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
       )}
       </div>
