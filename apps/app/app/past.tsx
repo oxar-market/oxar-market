@@ -119,13 +119,16 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
           .
         </p>
         {/* Кто попал на вещь - логотипами победителей. */}
+        {/* Первые пять логотипов, остальные - счётчиком «+N»: молча обрезать
+            список значило бы недосчитать победителей. */}
         {logos > 0 && (
           <div className="hero-logos">
             {Object.entries(art)
-              .slice(0, 8)
+              .slice(0, 5)
               .map(([code, url]) => (
                 <img key={code} src={url} alt="" />
               ))}
+            {logos > 5 && <span className="hero-logos-more">+{logos - 5}</span>}
           </div>
         )}
         <button type="button" className="primary hero-go" onClick={onOpen}>
