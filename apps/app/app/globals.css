@@ -7607,6 +7607,20 @@ body::after {
   gap: 6px;
 }
 
+.hero-logos-more {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mut);
+}
+
 .hero-logos img {
   width: 40px;
   height: 40px;
