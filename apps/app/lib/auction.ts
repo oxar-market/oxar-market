@@ -366,6 +366,10 @@ export type MarketThing = {
   model: string | null;
   /** Лёгкая копия модели подготовленной нами вещи - голограмма до открытия. */
   hologram: string | null;
+  /** Описание вещи для героя маркета: «что будет с вещью». */
+  about: string | null;
+  /** Сколько всего ставок сделано по местам вещи. */
+  bids: number;
 };
 
 /** Анонс: вещь уже в каталоге, но торга на неё ещё не заводили. */
@@ -407,6 +411,8 @@ export type HeldRow = {
   cover: string | null;
   /** Сколько ставок было за торг. У пилота - ноль. */
   bids: number;
+  /** Описание вещи - под названием на слайде прошедшего торга. */
+  about: string | null;
 };
 
 /**
@@ -439,7 +445,7 @@ export async function loadMarket(): Promise<{
   // он открыл торг и админ её одобрил; до торга анонсом она не идёт.
   const { data: raw } = await db
     .from("things")
-    .select("id, title, tagline, seller, house, prepared, opens_at, photos, proof_photos, model_url, hologram_url, placed_on, partner, partner_url, lots(id, status)")
+    .select("id, title, tagline, seller, house, prepared, opens_at, photos, proof_photos, model_url, hologram_url, placed_on, partner, partner_url, worn_about, lots(id, status)")
     .eq("active", true)
     .order("created_at");
   // И вещи, подготовленные нами за продавца: их анонсируем как свои.
@@ -458,6 +464,7 @@ export async function loadMarket(): Promise<{
       pilot: { partner: (one.partner as string | null) ?? "", partnerUrl: (one.partner_url as string | null) ?? null },
       cover: coverOf(one.photos as string[] | null, one.proof_photos as string[] | null, one.model_url as string | null),
       bids: 0,
+      about: (one.worn_about as string | null) ?? (one.tagline as string | null) ?? null,
     }));
   // Черновики считаем за отсутствие торга: админ их видит, публика - нет,
   // и анонс у обоих должен быть одинаковым.
@@ -486,7 +493,7 @@ export async function loadMarket(): Promise<{
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, proof_photos, model_url, hologram_url)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, proof_photos, model_url, hologram_url, worn_about)",
     )
     .in("status", ["open", "won", "unsold", "refunded"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -499,6 +506,7 @@ export async function loadMarket(): Promise<{
   const things = new Map<string, MarketThing>();
   const heldBy = new Map<string, HeldRow>();
   const heldLots: { key: string; lot: string }[] = [];
+  const openLots: { thing: string; lot: string }[] = [];
   for (const lot of data) {
     const info = lot.things as unknown as {
       title?: string;
@@ -511,6 +519,7 @@ export async function loadMarket(): Promise<{
       proof_photos?: string[] | null;
       model_url?: string | null;
       hologram_url?: string | null;
+      worn_about?: string | null;
     } | null;
     // Лоты с открытым торгом видны всем, а вещь - только одобренная. Вещь
     // продавца, которую мы ещё не вывели на маркет, в показ не идёт, даже
@@ -541,8 +550,11 @@ export async function loadMarket(): Promise<{
           // подготовленной нами, до открытия.
           model: info.model_url || null,
           hologram: info.prepared ? info.hologram_url || info.model_url || null : null,
+          about: info.worn_about ?? null,
+          bids: 0,
         });
       known.spots += 1;
+      openLots.push({ thing: lot.thing_id, lot: lot.id });
       if (top) {
         known.taken += 1;
         const code = (lot.thing_spots as unknown as { code?: string } | null)?.code;
@@ -567,6 +579,7 @@ export async function loadMarket(): Promise<{
           model: info.model_url || null,
           cover: coverOf(info.photos, info.proof_photos, info.model_url),
           bids: 0,
+          about: info.worn_about ?? info.tagline ?? null,
         } satisfies HeldRow);
       if (lot.status === "won" && top) row.raisedCents += top.amount_cents;
       heldBy.set(key, row);
@@ -574,11 +587,15 @@ export async function loadMarket(): Promise<{
     }
   }
 
-  // Число ставок за торг - на карточке прошедшего торга.
-  const counts = await loadBidCounts(heldLots.map((one) => one.lot));
+  // Число ставок - у идущего торга в полосе цифр, у прошедшего на карточке.
+  const counts = await loadBidCounts([...heldLots, ...openLots].map((one) => one.lot));
   for (const { key, lot } of heldLots) {
     const row = heldBy.get(key);
     if (row) row.bids += counts[lot] ?? 0;
+  }
+  for (const { thing, lot } of openLots) {
+    const known = things.get(thing);
+    if (known) known.bids += counts[lot] ?? 0;
   }
 
   return {

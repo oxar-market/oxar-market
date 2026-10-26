@@ -7486,28 +7486,84 @@ body::after {
   color: var(--mut);
 }
 
-.hero-stat-clock .dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--mut);
-}
-
-.hero-stat-clock .dot.urgent {
-  background: #e0381c;
-}
-
+/* USDC у суммы - монетой и подписью, пилюлей. */
 .usdc-chip {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  padding: 2px 7px;
-  border-radius: 6px;
+  gap: 5px;
+  padding: 3px 9px 3px 4px;
+  border-radius: 999px;
   background: var(--soft);
-  color: var(--mut);
-  font-size: 0.625rem;
+  color: var(--ink);
+  font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+}
+
+.usdc-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.clock-icon {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.clock-icon.urgent {
+  color: #e0381c;
+}
+
+/* Описание вещи под подзаголовком и цифры плашками. */
+.hero-about {
+  max-width: 30rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.hero-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.hero-facts span {
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--mut);
+  font-size: 0.8125rem;
+}
+
+.hero-facts b {
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hero-logos img {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  object-fit: contain;
 }
 
 /* Полоса недели - карточкой в колонке контента, как полоса цифр. Липнет
@@ -7553,7 +7609,7 @@ body::after {
   flex-direction: column;
   align-items: stretch;
   gap: 0.25rem;
-  padding: 0 0 0.875rem;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--card);
@@ -7564,14 +7620,20 @@ body::after {
   cursor: pointer;
 }
 
+/* Снимок карточки - одной высоты у всех: картинка лежит поверх рамки, и
+   высокое фото больше не растягивает свою карточку. */
 .past-cover {
+  position: relative;
   display: block;
   aspect-ratio: 4 / 3;
-  margin-bottom: 0.5rem;
+  min-height: 0;
+  overflow: hidden;
   background: var(--soft);
 }
 
 .past-cover img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -7585,15 +7647,16 @@ body::after {
   mix-blend-mode: multiply;
 }
 
-.past-name,
-.past-kind,
-.past-sum,
-.past-foot {
-  padding: 0 0.875rem;
+.past-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.125rem 1.125rem;
 }
 
 .past-name {
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -7601,7 +7664,7 @@ body::after {
 }
 
 .past-kind {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--mut);
 }
 
@@ -7609,10 +7672,18 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.375rem;
-  font-size: 1.0625rem;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.875rem;
+  font-size: 1.375rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
+}
+
+.past-partner {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--mut);
 }
 
 .past-foot {
@@ -7620,9 +7691,36 @@ body::after {
   justify-content: space-between;
   gap: 0.5rem;
   margin-top: auto;
-  padding-top: 0.625rem;
-  font-size: 0.75rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--line2);
+  font-size: 0.8125rem;
   color: var(--mut);
+}
+
+
+/* Телефон: карточка в полэкрана - сумма мельче, монета переносится под
+   неё, а не режется краем; ставки и дата - столбиком. */
+@media (max-width: 759px) {
+  .past-body {
+    padding: 0.875rem 0.875rem 1rem;
+  }
+
+  .past-name {
+    font-size: 0.9375rem;
+  }
+
+  .past-sum {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.375rem;
+    font-size: 1.125rem;
+  }
+
+  .past-foot {
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: 0.75rem;
+  }
 }
 
 @media (min-width: 760px) {

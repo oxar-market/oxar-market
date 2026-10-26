@@ -88,6 +88,17 @@ export function formatUsd(cents: number): string {
   })}`;
 }
 
+/**
+ * Сумма на витрине - всегда с центами: «$275.00». Так цена читается ценой,
+ * как на ценнике, и суммы в колонке встают ровно.
+ */
+export function formatUsdFull(cents: number): string {
+  return `$${(cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 function assertWholeNonNegative(value: number, name: string): void {
   if (!Number.isInteger(value) || value < 0) {
     throw new Error(`${name} must be a whole number of units, zero or more`);

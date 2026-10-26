@@ -107,6 +107,7 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
           Sold
         </span>
         <h2 className="hero-name">{held.title}</h2>
+        {held.about && <p className="hero-about">{held.about}</p>}
         <p className="hero-who">
           {logos} {logos === 1 ? "logo" : "logos"} placed. Closed{" "}
           {new Date(held.closesAt).toLocaleDateString("en-US", {
@@ -115,6 +116,16 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
           })}
           .
         </p>
+        {/* Кто попал на вещь - логотипами победителей. */}
+        {logos > 0 && (
+          <div className="hero-logos">
+            {Object.entries(art)
+              .slice(0, 8)
+              .map(([code, url]) => (
+                <img key={code} src={url} alt="" />
+              ))}
+          </div>
+        )}
         <button type="button" className="primary hero-go" onClick={onOpen}>
           See results <span aria-hidden>&rarr;</span>
         </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUsd, hasOpened } from "@oxar/core";
+import { formatUsd, formatUsdFull, hasOpened } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import { houseShape, isShirt } from "@/lib/shape";
 import { db } from "@/lib/session";
@@ -19,6 +19,7 @@ import { PastHero } from "./past.tsx";
 import { PhotoView } from "./auction/photo.tsx";
 import { SellerLine } from "./reviews.tsx";
 import { SoonHologram } from "./soon.tsx";
+import { Usdc } from "./usdc.tsx";
 // TEMP_FRONT: тот же временный снимок и замер, что на торге.
 import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
@@ -340,7 +341,21 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
               </span>
               <h2 className="hero-name">{one.title}</h2>
               {one.tagline && <p className="hero-who">{one.tagline}</p>}
+              {one.about && <p className="hero-about">{one.about}</p>}
               {one.owner && <SellerLine seller={one.owner} house={one.house} />}
+              <div className="hero-facts">
+                <span>
+                  <b>{one.spots}</b> {one.spots === 1 ? "spot" : "spots"}
+                </span>
+                <span>
+                  <b>{one.bids}</b> {one.bids === 1 ? "bid" : "bids"}
+                </span>
+                {one.topCents > 0 && (
+                  <span>
+                    Top bid <b>{formatUsdFull(one.topCents)}</b>
+                  </span>
+                )}
+              </div>
               <button
                 type="button"
                 className="primary hero-go"
@@ -485,16 +500,25 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
                   />
                 )}
               </span>
-              <span className="past-name">{one.title}</span>
-              <span className="past-kind">{one.pilot ? "Pilot · Placed" : "Auction · Ended"}</span>
-              {!one.pilot && (
-                <span className="past-sum">
-                  {formatUsd(one.raisedCents)} <span className="usdc-chip">USDC</span>
+              <span className="past-body">
+                <span className="past-name">{one.title}</span>
+                <span className="past-kind">
+                  {one.pilot ? "Pilot" : "Auction"} · {one.pilot ? "Placed" : "Ended"}
                 </span>
-              )}
-              <span className="past-foot">
-                <span>{one.pilot ? one.pilot.partner : `${one.bids} ${one.bids === 1 ? "bid" : "bids"}`}</span>
-                <span>{day(one.closesAt)}</span>
+                <span className="past-sum">
+                  {one.pilot ? (
+                    <span className="past-partner">with {one.pilot.partner || "a partner"}</span>
+                  ) : (
+                    <>
+                      <span>{formatUsdFull(one.raisedCents)}</span>
+                      <Usdc />
+                    </>
+                  )}
+                </span>
+                <span className="past-foot">
+                  <span>{one.pilot ? "No bidding" : `${one.bids} ${one.bids === 1 ? "bid" : "bids"}`}</span>
+                  <span>{stamp(one.closesAt)}</span>
+                </span>
               </span>
             </button>
           ))}
@@ -628,19 +652,19 @@ function HeroStats({
         <div className="hero-stat-cell">
           <span className="hero-stat-cap">Bid so far</span>
           <span className="hero-stat-num">
-            {formatUsd(live.raisedCents)} <span className="usdc-chip">USDC</span>
+            {formatUsdFull(live.raisedCents)} <Usdc />
           </span>
         </div>
         <div className="hero-stat-cell">
-          <span className="hero-stat-cap">Spots taken</span>
+          <span className="hero-stat-cap">Total bids</span>
           <span className="hero-stat-num">
-            {live.taken} <span className="hero-stat-of">of {live.spots}</span>
+            {live.bids} <span className="hero-stat-of">on {live.taken} of {live.spots} spots</span>
           </span>
         </div>
         <div className="hero-stat-cell">
           <span className="hero-stat-cap">{later ? "Opens in" : "Ends in"}</span>
           <span className="hero-stat-num hero-stat-clock" suppressHydrationWarning>
-            <span className={clock.urgent ? "dot urgent" : "dot"} />
+            <ClockIcon urgent={clock.urgent} />
             {left(later ? (opensAt as number) : Date.parse(live.closesAt), now)}
           </span>
         </div>
@@ -673,16 +697,17 @@ function HeroStats({
         <div className="hero-stat-cell">
           <span className="hero-stat-cap">Raised</span>
           <span className="hero-stat-num">
-            {formatUsd(past.raisedCents)} <span className="usdc-chip">USDC</span>
+            {formatUsdFull(past.raisedCents)} <Usdc />
           </span>
         </div>
         <div className="hero-stat-cell">
-          <span className="hero-stat-cap">Bids</span>
+          <span className="hero-stat-cap">Total bids</span>
           <span className="hero-stat-num">{past.bids}</span>
         </div>
         <div className="hero-stat-cell">
           <span className="hero-stat-cap">Closed</span>
-          <span className="hero-stat-num">
+          <span className="hero-stat-num hero-stat-clock">
+            <ClockIcon urgent={false} />
             {new Date(past.closesAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </span>
         </div>
@@ -690,6 +715,16 @@ function HeroStats({
     );
   }
   return null;
+}
+
+/** Часы у времени: циферблат, красный в последние сутки торга. */
+function ClockIcon({ urgent }: { urgent: boolean }) {
+  return (
+    <svg className={urgent ? "clock-icon urgent" : "clock-icon"} viewBox="0 0 24 24" aria-hidden>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2.5 2M10 3h4" />
+    </svg>
+  );
 }
 
 type Group = {
@@ -718,7 +753,8 @@ function dayTitle(at: number, now: number): string {
   });
 }
 
-/** День для строк истории: коротко, в часах читателя. */
-function day(at: string): string {
-  return new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+/** Дата и время закрытия на карточке: «Oct 17, 18:00», в часах читателя. */
+function stamp(at: string): string {
+  const when = new Date(at);
+  return `${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${when.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
 }
