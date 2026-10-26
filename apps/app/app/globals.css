@@ -1339,6 +1339,43 @@ input:focus {
   font-size: 0.875rem;
 }
 
+/* Сколько стикеров: «−» у левого края, «+» у правого, число посередине -
+   одной строкой во всю ширину, без пустоты справа. */
+.lot-right .bumps.sticker-stepper,
+.bumps.sticker-stepper {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 0;
+  align-items: center;
+  width: 100%;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.lot-right .sticker-stepper .bump,
+.sticker-stepper .bump {
+  width: 44px;
+  min-width: 0;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--soft);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.sticker-stepper .bump:disabled {
+  opacity: 0.4;
+}
+
+.sticker-stepper .sticker-count {
+  padding: 0;
+  text-align: center;
+  font-weight: 500;
+}
+
 .angles {
   display: flex;
   justify-content: center;
