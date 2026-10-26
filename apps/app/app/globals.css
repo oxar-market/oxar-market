@@ -3783,14 +3783,6 @@ a.sl-pill {
    текст 15/1.5, подписи 13, капс 11 600. Карточки 20 px, поля 14 px.
    ───────────────────────────────────────────────────────────────────────── */
 
-.sl-toggle {
-  width: 100%;
-}
-
-.sl-toggle .role-tab {
-  padding: 0.75rem;
-}
-
 .sl-card {
   width: 100%;
   border: 1px solid var(--line);
@@ -7692,6 +7684,370 @@ body::after {
 
   .market .hero-arrow.prev {
     left: calc(40% + 1rem);
+  }
+}
+
+/* ── You по макету: меню разделов, карточки обзора, счётчик у Auctions. ── */
+
+.you-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Телефон: разделы - лентой пилюль, прокручивается вбок. */
+.you-nav {
+  display: flex;
+  gap: 0.375rem;
+  width: calc(100% + 2.5rem);
+  margin: 0 -1.25rem;
+  padding: 0 1.25rem 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.you-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.you-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.you-tab.on {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
+}
+
+.you-tab-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Счётчик того, что ждёт человека: перебили, надо оценить. */
+.you-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e0381c;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.you-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.you-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.you-panel .you-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.you-panel-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.you-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.you-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line2);
+}
+
+.you-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.you-stats b {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.you-stats span {
+  font-size: 0.75rem;
+  color: var(--mut);
+}
+
+.you-balance-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.you-balance-num {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.you-balance-row .you-more {
+  margin-left: auto;
+}
+
+/* Тихая кнопка-ссылка справа в карточке: Change, Copy, View all. */
+.you-more {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .you-more:hover {
+    color: var(--ink);
+  }
+}
+
+.you-info,
+.you-activity {
+  display: flex;
+  flex-direction: column;
+}
+
+.you-info-row {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line2);
+  font-size: 0.875rem;
+}
+
+.you-info-row:first-child,
+.you-act-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.you-info-cap {
+  color: var(--mut);
+}
+
+.you-info-val {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.you-act-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line2);
+}
+
+.you-act-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--soft);
+}
+
+.you-act-icon svg,
+.you-help-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.you-act-what,
+.you-act-amt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.you-act-what b,
+.you-act-amt b {
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.you-act-what span,
+.you-act-amt span {
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--mut);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.you-act-amt {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.you-act-amt b.plus {
+  color: #0f8a52;
+}
+
+.you-help {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 0.875rem;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  background: var(--soft);
+  color: inherit;
+  text-decoration: none;
+}
+
+.you-help-icon svg {
+  width: 30px;
+  height: 30px;
+  stroke-width: 1.6;
+}
+
+.you-help-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.you-help-text b {
+  font-size: 0.9375rem;
+}
+
+.you-help-text span {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.you-help-go {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--card);
+}
+
+/* Широкий экран: меню колонкой слева, разделы справа. */
+@media (min-width: 64rem) {
+  .app:has(.screen.you) {
+    max-width: 64rem;
+  }
+
+  .you-layout {
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .you-layout.bare {
+    display: block;
+  }
+
+  .you-nav {
+    position: sticky;
+    top: 1.5rem;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .you-tab {
+    padding: 0.625rem 0.875rem;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 0.9375rem;
+  }
+
+  .you-tab.on {
+    background: var(--soft);
+    color: var(--ink);
+  }
+
+  .you-badge {
+    margin-left: auto;
+  }
+
+  .you-main {
+    max-width: 44rem;
+  }
+
+  /* Админке и кабинету продавца - вся ширина: у них свои таблицы и формы,
+     и в колонке обзора им тесно. */
+  .app:has(.you-layout.wide) {
+    max-width: 76rem;
+  }
+
+  .you-layout.wide .you-main {
+    max-width: none;
   }
 }
 
