@@ -20,6 +20,7 @@ import { PhotoView } from "./auction/photo.tsx";
 import { SellerLine } from "./reviews.tsx";
 import { SoonHologram } from "./soon.tsx";
 import { Usdc } from "./usdc.tsx";
+import { WornLine } from "./worn-line.tsx";
 // TEMP_FRONT: тот же временный снимок и замер, что на торге.
 import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
@@ -342,6 +343,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
               <h2 className="hero-name">{one.title}</h2>
               {one.tagline && <p className="hero-who">{one.tagline}</p>}
               {one.about && <p className="hero-about">{one.about}</p>}
+              <WornLine worn={one.worn} />
               {one.owner && <SellerLine seller={one.owner} house={one.house} />}
               <div className="hero-facts">
                 <span>
