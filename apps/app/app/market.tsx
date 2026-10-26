@@ -74,14 +74,22 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
   // Герой по умолчанию живой: та же модель, что на торге, с реальными
   // логотипами лидеров. Фото остаётся вторым видом.
   const [heroLook, setHeroLook] = useState<"live" | "photo">("live");
-  const heroStage = useRef<Stage | null>(null);
-  function dressHero() {
-    // Модель на маркете одна - наша футболка; вещи продавцов идут снимком.
-    const art: Record<string, string> = things.find((one) => !one.seller)?.art ?? {};
-    for (const [code, url] of Object.entries(art)) {
+  // У каждой вещи в карусели своя сцена: общая на всех держала бы последнюю
+  // собранную, и логотипы ложились бы не на ту вещь.
+  const heroStages = useRef(new Map<string, { current: Stage | null }>());
+  function stageOf(id: string): { current: Stage | null } {
+    const known = heroStages.current.get(id);
+    if (known) return known;
+    const made = { current: null as Stage | null };
+    heroStages.current.set(id, made);
+    return made;
+  }
+  // Логотипы лидеров - на саму вещь: и нашу, и вещь продавца с моделью (ван).
+  function dressHero(thing: MarketThing) {
+    for (const [code, url] of Object.entries(thing.art)) {
       const image = new Image();
       image.crossOrigin = "anonymous";
-      image.onload = () => heroStage.current?.show(code, image);
+      image.onload = () => stageOf(thing.id).current?.show(code, image);
       image.src = url;
     }
   }
@@ -280,8 +288,8 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
                     shape={houseShape(one.model)}
                     picked={null}
                     onPick={() => {}}
-                    stage={heroStage}
-                    onReady={dressHero}
+                    stage={stageOf(one.id)}
+                    onReady={() => dressHero(one)}
                   />
                 </div>
               ) : one.seller ? (
@@ -302,8 +310,8 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
                     shape={houseShape(one.model)}
                     picked={null}
                     onPick={() => {}}
-                    stage={heroStage}
-                    onReady={dressHero}
+                    stage={stageOf(one.id)}
+                    onReady={() => dressHero(one)}
                   />
                 </div>
               ) : (
