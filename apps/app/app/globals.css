@@ -8953,3 +8953,122 @@ body::after {
   color: var(--mut);
 }
 
+/* Правая колонка до открытия: дата, места, как это работает, письмо. */
+.pre-open {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.pre-open-head {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.pre-open-head > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pre-open-head b {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.pre-open-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--soft);
+}
+
+.pre-open-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pre-open-cap,
+.pre-open-utc,
+.pre-open-label {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.pre-open-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pre-open-spots,
+.pre-open-notify {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.pre-open-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.pre-open-chips span {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 0.8125rem;
+}
+
+.pre-open-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pre;
+  font-size: 0.875rem;
+  color: var(--mut);
+}
+
+.pre-open-steps li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 0.625rem;
+  align-items: start;
+  counter-increment: pre;
+}
+
+.pre-open-steps li::before {
+  content: counter(pre);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pre-open-notify .bw-note {
+  margin-top: 0;
+}
+
+.pre-open-notify .join {
+  width: 100%;
+}
+
