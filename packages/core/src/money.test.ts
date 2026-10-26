@@ -4,6 +4,7 @@ import {
   USDC_DECIMALS,
   centsToUnits,
   formatSol,
+  hasFeeSol,
   formatUsd,
   formatUsdFull,
   parseUsd,
@@ -114,5 +115,12 @@ test("витринная сумма - всегда с центами: $275.00, �
   assert.equal(formatUsdFull(17_280), "$172.80");
   assert.equal(formatUsdFull(462_000), "$4,620.00");
   assert.equal(formatUsdFull(0), "$0.00");
+});
+
+test("на комиссию сети нужен SOL: без него ставка до блока не дойдёт", () => {
+  assert.equal(hasFeeSol(0), false);
+  assert.equal(hasFeeSol(9_999), false);
+  assert.equal(hasFeeSol(10_000), true);
+  assert.equal(hasFeeSol(20_000_000n), true);
 });
 

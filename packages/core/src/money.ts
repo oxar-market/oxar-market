@@ -51,6 +51,18 @@ export function formatSol(lamports: bigint | number, digits = 4): string {
   return `${(Number(lamports) / 1e9).toFixed(digits)} SOL`;
 }
 
+/**
+ * Меньше этого SOL на кошельке - транзакцию нечем оплатить: базовая комиссия
+ * сети за одну подпись. USDC комиссию не платит, и кошелёк с одними USDC
+ * ставку подписывает, а сеть её молча отбрасывает.
+ */
+export const MIN_FEE_LAMPORTS = 10_000;
+
+/** Хватит ли SOL на комиссию сети. */
+export function hasFeeSol(lamports: bigint | number): boolean {
+  return Number(lamports) >= MIN_FEE_LAMPORTS;
+}
+
 /** Проценты, набранные человеком, в сотые доли процента; не число - null. */
 export function percentToBps(text: string): number | null {
   const value = Number(text.trim());
