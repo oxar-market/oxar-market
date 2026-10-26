@@ -6,6 +6,7 @@ import { houseShape, isShirt, ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { loadWinners } from "@/lib/winners";
 import { PhotoView } from "./auction/photo.tsx";
+import { WornLine } from "./worn-line.tsx";
 // TEMP_FRONT: тот же временный снимок и замер, что на торге и маркете.
 import { TEMP_FRONT_QUADS, TEMP_SHOTS } from "./auction/temp-photo.ts";
 
@@ -108,6 +109,7 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
         </span>
         <h2 className="hero-name">{held.title}</h2>
         {held.about && <p className="hero-about">{held.about}</p>}
+        <WornLine worn={held.worn} />
         <p className="hero-who">
           {logos} {logos === 1 ? "logo" : "logos"} placed. Closed{" "}
           {new Date(held.closesAt).toLocaleDateString("en-US", {

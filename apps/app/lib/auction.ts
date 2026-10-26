@@ -370,7 +370,12 @@ export type MarketThing = {
   about: string | null;
   /** Сколько всего ставок сделано по местам вещи. */
   bids: number;
+  /** Кто носит вещь, где и когда - те же строки, что на странице торга. */
+  worn: Worn;
 };
+
+/** Кто носит вещь, где и когда. Пусто - ещё не объявлено. */
+export type Worn = { by: string | null; where: string | null; when: string | null };
 
 /** Анонс: вещь уже в каталоге, но торга на неё ещё не заводили. */
 export type UpcomingThing = {
@@ -413,6 +418,7 @@ export type HeldRow = {
   bids: number;
   /** Описание вещи - под названием на слайде прошедшего торга. */
   about: string | null;
+  worn: Worn;
 };
 
 /**
@@ -445,7 +451,7 @@ export async function loadMarket(): Promise<{
   // он открыл торг и админ её одобрил; до торга анонсом она не идёт.
   const { data: raw } = await db
     .from("things")
-    .select("id, title, tagline, seller, house, prepared, opens_at, photos, proof_photos, model_url, hologram_url, placed_on, partner, partner_url, worn_about, lots(id, status)")
+    .select("id, title, tagline, seller, house, prepared, opens_at, photos, proof_photos, model_url, hologram_url, placed_on, partner, partner_url, worn_about, worn_by, worn_where, worn_when, lots(id, status)")
     .eq("active", true)
     .order("created_at");
   // И вещи, подготовленные нами за продавца: их анонсируем как свои.
@@ -465,6 +471,11 @@ export async function loadMarket(): Promise<{
       cover: coverOf(one.photos as string[] | null, one.proof_photos as string[] | null, one.model_url as string | null),
       bids: 0,
       about: (one.worn_about as string | null) ?? (one.tagline as string | null) ?? null,
+      worn: {
+        by: (one.worn_by as string | null) ?? null,
+        where: (one.worn_where as string | null) ?? null,
+        when: (one.worn_when as string | null) ?? null,
+      },
     }));
   // Черновики считаем за отсутствие торга: админ их видит, публика - нет,
   // и анонс у обоих должен быть одинаковым.
@@ -493,7 +504,7 @@ export async function loadMarket(): Promise<{
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, proof_photos, model_url, hologram_url, worn_about)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, proof_photos, model_url, hologram_url, worn_about, worn_by, worn_where, worn_when)",
     )
     .in("status", ["open", "won", "unsold", "refunded"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -520,6 +531,9 @@ export async function loadMarket(): Promise<{
       model_url?: string | null;
       hologram_url?: string | null;
       worn_about?: string | null;
+      worn_by?: string | null;
+      worn_where?: string | null;
+      worn_when?: string | null;
     } | null;
     // Лоты с открытым торгом видны всем, а вещь - только одобренная. Вещь
     // продавца, которую мы ещё не вывели на маркет, в показ не идёт, даже
@@ -552,6 +566,7 @@ export async function loadMarket(): Promise<{
           hologram: info.prepared ? info.hologram_url || info.model_url || null : null,
           about: info.worn_about ?? null,
           bids: 0,
+          worn: { by: info.worn_by ?? null, where: info.worn_where ?? null, when: info.worn_when ?? null },
         });
       known.spots += 1;
       openLots.push({ thing: lot.thing_id, lot: lot.id });
@@ -580,6 +595,7 @@ export async function loadMarket(): Promise<{
           cover: coverOf(info.photos, info.proof_photos, info.model_url),
           bids: 0,
           about: info.worn_about ?? info.tagline ?? null,
+          worn: { by: info.worn_by ?? null, where: info.worn_where ?? null, when: info.worn_when ?? null },
         } satisfies HeldRow);
       if (lot.status === "won" && top) row.raisedCents += top.amount_cents;
       heldBy.set(key, row);
