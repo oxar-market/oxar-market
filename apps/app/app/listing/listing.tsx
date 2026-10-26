@@ -258,20 +258,18 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           <button type="button" className="case-back" onClick={onBack}>
             &larr; Market
           </button>
-          {started && closesAt !== null && closesAt > now && (
-            <span className="live-badge">
-              <i aria-hidden />
-              LIVE
-            </span>
-          )}
           {thing.seller && <SellerLine seller={thing.seller} house={ours} />}
           <h1>{thing.title}</h1>
-          {pot > 0 && (
-            <p className="lot-pot">
-              <strong>{formatUsd(pot)}</strong> bid so far
-            </p>
-          )}
-          <ShareAuction thingId={thingId} />
+          {/* Сумма и «поделиться» - одной строкой: столбиком угол был
+              перегружен. LIVE переехал к часам - он про время торга. */}
+          <div className="lot-meta">
+            {pot > 0 && (
+              <p className="lot-pot">
+                <strong>{formatUsd(pot)}</strong> bid so far
+              </p>
+            )}
+            <ShareAuction thingId={thingId} />
+          </div>
         </div>
         <div className="lot-side">
           {!started && opensAt !== null && (
@@ -284,7 +282,17 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           )}
           {started && closesAt !== null && (
             <div className="lot-cd">
-              <span className="lot-cd-cap">Auction ends in</span>
+              {closesAt > now ? (
+                <span className="lot-cd-live">
+                  <span className="live-badge">
+                    <i aria-hidden />
+                    LIVE
+                  </span>
+                  Auction ends in
+                </span>
+              ) : (
+                <span className="lot-cd-cap">Auction ended</span>
+              )}
               <span className="lot-cd-num" suppressHydrationWarning>
                 {clock(closesAt - now)}
               </span>
