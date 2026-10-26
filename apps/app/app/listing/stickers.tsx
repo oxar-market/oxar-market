@@ -153,8 +153,8 @@ export function Stickers({
         </span>
       </div>
       <p className="muted small">
-        Your logo as a 10 × 10 cm sticker on the van&apos;s front or rear bumper, for the whole road trip. Fixed
-        price. Once you buy, the spot is yours and nobody can outbid it.
+        Your logo as a sticker on the van&apos;s front or rear bumper, for the whole road trip. Fixed price. Once
+        you buy, the spot is yours and nobody can outbid it.
       </p>
 
       {recent.length > 0 && (
