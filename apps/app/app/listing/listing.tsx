@@ -11,6 +11,7 @@ import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
 import { PhotoView } from "../auction/photo.tsx";
 import { ShareAuction, ShareBid } from "../auction/share.tsx";
+import { Notify } from "../notify-me.tsx";
 import { TIE } from "@oxar/stage";
 import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
 import { useAdmin } from "../admin/use-admin.ts";
@@ -644,10 +645,49 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         </button>
       )}
 
+      {/* До открытия правая колонка - не пустая: когда открывается, какие
+          места пойдут с торгов, как это работает и письмо на открытие. */}
       {!started && opensAt !== null && (
-        <p className="lot-state">
-          <strong>Bidding opens {new Date(opensAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</strong>
-        </p>
+        <div className="pre-open">
+          <div className="pre-open-head">
+            <span className="pre-open-icon" aria-hidden>
+              <svg viewBox="0 0 24 24">
+                <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+                <path d="M3.5 10h17M8 3v4M16 3v4" />
+              </svg>
+            </span>
+            <span>
+              <span className="pre-open-cap">Bidding opens</span>
+              <b suppressHydrationWarning>
+                {new Date(opensAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </b>
+              <span className="pre-open-utc" suppressHydrationWarning>
+                {new Date(opensAt).toLocaleString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" })} UTC
+              </span>
+            </span>
+          </div>
+
+          <div className="pre-open-spots">
+            <span className="pre-open-label">
+              {thing.spots.length} {thing.spots.length === 1 ? "spot goes" : "spots go"} to auction
+            </span>
+            <div className="pre-open-chips">
+              {thing.spots.map((spot) => (
+                <span key={spot.code}>{spot.label}</span>
+              ))}
+            </div>
+          </div>
+
+          <ol className="pre-open-steps">
+            <li>Pick a spot and bid in USDC on Solana.</li>
+            <li>Outbid? Your USDC comes back in the same transaction.</li>
+            <li>The highest bid at the close puts its logo on the thing.</li>
+          </ol>
+
+          <div className="pre-open-notify">
+            <Notify note="One email when bidding opens. No newsletter." />
+          </div>
+        </div>
       )}
 
       {/* Стикеры - не торг: показываем, когда вещь открыта, а не голограмма. */}
