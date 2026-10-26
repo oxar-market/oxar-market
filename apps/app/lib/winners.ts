@@ -173,22 +173,35 @@ export type BidEvent = {
   mediaUrl: string;
 };
 
+/** Торг целиком для экрана итогов: ставки по времени и цифры полосы. */
+export type Timeline = {
+  events: BidEvent[];
+  /** Сколько мест было на торгах в этот день. */
+  spots: number;
+  /** Сумма стартовых цен проданных мест - от неё считается рост. */
+  startCents: number;
+};
+
 /**
  * Все ставки вещи за один торг, по времени. Из них экран итогов
  * проматывает, как менялись логотипы на местах. Торг - это день закрытия:
  * у вещи их бывает несколько, и чужие сюда не подмешиваем.
  */
-export async function loadBidTimeline(thingId: string, closesOn: string): Promise<BidEvent[]> {
-  if (!db) return [];
+export async function loadBidTimeline(thingId: string, closesOn: string): Promise<Timeline> {
+  if (!db) return { events: [], spots: 0, startCents: 0 };
   const { data } = await db
     .from("lots")
-    .select("closes_at, thing_spots(label, code), lot_bids(created_at, amount_cents, brand, media_url)")
+    .select("closes_at, status, reserve_cents, thing_spots(label, code), lot_bids(created_at, amount_cents, brand, media_url)")
     .eq("thing_id", thingId)
     .in("status", ["won", "unsold", "refunded"])
     .eq("rehearsal", false);
   const out: BidEvent[] = [];
+  let spots = 0;
+  let startCents = 0;
   for (const lot of data ?? []) {
     if (closeDay(lot.closes_at) !== closeDay(closesOn)) continue;
+    spots += 1;
+    if (lot.status === "won") startCents += (lot.reserve_cents as number | null) ?? 0;
     const spot = lot.thing_spots as unknown as { label: string; code: string } | null;
     for (const bid of (lot.lot_bids as unknown as {
       created_at: string; amount_cents: number; brand: string; media_url: string;
@@ -203,5 +216,5 @@ export async function loadBidTimeline(thingId: string, closesOn: string): Promis
       });
     }
   }
-  return out.sort((a, b) => a.at.localeCompare(b.at));
+  return { events: out.sort((a, b) => a.at.localeCompare(b.at)), spots, startCents };
 }
