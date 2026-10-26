@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { closeDay, formatUsd } from "@oxar/core";
+import { closeDay, formatUsd, formatUsdFull } from "@oxar/core";
 import { ThingStage, type Stage } from "@oxar/stage";
 import { houseShape } from "@/lib/shape";
 import type { HeldRow } from "@/lib/auction";
 import { Media } from "./gallery.tsx";
-import { loadWorn, WornInfo, type Worn } from "./worn.tsx";
+import { loadWorn, type Worn } from "./worn.tsx";
+import { Usdc } from "./usdc.tsx";
 import { loadBidTimeline, loadPlacements, loadProof, loadWinners, type BidEvent, type Winner } from "@/lib/winners";
 
 /**
@@ -54,11 +55,17 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
   // История торга: все ставки по времени. Ползунок стоит на числе уже
   // случившихся ставок; по умолчанию - на конце, то есть на победителях.
   const [events, setEvents] = useState<BidEvent[]>([]);
+  const [spots, setSpots] = useState(0);
+  const [startCents, setStartCents] = useState(0);
   const [step, setStep] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   useEffect(() => {
     if (pilot) return;
-    void loadBidTimeline(held.thingId, held.closesAt).then(setEvents);
+    void loadBidTimeline(held.thingId, held.closesAt).then((line) => {
+      setEvents(line.events);
+      setSpots(line.spots);
+      setStartCents(line.startCents);
+    });
   }, [held, pilot]);
   const at = step ?? events.length;
 
@@ -120,20 +127,85 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
   const signature = list?.find((one) => one.code === picked)?.settleSignature ?? null;
   const proven = proof.length > 0;
 
-  return (
-    <>
-      <button type="button" className="case-back" onClick={onBack}>
-        &larr; Market
-      </button>
+  // Цифры полосы: сколько брендов ставило, сколько мест ушло, на сколько
+  // торг поднял стартовую цену.
+  const brands = new Set(events.map((one) => one.brand)).size;
+  const sold = (list ?? []).length;
+  const growth = startCents > 0 && held.raisedCents > startCents
+    ? Math.round(((held.raisedCents - startCents) / startCents) * 100)
+    : null;
+  // Выигравшая ставка места - самая крупная на нём: она и WON в истории.
+  const winning = new Set((list ?? []).map((one) => `${one.code}:${one.amountCents}`));
+  const history = [...events].reverse();
 
-      <div className="case-head">
-        <span className="case-pill">ENDED</span>
-        <h2 className="hero-name">{held.title}</h2>
-        <p className="hero-who">
-          Closed {day(held.closesAt)}
+  const scrub = events.length > 0 && (
+    <div className="results-timeline">
+      <div className="results-time-head">
+        <button
+          type="button"
+          className="sl-pill"
+          onClick={() => {
+            if (playing) return setPlaying(false);
+            if (at >= events.length) setStep(0);
+            setPlaying(true);
+          }}
+        >
+          {playing ? "Pause" : at >= events.length ? "Replay" : "Play"}
+        </button>
+        <b className="results-time-step">
+          Bid {at} of {events.length}
+        </b>
+        <span className="results-time-now">
+          {current
+            ? `${clock(current.at)} · ${current.brand} · ${formatUsdFull(current.amountCents)}`
+            : "Before the first bid"}
+        </span>
+      </div>
+      {/* Свой ползунок: засечка на каждую ставку, пройденное - тёмным. */}
+      <div
+        className="results-scrub"
+        style={{ "--fill": `${events.length ? (at / events.length) * 100 : 0}%` } as React.CSSProperties}
+      >
+        <div className="results-ticks" aria-hidden>
+          {events.map((one, i) => (
+            <i
+              key={i}
+              className={i < at ? "on" : ""}
+              style={{ left: `${((i + 1) / events.length) * 100}%` }}
+            />
+          ))}
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={events.length}
+          value={at}
+          aria-label="Auction timeline"
+          onChange={(event) => {
+            setPlaying(false);
+            setStep(Number(event.target.value));
+          }}
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="rs">
+      <header className="lot-top rs-top">
+        <div className="lot-title">
+          <button type="button" className="case-back" onClick={onBack}>
+            &larr; Market
+          </button>
+          <span className="hero-pill done">
+            <span className="dot" />
+            {pilot ? "Pilot placed" : "Auction ended"}
+          </span>
+          <h1>{held.title}</h1>
+          {(held.about ?? worn?.about) && <p className="rs-sub">{held.about ?? worn?.about}</p>}
           {pilot && (
-            <>
-              {" "}· with{" "}
+            <p className="rs-sub">
+              With{" "}
               {pilot.partnerUrl ? (
                 <a className="case-partner" href={pilot.partnerUrl} target="_blank" rel="noreferrer">
                   {pilot.partner}
@@ -141,88 +213,213 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
               ) : (
                 pilot.partner
               )}
-            </>
+            </p>
           )}
-        </p>
-        {/* Сколько собрали - главная цифра итогов, крупно, как ставка на маркете. */}
-        {!pilot && (
-          <p className="results-raised">
-            <b>{formatUsd(held.raisedCents)}</b>
-            <span>raised</span>
-          </p>
+        </div>
+        <div className="lot-side">
+          <div className="lot-cd">
+            <span className="lot-cd-cap">{pilot ? "Placed" : "Closed"}</span>
+            <span className="lot-cd-num">{clock(held.closesAt)}</span>
+          </div>
+        </div>
+      </header>
+
+      {!pilot && (
+        <div className="hero-stats rs-stats">
+          <div className="hero-stat-cell">
+            <span className="hero-stat-cap">Raised</span>
+            <span className="hero-stat-num">
+              {formatUsdFull(held.raisedCents)} <Usdc />
+            </span>
+          </div>
+          <div className="hero-stat-cell">
+            <span className="hero-stat-cap">Total bids</span>
+            <span className="hero-stat-num">
+              {events.length}{" "}
+              {brands > 0 && (
+                <span className="hero-stat-of">
+                  from {brands} {brands === 1 ? "brand" : "brands"}
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="hero-stat-cell">
+            <span className="hero-stat-cap">Spots sold</span>
+            <span className="hero-stat-num">
+              {sold} {spots > 0 && <span className="hero-stat-of">of {spots}</span>}
+            </span>
+          </div>
+          {growth !== null && (
+            <div className="hero-stat-cell">
+              <span className="hero-stat-cap">Over the start price</span>
+              <span className="hero-stat-num">
+                <span className="rs-up">+{growth}%</span>
+                <span className="hero-stat-of">
+                  {formatUsdFull(startCents)} to {formatUsdFull(held.raisedCents)}
+                </span>
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className={events.length > 0 ? "rs-body" : "rs-body two"}>
+        {events.length > 0 && (
+          <aside className="rs-card rs-history">
+            <div className="rs-card-head">
+              <b>Bid history</b>
+              <span>
+                {events.length} {events.length === 1 ? "bid" : "bids"}
+              </span>
+            </div>
+            <div className="rs-list">
+              {history.map((one, i) => {
+                const won = winning.has(`${one.code}:${one.amountCents}`);
+                const first = i === history.length - 1;
+                return (
+                  <div className="rs-bid" key={`${one.at}${one.brand}${one.amountCents}`}>
+                    <img src={one.mediaUrl} alt="" />
+                    <span className="rs-bid-who">
+                      <span>{one.brand}</span>
+                      <em>
+                        {one.spot} · {stamp(one.at)}
+                      </em>
+                    </span>
+                    <span className="rs-bid-amt">
+                      <b>{formatUsdFull(one.amountCents)}</b>
+                      <span className={won ? "rs-tag won" : "rs-tag"}>
+                        {won ? "WON" : first ? "FIRST BID" : "REFUNDED"}
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="rs-note">Every bid is public. Replay them on the scene.</p>
+          </aside>
         )}
+
+        <section className="rs-scene">
+          {held.house ? (
+            <div className="case-stage">
+              <ThingStage
+                shape={houseShape(held.model)}
+                picked={picked}
+                onPick={(code) => setPicked((was) => (was === code ? null : code))}
+                stage={stage}
+                onReady={() => setReady(true)}
+              />
+            </div>
+          ) : (
+            held.photo && <img className="results-photo" src={held.photo} alt={held.title} />
+          )}
+          {list && list.length > 0 && (
+            <span className="rs-sold">
+              {pilot ? "Placed with" : "Sold to"} {list.length === 1 ? list[0]!.brand : `${list.length} brands`}
+            </span>
+          )}
+          {scrub}
+        </section>
+
+        <aside className="rs-card rs-winners">
+          <div className="rs-card-head">
+            <b>Winners</b>
+            <span>
+              {sold} {sold === 1 ? "spot" : "spots"}
+            </span>
+          </div>
+          {list !== null && list.length === 0 && <p className="muted">No spot on this thing found a winner.</p>}
+          <div className="rs-win-list">
+            {(list ?? []).map((one) => (
+              <button
+                type="button"
+                key={one.lotId}
+                className={one.code === picked ? "rs-win on" : "rs-win"}
+                onClick={() => setPicked((was) => (was === one.code ? null : one.code))}
+              >
+                <img src={one.mediaUrl} alt="" />
+                <span className="rs-win-text">
+                  <span className="rs-win-spot">{one.spot}</span>
+                  <b>{one.brand}</b>
+                  {!pilot && (
+                    <span className="rs-win-sum">
+                      {formatUsdFull(one.amountCents)} <Usdc />
+                    </span>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <span className="rs-sect">What happens now</span>
+          <ol className="rs-steps">
+            <li className="done">
+              <b>{pilot ? "Placed" : "Auction ended"}</b>
+              <span>
+                {clock(held.closesAt)}.{" "}
+                {pilot ? "Spots given to the partner without bidding." : "The highest bid on each spot won."}
+              </span>
+            </li>
+            <li className={settled ? "done" : settled === false ? "now" : ""}>
+              <b>Escrow settled</b>
+              <span>
+                {pilot
+                  ? "Nothing to settle: no bids, no payment."
+                  : "Winning bids paid out. Every other bid refunded automatically."}
+              </span>
+            </li>
+            <li className={proven ? "done" : settled ? "now" : ""}>
+              <b>Preparing</b>
+              <span>Winning artwork goes on the thing as uploaded.</span>
+            </li>
+            <li className={proven ? "done" : ""}>
+              <b>{worn?.when ? `In use: ${worn.when}` : "In use"}</b>
+              <span>{worn?.where ?? "Place to be announced."}</span>
+            </li>
+            <li className={proven ? "done" : ""}>
+              <b>{worn?.proofBy ? `Proof by ${day(worn.proofBy)}` : "Proof"}</b>
+              <span>Photos of the thing in use appear here.</span>
+            </li>
+          </ol>
+          {/* Чем разобрали выбранное место: подпись и ссылка в обозреватель.
+              Пусто без выбранного места и у торгов, разобранных до того, как
+              подпись стали хранить. */}
+          {signature && (
+            <div className="rs-foot">
+              <span className="mono">Settlement {short(signature)}</span>
+              <a href={`https://solscan.io/tx/${signature}`} target="_blank" rel="noreferrer">
+                View on Solscan
+              </a>
+            </div>
+          )}
+        </aside>
       </div>
 
       {/* Покупатель места должен знать, на ком, где и когда будет вещь. */}
-      <WornInfo thingId={held.thingId} />
-
-      {held.house ? (
-        <div className="case-stage">
-          <ThingStage
-            shape={houseShape(held.model)}
-            picked={picked}
-            onPick={(code) => setPicked((was) => (was === code ? null : code))}
-            stage={stage}
-            onReady={() => setReady(true)}
-          />
-        </div>
-      ) : (
-        held.photo && <img className="results-photo" src={held.photo} alt={held.title} />
-      )}
-
-      {events.length > 0 && (
-        <div className="results-timeline">
-          <div className="results-time-head">
-            <button
-              type="button"
-              className="sl-pill"
-              onClick={() => {
-                if (playing) return setPlaying(false);
-                if (at >= events.length) setStep(0);
-                setPlaying(true);
-              }}
-            >
-              {playing ? "Pause" : at >= events.length ? "Replay" : "Play"}
-            </button>
-            <span className="results-time-now">
-              {current
-                ? `${clock(current.at)} · ${current.spot} · ${current.brand} ${formatUsd(current.amountCents)}`
-                : "Before the first bid"}
-            </span>
+      {worn && (worn.by || worn.where || worn.when || worn.proofBy) && (
+        <dl className="worn rs-worn">
+          <div>
+            <dt>Who has it</dt>
+            <dd className={worn.by ? "" : "tba"}>{worn.by ?? "To be announced"}</dd>
           </div>
-          {/* Свой ползунок: засечка на каждую ставку, пройденное - красным. */}
-          <div
-            className="results-scrub"
-            style={{ "--fill": `${events.length ? (at / events.length) * 100 : 0}%` } as React.CSSProperties}
-          >
-            <div className="results-ticks" aria-hidden>
-              {events.map((one, i) => (
-                <i
-                  key={i}
-                  className={i < at ? "on" : ""}
-                  style={{ left: `${((i + 1) / events.length) * 100}%` }}
-                />
-              ))}
+          <div>
+            <dt>Where</dt>
+            <dd className={worn.where ? "" : "tba"}>{worn.where ?? "To be announced"}</dd>
+          </div>
+          <div>
+            <dt>When</dt>
+            <dd className={worn.when ? "" : "tba"}>{worn.when ?? "To be announced"}</dd>
+          </div>
+          {worn.proofBy && (
+            <div>
+              <dt>Proof by</dt>
+              <dd>{new Date(worn.proofBy).toLocaleDateString("en-US", { month: "long", day: "numeric" })}</dd>
             </div>
-            <input
-              type="range"
-              min={0}
-              max={events.length}
-              value={at}
-              aria-label="Auction timeline"
-              onChange={(event) => {
-                setPlaying(false);
-                setStep(Number(event.target.value));
-              }}
-            />
-          </div>
-          <span className="muted">
-            {at} of {events.length} bids
-          </span>
-        </div>
+          )}
+        </dl>
       )}
 
-      <div className="case-proof">
+      <div className={proven ? "case-proof rs-proof" : "case-proof rs-proof empty"}>
         <span className="case-proof-head">Proof</span>
         {proven ? (
           <div className="proof-shots">
@@ -231,66 +428,12 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
             ))}
           </div>
         ) : (
-          <span className="muted">Photos of the thing in use will appear here.</span>
+          <span className="muted">
+            Photos of the thing in use will appear here{worn?.when ? ` after ${worn.when}` : ""}.
+          </span>
         )}
       </div>
-
-      <h2 className="mk-head">Winners</h2>
-      {list !== null && list.length === 0 && <p className="muted">No spot on this thing found a winner.</p>}
-      <div className="held-list">
-        {(list ?? []).map((one) => (
-          <button
-            type="button"
-            key={one.lotId}
-            className={one.code === picked ? "case-row results-row on" : "case-row results-row"}
-            onClick={() => setPicked((was) => (was === one.code ? null : one.code))}
-          >
-            <img className="results-logo" src={one.mediaUrl} alt="" />
-            <span className="results-spot">{one.spot}</span>
-            <span className="results-brand">{one.brand}</span>
-            <span className="results-sum">{pilot ? "Placed" : formatUsd(one.amountCents)}</span>
-          </button>
-        ))}
-      </div>
-
-      <h2 className="mk-head">What happens now</h2>
-      <ol className="rs-steps">
-        <li className="done">
-          <b>Auction ended</b>
-          <span>{clock(held.closesAt)}. The highest bid on each spot won.</span>
-        </li>
-        <li className={settled ? "done" : settled === false ? "now" : ""}>
-          <b>Escrow settled</b>
-          <span>
-            {pilot
-              ? "Nothing to settle: the spots were placed without bids or payment."
-              : "Winning bids paid out. Every other bid refunded automatically."}
-          </span>
-        </li>
-        <li className={proven ? "done" : settled ? "now" : ""}>
-          <b>Preparing</b>
-          <span>Winning artwork goes on the thing as uploaded.</span>
-        </li>
-        <li className={proven ? "done" : ""}>
-          <b>Proof</b>
-          <span>
-            {worn?.when ? `From ${worn.when}` : "Date to be announced"}. Photos of the thing in use
-            appear here.
-          </span>
-        </li>
-      </ol>
-      {/* Чем разобрали выбранное место: подпись и ссылка в обозреватель.
-          Пусто без выбранного места и у торгов, разобранных до того, как
-          подпись стали хранить. */}
-      {signature && (
-        <div className="rs-foot">
-          <span className="mono">Settlement {short(signature)}</span>
-          <a href={`https://solscan.io/tx/${signature}`} target="_blank" rel="noreferrer">
-            View on Solscan
-          </a>
-        </div>
-      )}
-    </>
+    </div>
   );
 }
 
@@ -302,6 +445,12 @@ function short(at: string): string {
 /** Время ставки по часам читателя: торг идёт неделю, поэтому и с днём. */
 function clock(at: string): string {
   return new Date(at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+/** Время ставки в истории - коротко, сутками: «Oct 17, 10:05». */
+function stamp(at: string): string {
+  const when = new Date(at);
+  return `${when.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${when.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 function day(at: string): string {
