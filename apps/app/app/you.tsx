@@ -284,7 +284,7 @@ export function You({
         </h1>
       )}
 
-      <div className={bare ? "you-layout bare" : "you-layout"}>
+      <div className={bare ? "you-layout bare" : pane === "admin" || pane === "sales" ? "you-layout wide" : "you-layout"}>
         {!bare && (
           <nav className="you-nav" aria-label="Your account">
             {panes.map((one) => (

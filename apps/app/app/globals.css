@@ -8039,5 +8039,15 @@ body::after {
   .you-main {
     max-width: 44rem;
   }
+
+  /* Админке и кабинету продавца - вся ширина: у них свои таблицы и формы,
+     и в колонке обзора им тесно. */
+  .app:has(.you-layout.wide) {
+    max-width: 76rem;
+  }
+
+  .you-layout.wide .you-main {
+    max-width: none;
+  }
 }
 
