@@ -220,7 +220,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
   }
 
   return (
-    <section className="screen">
+    <section className="screen market">
       <h1 className="mk-title">
         OXAR <span>Market</span>
       </h1>
@@ -249,7 +249,6 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       {things.map((one) => {
         const opensAt = one.opensAt === null ? null : Date.parse(one.opensAt);
         const opensLater = !hasOpened(opensAt, now);
-        const clock = heroClock(opensAt, Date.parse(one.closesAt), now);
         // Наша вещь не футболка: снимков для фото-режима у неё нет, только сцена.
         const ownModel = !one.seller && !isShirt(one.model);
         // Вещь продавца без снимков, но с моделью (ван): показываем модель,
@@ -332,36 +331,22 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
               </span>
               )}
             </div>
-            <div className="hero-card">
-              <div>
-                <h2 className="hero-name">{one.title}</h2>
-                {/* Часы - строкой под названием, а не плашками на фото: на
-                    телефоне пилюля и таймер стояли на разной высоте и
-                    вылезали за края снимка. */}
-                <span className="hero-clock" suppressHydrationWarning>
-                  <span className={clock.urgent ? "dot urgent" : "dot"} />
-                  {clock.text}
-                </span>
-                {one.tagline && <p className="hero-who">{one.tagline}</p>}
-                {one.owner && <SellerLine seller={one.owner} house={one.house} />}
-              </div>
-              <div className="hero-stat">
-                <span className="muted">
-                  {one.taken} of {one.spots} spots taken
-                </span>
-                {one.topCents > 0 && (
-                  <span className="hero-top">
-                    {formatUsd(one.topCents)}{" "}
-                    <span className="hero-top-cap">top bid</span>
-                  </span>
-                )}
-              </div>
+            {/* Текст - колонкой слева от вещи на широком экране и под ней на
+                телефоне. Часы и суммы - в полосе цифр под каруселью. */}
+            <div className="hero-text">
+              <span className="hero-pill">
+                <span className={opensLater ? "dot soon" : "dot"} />
+                {opensLater ? "Opens soon" : "Live auction"}
+              </span>
+              <h2 className="hero-name">{one.title}</h2>
+              {one.tagline && <p className="hero-who">{one.tagline}</p>}
+              {one.owner && <SellerLine seller={one.owner} house={one.house} />}
               <button
                 type="button"
-                className="primary wide"
+                className="primary hero-go"
                 onClick={() => onOpenAuction(one.seller ? one.id : undefined)}
               >
-                Open
+                View auction <span aria-hidden>&rarr;</span>
               </button>
             </div>
           </div>
@@ -413,6 +398,13 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
           ))}
         </div>
       )}
+
+      <HeroStats
+        live={slide < things.length ? things[slide] : undefined}
+        soon={slide >= things.length ? upcoming[slide - things.length] : undefined}
+        past={slide === things.length + upcoming.length ? held[0] : undefined}
+        now={now}
+      />
 
       <div className="mk-strip">
         {week.map((one) => {
@@ -466,22 +458,44 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
         </div>
       ))}
 
-      <h2 className="mk-head">Past</h2>
-      {/* Одним списком, свежие сверху: пилот - такая же строка истории, как
-          торги, и стоит по своей дате, а не первым навсегда. */}
-      <div className="held-list">
+      <h2 className="mk-head">Past auctions</h2>
+      {/* Карточками, свежие первыми: пилот - такая же карточка истории, как
+          торги, и стоит по своей дате. Картинка - снимок, а не сцена: четыре
+          живые модели рядом грузили бы телефон. */}
+      <div className="past-grid">
         {[...held, ...pilots]
           .sort((a, b) => Date.parse(b.closesAt) - Date.parse(a.closesAt))
           .map((one) => (
             <button
               type="button"
-              className="held-row held-pilot"
+              className="past-card"
               key={one.closesAt + one.title}
               onClick={() => setResult(one)}
             >
-              <span className="held-date">{day(one.closesAt)}</span>
-              <span className="held-name">{one.title}</span>
-              <span className="held-sum">{one.pilot ? "Pilot" : formatUsd(one.raisedCents)}</span>
+              <span className="past-cover">
+                {one.cover && (
+                  <img
+                    className={one.cover.startsWith("/models/") ? "still" : undefined}
+                    src={one.cover}
+                    alt=""
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                )}
+              </span>
+              <span className="past-name">{one.title}</span>
+              <span className="past-kind">{one.pilot ? "Pilot · Placed" : "Auction · Ended"}</span>
+              {!one.pilot && (
+                <span className="past-sum">
+                  {formatUsd(one.raisedCents)} <span className="usdc-chip">USDC</span>
+                </span>
+              )}
+              <span className="past-foot">
+                <span>{one.pilot ? one.pilot.partner : `${one.bids} ${one.bids === 1 ? "bid" : "bids"}`}</span>
+                <span>{day(one.closesAt)}</span>
+              </span>
             </button>
           ))}
       </div>
@@ -561,51 +575,121 @@ function Upcoming({ thing, onOpen }: { thing: UpcomingThing; onOpen: () => void 
             <SoonHologram model={thing.model} />
           </div>
         )}
-        <span className="now-pill">
-          <span className="dot" />
-          COMING SOON
-        </span>
       </div>
-      {thing.house ? (
-        // Наша неназванная вещь: подпись под знаком вопроса, без рамки -
-        // карточка с одной строкой текста смотрелась пустой.
-        <div className="hero-note">
-          <h2 className="hero-name">{thing.title}</h2>
-          <span className="muted">
+      <div className="hero-text">
+        <span className="hero-pill">
+          <span className="dot soon" />
+          Coming soon
+        </span>
+        <h2 className="hero-name">{thing.title}</h2>
+        {thing.house ? (
+          // Наша неназванная вещь: что это и когда - скажет анонс.
+          <p className="hero-who">
             Our next thing. What it is and when bidding opens will be announced here and by email.
-          </span>
-        </div>
-      ) : (
-        <div className="hero-card">
-          <div>
-            <h2 className="hero-name">{thing.title}</h2>
+          </p>
+        ) : (
+          <>
             {thing.tagline && <p className="hero-who">{thing.tagline}</p>}
             {thing.owner && <SellerLine seller={thing.owner} house={thing.house} />}
-          </div>
-          {thing.opensAt ? (
-            <span className="muted">
-              Bidding opens{" "}
-              {new Date(thing.opensAt).toLocaleString("en-US", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-              .
-            </span>
-          ) : (
-            <span className="muted">Opening date to be announced.</span>
-          )}
-          {(thing.seller || thing.prepared) && (
-            <button type="button" className="primary wide" onClick={onOpen}>
-              Open
-            </button>
-          )}
-        </div>
-      )}
+          </>
+        )}
+        {(thing.seller || thing.prepared) && (
+          <button type="button" className="primary hero-go" onClick={onOpen}>
+            View auction <span aria-hidden>&rarr;</span>
+          </button>
+        )}
+      </div>
     </div>
   );
+}
+
+/**
+ * Полоса цифр под каруселью - про вещь на экране: у идущего торга сколько
+ * поставлено, сколько мест занято и сколько осталось; у анонса - когда
+ * откроется; у прошедшего - сколько собрали.
+ */
+function HeroStats({
+  live,
+  soon,
+  past,
+  now,
+}: {
+  live?: MarketThing;
+  soon?: UpcomingThing;
+  past?: HeldRow;
+  now: number;
+}) {
+  if (live) {
+    const opensAt = live.opensAt === null ? null : Date.parse(live.opensAt);
+    const clock = heroClock(opensAt, Date.parse(live.closesAt), now);
+    const later = !hasOpened(opensAt, now);
+    return (
+      <div className="hero-stats">
+        <div className="hero-stat-cell">
+          <span className="hero-stat-cap">Bid so far</span>
+          <span className="hero-stat-num">
+            {formatUsd(live.raisedCents)} <span className="usdc-chip">USDC</span>
+          </span>
+        </div>
+        <div className="hero-stat-cell">
+          <span className="hero-stat-cap">Spots taken</span>
+          <span className="hero-stat-num">
+            {live.taken} <span className="hero-stat-of">of {live.spots}</span>
+          </span>
+        </div>
+        <div className="hero-stat-cell">
+          <span className="hero-stat-cap">{later ? "Opens in" : "Ends in"}</span>
+          <span className="hero-stat-num hero-stat-clock" suppressHydrationWarning>
+            <span className={clock.urgent ? "dot urgent" : "dot"} />
+            {left(later ? (opensAt as number) : Date.parse(live.closesAt), now)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  if (soon) {
+    return (
+      <div className="hero-stats">
+        <div className="hero-stat-cell">
+          <span className="hero-stat-cap">Bidding opens</span>
+          <span className="hero-stat-num" suppressHydrationWarning>
+            {soon.opensAt
+              ? new Date(soon.opensAt).toLocaleString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "To be announced"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  if (past) {
+    return (
+      <div className="hero-stats">
+        <div className="hero-stat-cell">
+          <span className="hero-stat-cap">Raised</span>
+          <span className="hero-stat-num">
+            {formatUsd(past.raisedCents)} <span className="usdc-chip">USDC</span>
+          </span>
+        </div>
+        <div className="hero-stat-cell">
+          <span className="hero-stat-cap">Bids</span>
+          <span className="hero-stat-num">{past.bids}</span>
+        </div>
+        <div className="hero-stat-cell">
+          <span className="hero-stat-cap">Closed</span>
+          <span className="hero-stat-num">
+            {new Date(past.closesAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return null;
 }
 
 type Group = {
