@@ -8928,3 +8928,28 @@ body::after {
   }
 }
 
+/* Шапка торга проще: сумма и «поделиться» одной строкой под названием, LIVE
+   - над часами в карточке таймера. */
+.lot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 1.25rem;
+}
+
+.lot-meta .lot-pot {
+  margin: 0;
+}
+
+.lot:has(.lot-body) .lot-meta .share-auction {
+  margin-top: 0;
+}
+
+.lot-cd-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  color: var(--mut);
+}
+
