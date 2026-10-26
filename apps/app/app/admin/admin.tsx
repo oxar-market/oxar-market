@@ -27,6 +27,7 @@ import { reviewState } from "@/lib/thing-review";
 import { Disputes } from "./disputes.tsx";
 import { PrepareThing } from "./prepare.tsx";
 import { GiveToSeller } from "./give.tsx";
+import { FeeTerms } from "./terms.tsx";
 import { loadDisputes } from "@/lib/arbiter";
 
 /**
@@ -38,7 +39,7 @@ export function Admin() {
   const [things, setThings] = useState<AdminThing[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   // Люди и вещи - разные очереди: заявки в продавцы не тонут среди вещей.
-  const [section, setSection] = useState<"people" | "things" | "disputes">("things");
+  const [section, setSection] = useState<"people" | "things" | "disputes" | "fee">("things");
   // Сколько ждут решения - число на вкладке, чтобы было видно, есть ли дело.
   const [people, setPeople] = useState(0);
   // Нерешённые споры: деньги мест заморожены, пока арбитр не решит.
@@ -78,8 +79,8 @@ export function Admin() {
 
   const sections = (
     <div className="role-toggle slim">
-      {(["things", "people", "disputes"] as const).map((one) => {
-        const count = one === "things" ? toReview : one === "people" ? people : disputes;
+      {(["things", "people", "disputes", "fee"] as const).map((one) => {
+        const count = one === "things" ? toReview : one === "people" ? people : one === "disputes" ? disputes : 0;
         return (
           <button
             key={one}
@@ -87,7 +88,7 @@ export function Admin() {
             className={section === one ? "role-tab on" : "role-tab"}
             onClick={() => setSection(one)}
           >
-            {one === "things" ? "Things" : one === "people" ? "People" : "Disputes"}
+            {one === "things" ? "Things" : one === "people" ? "People" : one === "disputes" ? "Disputes" : "Fee"}
             {count > 0 && <span className="ad-count">{count}</span>}
           </button>
         );
@@ -100,6 +101,15 @@ export function Admin() {
       <>
         {sections}
         <Disputes onCount={setDisputes} />
+      </>
+    );
+  }
+
+  if (section === "fee") {
+    return (
+      <>
+        {sections}
+        <FeeTerms />
       </>
     );
   }
