@@ -114,26 +114,47 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     };
   }, [lot?.id]);
 
-  // Логотипы лидеров и своя примерка - на модель, как у футболки.
-  function dress() {
-    if (!thing) return;
+  // Логотипы лидеров и своя примерка - на модель, как у футболки. Ответ -
+  // когда все картинки легли (или не загрузились).
+  function dress(): Promise<void> {
+    if (!thing) return Promise.resolve();
+    const jobs: Promise<void>[] = [];
     for (const spot of thing.spots) {
       const one = lotOf(spot.code);
       const url = art[spot.code]?.url ?? (one ? tops[one.id]?.media_url : undefined);
       if (!url) continue;
-      const image = new Image();
-      // CORS - только логотипам из хранилища. Своя примерка - blob-ссылка, и
-      // Safari на iPhone с crossOrigin на ней картинку не грузил: на телефоне
-      // загруженное фото на вещи не появлялось.
-      if (!url.startsWith("blob:")) image.crossOrigin = "anonymous";
-      image.onload = () => stage.current?.show(spot.code, image);
-      image.src = url;
+      jobs.push(
+        new Promise((done) => {
+          const image = new Image();
+          // CORS - только логотипам из хранилища. Своя примерка - blob-ссылка, и
+          // Safari на iPhone с crossOrigin на ней картинку не грузил: на телефоне
+          // загруженное фото на вещи не появлялось.
+          if (!url.startsWith("blob:")) image.crossOrigin = "anonymous";
+          image.onload = () => {
+            stage.current?.show(spot.code, image);
+            done();
+          };
+          image.onerror = () => done();
+          image.src = url;
+        }),
+      );
     }
+    return Promise.all(jobs).then(() => undefined);
   }
+  // Фото-режим - снимки, переснятые со сцены с логотипами на вещи: прежде
+  // логотип ложился плоской картинкой по углам места поверх голого снимка,
+  // и на изогнутой двери вана разъезжался и вылезал за кузов.
+  const [shotsNow, setShotsNow] = useState<string[] | null>(null);
   useEffect(() => {
-    if (look === "live") dress();
+    let live = true;
+    void dress().then(() => {
+      if (live && look === "shot") setShotsNow(stage.current?.shots() ?? null);
+    });
+    return () => {
+      live = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tops, art, look]);
+  }, [tops, art, look, stuck, views]);
 
   // Стикеры - на вещь, когда сцена собралась (тогда приходят и ракурсы).
   // Каждый стикер покупки - отдельная наклейка: купил три - три на бампере.
@@ -155,7 +176,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     ).then((loaded) => {
       // Не загрузившийся логотип оставляет свою ячейку пустой, а не сдвигает
       // остальных: у каждого стикера своё место на бампере.
-      if (live) stage.current?.stickers(loaded);
+      if (!live) return;
+      stage.current?.stickers(loaded);
+      // Фото-режим переснимаем: стикеры тоже должны быть на кадре.
+      if (look === "shot") setShotsNow(stage.current?.shots() ?? null);
     });
     return () => {
       live = false;
@@ -332,18 +356,20 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                 stage={stage}
                 onReady={(ready) => {
                   setViews(ready);
-                  dress();
+                  void dress();
                 }}
               />
             </div>
             {look === "shot" && views.shots[photo] && (
               <div className="ls-shots">
                 <PhotoView
-                  shot={views.shots[photo]!}
+                  shot={shotsNow?.[photo] ?? views.shots[photo]!}
                   quads={views.quads[photo] ?? {}}
                   picked={picked ?? ""}
                   onPick={choose}
-                  art={shownArt}
+                  // Логотипы уже на переснятом кадре; поверх - только пока он
+                  // не готов, иначе они легли бы дважды.
+                  art={shotsNow ? {} : shownArt}
                   spots={scene.spots}
                 />
               </div>

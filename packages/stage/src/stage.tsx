@@ -70,6 +70,12 @@ export type Stage = {
    */
   snapshot(azimuth: number): HTMLCanvasElement | null;
   /**
+   * Снять ракурсы заново - с тем, что сейчас на вещи. Те же четыре кадра и те
+   * же углы мест, что пришли в `onReady`: фото-режим подменяет ими снимки, и
+   * логотип на изогнутой панели лежит по форме, а не плоской картинкой.
+   */
+  shots(): string[];
+  /**
    * Наклеить купленные стикеры: по одному на ячейку вещи, в порядке покупок,
    * в настоящий размер в сантиметрах. Зов заново заменяет прежние. Вещь без
    * ячеек и стикеры сверх ячеек не рисует. `null` - ячейка остаётся пустой.
@@ -1025,6 +1031,9 @@ export function ThingStage({
             aimFrom = decal ? near : far;
             arriving = true;
           },
+          shots() {
+            return capture(false).shots;
+          },
           snapshot(azimuth) {
             // Тот же способ, что у снимков ракурсов ниже, но с тем, что
             // сейчас на вещи: поделиться ставкой - значит показать логотип.
@@ -1074,7 +1083,9 @@ export function ThingStage({
          * сейчас на вещи», и перерисовывать её на каждую картинку значило бы
          * гонять рендер ради ногтя.
          */
-        const views = (() => {
+        // Снимки ракурсов. Первый раз - сразу после сборки, с кадрами-превью
+        // оклеек; потом фото-режим зовёт ещё раз, уже с логотипами на вещи.
+        const capture = (full: boolean): Views => {
           // Крупнее, чем нужно кнопке: этот же кадр показывает фото-режим во
           // всю сцену, и там триста двадцать точек читались бы как каша.
           // Длинную вещь снимаем широким кадром: в квадрате ван сбоку был
@@ -1196,6 +1207,7 @@ export function ThingStage({
           // капот или крыло панель не повторяла и резала её криво.
           // Кадр меньше основного: превью - узкая карточка, а не вся сцена.
           const marked: Record<string, string> = {};
+          if (full) {
           const small = document.createElement("canvas");
           small.width = Math.round(broad * 0.6);
           small.height = Math.round(tall * 0.6);
@@ -1225,6 +1237,7 @@ export function ThingStage({
             marked[spot.code] = shoot(best, smallTarget, small, smallInk, smallPixels);
           }
           smallTarget.dispose();
+          }
 
           renderer.setRenderTarget(null);
           target.dispose();
@@ -1233,7 +1246,8 @@ export function ThingStage({
           chosen = wasChosen;
           restyle();
           return { shots, quads, marked };
-        })();
+        };
+        const views = capture(true);
 
         const resize = () => {
           if (!host.clientWidth || !host.clientHeight) return;
