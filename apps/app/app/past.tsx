@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { closeDay, formatUsd } from "@oxar/core";
+import { closeDay } from "@oxar/core";
 import { houseShape, isShirt, ThingStage, type Stage } from "@oxar/stage";
 import type { HeldRow } from "@/lib/auction";
 import { loadWinners } from "@/lib/winners";
@@ -78,10 +78,10 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
             art={art}
           />
         ) : (
-          // Вещь продавца: его снимок, модели к ней у нас нет.
-          held.photo && (
+          // Вещь продавца: его снимок, а нет снимка - пруф или кадр модели.
+          (held.photo ?? held.cover) && (
             <button type="button" className="hero-shot" onClick={onOpen}>
-              <img src={held.photo} alt={held.title} />
+              <img src={(held.photo ?? held.cover) as string} alt={held.title} />
             </button>
           )
         )}
@@ -99,29 +99,24 @@ export function PastHero({ held, onOpen }: { held: HeldRow; onOpen: () => void }
             ))}
           </span>
         )}
-        <span className="now-pill done">SOLD</span>
       </div>
-      <div className="hero-card">
-        <div>
-          <h2 className="hero-name">{held.title}</h2>
-          <p className="hero-who">
-            Closed{" "}
-            {new Date(held.closesAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </p>
-        </div>
-        <div className="hero-stat">
-          <span className="muted">
-            {logos} {logos === 1 ? "logo" : "logos"} placed
-          </span>
-          <span className="hero-top">
-            {formatUsd(held.raisedCents)} <span className="hero-top-cap">raised</span>
-          </span>
-        </div>
-        <button type="button" className="primary wide" onClick={onOpen}>
-          See results
+      {/* Текст - как у живого торга; сколько собрали - в полосе цифр. */}
+      <div className="hero-text">
+        <span className="hero-pill done">
+          <span className="dot" />
+          Sold
+        </span>
+        <h2 className="hero-name">{held.title}</h2>
+        <p className="hero-who">
+          {logos} {logos === 1 ? "logo" : "logos"} placed. Closed{" "}
+          {new Date(held.closesAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })}
+          .
+        </p>
+        <button type="button" className="primary hero-go" onClick={onOpen}>
+          See results <span aria-hidden>&rarr;</span>
         </button>
       </div>
     </div>

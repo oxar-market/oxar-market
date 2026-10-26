@@ -400,7 +400,25 @@ export type HeldRow = {
   /** Наша вещь - у неё 3D-модель; у вещи продавца - снимок. */
   house: boolean;
   photo: string | null;
+  /**
+   * Картинка карточки прошедшего торга: снимок вещи, иначе пруф, иначе
+   * статичный кадр модели. Живая сцена в каждой карточке грузила бы телефон.
+   */
+  cover: string | null;
+  /** Сколько ставок было за торг. У пилота - ноль. */
+  bids: number;
 };
+
+/**
+ * Картинка карточки прошедшего торга. Кадр модели лежит рядом с ней тем же
+ * именем (tie.glb - tie.webp); его нет - карточка без картинки.
+ */
+function coverOf(photos: string[] | null | undefined, proof: string[] | null | undefined, model: string | null | undefined): string | null {
+  if (photos?.[0]) return photoUrl(photos[0]);
+  if (proof?.[0]) return photoUrl(proof[0]);
+  if (model && model.startsWith("/models/")) return model.replace(/\.glb(\?.*)?$/, ".webp");
+  return null;
+}
 
 /**
  * Витрина маркета: идущие торги по вещам и прошедшие - строками.
@@ -421,7 +439,7 @@ export async function loadMarket(): Promise<{
   // он открыл торг и админ её одобрил; до торга анонсом она не идёт.
   const { data: raw } = await db
     .from("things")
-    .select("id, title, tagline, seller, house, prepared, opens_at, photos, model_url, hologram_url, placed_on, partner, partner_url, lots(id, status)")
+    .select("id, title, tagline, seller, house, prepared, opens_at, photos, proof_photos, model_url, hologram_url, placed_on, partner, partner_url, lots(id, status)")
     .eq("active", true)
     .order("created_at");
   // И вещи, подготовленные нами за продавца: их анонсируем как свои.
@@ -438,6 +456,8 @@ export async function loadMarket(): Promise<{
       photo: null,
       model: (one.model_url as string) || null,
       pilot: { partner: (one.partner as string | null) ?? "", partnerUrl: (one.partner_url as string | null) ?? null },
+      cover: coverOf(one.photos as string[] | null, one.proof_photos as string[] | null, one.model_url as string | null),
+      bids: 0,
     }));
   // Черновики считаем за отсутствие торга: админ их видит, публика - нет,
   // и анонс у обоих должен быть одинаковым.
@@ -466,7 +486,7 @@ export async function loadMarket(): Promise<{
   const { data } = await db
     .from("lots")
     .select(
-      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, model_url, hologram_url)",
+      "id, status, opens_at, closes_at, thing_id, thing_spots(code), things:thing_id(title, tagline, active, seller, house, prepared, photos, proof_photos, model_url, hologram_url)",
     )
     .in("status", ["open", "won", "unsold", "refunded"])
     .gte("closes_at", new Date(PUBLIC_OPENING).toISOString())
@@ -478,6 +498,7 @@ export async function loadMarket(): Promise<{
 
   const things = new Map<string, MarketThing>();
   const heldBy = new Map<string, HeldRow>();
+  const heldLots: { key: string; lot: string }[] = [];
   for (const lot of data) {
     const info = lot.things as unknown as {
       title?: string;
@@ -487,6 +508,7 @@ export async function loadMarket(): Promise<{
       house?: boolean;
       prepared?: boolean;
       photos?: string[] | null;
+      proof_photos?: string[] | null;
       model_url?: string | null;
       hologram_url?: string | null;
     } | null;
@@ -543,10 +565,20 @@ export async function loadMarket(): Promise<{
           // Снимок нашей вещи лежит в самом приложении, путём от корня.
           photo: info.photos?.[0] ? photoUrl(info.photos[0]) : null,
           model: info.model_url || null,
+          cover: coverOf(info.photos, info.proof_photos, info.model_url),
+          bids: 0,
         } satisfies HeldRow);
       if (lot.status === "won" && top) row.raisedCents += top.amount_cents;
       heldBy.set(key, row);
+      heldLots.push({ key, lot: lot.id });
     }
+  }
+
+  // Число ставок за торг - на карточке прошедшего торга.
+  const counts = await loadBidCounts(heldLots.map((one) => one.lot));
+  for (const { key, lot } of heldLots) {
+    const row = heldBy.get(key);
+    if (row) row.bids += counts[lot] ?? 0;
   }
 
   return {
