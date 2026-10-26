@@ -44,7 +44,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // Общая лента: все ставки на все места, чтобы было видно, где идёт торг,
   // а не только историю выбранного места.
   const [feed, setFeed] = useState<Bid[]>([]);
-  const [feedOf, setFeedOf] = useState<"all" | "spot">("all");
+  const [feedOf, setFeedOf] = useState<"all" | "spot" | "logos">("all");
   const [photo, setPhoto] = useState(0);
   // Какой ракурс вещи сейчас перед зрителем: для полоски ракурсов и кнопки
   // поворота.
@@ -63,6 +63,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [views, setViews] = useState<Views>({ shots: [], quads: [] });
   // Купленные стикеры: сцена клеит их на вещь, когда соберётся.
   const [stuck, setStuck] = useState<PaidSticker[]>([]);
+  // Цена одного стикера - для сумм во вкладке «Logos».
+  const [stickerCents, setStickerCents] = useState(0);
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
   const [shared, setShared] = useState<{ cents: number; brand: string; mine: boolean } | null>(null);
@@ -245,6 +247,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // Колонка ставок - пока идёт торг: до открытия ставить некуда, и пустая
   // колонка слева только сдвигала бы вещь.
   const showBids = started && lots.length > 0;
+  const logoCount = stuck.reduce((sum, one) => sum + one.count, 0);
 
   return (
     <section className="lot">
@@ -691,7 +694,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       )}
 
       {/* Стикеры - не торг: показываем, когда вещь открыта, а не голограмма. */}
-      {thing.stickerSheet && !ghost && <Stickers thingId={thingId} sheetId={thing.stickerSheet} onPaid={setStuck} />}
+      {thing.stickerSheet && !ghost && <Stickers
+          thingId={thingId}
+          sheetId={thing.stickerSheet}
+          onPaid={(paid, cents) => {
+            setStuck(paid);
+            setStickerCents(cents);
+          }}
+        />}
       </div>
 
       {showBids && (
@@ -717,12 +727,39 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                 {spotLabel}
               </button>
             )}
+            {stuck.length > 0 && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={feedOf === "logos"}
+                className={feedOf === "logos" ? "feed-tab on" : "feed-tab"}
+                onClick={() => setFeedOf("logos")}
+              >
+                Logos
+              </button>
+            )}
             <span className="feed-count">
-              {(feedOf === "all" ? feed : bids).length} {(feedOf === "all" ? feed : bids).length === 1 ? "bid" : "bids"}
+              {feedOf === "logos"
+                ? `${logoCount} ${logoCount === 1 ? "logo" : "logos"}`
+                : `${(feedOf === "all" ? feed : bids).length} ${(feedOf === "all" ? feed : bids).length === 1 ? "bid" : "bids"}`}
             </span>
           </div>
           <div className="feed-list">
-            {feedOf === "all" ? (
+            {feedOf === "logos" ? (
+              // Логотипы на бампере: купленные по фиксированной цене, свежие
+              // первыми. Не торг - перебить их нельзя, поэтому метка своя.
+              [...stuck].reverse().map((one) => (
+                <div key={one.id} className="bid-row">
+                  <img className="bid-row-art" src={one.logoUrl} alt="" />
+                  <span className="bid-row-who">
+                    <span>{one.name}</span>
+                    <em>Bumper{one.count > 1 ? ` · ×${one.count}` : ""}</em>
+                  </span>
+                  <span className="tagchip">BOUGHT</span>
+                  <span className="bid-row-amt">{formatUsd(stickerCents * one.count)}</span>
+                </div>
+              ))
+            ) : feedOf === "all" ? (
               <>
                 {feed.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
                 {feed.map((bid) => {

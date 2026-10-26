@@ -38,8 +38,11 @@ export function Stickers({
 }: {
   thingId: string;
   sheetId: string;
-  /** Оплаченные стикеры в порядке покупок - сцена клеит их на вещь. */
-  onPaid?: (paid: PaidSticker[]) => void;
+  /**
+   * Оплаченные стикеры в порядке покупок и цена одного - сцена клеит их на
+   * вещь, а лента слева показывает вкладкой «Logos».
+   */
+  onPaid?: (paid: PaidSticker[], priceCents: number) => void;
 }) {
   const { authenticated } = usePrivy();
   const { login } = useLogin();
@@ -48,7 +51,6 @@ export function Stickers({
   const wallet = wallets[0];
 
   const [sheet, setSheet] = useState<ChainSheet | null>(null);
-  const [paid, setPaid] = useState<PaidSticker[]>([]);
   const [name, setName] = useState("");
   const [count, setCount] = useState(1);
   const [logo, setLogo] = useState<{ url: string; file: File } | null>(null);
@@ -62,8 +64,7 @@ export function Stickers({
     void loadStickers(thingId, sheetId).then((loaded) => {
       if (!live || !loaded) return;
       setSheet(loaded.sheet);
-      setPaid(loaded.paid);
-      onPaid?.(loaded.paid);
+      onPaid?.(loaded.paid, unitsToCents(loaded.sheet.price));
     });
     return () => {
       live = false;
@@ -87,9 +88,6 @@ export function Stickers({
   const price = unitsToCents(sheet.price);
   const left = sheet.cap - sheet.sold;
   const total = price * count;
-  // На стене - последние десять, свежие первыми: сотня плиток растянула бы
-  // страницу, а все стикеры и так видны на самой вещи.
-  const recent = paid.slice(-10).reverse();
 
   async function buy() {
     setError("");
@@ -152,18 +150,6 @@ export function Stickers({
           {left > 0 ? `${left} of ${sheet.cap} left` : `All ${sheet.cap} sold`} · {formatUsd(price)} each
         </span>
       </div>
-
-      {recent.length > 0 && (
-        <div className="sticker-wall" role="list" aria-label="Latest stickers on the van">
-          {recent.map((sticker) => (
-            <div key={sticker.id} className="sticker-tile" role="listitem">
-              <img src={sticker.logoUrl} alt="" />
-              <span>{sticker.name}</span>
-              {sticker.count > 1 && <em>×{sticker.count}</em>}
-            </div>
-          ))}
-        </div>
-      )}
 
       {left > 0 &&
         (!authenticated ? (
