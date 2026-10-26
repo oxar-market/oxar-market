@@ -18,8 +18,10 @@ import {
   unitsToCents,
 } from "@oxar/core";
 import {
+  NO_FEE_SOL,
   WALLET_CHAIN,
   bidTransaction,
+  lacksFeeSol,
   readLot,
   readSale,
   sendSigned,
@@ -165,6 +167,10 @@ export function BidForm({
       if (cents < least) {
         return setError(`The bid has to be at least ${formatUsd(least)} now.`);
       }
+
+      // Без SOL на комиссию ставку сеть не примет - говорим это до подписи,
+      // а не через полминуты «потеряли ставку».
+      if (await lacksFeeSol(new PublicKey(wallet.address))) return setError(NO_FEE_SOL);
 
       const mediaUrl = await uploadCreative(lot.id, art.file);
       if (!mediaUrl) return setError("Could not upload the artwork. Try again.");

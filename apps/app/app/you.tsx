@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { useExportWallet } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
 import { avatarLetter, formatUsd, shortWallet, spotName, unitsToCents, type Score } from "@oxar/core";
 import { BUILD } from "@/lib/build";
@@ -119,6 +120,10 @@ export function You({
     return () => clearInterval(tick);
   }, []);
 
+  // Ключ кошелька Privy - в окне Privy на его же домене: приложение ключа не
+  // видит, человек копирует его в Phantom или Solflare сам.
+  const { exportWallet } = useExportWallet();
+  const [exportFailed, setExportFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   function copyAddress() {
     if (!wallet) return;
@@ -254,6 +259,27 @@ export function You({
             Send USDC, plus a little SOL for fees, on the Solana network to
             the address above. Anything sent on another network is lost.
           </p>
+        </div>
+      )}
+
+      {embedded && (
+        <div className="funds">
+          <span className="funds-head">Use it in another wallet</span>
+          <p className="role-note">
+            Export the private key and import it into Phantom or Solflare. Privy shows the key in its
+            own window - OXAR never sees it. Anyone with this key controls the wallet.
+          </p>
+          <button
+            type="button"
+            className="ghost small export-key"
+            onClick={() => {
+              setExportFailed(false);
+              exportWallet(wallet ? { address: wallet } : undefined).catch(() => setExportFailed(true));
+            }}
+          >
+            Export private key
+          </button>
+          {exportFailed && <p className="bad">Could not open the export window. Sign in again and retry.</p>}
         </div>
       )}
 

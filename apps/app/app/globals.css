@@ -9088,3 +9088,9 @@ body::after {
   width: 100%;
 }
 
+/* Экспорт ключа - тихой кнопкой под подписью, не во всю ширину. */
+.export-key {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+

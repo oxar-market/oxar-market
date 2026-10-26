@@ -16,7 +16,7 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
-import { ACCOUNT_OVERHEAD, EXTEND_SECONDS, centsToUnits } from "@oxar/core";
+import { ACCOUNT_OVERHEAD, EXTEND_SECONDS, centsToUnits, hasFeeSol } from "@oxar/core";
 
 /**
  * Разговор со своей программой на Solana.
@@ -416,6 +416,21 @@ export async function bidTransaction(
     }).compileToV0Message(),
   );
 }
+
+/**
+ * Нечем заплатить комиссию сети: на кошельке нет SOL. Кошелёк Privy рождается
+ * пустым, люди кладут на него только USDC - и ставка подписывается, а сеть её
+ * молча отбрасывает (отправка без предпроверки), и человек видел «потеряли
+ * ставку». Баланс не прочитался - не мешаем: пусть решает сеть.
+ */
+export async function lacksFeeSol(owner: PublicKey): Promise<boolean> {
+  const lamports = await connection.getBalance(owner).catch(() => null);
+  return lamports !== null && !hasFeeSol(lamports);
+}
+
+/** Что сказать человеку без SOL на комиссию. */
+export const NO_FEE_SOL =
+  "Your wallet has no SOL for the network fee. Send about 0.01 SOL to your wallet address (You, Wallet) and try again. Nothing was charged.";
 
 /**
  * Отправить подписанную транзакцию через нашу ноду и вернуть её подпись.

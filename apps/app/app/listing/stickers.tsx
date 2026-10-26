@@ -9,8 +9,10 @@ import {
 import { PublicKey } from "@solana/web3.js";
 import { BRAND_MAX, cleanBrand, formatUsd, unitsToCents } from "@oxar/core";
 import {
+  NO_FEE_SOL,
   WALLET_CHAIN,
   buyStickersTransaction,
+  lacksFeeSol,
   readSheet,
   sendSigned,
   settled,
@@ -106,6 +108,9 @@ export function Stickers({
         setSheet(fresh);
         return setError(fresh.sold >= fresh.cap ? "All stickers are sold." : `Only ${fresh.cap - fresh.sold} left.`);
       }
+
+      // Без SOL на комиссию покупку сеть не примет - говорим это до подписи.
+      if (await lacksFeeSol(new PublicKey(wallet.address))) return setError(NO_FEE_SOL);
 
       const logoUrl = await uploadCreative(`stickers-${thingId}`, logo.file);
       if (!logoUrl) return setError("Could not upload the logo. Try again.");
