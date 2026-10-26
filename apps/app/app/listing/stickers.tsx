@@ -152,10 +152,6 @@ export function Stickers({
           {left > 0 ? `${left} of ${sheet.cap} left` : `All ${sheet.cap} sold`} · {formatUsd(price)} each
         </span>
       </div>
-      <p className="muted small">
-        Your logo as a sticker on the van&apos;s front or rear bumper, for the whole road trip. Fixed price. Once
-        you buy, the spot is yours and nobody can outbid it.
-      </p>
 
       {recent.length > 0 && (
         <div className="sticker-wall" role="list" aria-label="Latest stickers on the van">
