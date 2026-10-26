@@ -8610,3 +8610,17 @@ body::after {
   }
 }
 
+/* Комиссия площадки в админке: нынешний процент крупно. */
+.ad-fee-now {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--mut);
+}
+
+.ad-fee-now b {
+  margin-right: 0.375rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+

@@ -34,6 +34,8 @@ import { ACCOUNT_OVERHEAD, EXTEND_SECONDS, centsToUnits } from "@oxar/core";
 
 /** Адрес программы. Он вшит в неё саму (`declare_id!`) и одинаков во всех сетях. */
 const PROGRAM_ID = new PublicKey("4zBp61iGL7f9zybTfrtwydUZmM2WxRsskedqFNdHiDpe");
+/** Загрузчик программ: у него лежит право на обновление нашей. */
+const LOADER_UPGRADEABLE = new PublicKey("BPFLoaderUpgradeab1e11111111111111111111111");
 
 /** `bidder_places_bid` из IDL. */
 const PLACE_BID = new Uint8Array([172, 147, 26, 172, 0, 179, 171, 148]);
@@ -148,6 +150,8 @@ const MOVE_PROOF = new Uint8Array([51, 172, 4, 45, 206, 188, 43, 192]);
 /** Разрешение админа на торг без пруфа - из IDL. */
 const PERMIT_SALE = new Uint8Array([159, 156, 93, 203, 15, 186, 204, 167]);
 const REVOKE_PERMIT = new Uint8Array([90, 92, 105, 98, 172, 168, 160, 230]);
+/** Условия площадки - из IDL: комиссия, касса, монета, админ. */
+const SET_TERMS = new Uint8Array([184, 202, 182, 27, 206, 9, 24, 159]);
 
 function join(...parts: Uint8Array[]): Uint8Array {
   const out = new Uint8Array(parts.reduce((sum, one) => sum + one.length, 0));
@@ -180,6 +184,19 @@ export function decideData(sellerBps: number): Uint8Array {
   const bps = new Uint8Array(2);
   new DataView(bps.buffer).setUint16(0, sellerBps, true);
   return join(DECIDE, bps);
+}
+
+/**
+ * Новая комиссия площадки в сотых процента. Админство не передаётся
+ * (new_admin = None): передача необратима, и кнопки для неё нет нарочно.
+ */
+export function termsData(feeBps: number): Uint8Array {
+  if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 10_000) {
+    throw new Error("комиссия - целое число от 0 до 10 000 сотых процента");
+  }
+  const bps = new Uint8Array(2);
+  new DataView(bps.buffer).setUint16(0, feeBps, true);
+  return join(SET_TERMS, bps, new Uint8Array([0]));
 }
 
 /** Перенос срока пруфа: новое время - миллисекунды на входе, секунды в программу. */
@@ -586,6 +603,47 @@ export function revokePermitInstruction(admin: PublicKey, saleId: string): Trans
       { pubkey: admin, isSigner: true, isWritable: true },
       { pubkey: CONFIG, isSigner: false, isWritable: false },
       { pubkey: permitAddress(saleId), isSigner: false, isWritable: true },
+    ],
+  });
+}
+
+/** Условия площадки: кто админ, куда идёт комиссия, какая она, какая монета. */
+export type Terms = { admin: PublicKey; platform: PublicKey; feeBps: number; mint: PublicKey };
+
+/** Разбор аккаунта настроек: 8 байт метки, admin, platform, fee_bps, bump, mint. */
+export function decodeConfig(data: Uint8Array): Terms {
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  return {
+    admin: new PublicKey(data.slice(8, 40)),
+    platform: new PublicKey(data.slice(40, 72)),
+    feeBps: view.getUint16(72, true),
+    mint: new PublicKey(data.slice(75, 107)),
+  };
+}
+
+/** Нынешние условия площадки из сети. null - настроек нет или не прочитались. */
+export async function readTerms(): Promise<Terms | null> {
+  const account = await connection.getAccountInfo(CONFIG);
+  return account ? decodeConfig(account.data) : null;
+}
+
+/**
+ * Админ меняет комиссию. Касса и монета передаются нынешние: инструкция
+ * пишет все поля разом, и пустое поле обнулило бы кассу. Действует только на
+ * торги, открытые после: у открытых комиссия вморожена при открытии.
+ */
+export function termsInstruction(admin: PublicKey, terms: Terms, feeBps: number): TransactionInstruction {
+  const programData = PublicKey.findProgramAddressSync([PROGRAM_ID.toBytes()], LOADER_UPGRADEABLE)[0];
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    data: Buffer.from(termsData(feeBps)),
+    keys: [
+      { pubkey: admin, isSigner: true, isWritable: true },
+      { pubkey: CONFIG, isSigner: false, isWritable: true },
+      { pubkey: terms.platform, isSigner: false, isWritable: false },
+      { pubkey: terms.mint, isSigner: false, isWritable: false },
+      { pubkey: programData, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
   });
 }

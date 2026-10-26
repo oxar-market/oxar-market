@@ -14,6 +14,8 @@ import {
   permitAddress,
   permitData,
   revokePermitData,
+  termsData,
+  decodeConfig,
   saleAddress,
   openStickersData,
   buyStickersData,
@@ -242,3 +244,30 @@ test("адреса листа и покупок: свой у каждого но
   assert.ok(!orderAddress(sheet, 0).equals(orderAddress(sheet, 1)));
   assert.ok(!sheet.equals(saleAddress(SALE_ID)), "адрес листа совпал с адресом торга");
 });
+
+test("смена комиссии кодируется байт в байт как у Anchor, админство не передаётся", () => {
+  // Образцы сняты BorshInstructionCoder по IDL: fee_bps 1000 и 750, new_admin = None.
+  const b64 = (data: Uint8Array) => Buffer.from(data).toString("base64");
+  assert.equal(b64(termsData(1000)), "uMq2G84JGJ/oAwA=");
+  assert.equal(b64(termsData(750)), "uMq2G84JGJ/uAgA=");
+  assert.throws(() => termsData(10_001), "комиссия больше ста процентов");
+  assert.throws(() => termsData(12.5), "комиссия не целым числом");
+});
+
+test("настройки площадки читаются из аккаунта: админ, касса, комиссия, монета", () => {
+  const admin = new PublicKey("AkC8BHHNJQ61fXVsHVnWsferBm4PC6t8oT8YwRmrwDtB");
+  const platform = new PublicKey("HTnptfEEkqjr7ZiQs7E39a7a4cuo7tX9JNRych2sRJPv");
+  const mint = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+  const data = new Uint8Array(8 + 32 + 32 + 2 + 1 + 32);
+  data.set(admin.toBytes(), 8);
+  data.set(platform.toBytes(), 40);
+  new DataView(data.buffer).setUint16(72, 1000, true);
+  data[74] = 254;
+  data.set(mint.toBytes(), 75);
+  const terms = decodeConfig(data);
+  assert.ok(terms.admin.equals(admin));
+  assert.ok(terms.platform.equals(platform));
+  assert.equal(terms.feeBps, 1000);
+  assert.ok(terms.mint.equals(mint));
+});
+

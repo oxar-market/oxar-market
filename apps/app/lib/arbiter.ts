@@ -9,7 +9,9 @@ import {
   decodeLot,
   moveProofInstruction,
   readSale,
+  readTerms,
   settled,
+  termsInstruction,
   type ChainLot,
   type ChainSale,
 } from "./chain.ts";
@@ -192,3 +194,14 @@ export async function moveProof(sale: PublicKey, newDeadlineMs: number) {
   }
   return result;
 }
+
+/**
+ * Сменить комиссию площадки. Условия перечитываются из сети прямо перед
+ * подписью: касса и монета уходят ровно те, что записаны сейчас.
+ */
+export async function changeFee(feeBps: number) {
+  const terms = await readTerms().catch(() => null);
+  if (!terms) return { ok: false as const, why: "Could not read the current terms from the network." };
+  return signInPhantom((admin) => [termsInstruction(admin, terms, feeBps)]);
+}
+
