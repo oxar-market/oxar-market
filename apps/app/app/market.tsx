@@ -90,7 +90,10 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
   // знают и точки под ней, и строки списка - строка текущего подсвечена.
   const rail = useRef<HTMLDivElement | null>(null);
   const [slide, setSlide] = useState(0);
-  const slides = things.length + upcoming.length + (held[0] ? 1 : 0);
+  // Прошедшие торги - последними слайдами, три свежих: карусель показывает,
+  // что здесь уже печатали, и листается, даже когда живого торга нет.
+  const recent = held.slice(0, 3);
+  const slides = things.length + upcoming.length + recent.length;
   // Высота карусели - по текущему слайду, а не по самому высокому: иначе
   // под короткой карточкой «Unknown item» лежала пустота в рост карточки
   // прошлого торга, и полоса недели уезжала вниз.
@@ -377,7 +380,9 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       {/* Последний закрытый торг - последним слайдом, и когда живые идут
           тоже: он показывает, что здесь уже печатали, а это и есть довод
           ставить. Прежде он стоял плашкой под каруселью, и только в паузу. */}
-      {held[0] && <PastHero held={held[0]} onOpen={() => setResult(held[0]!)} />}
+      {recent.map((one) => (
+        <PastHero key={one.thingId + one.closesAt} held={one} onOpen={() => setResult(one)} />
+      ))}
       </div>
       {/* Стрелки по бокам вещи: точки под каруселью легко не заметить. */}
       {slides > 1 && (
@@ -419,7 +424,7 @@ export function Market({ onOpenAuction }: { onOpenAuction: (thingId?: string) =>
       <HeroStats
         live={slide < things.length ? things[slide] : undefined}
         soon={slide >= things.length ? upcoming[slide - things.length] : undefined}
-        past={slide === things.length + upcoming.length ? held[0] : undefined}
+        past={slide >= things.length + upcoming.length ? recent[slide - things.length - upcoming.length] : undefined}
         now={now}
       />
 
