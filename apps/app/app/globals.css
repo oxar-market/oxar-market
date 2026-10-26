@@ -6623,7 +6623,7 @@ body::after {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
     flex: 1 1 auto;
-    min-height: 12rem;
+    min-height: 7.5rem;
     overflow-x: hidden;
     overflow-y: auto;
     scrollbar-width: thin;
@@ -6715,10 +6715,18 @@ body::after {
     flex: none;
   }
 
+  /* Стикеры - без черт и с малыми отступами: форма покупки целиком влезает
+     в карточку, а список мест над ней ужимается и прокручивается. */
   .lot-right .stickers {
-    margin-top: 1.5rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--line);
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+  }
+
+  .lot-right .stickers .pick-head {
+    height: auto;
+    margin: 0;
+    padding: 0;
+    border-bottom: 0;
   }
 
   /* Одна сетка для обеих колонок: шапка одной высоты и с одной чертой, под
