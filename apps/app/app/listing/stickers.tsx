@@ -192,7 +192,7 @@ export function Stickers({
               )}
             </label>
 
-            <div className="bumps" role="group" aria-label="How many stickers">
+            <div className="bumps sticker-stepper" role="group" aria-label="How many stickers">
               <button type="button" className="bump" disabled={count <= 1} onClick={() => setCount(count - 1)}>
                 -
               </button>
