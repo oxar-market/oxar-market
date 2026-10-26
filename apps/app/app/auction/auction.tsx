@@ -28,6 +28,7 @@ import { NoEmailHint } from "../notify.tsx";
 import { PhotoView } from "./photo.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
+import { db } from "@/lib/session";
 import { ListingAuction } from "../listing/listing.tsx";
 import { WornInfo } from "../worn.tsx";
 // TEMP_FRONT: временный замер на чужом снимке. Подробности и список того, что
@@ -976,62 +977,170 @@ export function Between({ onBack }: { onBack?: () => void } = {}) {
   // вещи показывали бы её по-разному в зависимости от того, откуда пришёл.
   if (next?.thingId && onBack) return <ListingAuction thingId={next.thingId} onBack={onBack} />;
 
+  const soon = opensAt !== null && opensAt > now;
   return (
-    <section className="lot">
+    <section className="lot bw">
       <div className="lot-brandbar">
         <span className="mk-title">
           OXAR <span>Auction</span>
         </span>
       </div>
 
-      <div className="hero">
-        <div className="hero-photo in3d">
+      <header className="lot-top bw-top">
+        <div className="lot-title">
+          <span className="hero-pill bw-pill">
+            <span className="dot soon" />
+            {next ? "Next thing" : "Between auctions"}
+          </span>
+          <h1>{next?.title ?? "The next auction is being prepared"}</h1>
+          <p className="bw-sub">
+            {next?.tagline ??
+              "A new thing, new spots, the same rules: every spot goes to the highest bid in USDC. Get one email the moment bidding opens."}
+          </p>
+        </div>
+        <div className="lot-side">
+          <div className="lot-cd">
+            <span className="lot-cd-cap">{soon ? "Bidding opens in" : "Bidding opens"}</span>
+            <span className="lot-cd-num" suppressHydrationWarning>
+              {soon ? clockOf(opensAt as number, now) : "To be announced"}
+            </span>
+            {!soon && <span className="bw-hint">The date shows here first</span>}
+          </div>
+        </div>
+      </header>
+
+      <div className="bw-body">
+        <aside className="rs-card bw-how">
+          <div className="rs-card-head">
+            <b>How it works</b>
+          </div>
+          <ol className="bw-steps">
+            <li>
+              <span className="bw-n">1</span>
+              <span>
+                <b>We announce the thing</b>
+                What it is, who has it, where and when. All before bidding opens.
+              </span>
+            </li>
+            <li>
+              <span className="bw-n">2</span>
+              <span>
+                <b>Bidding runs for a few days</b>
+                Every marked spot is its own auction. A late bid extends the clock.
+              </span>
+            </li>
+            <li>
+              <span className="bw-n">3</span>
+              <span>
+                <b>The highest bid wins the spot</b>
+                Outbid? Your USDC comes back in the same transaction.
+              </span>
+            </li>
+            <li>
+              <span className="bw-n">4</span>
+              <span>
+                <b>Proof, then payout</b>
+                Your money stays in escrow until the thing is shown in use.
+              </span>
+            </li>
+          </ol>
+          <div className="bw-facts">
+            <span>
+              <svg viewBox="0 0 24 24" aria-hidden>
+                <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+              Escrow on Solana, every bid is public
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" aria-hidden>
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              72 hours to check the proof
+            </span>
+          </div>
+        </aside>
+
+        {/* Вещь - живой голограммой, как на торге до открытия: знак вопроса,
+            пока вещь не объявлена, и её модель, когда объявлена. */}
+        <section className="bw-scene">
           <div className="hero-stage between-scene">
             <SoonHologram model={next?.model} />
           </div>
-          <span className="now-pill">
-            <span className="dot" />
-            NEXT THING
-          </span>
-        </div>
-        <div className="hero-card">
-          <div>
-            <h2 className="hero-name">{next?.title ?? "Not announced yet"}</h2>
-            <p className="hero-who">
-              {next?.tagline
-                ? next.tagline
-                : next
+          <span className="rs-sold bw-tag">Next thing</span>
+          <div className="bw-glass">
+            <span>
+              <b>{next ? "Announced" : "Not announced yet"}</b>
+              {next
                 ? "Who has it, where and when show up here before bidding opens."
-                : "The thing is not decided yet. Details show up here before bidding opens."}
-            </p>
-          </div>
-          <div className="hero-stat">
-            <span className="muted">{opensAt !== null && opensAt > now ? "Bidding opens in" : "Bidding opens"}</span>
-            {opensAt !== null && opensAt > now ? (
-              <span className="hero-top" suppressHydrationWarning>
-                {clockOf(opensAt, now)}
-              </span>
-            ) : (
-              <span className="hero-top word">Soon</span>
+                : "What it is, who has it, where and when show up here before bidding opens."}
+            </span>
+            {onBack && (
+              <button type="button" className="sl-btn light bw-last" onClick={onBack}>
+                See the last auction &rarr;
+              </button>
             )}
           </div>
-          {/* Шаги в той же карточке: под ней они читались выпавшими. */}
-          <ol className="between-steps">
-            <li>
-              <b>We announce the thing</b>
-              <span>What it is, who has it, where and when - all before bidding opens.</span>
-            </li>
-            <li>
-              <b>Bidding runs for a few days</b>
-              <span>Every marked spot on it is auctioned. A late bid extends the clock.</span>
-            </li>
-            <li>
-              <b>The highest bid wins the spot</b>
-              <span>Winning logos go on the thing, and photos of it in use show up here.</span>
-            </li>
-          </ol>
-        </div>
+        </section>
+
+        <aside className="rs-card bw-notify">
+          <div className="rs-card-head">
+            <b>Get notified</b>
+          </div>
+          <Notify />
+          <span className="bw-or">or follow along</span>
+          <a className="bw-link" href="https://x.com/oxar_app" target="_blank" rel="noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path d="M17.8 3h3l-6.6 7.6L22 21h-6.1l-4.8-6.3L5.6 21h-3l7.1-8.1L2 3h6.2l4.4 5.8L17.8 3zm-1 16.2h1.7L7.3 4.7H5.5l11.3 14.5z" />
+            </svg>
+            @oxar_app on X<span aria-hidden>&rarr;</span>
+          </a>
+          <div className="bw-seller">
+            <b>Have a thing people will see?</b>
+            A shirt on stage, a van on a road trip, a laptop at a conference. Sell spots on it.{" "}
+            <a href="/?tab=you">Apply as a seller</a>
+          </div>
+        </aside>
       </div>
     </section>
+  );
+}
+
+/** Почта на следующий торг: одно письмо, когда откроются ставки. */
+function Notify() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "done" | "failed">("idle");
+  async function join(event: React.FormEvent) {
+    event.preventDefault();
+    if (state === "sending") return;
+    if (!email.includes("@") || email.length < 5) return setState("failed");
+    setState("sending");
+    if (!db) return setState("failed");
+    const { error } = await db.from("waitlist").insert({ contact: email.trim(), side: "buyer" });
+    setState(!error || error.code === "23505" ? "done" : "failed");
+  }
+  if (state === "done") return <p className="bw-note">You are on the list. One email when the next auction opens.</p>;
+  return (
+    <>
+      <p className="bw-note">One email when the next auction opens. No newsletter.</p>
+      <form className="join" onSubmit={join}>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            if (state === "failed") setState("idle");
+          }}
+          placeholder="you@example.com"
+          aria-label="Your email"
+          autoComplete="email"
+        />
+        <button type="submit" className="primary" disabled={state === "sending"}>
+          {state === "sending" ? "Joining…" : "Notify me"}
+        </button>
+      </form>
+      {state === "failed" && <p className="bad">That did not go through. Check the address and try again.</p>}
+    </>
   );
 }
