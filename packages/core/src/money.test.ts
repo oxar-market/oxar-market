@@ -5,6 +5,7 @@ import {
   centsToUnits,
   formatSol,
   formatUsd,
+  formatUsdFull,
   parseUsd,
   payoutSplit,
   percentToBps,
@@ -107,3 +108,11 @@ test("третий знак после запятой отклоняется, а
   // Человек видел бы одну сумму, а поставил другую.
   assert.equal(parseUsd("12.505"), null);
 });
+
+test("витринная сумма - всегда с центами: $275.00, а не $275", () => {
+  assert.equal(formatUsdFull(27_500), "$275.00");
+  assert.equal(formatUsdFull(17_280), "$172.80");
+  assert.equal(formatUsdFull(462_000), "$4,620.00");
+  assert.equal(formatUsdFull(0), "$0.00");
+});
+
