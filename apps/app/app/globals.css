@@ -9094,3 +9094,264 @@ body::after {
   margin-top: 0.25rem;
 }
 
+/* ── Ставка принята: окно поверх торга. ── */
+.bid-ok-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 18, 25, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: bid-ok-fade 0.2s ease-out;
+}
+
+.bid-ok {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 34rem;
+  max-height: calc(100svh - 2rem);
+  overflow-y: auto;
+  padding: 2.25rem 1.75rem 1.75rem;
+  border-radius: 28px;
+  background: var(--bg);
+  box-shadow: 0 24px 80px rgba(15, 18, 25, 0.25);
+  text-align: center;
+  animation: bid-ok-rise 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.bid-ok-x {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.bid-ok h2 {
+  margin: 0.25rem 0 0;
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+.bid-ok-sub {
+  margin: 0 0 0.75rem;
+  max-width: 24rem;
+  color: var(--mut);
+  line-height: 1.5;
+}
+
+/* Галочка в двух кругах и лучики вокруг. */
+.bid-ok-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(20, 184, 109, 0.08);
+}
+
+.bid-ok-mark > span {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(20, 184, 109, 0.2);
+  animation: bid-ok-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) 0.1s both;
+}
+
+.bid-ok-mark svg {
+  width: 38px;
+  height: 38px;
+  fill: none;
+  stroke: #0f8a52;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bid-ok-mark i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 11px;
+  margin: -5px 0 0 -1.5px;
+  border-radius: 2px;
+  background: #14b86d;
+  transform: rotate(var(--a)) translateY(-78px);
+  animation: bid-ok-ray 0.5s ease-out 0.15s both;
+}
+
+.bid-ok-card {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+  text-align: left;
+}
+
+.bid-ok-thing {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: radial-gradient(70% 70% at 50% 55%, var(--card) 0%, var(--soft) 100%);
+  overflow: hidden;
+}
+
+.bid-ok-thing img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bid-ok-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.bid-ok-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(20, 184, 109, 0.12);
+  color: #0f8a52;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bid-ok-title {
+  margin-top: 0.25rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.bid-ok-spot,
+.bid-ok-cap {
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.bid-ok-cap {
+  margin-top: 0.5rem;
+}
+
+.bid-ok-sum {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.bid-ok-next {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 1.125rem;
+  border-radius: 16px;
+  background: var(--soft);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mut);
+  text-align: left;
+}
+
+.bid-ok-next svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.bid-ok-next b {
+  display: block;
+  margin-bottom: 0.125rem;
+  font-size: 0.9375rem;
+  color: var(--ink);
+}
+
+.bid-ok-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.bid-ok-share {
+  border-radius: 999px;
+  padding: 0.875rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bid-ok-note {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 30rem) {
+  .bid-ok {
+    padding: 2rem 1.125rem 1.25rem;
+  }
+
+  .bid-ok-card {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 0.875rem;
+  }
+
+  .bid-ok-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes bid-ok-fade {
+  from { opacity: 0; }
+}
+
+@keyframes bid-ok-rise {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+}
+
+@keyframes bid-ok-pop {
+  from { transform: scale(0.4); opacity: 0; }
+}
+
+@keyframes bid-ok-ray {
+  from { opacity: 0; transform: rotate(var(--a)) translateY(-58px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bid-ok-dim,
+  .bid-ok,
+  .bid-ok-mark > span,
+  .bid-ok-mark i {
+    animation: none;
+  }
+}
+
