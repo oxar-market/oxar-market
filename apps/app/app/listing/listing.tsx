@@ -10,7 +10,7 @@ import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
 import { BidForm } from "../auction/bid.tsx";
 import { PhotoView } from "../auction/photo.tsx";
-import { ShareAuction, ShareBid } from "../auction/share.tsx";
+import { BidSuccess, ShareAuction, ShareBid } from "../auction/share.tsx";
 import { Notify } from "../notify-me.tsx";
 import { TIE } from "@oxar/stage";
 import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
@@ -67,7 +67,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [stickerCents, setStickerCents] = useState(0);
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
-  const [shared, setShared] = useState<{ cents: number; brand: string; mine: boolean } | null>(null);
+  // fresh - ставка только что прошла: окно «Congrats!» поверх торга. Иначе -
+  // блок «поделиться» в колонке.
+  const [shared, setShared] = useState<{ cents: number; brand: string; mine: boolean; fresh?: boolean } | null>(null);
   useEffect(() => setShared(null), [picked]);
 
   useEffect(() => {
@@ -600,7 +602,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           art={picked ? art[picked] : undefined}
           onPlaced={(bid) => {
             refresh();
-            setShared({ cents: bid.cents, brand: bid.brand, mine: true });
+            setShared({ cents: bid.cents, brand: bid.brand, mine: true, fresh: true });
           }}
         >
           <label className="art-row">
@@ -646,7 +648,23 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         </BidForm>
       )}
 
-      {shared !== null && (
+      {shared !== null && shared.fresh && (
+        <BidSuccess
+          thingId={thingId}
+          stage={stage}
+          azimuth={Math.round((thing.shape?.spots.find((spot) => spot.code === picked)?.azimuth ?? 0) / 90) * 90}
+          title={thing.title}
+          spot={thing.spots.length > 1 ? spotLabel : undefined}
+          cents={shared.cents}
+          mine
+          brand={shared.brand}
+          broadcast={thing.shape?.model === TIE.model}
+          closesAt={closesAt}
+          onClose={() => setShared(null)}
+        />
+      )}
+
+      {shared !== null && !shared.fresh && (
         <ShareBid
           thingId={thingId}
           stage={stage}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
-import { formatUsd } from "@oxar/core";
+import { formatUsd, formatUsdFull } from "@oxar/core";
+import { Usdc } from "../usdc.tsx";
 import type { Stage } from "@oxar/stage";
 import { auctionLink, leadText, shareIntent, shareText, tieText, type ShareWorn } from "@/lib/share";
 import { loadWorn } from "../worn.tsx";
@@ -19,18 +20,7 @@ import { loadWorn } from "../worn.tsx";
 
 /** Телефон или планшет: палец, а не мышь. Там меню «Поделиться» ведёт в X. */
 const touch = () => window.matchMedia("(pointer: coarse)").matches;
-export function ShareBid({
-  thingId,
-  stage,
-  azimuth,
-  title,
-  spot,
-  cents,
-  brand,
-  mine = true,
-  broadcast = false,
-  onClose,
-}: {
+type ShareInput = {
   /** По нему - кто носит вещь, где и когда: это идёт в текст твита. */
   thingId: string;
   stage: RefObject<Stage | null>;
@@ -49,10 +39,17 @@ export function ShareBid({
    * сама, а картинка - заставка прямого эфира, а не справка.
    */
   broadcast?: boolean;
-  onClose: () => void;
-}) {
+};
+
+/**
+ * Картинка ставки и отправка в X - одно на окно «ставка принята» и на блок
+ * «поделиться лидерством». Снимок вещи отдаётся и отдельно: окно показывает
+ * его в карточке.
+ */
+function useShareBid({ thingId, stage, azimuth, title, spot, cents, brand, mine = true, broadcast = false }: ShareInput) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
+  const [thing, setThing] = useState("");
   const [note, setNote] = useState("");
   const [worn, setWorn] = useState<ShareWorn | undefined>(undefined);
   useEffect(() => {
@@ -69,6 +66,7 @@ export function ShareBid({
   // по нажатию, и ждать в нём сборки нельзя - жест истечёт.
   useEffect(() => {
     const shot = stage.current?.snapshot(azimuth) ?? null;
+    setThing(shot ? shot.toDataURL("image/png") : "");
     const card = broadcast
       ? drawBroadcast(shot, brand)
       : drawCard(shot, cents, title, spot, mine ? "I just bid" : "Top bid");
@@ -111,6 +109,13 @@ export function ShareBid({
     );
   }
 
+  return { file, preview, thing, note, share };
+}
+
+export function ShareBid({ onClose, ...input }: ShareInput & { onClose: () => void }) {
+  const mine = input.mine ?? true;
+  const { file, preview, note, share } = useShareBid(input);
+
   return (
     <div className="share-bid">
       <div className="share-head">
@@ -131,6 +136,88 @@ export function ShareBid({
         )}
       </div>
       {note && <p className="muted">{note}</p>}
+    </div>
+  );
+}
+
+/**
+ * Ставка принята - окном поверх торга: галочка, вещь с логотипом ставки,
+ * сумма, что дальше, и «Share on X» тут же, пока радость свежая.
+ */
+export function BidSuccess({
+  closesAt,
+  onClose,
+  ...input
+}: ShareInput & { closesAt: number | null; onClose: () => void }) {
+  const { file, thing, note, share } = useShareBid(input);
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [onClose]);
+  const closes = closesAt
+    ? new Date(closesAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    : null;
+  return (
+    <div className="bid-ok-dim" onClick={onClose}>
+      <div
+        className="bid-ok"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Bid placed"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button type="button" className="share-close bid-ok-x" aria-label="Close" onClick={onClose}>
+          &times;
+        </button>
+        <div className="bid-ok-mark" aria-hidden>
+          {Array.from({ length: 8 }, (_, i) => (
+            <i key={i} style={{ "--a": `${i * 45 + 20}deg` } as React.CSSProperties} />
+          ))}
+          <span>
+            <svg viewBox="0 0 24 24">
+              <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
+          </span>
+        </div>
+        <h2>Congrats!</h2>
+        <p className="bid-ok-sub">Your bid is in. You lead {input.spot ? `the ${input.spot}` : "this auction"} right now.</p>
+
+        <div className="bid-ok-card">
+          <span className="bid-ok-thing">{thing && <img src={thing} alt="" />}</span>
+          <span className="bid-ok-info">
+            <span className="bid-ok-pill">Leading</span>
+            <b className="bid-ok-title">{input.title}</b>
+            {input.spot && <span className="bid-ok-spot">{input.spot}</span>}
+            <span className="bid-ok-cap">Your bid</span>
+            <span className="bid-ok-sum">
+              {formatUsdFull(input.cents)} <Usdc />
+            </span>
+          </span>
+        </div>
+
+        <div className="bid-ok-next">
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5M12 8h.01" />
+          </svg>
+          <span>
+            <b>What happens next?</b>
+            If someone outbids you, your USDC comes back to your wallet in the same transaction.
+            {closes ? ` The auction closes ${closes}, and the highest bid on each spot wins.` : " The highest bid on each spot at the close wins."}
+          </span>
+        </div>
+
+        <div className="bid-ok-actions">
+          <button type="button" className="primary bid-ok-share" disabled={!file} onClick={share}>
+            Share on X
+          </button>
+          <button type="button" className="sl-btn light" onClick={onClose}>
+            Back to the auction
+          </button>
+        </div>
+        {note && <p className="muted bid-ok-note">{note}</p>}
+      </div>
     </div>
   );
 }
