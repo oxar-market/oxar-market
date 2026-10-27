@@ -44,7 +44,7 @@ export function Stickers({
    * Оплаченные стикеры в порядке покупок и цена одного - сцена клеит их на
    * вещь, а лента слева показывает вкладкой «Logos».
    */
-  onPaid?: (paid: PaidSticker[], priceCents: number) => void;
+  onPaid?: (paid: PaidSticker[], priceCents: number, left: number) => void;
 }) {
   const { authenticated } = usePrivy();
   const { login } = useLogin();
@@ -66,7 +66,7 @@ export function Stickers({
     void loadStickers(thingId, sheetId).then((loaded) => {
       if (!live || !loaded) return;
       setSheet(loaded.sheet);
-      onPaid?.(loaded.paid, unitsToCents(loaded.sheet.price));
+      onPaid?.(loaded.paid, unitsToCents(loaded.sheet.price), loaded.sheet.cap - loaded.sheet.sold);
     });
     return () => {
       live = false;

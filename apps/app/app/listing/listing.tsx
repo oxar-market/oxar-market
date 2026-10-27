@@ -35,9 +35,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // список мест, а выбрал место - форма ставки на него, без прокрутки.
   // На телефоне видно и то, и другое одной колонкой.
   const [choosing, setChoosing] = useState(true);
+  // Логотип на бампере - такая же строка списка, как места: по ней второй
+  // шаг карточки с формой покупки. Прежде он висел отдельным блоком под
+  // списком, и люди не понимали, что это и как его купить.
+  const [bumper, setBumper] = useState(false);
   function choose(code: string) {
     setPicked(code);
     setChoosing(false);
+    setBumper(false);
   }
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
   const [bids, setBids] = useState<Bid[]>([]);
@@ -65,6 +70,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [stuck, setStuck] = useState<PaidSticker[]>([]);
   // Цена одного стикера - для сумм во вкладке «Logos».
   const [stickerCents, setStickerCents] = useState(0);
+  const [stickersLeft, setStickersLeft] = useState<number | null>(null);
   // Сумма только что прошедшей ставки: под формой - поделиться ею в X.
   // Другое место - другая ставка, прежняя карточка уходит.
   // fresh - ставка только что прошла: окно «Congrats!» поверх торга. Иначе -
@@ -522,7 +528,21 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
 
       </div>
 
-      <div className={choosing ? "lot-right choosing" : "lot-right chosen"}>
+      <div className={bumper ? "lot-right bumper" : choosing ? "lot-right choosing" : "lot-right chosen"}>
+      {bumper && (
+        <>
+          <button type="button" className="spot-back bumper-back" onClick={() => setBumper(false)}>
+            &larr; All spots
+          </button>
+          <div className="spot-card bumper-card">
+            <BumperThumb width={64} height={48} />
+            <span className="spot-card-text">
+              <b>Logo on the bumper</b>
+              <span>Fixed price, not an auction. Buy it and the spot is yours.</span>
+            </span>
+          </div>
+        </>
+      )}
       {lot && running && (
         <button type="button" className="spot-back" onClick={() => setChoosing(true)}>
           &larr; All spots
@@ -587,6 +607,26 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                 </button>
               );
             })}
+            {stickersLeft !== null && stickerCents > 0 && (
+              <button
+                type="button"
+                className={bumper ? "pick-cell on" : "pick-cell"}
+                aria-pressed={bumper}
+                onClick={() => setBumper(true)}
+              >
+                <BumperThumb width={48} height={38} />
+                <span className="pick-n">Logo on the bumper</span>
+                <span className="pick-price">
+                  <span className="pick-from">fixed</span> {formatUsd(stickerCents)}
+                </span>
+                <span className="pick-count">
+                  {stickersLeft > 0 ? `${stickersLeft} left` : "Sold out"}
+                </span>
+                <span className="pick-go" aria-hidden>
+                  ›
+                </span>
+              </button>
+            )}
           </div>
         </>
       )}
@@ -741,9 +781,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       {thing.stickerSheet && !ghost && <Stickers
           thingId={thingId}
           sheetId={thing.stickerSheet}
-          onPaid={(paid, cents) => {
+          onPaid={(paid, cents, left) => {
             setStuck(paid);
             setStickerCents(cents);
+            setStickersLeft(left);
           }}
         />}
       </div>
@@ -806,7 +847,11 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             ) : feedOf === "all" ? (
               <>
                 {feed.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
-                {feed.map((bid) => {
+                {/* Лидеры сверху - кто сейчас держит места; под ними
+                    перебитые, свежие первыми. */}
+                {[...feed]
+                  .sort((a, b) => Number(tops[b.lot_id]?.id === b.id) - Number(tops[a.lot_id]?.id === a.id))
+                  .map((bid) => {
                   const where = lots.find((one) => one.id === bid.lot_id);
                   const spot = thing.spots.find((one) => one.code === where?.spot_code);
                   const leads = tops[bid.lot_id]?.id === bid.id;
@@ -948,6 +993,19 @@ function SpotThumb({ views, code, width = 44, height = 34 }: { views: Views; cod
         alt=""
         style={{ width: pct(imgW, width), height: pct(imgH, height), left: pct(width / 2 - cx, width), top: pct(height / 2 - cy, height) }}
       />
+    </span>
+  );
+}
+
+/** Миниатюра бампера: значок наклейки на плашке того же размера, что у мест. */
+function BumperThumb({ width, height }: { width: number; height: number }) {
+  return (
+    <span className="pick-thumb bumper-thumb" style={{ width, height }} aria-hidden>
+      <svg viewBox="0 0 24 24">
+        <path d="M5 4h10l4 4v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+        <path d="M15 4v4h4" />
+        <path d="M8 13h8M8 16h5" />
+      </svg>
     </span>
   );
 }

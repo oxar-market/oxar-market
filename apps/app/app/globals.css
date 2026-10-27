@@ -6110,14 +6110,16 @@ body::after {
   display: none;
 }
 
-.lot-right.chosen .spot-card {
+.lot-right.chosen .spot-card,
+.lot-right.bumper .spot-card {
   display: flex;
   align-items: center;
   gap: 0.875rem;
   margin-bottom: 1rem;
 }
 
-.lot-right.chosen .spot-card .pick-thumb {
+.lot-right.chosen .spot-card .pick-thumb,
+.lot-right.bumper .spot-card .pick-thumb {
   border-radius: 12px;
 }
 
@@ -6421,13 +6423,56 @@ body::after {
 /* Два шага одной карточки: список мест или ставка на выбранное. */
 .lot-right.choosing .bidding,
 .lot-right.choosing .share-lead,
+.lot-right.choosing .stickers,
 .lot-right.chosen .pick-head,
 .lot-right.chosen .pick-grid,
 .lot-right.chosen .stickers {
   display: none;
 }
 
-.lot-right.chosen .spot-back {
+/* Третий шаг той же карточки - логотип на бампере: свой заголовок и форма
+   покупки, всё остальное убрано. */
+.lot-right.bumper > :not(.bumper-back):not(.bumper-card):not(.stickers) {
+  display: none;
+}
+
+.lot-right.bumper .bumper-card .spot-card-text span {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+.lot-right.bumper .bumper-back {
+  display: block;
+  align-self: flex-start;
+}
+
+.lot-right.bumper .stickers {
+  margin-top: 0.5rem;
+}
+
+.lot-right.bumper .stickers .pick-title {
+  display: none;
+}
+
+.bumper-thumb {
+  display: grid !important;
+  place-items: center;
+  background: var(--soft);
+}
+
+.bumper-thumb svg {
+  width: 55%;
+  height: 55%;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lot-right.chosen .spot-back,
+.lot-right.bumper .spot-back {
   display: block;
   align-self: flex-start;
   margin: 0 0 0.5rem;
@@ -6440,7 +6485,8 @@ body::after {
   cursor: pointer;
 }
 
-.lot-right.chosen .spot-back:hover {
+.lot-right.chosen .spot-back:hover,
+.lot-right.bumper .spot-back:hover {
   color: var(--ink);
 }
 
@@ -6697,12 +6743,14 @@ body::after {
   }
 
   /* Шаг ставки в карточке плотнее: форма целиком без прокрутки. */
-  .lot-right.chosen .spot-card {
+  .lot-right.chosen .spot-card,
+.lot-right.bumper .spot-card {
     gap: 0.75rem;
     margin-bottom: 0.5rem;
   }
 
-  .lot-right.chosen .spot-card .pick-thumb {
+  .lot-right.chosen .spot-card .pick-thumb,
+.lot-right.bumper .spot-card .pick-thumb {
     width: 48px !important;
     height: 36px !important;
   }
