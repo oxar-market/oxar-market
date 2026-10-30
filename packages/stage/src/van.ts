@@ -35,6 +35,12 @@ const DOOR_SURFACES = ["carpaint", "windowglass", "material_5"];
  * без неё планка торчала поверх картинки во всю ширину.
  */
 const REAR_SURFACES = [...DOOR_SURFACES, "2glossy"];
+/**
+ * Знак на корме - на стекле: оно от 1.0 до 1.8 м, а планка над номером -
+ * 0.93-1.0 м, ровно под серединой зоны (0.46-1.81 м). По центру зоны планка
+ * резала надпись пополам; на стекле её ничто не пересекает.
+ */
+const REAR_LOGO = { y: 0.3, h: 0.4 };
 
 /**
  * Двери - отдельные детали: штамп глубже, а коробка ниже низа двери, чтобы
@@ -62,7 +68,7 @@ export const VAN_SPOTS: Spot[] = [
   { code: "van_door_l", label: "L door", height: at(0.965), azimuth: 180, shift: len(-0.655), size: [len(1.04), len(1.61)], wrap: true, parts: FRONT_L, reach: DOOR_REACH, surfaces: DOOR_SURFACES },
   { code: "van_fender_l", label: "L fender", height: at(0.85), azimuth: 180, shift: len(-1.765), size: [len(1.16), len(0.7)], wrap: true, parts: BODY },
   // Корма: задняя дверь целиком, со стеклом.
-  { code: "van_rear", label: "Rear", height: at(1.135), azimuth: -90, shift: 0, size: [len(1.82), len(1.35)], wrap: true, parts: TAILGATE, reach: DOOR_REACH, surfaces: REAR_SURFACES },
+  { code: "van_rear", label: "Rear", height: at(1.135), azimuth: -90, shift: 0, size: [len(1.82), len(1.35)], wrap: true, parts: TAILGATE, reach: DOOR_REACH, surfaces: REAR_SURFACES, logo: REAR_LOGO },
   // Сверху: сдвиг - вдоль машины, плюс - к переду. Логотип смотрит вперёд:
   // размер - поперёк машины и вдоль неё.
   { code: "van_hood", label: "Hood", height: 1, azimuth: 0, top: true, shift: len(2.06), size: [len(1.9), len(0.88)], wrap: true, parts: BODY },

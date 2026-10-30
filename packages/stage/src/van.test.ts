@@ -69,3 +69,12 @@ test("на боковых концах бамперов стикеры не ле
     for (const slot of sides) assert.ok(slot.height + 0.05 / 1.866 <= bottom + 1e-3, `${code}: ${slot.height}`);
   }
 });
+
+test("знак на корме - на стекле, выше хромовой планки над номером", () => {
+  const rear = VAN_SPOTS.find((spot) => spot.code === "van_rear");
+  assert.ok(rear?.logo, "у кормы своё место знака");
+  // Доли высоты зоны от верха: знак целиком в верхней половине - там стекло.
+  assert.ok(rear.logo.y - rear.logo.h / 2 >= 0, "знак не вылезает за верх зоны");
+  assert.ok(rear.logo.y + rear.logo.h / 2 <= 0.5, "знак не доходит до планки над номером");
+});
+

@@ -921,7 +921,7 @@ export function ThingStage({
               return;
             }
 
-            const texture = artwork(THREE, spot, image);
+            const texture = artwork(THREE, spot, image, glazed.has(spot.code));
             mine.set(code, texture);
             material.map = texture;
             // Логотип показываем как есть: синий налёт рамки на нём читался
@@ -1593,6 +1593,8 @@ function artwork(
   THREE: typeof import("three"),
   spot: Spot,
   image: HTMLImageElement,
+  /** Место заходит на стекло: знаку - тень по контуру, чтобы читался на окне. */
+  glazed = false,
 ) {
   if (spot.tile) return pattern(THREE, spot, image);
   const [wide, tall] = spot.size;
@@ -1622,12 +1624,24 @@ function artwork(
   // чужой знак нельзя. Панель вокруг не заливаем: прозрачное в знаке остаётся
   // кузовом, иначе круглый логотип превращался в сплошной цветной борт.
   if (spot.wrap) {
-    const room = { width: canvas.width * 0.72, height: canvas.height * 0.72 };
+    // Место со стеклом (корма, двери с окнами): через прозрачное в знаке
+    // светит окно с салоном, и белый знак на нём пропадал. Окно не заливаем -
+    // так места со ставкой и без выглядят одинаково, - а знаку даём мягкую
+    // тёмную тень по контуру: светлые буквы отделяются от светлого стекла.
+    if (glazed) {
+      ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
+      ctx.shadowBlur = Math.round(canvas.height * 0.025);
+    }
+    const room = {
+      width: canvas.width * 0.72,
+      height: canvas.height * (spot.logo?.h ?? 0.72),
+    };
+    const middle = canvas.height * (spot.logo?.y ?? 0.5);
     const box = fitInside(source, room);
     ctx.drawImage(
       image,
       (canvas.width - room.width) / 2 + box.x,
-      (canvas.height - room.height) / 2 + box.y,
+      middle - room.height / 2 + box.y,
       box.width,
       box.height,
     );
