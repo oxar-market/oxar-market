@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { closeDay, formatUsdFull, isOpen, nextClose } from "@oxar/core";
 import { houseShape, SOON, ThingStage, type Stage } from "@oxar/stage";
+import { Usdc } from "./usdc.tsx";
 
 /** Зазор между карточками карусели, px. Тот же, что в CSS у .live-rail. */
 const RAIL_GAP = 12;
@@ -651,13 +652,19 @@ export default function Home() {
             </div>
             <a className="live-info" href={APP_URL}>
               <span className="live-name">{past.title}</span>
-              <span className="live-cd">{formatUsdFull(past.raisedCents)}</span>
+              <span className="live-cd">
+                {formatUsdFull(past.raisedCents)} <Usdc />
+              </span>
               <span className="live-sub">
-                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} placed, closed{" "}
-                {new Date(past.closedAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
+                {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} placed,{" "}
+                {/* Дата не рвётся посередине: «Oct» и «30» на разных строках. */}
+                <span style={{ whiteSpace: "nowrap" }}>
+                  closed{" "}
+                  {new Date(past.closedAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
               </span>
               <span className="live-sub">raised</span>
               {/* Кто, где и когда - каждое своей строкой, как в табличке на
