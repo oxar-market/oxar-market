@@ -300,7 +300,9 @@ export function ResultsView({ held, onBack }: { held: HeldRow; onBack: () => voi
         )}
 
         <section className="rs-scene">
-          {held.house ? (
+          {/* Вещь продавца без снимка, но с моделью (ван) - тоже сценой, как
+              на маркете: иначе посередине пусто. */}
+          {held.house || (!held.photo && houseShape(held.model)) ? (
             <div className="case-stage">
               <ThingStage
                 shape={houseShape(held.model)}
