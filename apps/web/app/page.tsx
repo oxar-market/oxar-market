@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { closeDay, isOpen, nextClose } from "@oxar/core";
+import { closeDay, formatUsdFull, isOpen, nextClose } from "@oxar/core";
 import { houseShape, SOON, ThingStage, type Stage } from "@oxar/stage";
 
 /** Зазор между карточками карусели, px. Тот же, что в CSS у .live-rail. */
@@ -203,17 +203,18 @@ type Past = {
 
 async function loadPast(): Promise<Past | null> {
   const lots = (await rest(
-    "lots?status=eq.won&rehearsal=eq.false&select=id,closes_at,thing_id,thing_spots:spot_id(code),things:thing_id(title,house,active,model_url)&order=closes_at.desc&limit=100",
+    "lots?status=eq.won&rehearsal=eq.false&select=id,closes_at,thing_id,thing_spots:spot_id(code),things:thing_id(title,house,prepared,active,model_url)&order=closes_at.desc&limit=100",
   )) as
     | {
         id: string;
         closes_at: string;
         thing_id: string;
         thing_spots: { code: string } | null;
-        things: { title: string; house: boolean; active: boolean; model_url: string | null } | null;
+        things: { title: string; house: boolean; prepared: boolean; active: boolean; model_url: string | null } | null;
       }[]
     | null;
-  const ours = (lots ?? []).filter((one) => one.things?.house && one.things.active);
+  // Подготовленная нами вещь продавца (ван) - тоже наш кейс, как и у афиши.
+  const ours = (lots ?? []).filter((one) => one.things?.active && (one.things.house || one.things.prepared));
   const last = ours[0];
   if (!last) return null;
   // Торг - это вещь и день закрытия: у вещи их бывает несколько.
@@ -650,7 +651,7 @@ export default function Home() {
             </div>
             <a className="live-info" href={APP_URL}>
               <span className="live-name">{past.title}</span>
-              <span className="live-cd">{usd(past.raisedCents)}</span>
+              <span className="live-cd">{formatUsdFull(past.raisedCents)}</span>
               <span className="live-sub">
                 {past.logos.length} {past.logos.length === 1 ? "logo" : "logos"} placed, closed{" "}
                 {new Date(past.closedAt).toLocaleDateString("en-US", {
@@ -710,11 +711,6 @@ export default function Home() {
   );
 }
 
-
-/** Доллары из центов: «$172.80». */
-function usd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 /** Сколько осталось торгу: крупно дни, дальше часы-минуты-секунды. */
 function countdown(ms: number): string {
