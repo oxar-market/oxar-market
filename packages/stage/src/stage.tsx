@@ -921,7 +921,7 @@ export function ThingStage({
               return;
             }
 
-            const texture = artwork(THREE, spot, image);
+            const texture = artwork(THREE, spot, image, glazed.has(spot.code));
             mine.set(code, texture);
             material.map = texture;
             // Логотип показываем как есть: синий налёт рамки на нём читался
@@ -1583,6 +1583,9 @@ function selectionSheet(THREE: typeof import("three"), spot: Spot) {
   return made;
 }
 
+/** Тёмная плёнка под знаком на стекле - в тон чёрному кузову. */
+const GLASS_FILM = "#141518";
+
 /**
  * Логотип в месте: картинка, вписанная в пропорции самого места.
  *
@@ -1593,6 +1596,8 @@ function artwork(
   THREE: typeof import("three"),
   spot: Spot,
   image: HTMLImageElement,
+  /** Место заходит на стекло: под знаком - тёмная плёнка, а не окно. */
+  glazed = false,
 ) {
   if (spot.tile) return pattern(THREE, spot, image);
   const [wide, tall] = spot.size;
@@ -1622,12 +1627,24 @@ function artwork(
   // чужой знак нельзя. Панель вокруг не заливаем: прозрачное в знаке остаётся
   // кузовом, иначе круглый логотип превращался в сплошной цветной борт.
   if (spot.wrap) {
-    const room = { width: canvas.width * 0.72, height: canvas.height * 0.72 };
+    // Место со стеклом (корма, двери с окнами): прозрачное в знаке показывало
+    // светлое окно с салоном, и белый знак на нём пропадал. На стекло такие
+    // знаки и печатают по тёмной перфорированной плёнке - её и кладём, цвета
+    // кузова. На сплошном борту прозрачное остаётся кузовом, как было.
+    if (glazed) {
+      ctx.fillStyle = GLASS_FILM;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    const room = {
+      width: canvas.width * 0.72,
+      height: canvas.height * (spot.logo?.h ?? 0.72),
+    };
+    const middle = canvas.height * (spot.logo?.y ?? 0.5);
     const box = fitInside(source, room);
     ctx.drawImage(
       image,
       (canvas.width - room.width) / 2 + box.x,
-      (canvas.height - room.height) / 2 + box.y,
+      middle - room.height / 2 + box.y,
       box.width,
       box.height,
     );
