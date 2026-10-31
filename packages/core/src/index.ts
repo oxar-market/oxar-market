@@ -68,4 +68,4 @@ export {
 
 export { normalizeProof, proofPayload, type ProofParts } from "./proof-payload.ts";
 
-export { PREVIEW_SIDE, needsPreview, originalUrl, previewPath, previewSize } from "./preview.ts";
+export { PREVIEW_SIDE, imageExt, isCreativeUrl, needsPreview, originalUrl, previewPath, previewSize } from "./preview.ts";

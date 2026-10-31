@@ -1,9 +1,11 @@
 "use client";
 
-import { closeDay, originalUrl } from "@oxar/core";
+import { closeDay, imageExt, isCreativeUrl, originalUrl } from "@oxar/core";
 import { db } from "./session.ts";
 import { photoUrl } from "./seller.ts";
 import { zip } from "./zip.ts";
+
+const STORAGE = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 
 /**
  * Что печатать: верхняя ставка каждого места вещи. После закрытия торга -
@@ -94,6 +96,8 @@ export async function loadBidPhotos(thingId: string): Promise<BidPhoto[]> {
       (a, b) => b.amount_cents - a.amount_cents || a.created_at.localeCompare(b.created_at),
     );
     bids.forEach((bid, i) =>
+      // Чужой адрес вместо файла из нашего бакета - не показываем.
+      isCreativeUrl(bid.media_url, STORAGE) &&
       out.push({
         spot: spot?.label ?? "Spot",
         sort: spot?.sort ?? 0,
@@ -165,9 +169,11 @@ export async function downloadLogos(
   for (const one of list) {
     // Типографии - оригинал, а не лёгкая копия сайта.
     const url = originalUrl(one.mediaUrl);
+    // Ссылку пишет участник: качаем только файлы из нашего бакета.
+    if (!isCreativeUrl(url, STORAGE)) continue;
     const response = await fetch(url);
     if (!response.ok) return false;
-    const ext = (url.split("?")[0]!.split(".").pop() ?? "png").toLowerCase().slice(0, 5);
+    const ext = imageExt(url);
     const base = `${one.spot} - ${one.brand}`.replace(/[\\/:*?"<>|]+/g, " ").trim();
     let name = `${base}.${ext}`;
     for (let k = 2; taken.has(name); k++) name = `${base} (${k}).${ext}`;
