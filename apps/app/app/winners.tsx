@@ -48,7 +48,9 @@ export function Winners({
         {list.map((one) => (
           <div className="win-row" key={one.lotId}>
             <a className="win-logo" href={originalUrl(one.mediaUrl)} target="_blank" rel="noreferrer">
-              <img src={one.mediaUrl} alt={one.brand} />
+              {/* Оригинал, а не копия сайта: копию кладёт сам участник, и смотреть
+                  надо то, что уйдёт в печать. */}
+              <img src={originalUrl(one.mediaUrl)} alt={one.brand} />
             </a>
             <div className="win-info">
               <b>

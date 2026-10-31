@@ -7,7 +7,10 @@
 --
 -- Новые ставки кладут копию сами. Копии старых залиты скриптом заранее;
 -- здесь ссылка меняется только там, где копия правда лежит в хранилище, -
--- иначе картинка на сайте сломалась бы. Откат: отрезать '.view.webp'.
+-- иначе картинка на сайте сломалась бы. И только копии без владельца: их
+-- клал служебный ключ скрипта, а не посетитель - класть в бакет может любой
+-- вошедший, и подложенная им «копия» к чужому логотипу сюда не пройдёт.
+-- Откат: отрезать '.view.webp'.
 
 update lot_bids b
 set media_url = b.media_url || '.view.webp'
@@ -17,6 +20,8 @@ where b.media_url like '%/storage/v1/object/public/creatives/%'
     select 1 from storage.objects o
     where o.bucket_id = 'creatives'
       and o.name = split_part(b.media_url, '/creatives/', 2) || '.view.webp'
+      and o.owner is null
+      and o.owner_id is null
   );
 
 update stickers s
@@ -27,4 +32,6 @@ where s.logo_url like '%/storage/v1/object/public/creatives/%'
     select 1 from storage.objects o
     where o.bucket_id = 'creatives'
       and o.name = split_part(s.logo_url, '/creatives/', 2) || '.view.webp'
+      and o.owner is null
+      and o.owner_id is null
   );
