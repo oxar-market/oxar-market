@@ -42,7 +42,7 @@ import { SetUpSpots } from "./setup.tsx";
 import { PreparedReview } from "./prepared.tsx";
 import { db } from "@/lib/session";
 import { Reviews } from "../reviews.tsx";
-import { Winners } from "../winners.tsx";
+import { BidPhotos, Winners } from "../winners.tsx";
 import { ProofPanel } from "./proof.tsx";
 
 type View =
@@ -336,6 +336,11 @@ export function SellerFlow({
             file.
           </p>
           <Winners thingId={view.thing.id} title={view.thing.title} />
+          {/* Ниже - фото всех ставок, не только выигравших. */}
+          <div className="sl-head">
+            <h2>All bid photos</h2>
+          </div>
+          <BidPhotos thingId={view.thing.id} title={view.thing.title} />
           {!due && proof}
         </>,
       );

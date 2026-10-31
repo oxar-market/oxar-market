@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { closeDay, formatUsd, originalUrl, shortWallet } from "@oxar/core";
-import { downloadLogos, loadHouseThings, loadWinners, type HouseThing, type Winner } from "@/lib/winners";
+import {
+  downloadLogos,
+  loadBidPhotos,
+  loadHouseThings,
+  loadWinners,
+  type BidPhoto,
+  type HouseThing,
+  type Winner,
+} from "@/lib/winners";
 import { Thumb } from "./seller/parts.tsx";
 
 /**
@@ -71,6 +79,60 @@ export function Winners({
     </>
   );
 }
+
+/**
+ * Фото всех ставок вещи: что каждый участник загрузил со ставкой, по местам,
+ * от большей ставки к меньшей. Показываем оригиналы - ровно то, что прислали.
+ */
+export function BidPhotos({ thingId, title }: { thingId: string; title: string }) {
+  const [list, setList] = useState<BidPhoto[] | null>(null);
+  const [zipping, setZipping] = useState<"idle" | "busy" | "failed">("idle");
+  useEffect(() => {
+    void loadBidPhotos(thingId).then(setList);
+  }, [thingId]);
+
+  if (list === null) return null;
+  if (list.length === 0) return <p className="muted">No bids on this thing yet.</p>;
+
+  async function download() {
+    setZipping("busy");
+    const done = await downloadLogos(`${title} - all bids`, list!);
+    setZipping(done ? "idle" : "failed");
+  }
+
+  return (
+    <>
+      <button type="button" className="sl-btn win-zip" disabled={zipping === "busy"} onClick={() => void download()}>
+        {zipping === "busy" ? "Packing…" : `Download all photos (.zip, ${list.length})`}
+      </button>
+      {zipping === "failed" && <p className="bad">Could not fetch every photo. Try again.</p>}
+      <div className="sl-card win-list">
+        {list.map((one) => (
+          <div className="win-row" key={`${one.at}${one.wallet}${one.amountCents}`}>
+            <a className="win-logo" href={originalUrl(one.mediaUrl)} target="_blank" rel="noreferrer">
+              <img src={originalUrl(one.mediaUrl)} alt={one.brand} loading="lazy" />
+            </a>
+            <div className="win-info">
+              <b>
+                {one.spot} · {one.brand}
+              </b>
+              <small className="muted">
+                {TAG[one.tag]} · {formatUsd(one.amountCents)} ·{" "}
+                {new Date(one.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ·{" "}
+                {shortWallet(one.wallet)}
+              </small>
+            </div>
+            <a className="sl-pill" href={originalUrl(one.mediaUrl)} target="_blank" rel="noreferrer" download>
+              Open photo
+            </a>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+const TAG: Record<BidPhoto["tag"], string> = { won: "Won", leading: "Leading now", outbid: "Outbid" };
 
 /**
  * Наши вещи: что печатать. Пока торг идёт - лидеры, после закрытия -

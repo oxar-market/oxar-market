@@ -63,6 +63,53 @@ export async function loadWinners(thingId: string): Promise<Winner[]> {
 }
 
 /**
+ * Фото каждой ставки вещи, а не только верхней: всё, что участники
+ * загружали, когда ставили. Смотрят админ (любая вещь) и продавец (своя).
+ * Прогоны не берём - это наши тесты.
+ */
+export type BidPhoto = {
+  spot: string;
+  brand: string;
+  amountCents: number;
+  mediaUrl: string;
+  wallet: string;
+  at: string;
+  /** Выиграла, ведёт сейчас или её перебили. */
+  tag: "won" | "leading" | "outbid";
+};
+
+export async function loadBidPhotos(thingId: string): Promise<BidPhoto[]> {
+  if (!db) return [];
+  const { data } = await db
+    .from("lots")
+    .select("status, thing_spots(label, sort), lot_bids(amount_cents, created_at, brand, media_url, bidder_wallet)")
+    .eq("thing_id", thingId)
+    .eq("rehearsal", false);
+  const out: (BidPhoto & { sort: number })[] = [];
+  for (const lot of data ?? []) {
+    const spot = lot.thing_spots as unknown as { label: string; sort: number } | null;
+    const bids = ((lot.lot_bids as unknown as {
+      amount_cents: number; created_at: string; brand: string; media_url: string; bidder_wallet: string;
+    }[] | null) ?? []).sort(
+      (a, b) => b.amount_cents - a.amount_cents || a.created_at.localeCompare(b.created_at),
+    );
+    bids.forEach((bid, i) =>
+      out.push({
+        spot: spot?.label ?? "Spot",
+        sort: spot?.sort ?? 0,
+        brand: bid.brand,
+        amountCents: bid.amount_cents,
+        mediaUrl: bid.media_url,
+        wallet: bid.bidder_wallet,
+        at: bid.created_at,
+        tag: i === 0 && lot.status === "won" ? "won" : i === 0 && lot.status === "open" ? "leading" : "outbid",
+      }),
+    );
+  }
+  return out.sort((a, b) => a.sort - b.sort || b.amountCents - a.amountCents);
+}
+
+/**
  * Наши вещи (футболка и другие): что печатать. Видит их тот, на кого они
  * записаны, - во вкладке продавца, рядом со своими вещами. Печатаем мы, и
  * логотипы нужны тому, кто печатает.
@@ -109,7 +156,10 @@ export async function loadHouseThings(): Promise<HouseThing[]> {
  * типографии не путали, что куда. Файлы качаются по очереди: их десяток, и
  * параллельность здесь ничего не решает.
  */
-export async function downloadLogos(title: string, list: Winner[]): Promise<boolean> {
+export async function downloadLogos(
+  title: string,
+  list: { spot: string; brand: string; mediaUrl: string }[],
+): Promise<boolean> {
   const entries: { name: string; data: Uint8Array }[] = [];
   const taken = new Set<string>();
   for (const one of list) {

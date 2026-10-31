@@ -28,6 +28,7 @@ import { Disputes } from "./disputes.tsx";
 import { PrepareThing } from "./prepare.tsx";
 import { GiveToSeller } from "./give.tsx";
 import { FeeTerms } from "./terms.tsx";
+import { BidPhotos } from "../winners.tsx";
 import { loadDisputes } from "@/lib/arbiter";
 
 /**
@@ -494,6 +495,13 @@ function AdminThingView({
       </div>
 
       )}
+
+      {/* Фото ставок: всё, что участники загрузили со ставками, - по любой
+          вещи, нашей и продавца. */}
+      <div className="sl-card ad-card">
+        <h3>Bid photos</h3>
+        <BidPhotos thingId={thing.id} title={thing.title} />
+      </div>
 
       {/* Фото итогов: вещь в деле для страницы итогов. Пока их нет, итоги
           говорят «preparing». Это не пруф защиты покупателя - тот шлёт
