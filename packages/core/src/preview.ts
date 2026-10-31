@@ -34,3 +34,22 @@ export function previewPath(path: string, ext: "webp" | "png"): string {
 export function originalUrl(url: string): string {
   return url.replace(/\.view\.(webp|png)$/, "");
 }
+
+/**
+ * Файл из нашего бакета логотипов. Ссылку на картинку в ставку пишет сам
+ * участник, и подставить он может любой адрес; админу и продавцу показываем
+ * и качаем только своё. Строкой, без URL: пакет не тянет платформенных API.
+ */
+export function isCreativeUrl(url: string, supabaseUrl: string): boolean {
+  const prefix = `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/creatives/`;
+  if (!supabaseUrl || !url.startsWith(prefix)) return false;
+  const rest = url.slice(prefix.length);
+  // «..» и его закодированные и обратные формы вывели бы из бакета.
+  return !/(^|[\/\\])\.\.([\/\\]|$)|%2e|%2f|%5c/i.test(rest);
+}
+
+/** Расширение файла для архива: только картинки, остальное - png. */
+export function imageExt(url: string): string {
+  const ext = (url.split("?")[0]!.split("/").pop() ?? "").split(".").pop()?.toLowerCase() ?? "";
+  return ["png", "jpg", "jpeg", "webp", "svg", "gif"].includes(ext) ? ext : "png";
+}

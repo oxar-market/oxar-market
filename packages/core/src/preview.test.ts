@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { PREVIEW_SIDE, needsPreview, originalUrl, previewPath, previewSize } from "./preview.ts";
+import { PREVIEW_SIDE, imageExt, isCreativeUrl, needsPreview, originalUrl, previewPath, previewSize } from "./preview.ts";
 
 test("копия ужимается по длинной стороне и не растягивается", () => {
   assert.equal(PREVIEW_SIDE, 1024);
@@ -28,4 +28,33 @@ test("копия лежит рядом с оригиналом, оригинал
   // Ссылка без копии (SVG, старые ставки, кейсы на сайте) - и есть оригинал.
   assert.equal(originalUrl(base + "lot-1/abc.svg"), base + "lot-1/abc.svg");
   assert.equal(originalUrl("/cases/delora-laptop/oxar.webp"), "/cases/delora-laptop/oxar.webp");
+});
+
+test("своим считаем только файл из нашего бакета creatives", () => {
+  const base = "https://x.supabase.co";
+  assert.equal(isCreativeUrl(`${base}/storage/v1/object/public/creatives/lot/a.png.view.webp`, base), true);
+  assert.equal(isCreativeUrl(`${base}/storage/v1/object/public/things/proof/a.jpg`, base), false);
+  assert.equal(isCreativeUrl("https://evil.example/storage/v1/object/public/creatives/a.png", base), false);
+  assert.equal(isCreativeUrl(`${base}.evil.example/storage/v1/object/public/creatives/a.png`, base), false);
+  assert.equal(isCreativeUrl(`${base}/storage/v1/object/public/creatives/../things/a.png`, base), false);
+  assert.equal(isCreativeUrl("javascript:alert(1)", base), false);
+});
+
+test("расширение файла в архиве - только из картинок", () => {
+  assert.equal(imageExt("https://x/creatives/a.PNG"), "png");
+  assert.equal(imageExt("https://x/creatives/a.jpeg"), "jpeg");
+  assert.equal(imageExt("https://x/creatives/a.svg"), "svg");
+  assert.equal(imageExt("https://x/creatives/a.html"), "png");
+  assert.equal(imageExt("https://x/creatives/a.exe?x=1"), "png");
+  assert.equal(imageExt("https://x/creatives/a"), "png");
+});
+
+test("закодированные выходы из бакета не проходят", () => {
+  const base = "https://x.supabase.co/";
+  const ours = "https://x.supabase.co/storage/v1/object/public/creatives/";
+  assert.equal(isCreativeUrl(ours + "a.png", base), true);
+  assert.equal(isCreativeUrl(ours + "%2e%2e/things/a.png", base), false);
+  assert.equal(isCreativeUrl(ours + "..%2fthings/a.png", base), false);
+  assert.equal(isCreativeUrl(ours + "..\\\\things/a.png", base), false);
+  assert.equal(isCreativeUrl(ours + "a.png", ""), false);
 });
