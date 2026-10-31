@@ -1,6 +1,6 @@
 "use client";
 
-import { closeDay, isOpen, onAir, type LotWindow, type OnAir } from "@oxar/core";
+import { closeDay, isOpen, needsPreview, onAir, previewPath, previewSize, type LotWindow, type OnAir } from "@oxar/core";
 import { db } from "./session.ts";
 import { photoUrl } from "./seller.ts";
 
@@ -631,6 +631,11 @@ export async function loadMarket(): Promise<{
  * обязательна, и узнать её адрес надо раньше, чем появится строка. Если
  * ставка потом не пройдёт, в хранилище останется никому не нужный файл - это
  * дешевле, чем ставка в цепочке, к которой нечего напечатать.
+ *
+ * Оригинал кладётся как есть - его печатают. Сайту отдаём лёгкую копию рядом
+ * (см. @oxar/core preview) и её адрес. Не вышло сделать копию - адрес
+ * оригинала: ставка важнее трафика. Имена файлов не повторяются, поэтому
+ * браузеру можно держать их в кэше год.
  */
 export async function uploadCreative(
   lotId: string,
@@ -641,13 +646,43 @@ export async function uploadCreative(
   const dot = file.name.lastIndexOf(".");
   const ext = dot > 0 ? file.name.slice(dot + 1).toLowerCase() : "png";
   const path = `${lotId}/${crypto.randomUUID()}.${ext}`;
+  const bucket = db.storage.from("creatives");
 
-  const { error } = await db.storage
-    .from("creatives")
-    .upload(path, file, { contentType: file.type, upsert: false });
+  const { error } = await bucket.upload(path, file, { contentType: file.type, upsert: false, cacheControl: YEAR });
   if (error) return null;
+  const original = bucket.getPublicUrl(path).data.publicUrl;
+  if (!needsPreview(ext)) return original;
 
-  return db.storage.from("creatives").getPublicUrl(path).data.publicUrl;
+  const light = await shrink(file);
+  if (!light || light.blob.size >= file.size) return original;
+  const view = previewPath(path, light.ext);
+  const { error: viewError } = await bucket.upload(view, light.blob, {
+    contentType: light.blob.type,
+    upsert: false,
+    cacheControl: YEAR,
+  });
+  return viewError ? original : bucket.getPublicUrl(view).data.publicUrl;
+}
+
+const YEAR = "31536000";
+
+/** Копия картинки не крупнее, чем её рисует сайт, в WebP. */
+async function shrink(file: File): Promise<{ blob: Blob; ext: "webp" | "png" } | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = previewSize(bitmap.width, bitmap.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, size.width, size.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, "image/webp", 0.9));
+    if (!blob) return null;
+    // Старый Safari WebP не пишет и молча отдаёт PNG - тогда и имя PNG.
+    return { blob, ext: blob.type === "image/webp" ? "webp" : "png" };
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { closeDay } from "@oxar/core";
+import { closeDay, originalUrl } from "@oxar/core";
 import { db } from "./session.ts";
 import { photoUrl } from "./seller.ts";
 import { zip } from "./zip.ts";
@@ -113,9 +113,11 @@ export async function downloadLogos(title: string, list: Winner[]): Promise<bool
   const entries: { name: string; data: Uint8Array }[] = [];
   const taken = new Set<string>();
   for (const one of list) {
-    const response = await fetch(one.mediaUrl);
+    // Типографии - оригинал, а не лёгкая копия сайта.
+    const url = originalUrl(one.mediaUrl);
+    const response = await fetch(url);
     if (!response.ok) return false;
-    const ext = (one.mediaUrl.split("?")[0]!.split(".").pop() ?? "png").toLowerCase().slice(0, 5);
+    const ext = (url.split("?")[0]!.split(".").pop() ?? "png").toLowerCase().slice(0, 5);
     const base = `${one.spot} - ${one.brand}`.replace(/[\\/:*?"<>|]+/g, " ").trim();
     let name = `${base}.${ext}`;
     for (let k = 2; taken.has(name); k++) name = `${base} (${k}).${ext}`;

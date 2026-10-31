@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { closeDay, formatUsd, shortWallet } from "@oxar/core";
+import { closeDay, formatUsd, originalUrl, shortWallet } from "@oxar/core";
 import { downloadLogos, loadHouseThings, loadWinners, type HouseThing, type Winner } from "@/lib/winners";
 import { Thumb } from "./seller/parts.tsx";
 
@@ -47,7 +47,7 @@ export function Winners({
       <div className="sl-card win-list">
         {list.map((one) => (
           <div className="win-row" key={one.lotId}>
-            <a className="win-logo" href={one.mediaUrl} target="_blank" rel="noreferrer">
+            <a className="win-logo" href={originalUrl(one.mediaUrl)} target="_blank" rel="noreferrer">
               <img src={one.mediaUrl} alt={one.brand} />
             </a>
             <div className="win-info">
@@ -59,7 +59,8 @@ export function Winners({
                 {shortWallet(one.wallet)}
               </small>
             </div>
-            <a className="sl-pill" href={one.mediaUrl} target="_blank" rel="noreferrer" download>
+            {/* В печать - оригинал, а не лёгкая копия сайта. */}
+            <a className="sl-pill" href={originalUrl(one.mediaUrl)} target="_blank" rel="noreferrer" download>
               Open logo
             </a>
           </div>
