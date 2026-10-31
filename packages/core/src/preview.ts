@@ -43,9 +43,10 @@ export function originalUrl(url: string): string {
 export function isCreativeUrl(url: string, supabaseUrl: string): boolean {
   const prefix = `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/creatives/`;
   if (!supabaseUrl || !url.startsWith(prefix)) return false;
-  const rest = url.slice(prefix.length);
-  // «..» и его закодированные и обратные формы вывели бы из бакета.
-  return !/(^|[\/\\])\.\.([\/\\]|$)|%2e|%2f|%5c/i.test(rest);
+  // Имя - строго наше: «папка/uuid.расширение». Запрещать «..» поштучно
+  // мало: браузер выкидывает из адреса табы и переводы строк, и «.\t.»
+  // стал бы «..» уже после проверки.
+  return /^([A-Za-z0-9_-]+\/)?[A-Za-z0-9_-]+(\.[A-Za-z0-9]+)+$/.test(url.slice(prefix.length));
 }
 
 /** Расширение файла для архива: только картинки, остальное - png. */

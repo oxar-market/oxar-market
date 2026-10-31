@@ -57,4 +57,10 @@ test("закодированные выходы из бакета не прох�
   assert.equal(isCreativeUrl(ours + "..%2fthings/a.png", base), false);
   assert.equal(isCreativeUrl(ours + "..\\\\things/a.png", base), false);
   assert.equal(isCreativeUrl(ours + "a.png", ""), false);
+  // Табы и переводы строк браузер из адреса выкидывает.
+  assert.equal(isCreativeUrl(ours + ".\t./things/a.png", base), false);
+  assert.equal(isCreativeUrl(ours + "lot/.\n./a.png", base), false);
+  assert.equal(isCreativeUrl(ours + "lot/a.png?x=1", base), false);
+  assert.equal(isCreativeUrl(ours + "stickers-1d7c/42d8-bda2.png.view.webp", base), true);
+  assert.equal(isCreativeUrl(ours + "0c93b481-5418.png", base), true);
 });
