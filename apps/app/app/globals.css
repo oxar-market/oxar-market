@@ -3767,6 +3767,18 @@ input:focus {
   margin-bottom: 0.75rem;
 }
 
+/* Два архива рядом: все ставки и только верхние на местах. */
+.win-zips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.win-zips .win-zip {
+  margin-bottom: 0;
+}
+
 /* Под строкой вещи кнопка архива стояла впритык к ней. */
 .ad-house-logos .win-zip {
   margin-top: 0.75rem;
