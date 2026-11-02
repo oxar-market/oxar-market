@@ -3336,6 +3336,43 @@ input:focus {
   border-color: var(--ink);
 }
 
+/* «Поддержать бренд»: мелкая строка под загрузкой своего лого - главное
+   действие загрузка, это запасное, и нечаянно его не выбрать. */
+.bid-back {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bid-back b {
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bid-back img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: contain;
+  background: var(--photo);
+}
+
+.bid-back:hover b {
+  text-decoration-thickness: 2px;
+}
+
 .art-row img {
   width: 28px;
   height: 28px;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUsd, hasOpened, isOpen, minBidCents, shortWallet } from "@oxar/core";
+import { formatUsd, hasOpened, isCreativeUrl, isOpen, minBidCents, originalUrl, shortWallet } from "@oxar/core";
 import { ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
 import { loadBids, loadFeed, loadTopBids, type Bid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
@@ -57,6 +57,11 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const [look, setLook] = useState<"live" | "shot">("shot");
   const [art, setArt] = useState<Record<string, { url: string; file: File }>>({});
   const [artError, setArtError] = useState("");
+  // Ставка, на которую нажали в ленте: форма предлагает поставить за этот
+  // бренд его же логотипом. Основатель Akash не нашёл, как поднять ставку
+  // своего бренда: строка только выбирала место, а дальше - пустая форма.
+  const [from, setFrom] = useState<Bid | null>(null);
+  const [brandHint, setBrandHint] = useState<{ lot: string; brand: string } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const stage = useRef<Stage | null>(null);
   const { wallets } = useConnectedStandardWallets();
@@ -222,6 +227,33 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     });
   }
 
+  // Нажали на ставку: место - её, форма - перед глазами, предложение
+  // поставить за этот бренд - над загрузкой.
+  function pickBid(bid: Bid, code: string) {
+    choose(code);
+    setFrom(bid);
+    setTimeout(() => document.querySelector(".art-row")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  }
+
+  // Поставить за бренд из ленты: его имя и его логотип - тот же файл, что
+  // прислал автор ставки. Чужой адрес вместо нашего хранилища не берём.
+  async function backBrand(bid: Bid) {
+    if (!picked) return;
+    setArtError("");
+    setBrandHint({ lot: bid.lot_id, brand: bid.brand });
+    const url = originalUrl(bid.media_url);
+    if (!isCreativeUrl(url, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")) return;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(String(response.status));
+      const blob = await response.blob();
+      const ext = (url.split(".").pop() ?? "png").toLowerCase();
+      await tryOn(new File([blob], `${bid.brand} logo.${ext}`, { type: blob.type }));
+    } catch {
+      setArtError("Could not load their logo. Upload it yourself.");
+    }
+  }
+
   function takeOff() {
     if (!picked) return;
     stage.current?.show(picked, null);
@@ -262,6 +294,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const scene = thing.shape ?? (thing.model ? { model: thing.model, spots: [], depth: 0.05, cloth: false, noun: "thing" } : null);
   const ghost = soon && !(admin && peek);
   const top = bids[0] ?? null;
+  const offer = from && lot && from.lot_id === lot.id ? from : top;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents) : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
   // Мой кошелёк ведёт на этом месте - значит, есть чем поделиться.
@@ -640,6 +673,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           topCents={top?.amount_cents ?? null}
           topBrand={top?.brand ?? ""}
           art={picked ? art[picked] : undefined}
+          brandHint={brandHint?.lot === lot.id ? brandHint.brand : undefined}
           onPlaced={(bid) => {
             refresh();
             setShared({ cents: bid.cents, brand: bid.brand, mine: true, fresh: true });
@@ -677,6 +711,17 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               </>
             )}
           </label>
+          {/* Своё лого - главное действие. Поддержать бренд, который уже
+              ставил, - мелкой строкой под ним, чтобы чужое не выбирали
+              нечаянно. Это обычная ставка, только с их именем и логотипом. */}
+          {offer && picked && !art[picked] && (
+            <button type="button" className="bid-back" onClick={() => void backBrand(offer)}>
+              or back
+              <img src={offer.media_url} alt="" />
+              <b>{offer.brand}</b>
+              with their logo
+            </button>
+          )}
           {artError ? (
             <p className="bad">{artError}</p>
           ) : (
@@ -860,7 +905,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                       type="button"
                       key={bid.id}
                       className="bid-row"
-                      onClick={() => spot && choose(spot.code)}
+                      onClick={() => spot && pickBid(bid, spot.code)}
                     >
                       <img className="bid-row-art" src={bid.media_url} alt="" />
                       <span className="bid-row-who">
@@ -881,7 +926,12 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               <>
                 {bids.length === 0 && <p className="muted small">No bids yet. The first one at the starting price leads.</p>}
                 {bids.map((bid, index) => (
-                  <div key={bid.id} className="bid-row">
+                  <button
+                    type="button"
+                    key={bid.id}
+                    className="bid-row"
+                    onClick={() => picked && pickBid(bid, picked)}
+                  >
                     <img className="bid-row-art" src={bid.media_url} alt="" />
                     <span className="bid-row-who">
                       <span>{bid.brand}</span>
@@ -895,7 +945,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                       {index === 0 ? "LEADING" : "REFUNDED"}
                     </span>
                     <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
-                  </div>
+                  </button>
                 ))}
               </>
             )}
