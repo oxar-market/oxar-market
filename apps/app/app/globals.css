@@ -5356,8 +5356,14 @@ a.sl-pill {
   outline-offset: 2px;
 }
 
-/* Снимок вещи продавца в герое маркета: вписан в высоту, как фото футболки. */
+/* Снимок вещи продавца в герое маркета: вписан целиком, в своих пропорциях.
+   Рамка 4:5 с обрезкой съедала широкие кадры - у вана оставались одни
+   двери посередине. */
 .hero-shot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
   height: 86%;
   padding: 0;
   border: 0;
@@ -5366,9 +5372,8 @@ a.sl-pill {
 }
 
 .hero-shot img {
-  height: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
   border-radius: 12px;
 }
 
