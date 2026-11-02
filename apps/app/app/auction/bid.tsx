@@ -83,8 +83,9 @@ export function BidForm({
 
   const [amount, setAmount] = useState("");
   const [brand, setBrand] = useState(brandHint ?? "");
+  // Пустая строка - тоже команда: снять подставленное имя.
   useEffect(() => {
-    if (brandHint) setBrand(brandHint);
+    if (brandHint !== undefined) setBrand(brandHint);
   }, [brandHint]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

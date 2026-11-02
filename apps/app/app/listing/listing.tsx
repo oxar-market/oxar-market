@@ -62,6 +62,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // своего бренда: строка только выбирала место, а дальше - пустая форма.
   const [from, setFrom] = useState<Bid | null>(null);
   const [brandHint, setBrandHint] = useState<{ lot: string; brand: string } | null>(null);
+  // Место, где лого подставлено через «Back»: оно уже на вещи, и подпись
+  // «видно только вам» под ним была бы неправдой.
+  const [backed, setBacked] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const stage = useRef<Stage | null>(null);
   const { wallets } = useConnectedStandardWallets();
@@ -249,12 +252,22 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       const blob = await response.blob();
       const ext = (url.split(".").pop() ?? "png").toLowerCase();
       await tryOn(new File([blob], `${bid.brand} logo.${ext}`, { type: blob.type }));
+      setBacked(picked);
     } catch {
       setArtError("Could not load their logo. Upload it yourself.");
     }
   }
 
+  // Сняли подставленное через «Back» - уходит и их имя: иначе своё лого
+  // ушло бы в ставку под чужим названием.
+  function unback() {
+    if (!picked || backed !== picked || !lot) return;
+    setBacked(null);
+    setBrandHint({ lot: lot.id, brand: "" });
+  }
+
   function takeOff() {
+    unback();
     if (!picked) return;
     stage.current?.show(picked, null);
     setArt((was) => {
@@ -685,6 +698,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               accept="image/png,image/jpeg,image/webp,image/svg+xml"
               hidden
               onChange={(event) => {
+                unback();
                 void tryOn(event.target.files?.[0]);
                 event.target.value = "";
               }}
@@ -715,19 +729,32 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               ставил, - мелкой строкой под ним, чтобы чужое не выбирали
               нечаянно. Это обычная ставка, только с их именем и логотипом. */}
           {offer && picked && !art[picked] && (
-            <button type="button" className="bid-back" onClick={() => void backBrand(offer)}>
-              or back
-              <img src={offer.media_url} alt="" />
-              <b>{offer.brand}</b>
-              with their logo
-            </button>
+            <>
+              <span className="bid-or">or</span>
+              <button type="button" className="bid-back" onClick={() => void backBrand(offer)}>
+                <img src={offer.media_url} alt="" />
+                <span className="bid-back-text">
+                  <span>
+                    Back <b>{offer.brand}</b>
+                  </span>
+                  <em>Bid with their name and logo</em>
+                </span>
+                <span className="bid-back-go" aria-hidden>
+                  &rsaquo;
+                </span>
+              </button>
+            </>
           )}
           {artError ? (
             <p className="bad">{artError}</p>
           ) : (
             picked &&
             art[picked] && (
-              <p className="muted small">Only you can see this. It goes public when you bid with it.</p>
+              <p className="muted small">
+                {backed === picked
+                  ? "Their name and logo, your bid. If someone outbids you, your USDC comes back."
+                  : "Only you can see this. It goes public when you bid with it."}
+              </p>
             )
           )}
         </BidForm>
