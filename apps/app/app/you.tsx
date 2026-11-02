@@ -16,6 +16,7 @@ import { Admin } from "./admin/admin.tsx";
 import { SellerApply } from "./seller/apply.tsx";
 import { YourWins } from "./wins.tsx";
 import { Notifications } from "./notify.tsx";
+import { Usdc } from "./usdc.tsx";
 import { loadScoreOf } from "@/lib/reviews";
 import { signedInWith } from "@/lib/identity";
 
@@ -372,7 +373,7 @@ export function You({
                   <span className="you-panel-title">Balance</span>
                   <div className="you-balance-row">
                     <span className="you-balance-num">{money(usdc)}</span>
-                    <span className="usdc-chip">USDC</span>
+                    <Usdc />
                     <button type="button" className="you-more" onClick={() => setPane("wallet")}>
                       Wallet <span aria-hidden>&rarr;</span>
                     </button>
