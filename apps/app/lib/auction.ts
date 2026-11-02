@@ -200,6 +200,35 @@ export async function loadBids(lotId: string): Promise<Bid[]> {
   return (data ?? []) as Bid[];
 }
 
+/**
+ * Ставки этого кошелька, свежие первыми: из них форма берёт прежние имя и
+ * логотип, чтобы перебить обратно или поставить снова без новой загрузки.
+ * История - в базе, а не в браузере: тот же вход на другом устройстве её видит.
+ */
+export type MyBid = { lotId: string; brand: string; mediaUrl: string };
+
+export async function loadMyBids(wallet: string): Promise<MyBid[]> {
+  if (!db) return [];
+  const { data } = await db
+    .from("lot_bids")
+    .select("lot_id, brand, media_url")
+    .eq("bidder_wallet", wallet)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return (data ?? []).map((row) => ({ lotId: row.lot_id, brand: row.brand, mediaUrl: row.media_url }));
+}
+
+/** Проекты кошелька: по имени - последняя ставка, свежие первыми. */
+export function myBrands(bids: MyBid[]): MyBid[] {
+  const seen = new Set<string>();
+  return bids.filter((bid) => {
+    const key = bid.brand.trim().toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /** Все ставки всех мест вещи, свежие первыми: общая лента торга. */
 export async function loadFeed(lotIds: string[]): Promise<Bid[]> {
   if (!db || lotIds.length === 0) return [];

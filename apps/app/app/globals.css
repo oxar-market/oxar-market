@@ -3336,6 +3336,52 @@ input:focus {
   border-color: var(--ink);
 }
 
+/* Свои прежние проекты под загрузкой: пилюлями с миниатюрой. */
+.my-logos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+}
+
+.my-logos > span {
+  margin-right: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--mut);
+}
+
+.my-logos button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.my-logos button:hover {
+  border-color: var(--ink);
+}
+
+.my-logos img {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  object-fit: contain;
+  background: var(--soft);
+}
+
 /* «Поддержать бренд»: под загрузкой своего лого, через «or» - тише и
    ниже её, строкой как у мест: своё лого остаётся главным действием. */
 .bid-or {
