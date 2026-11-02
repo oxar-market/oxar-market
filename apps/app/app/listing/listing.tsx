@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatUsd, hasOpened, isCreativeUrl, isOpen, minBidCents, originalUrl, shortWallet } from "@oxar/core";
 import { ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
-import { loadBids, loadFeed, loadTopBids, type Bid } from "@/lib/auction";
+import { loadBids, loadFeed, loadMyBids, loadTopBids, myBrands, type Bid, type MyBid } from "@/lib/auction";
 import { loadListedThing, type ListedThing } from "@/lib/listing";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
@@ -61,10 +61,15 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // бренд его же логотипом. Основатель Akash не нашёл, как поднять ставку
   // своего бренда: строка только выбирала место, а дальше - пустая форма.
   const [from, setFrom] = useState<Bid | null>(null);
-  const [brandHint, setBrandHint] = useState<{ lot: string; brand: string } | null>(null);
-  // Место, где лого подставлено через «Back»: оно уже на вещи, и подпись
-  // «видно только вам» под ним была бы неправдой.
-  const [backed, setBacked] = useState<string | null>(null);
+  // Подставленное имя - по лоту: вернулся на место - имя на месте, как и лого.
+  const [brandHints, setBrandHints] = useState<Record<string, string>>({});
+  // Откуда лого на этом месте: «back» - чужой бренд через «Back», «mine» -
+  // своё из прежней ставки. Оба уже на виду, и подпись «видно только вам»
+  // под ними была бы неправдой; снимешь такое лого - уйдёт и его имя.
+  const [filled, setFilled] = useState<Record<string, "back" | "mine">>({});
+  // Прежние ставки этого кошелька: имя и лого, чтобы не грузить их заново.
+  const [mine, setMine] = useState<MyBid[]>([]);
+  const autoFilled = useRef(new Set<string>());
   const [now, setNow] = useState(() => Date.now());
   const stage = useRef<Stage | null>(null);
   const { wallets } = useConnectedStandardWallets();
@@ -238,36 +243,45 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     setTimeout(() => document.querySelector(".art-row")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   }
 
-  // Поставить за бренд из ленты: его имя и его логотип - тот же файл, что
-  // прислал автор ставки. Чужой адрес вместо нашего хранилища не берём.
-  async function backBrand(bid: Bid) {
-    if (!picked) return;
+  // Подставить имя и лого прежней ставки - чужой («Back») или своей. Файл
+  // тот же, что прислал автор ставки; чужой адрес вместо нашего хранилища
+  // не берём.
+  async function fillFrom(mediaUrl: string, brand: string, kind: "back" | "mine") {
+    if (!picked || !lot) return;
+    const spot = picked;
     setArtError("");
-    setBrandHint({ lot: bid.lot_id, brand: bid.brand });
-    const url = originalUrl(bid.media_url);
+    const lotId = lot.id;
+    setBrandHints((was) => ({ ...was, [lotId]: brand }));
+    const url = originalUrl(mediaUrl);
     if (!isCreativeUrl(url, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "")) return;
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error(String(response.status));
       const blob = await response.blob();
       const ext = (url.split(".").pop() ?? "png").toLowerCase();
-      await tryOn(new File([blob], `${bid.brand} logo.${ext}`, { type: blob.type }));
-      setBacked(picked);
+      await tryOn(new File([blob], `${brand} logo.${ext}`, { type: blob.type }));
+      setFilled((was) => ({ ...was, [spot]: kind }));
     } catch {
-      setArtError("Could not load their logo. Upload it yourself.");
+      setArtError("Could not load that logo. Upload it yourself.");
     }
   }
 
-  // Сняли подставленное через «Back» - уходит и их имя: иначе своё лого
-  // ушло бы в ставку под чужим названием.
-  function unback() {
-    if (!picked || backed !== picked || !lot) return;
-    setBacked(null);
-    setBrandHint({ lot: lot.id, brand: "" });
+  // Сняли подставленное - уходит и его имя: иначе своё лого ушло бы в
+  // ставку под чужим или прежним названием.
+  function unfill() {
+    if (!picked || !filled[picked] || !lot) return;
+    const spot = picked;
+    const lotId = lot.id;
+    setFilled((was) => {
+      const next = { ...was };
+      delete next[spot];
+      return next;
+    });
+    setBrandHints((was) => ({ ...was, [lotId]: "" }));
   }
 
   function takeOff() {
-    unback();
+    unfill();
     if (!picked) return;
     stage.current?.show(picked, null);
     setArt((was) => {
@@ -278,6 +292,25 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       return next;
     });
   }
+
+  const brandsOfMine = myBrands(mine);
+
+  const myWallet = wallets[0]?.address ?? null;
+  useEffect(() => {
+    if (!myWallet) return setMine([]);
+    void loadMyBids(myWallet).then(setMine);
+  }, [myWallet]);
+
+  // Перебили - перебей обратно: на месте, где уже ставил, форма сразу с тем
+  // же именем и лого. Не ставил здесь, но проект один - он. Проектов
+  // несколько - сами не выбираем, ниже строка «Your logos».
+  useEffect(() => {
+    if (!lot || !picked || art[picked] || mine.length === 0 || autoFilled.current.has(picked)) return;
+    autoFilled.current.add(picked);
+    const here = mine.find((bid) => bid.lotId === lot.id) ?? (brandsOfMine.length === 1 ? brandsOfMine[0] : null);
+    if (here) void fillFrom(here.mediaUrl, here.brand, "mine");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lot?.id, picked, mine]);
 
   if (!thing) {
     return (
@@ -686,7 +719,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           topCents={top?.amount_cents ?? null}
           topBrand={top?.brand ?? ""}
           art={picked ? art[picked] : undefined}
-          brandHint={brandHint?.lot === lot.id ? brandHint.brand : undefined}
+          brandHint={brandHints[lot.id]}
           onPlaced={(bid) => {
             refresh();
             setShared({ cents: bid.cents, brand: bid.brand, mine: true, fresh: true });
@@ -698,7 +731,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               accept="image/png,image/jpeg,image/webp,image/svg+xml"
               hidden
               onChange={(event) => {
-                unback();
+                unfill();
                 void tryOn(event.target.files?.[0]);
                 event.target.value = "";
               }}
@@ -725,13 +758,29 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
               </>
             )}
           </label>
+          {/* Свои прежние проекты - выбрать одним касанием, без загрузки. */}
+          {picked && !art[picked] && brandsOfMine.length > 0 && (
+            <div className="my-logos">
+              <span>Your logos</span>
+              {brandsOfMine.slice(0, 4).map((one) => (
+                <button
+                  type="button"
+                  key={one.brand}
+                  onClick={() => void fillFrom(one.mediaUrl, one.brand, "mine")}
+                >
+                  <img src={one.mediaUrl} alt="" />
+                  {one.brand}
+                </button>
+              ))}
+            </div>
+          )}
           {/* Своё лого - главное действие. Поддержать бренд, который уже
               ставил, - мелкой строкой под ним, чтобы чужое не выбирали
               нечаянно. Это обычная ставка, только с их именем и логотипом. */}
           {offer && picked && !art[picked] && (
             <>
               <span className="bid-or">or</span>
-              <button type="button" className="bid-back" onClick={() => void backBrand(offer)}>
+              <button type="button" className="bid-back" onClick={() => void fillFrom(offer.media_url, offer.brand, "back")}>
                 <img src={offer.media_url} alt="" />
                 <span className="bid-back-text">
                   <span>
@@ -751,9 +800,11 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             picked &&
             art[picked] && (
               <p className="muted small">
-                {backed === picked
+                {filled[picked] === "back"
                   ? "Their name and logo, your bid. If someone outbids you, your USDC comes back."
-                  : "Only you can see this. It goes public when you bid with it."}
+                  : filled[picked] === "mine"
+                    ? "Your name and logo from an earlier bid."
+                    : "Only you can see this. It goes public when you bid with it."}
               </p>
             )
           )}
