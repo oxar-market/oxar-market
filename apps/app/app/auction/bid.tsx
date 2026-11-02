@@ -55,6 +55,7 @@ export function BidForm({
   topCents,
   topBrand,
   art,
+  brandHint,
   onPlaced,
   children,
 }: {
@@ -68,6 +69,8 @@ export function BidForm({
   /** Чьё имя сейчас на месте: перебиваешь не сумму, а кого-то. */
   topBrand: string;
   art: Art | undefined;
+  /** Имя, подставленное снаружи: «поставить за этот бренд» из ленты ставок. */
+  brandHint?: string;
   /** Ставка прошла - с её суммой и брендом: ими делятся в X. */
   onPlaced: (bid: { cents: number; brand: string }) => void;
   /** Шаг с картинкой: живёт в форме, как в направлении дизайна. */
@@ -79,7 +82,11 @@ export function BidForm({
   const { signTransaction } = useStandardSignTransaction();
 
   const [amount, setAmount] = useState("");
-  const [brand, setBrand] = useState("");
+  const [brand, setBrand] = useState(brandHint ?? "");
+  // Пустая строка - тоже команда: снять подставленное имя.
+  useEffect(() => {
+    if (brandHint !== undefined) setBrand(brandHint);
+  }, [brandHint]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   // Сколько USDC на кошельке, в центах. null - ещё не прочитали или прочитать
