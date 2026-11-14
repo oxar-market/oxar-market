@@ -1360,3 +1360,38 @@ a.wordmark {
 .sell-split span:hover {
   filter: brightness(1.15);
 }
+
+/* Форма - отдельным блоком: в конце страницы она терялась среди вопросов.
+   Углы прямые, как у полей и кнопки внутри; красный квадрат у заголовка -
+   те же «деньги», что на главной. */
+.sell-block.sell-pitch {
+  padding: 2.5rem;
+  border: 1px solid var(--line);
+  border-image: none;
+  background: var(--card);
+}
+
+.sell-pitch h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.sell-pitch h2::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.875rem;
+  height: 0.875rem;
+  background: #e0381c;
+}
+
+.sell-pitch .sell-form input,
+.sell-pitch .sell-form textarea {
+  background: var(--bg);
+}
+
+@media (max-width: 56rem) {
+  .sell-block.sell-pitch {
+    padding: 1.5rem 1.25rem;
+  }
+}

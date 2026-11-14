@@ -253,7 +253,7 @@ function Pitch() {
 
   if (state === "sent") {
     return (
-      <section className="sell-block" id="pitch">
+      <section className="sell-block plain sell-pitch" id="pitch">
         <h2>Got it.</h2>
         <p className="sub">We&apos;ll look at your spot and get back to you soon.</p>
       </section>
@@ -261,7 +261,7 @@ function Pitch() {
   }
 
   return (
-    <section className="sell-block plain" id="pitch">
+    <section className="sell-block plain sell-pitch" id="pitch">
       <h2>Got something people look at? Tell us.</h2>
       <form className="sell-form" onSubmit={submit}>
         <label className="wide">
