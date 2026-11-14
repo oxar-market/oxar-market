@@ -69,11 +69,22 @@ const ENDS: Record<Lane, [Room, Room]> = {
   fee: ["escrow", "fee"],
 };
 
+/**
+ * Схему читает тот, кто ставит, поэтому его комната - «твой кошелёк», а не
+ * «спонсоры»: со словом «спонсоры» человек не узнавал в схеме себя.
+ */
 const NAMES: Record<Room, string> = {
-  sponsors: "Sponsors",
+  sponsors: "Your wallet",
   escrow: "Escrow",
-  organizer: "Organizer",
+  organizer: "Event organizer",
   fee: "OXAR fee",
+};
+
+/** Строка под названием: что это за комната, одними словами. */
+const HINTS: Partial<Record<Room, string>> = {
+  sponsors: "you bid on a spot",
+  escrow: "a program holds it, not us",
+  organizer: "paid after the photo",
 };
 
 type Piles = Record<Room, number>;
@@ -89,20 +100,20 @@ type Stage = {
 
 const STAGES: Stage[] = [
   {
-    tab: "While bidding",
-    text: "Every bid is paid upfront into an escrow program on Solana. Get outbid and your USDC comes straight back, in the same transaction.",
+    tab: "You bid",
+    text: "You pay your bid upfront into an escrow program on Solana. If someone outbids you, your USDC comes straight back to your wallet.",
     start: { sponsors: 6 },
     order: ["bid", "bid", "refund"],
   },
   {
-    tab: "If there's no proof",
-    text: "The organizer has a deadline to post a photo of your logo in place. No proof by then, and the winning bids go back automatically.",
+    tab: "No photo, no pay",
+    text: "If you win, the organizer has a deadline to post a photo of your logo in place. No photo by then, and you get your money back automatically.",
     start: { escrow: 5 },
     order: ["refund"],
   },
   {
-    tab: "After the proof",
-    text: "Once the photo is up, sponsors have 72 hours to dispute it. Then the program pays the organizer and takes the OXAR fee. Disputes go to an arbiter.",
+    tab: "Photo is up",
+    text: "Once the photo is up, you have 72 hours to dispute it. Then the program pays the organizer and takes the OXAR fee. Disputes go to an arbiter.",
     start: { escrow: 6 },
     order: ["payout", "payout", "payout", "payout", "fee", "payout"],
   },
@@ -153,7 +164,7 @@ export function MoneyFlow() {
 
   return (
     <section className="flow" aria-labelledby="flow-title">
-      <h2 id="flow-title">Where the money goes, in a nutshell.</h2>
+      <h2 id="flow-title">Where your money goes, in a nutshell.</h2>
       <div className="flow-tabs" role="tablist" aria-label="Money flow stage">
         {STAGES.map((one, at) => (
           <button
@@ -363,6 +374,11 @@ function Diagram({ layout, stage, still }: { layout: Layout; stage: Stage; still
             >
               {NAMES[room]}
             </text>
+            {HINTS[room] && (
+              <text x={x + 16} y={y + 50} fontSize={tall ? 12 : 13} className="flow-hint">
+                {HINTS[room]}
+              </text>
+            )}
             {Array.from({ length: piles[room] }, (_, at) => {
               const [cx, cy] = slot(layout, room, at);
               return (

@@ -716,6 +716,10 @@ h1 {
   fill: var(--mut);
 }
 
+.flow-hint {
+  fill: var(--mut);
+}
+
 .flow-coin {
   fill: #e0381c;
 }
