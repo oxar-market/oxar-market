@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { closeDay, formatUsdFull, isOpen, nextClose } from "@oxar/core";
 import { houseShape, SOON, ThingStage, type Stage } from "@oxar/stage";
+import { MoneyFlow } from "./money-flow.tsx";
 import { Usdc } from "./usdc.tsx";
 
 /** Зазор между карточками карусели, px. Тот же, что в CSS у .live-rail. */
@@ -377,6 +378,7 @@ export default function Home() {
   }
 
   return (
+    <>
     <main className="land">
       <header className="land-top">
         <span className="wordmark">OXAR</span>
@@ -715,6 +717,8 @@ export default function Home() {
         </div>
       </div>
     </main>
+    <MoneyFlow />
+    </>
   );
 }
 
