@@ -21,7 +21,11 @@ type Layout = {
   width: number;
   height: number;
   rooms: Record<Room, [number, number, number, number]>;
-  /** Труба - точки ломаной от комнаты-источника к комнате-получателю. */
+  /**
+   * Труба - точки ломаной от комнаты-источника к комнате-получателю. Трубы
+   * входят в комнаты ниже подписей и в стороне от них: иначе квадрат по пути
+   * к стопке проезжал бы по тексту.
+   */
   lanes: Record<Lane, Point[]>;
 };
 
@@ -36,10 +40,10 @@ const WIDE: Layout = {
     fee: [780, 170, 200, 90],
   },
   lanes: {
-    bid: [[200, 125], [320, 125]],
-    refund: [[320, 185], [200, 185]],
-    payout: [[540, 155], [640, 155], [700, 95], [780, 95]],
-    fee: [[540, 155], [640, 155], [700, 215], [780, 215]],
+    bid: [[200, 155], [320, 155]],
+    refund: [[320, 205], [200, 205]],
+    payout: [[540, 160], [660, 160], [660, 125], [780, 125]],
+    fee: [[540, 160], [660, 160], [660, 215], [780, 215]],
   },
 };
 
@@ -54,10 +58,10 @@ const TALL: Layout = {
     fee: [220, 470, 100, 130],
   },
   lanes: {
-    bid: [[110, 130], [110, 230]],
-    refund: [[230, 230], [230, 130]],
-    payout: [[170, 350], [170, 400], [110, 440], [110, 470]],
-    fee: [[170, 350], [170, 400], [270, 440], [270, 470]],
+    bid: [[235, 130], [235, 230]],
+    refund: [[285, 230], [285, 130]],
+    payout: [[215, 350], [215, 410], [175, 410], [175, 470]],
+    fee: [[215, 350], [215, 410], [270, 410], [270, 470]],
   },
 };
 
@@ -218,6 +222,25 @@ function along(route: Point[], at: number): Point | null {
   return null;
 }
 
+/**
+ * Путь квадрата из стопки в стопку только под прямыми углами: внутри комнаты
+ * он сперва встаёт на ось трубы, а на выходе из трубы - на ось своего места
+ * в стопке. По диагонали квадрат срезал углы и шёл мимо труб.
+ */
+function square(start: Point, lane: Point[], end: Point): Point[] {
+  const [first, second] = lane;
+  const [last, before] = [lane[lane.length - 1], lane[lane.length - 2]];
+  const inFlat = first[1] === second[1];
+  const outFlat = last[1] === before[1];
+  return [
+    start,
+    inFlat ? [start[0], first[1]] : [first[0], start[1]],
+    ...lane,
+    outFlat ? [end[0], last[1]] : [last[0], end[1]],
+    end,
+  ];
+}
+
 function Diagram({ layout, stage, still }: { layout: Layout; stage: Stage; still: boolean }) {
   const svg = useRef<SVGSVGElement | null>(null);
   const coins = useRef<SVGGElement | null>(null);
@@ -267,7 +290,7 @@ function Diagram({ layout, stage, still }: { layout: Layout; stage: Stage; still
         rect.setAttribute("height", String(COIN));
         rect.setAttribute("class", "flow-coin");
         group.appendChild(rect);
-        moving.add({ rect, route: [start, ...layout.lanes[lane], end], at: 0, to });
+        moving.add({ rect, route: square(start, layout.lanes[lane], end), at: 0, to });
         return true;
       }
       return false;
