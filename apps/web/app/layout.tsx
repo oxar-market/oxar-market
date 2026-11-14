@@ -34,6 +34,9 @@ const oxar = Inter({
  * Твиттеру отдельной картинки не даём: без своей строки он берёт ту же по
  * `og:image`, и второй такой же файл ради одного тега не нужен.
  */
+/** Вид кнопок - временно, пока выбираем: sharp, pixel или offset. */
+const BUTTONS = "sharp";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://oxar.app"),
   title: "OXAR",
@@ -66,7 +69,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={oxar.variable}>
+    <html lang="en" className={oxar.variable} data-buttons={BUTTONS}>
       <body>{children}</body>
     </html>
   );

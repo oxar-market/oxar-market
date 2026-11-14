@@ -133,14 +133,11 @@ const EVERY = 0.55;
 const REPLAY = 1.2;
 const COIN = 9;
 const GAP = 3;
-/** Сам переключает вкладки, пока человек не выбрал свою. */
-const AUTO_MS = 6500;
 
 const EMPTY: Piles = { sponsors: 0, escrow: 0, organizer: 0, fee: 0 };
 
 export function MoneyFlow() {
   const [stage, setStage] = useState(0);
-  const [touched, setTouched] = useState(false);
   const [tall, setTall] = useState(false);
   const [still, setStill] = useState(false);
 
@@ -160,12 +157,6 @@ export function MoneyFlow() {
     };
   }, []);
 
-  useEffect(() => {
-    if (touched) return;
-    const timer = setInterval(() => setStage((at) => (at + 1) % STAGES.length), AUTO_MS);
-    return () => clearInterval(timer);
-  }, [touched]);
-
   const current = STAGES[stage];
 
   return (
@@ -179,10 +170,7 @@ export function MoneyFlow() {
             role="tab"
             aria-selected={at === stage}
             className={at === stage ? "flow-tab on" : "flow-tab"}
-            onClick={() => {
-              setTouched(true);
-              setStage(at);
-            }}
+            onClick={() => setStage(at)}
           >
             <span className="flow-num">{at + 1}</span>
             {one.tab}
