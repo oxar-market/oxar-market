@@ -6,14 +6,6 @@
   box-sizing: border-box;
 }
 
-/* Углы везде прямые - как у квадратов-денег. Скругление было у всего подряд
-   и ничем нас не отличало; правило здесь, чтобы новое не скруглилось само. */
-*,
-*::before,
-*::after {
-  border-radius: 0 !important;
-}
-
 /* Палитра переменными: лендинг - первое место с настоящей темой. Тёмные
    значения из дизайн-борда. */
 :root {
@@ -41,7 +33,6 @@ html {
 
 body {
   margin: 0;
-  overflow-x: clip;
   /* Системный стек остаётся запасным: пока шрифт едет, страница уже читается. */
   font-family: var(--font-oxar), ui-sans-serif, system-ui, sans-serif;
   color: var(--ink);
@@ -51,7 +42,6 @@ body {
 }
 
 .land {
-  position: relative;
   min-height: 100svh;
   max-width: 90rem;
   margin: 0 auto;
@@ -61,39 +51,18 @@ body {
   gap: 2.5rem;
 }
 
-/* Первый экран по центру, как у backable: крупный заголовок, две двери и
-   три цифры из базы под ними. Карточка торга уехала ниже, в свою секцию. */
-.hero {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.75rem;
-  text-align: center;
-}
-
 .land-top {
-  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.wordmark {
+.wordmark,
+h1 {
   font-size: 1.75rem;
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.02em;
-}
-
-h1 {
-  position: relative;
-  max-width: 14ch;
-  font-size: clamp(3rem, 7.5vw, 6.5rem);
-  font-weight: 600;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
 }
 
 .tagline {
@@ -101,139 +70,40 @@ h1 {
   color: var(--mut);
 }
 
+.land-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 35rem;
+  gap: 6rem;
+  align-items: center;
+  min-height: 0;
+}
+
+.manifesto {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
 h1 {
   margin: 0;
   text-wrap: balance;
 }
 
+/* Поддержка тем же кеглем, что заголовок, но серым: это продолжение мысли,
+   а не подпись под ней. */
 .sub {
-  position: relative;
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.75rem;
   line-height: 1.5;
   color: var(--mut);
-  max-width: 38rem;
+  max-width: 34rem;
   text-wrap: pretty;
-}
-
-.hero-go {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.75rem;
-}
-
-.how {
-  display: inline-flex;
-  padding: 1.25rem 2.125rem;
-  border-radius: 0;
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--ink);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.how:hover {
-  background: var(--photo);
-}
-
-/* Три цифры: пока база не ответила, место держится пустым, чтобы экран не
-   прыгал, когда цифры приедут. */
-.hero-stats {
-  position: relative;
-  display: flex;
-  gap: 6.5rem;
-  margin: 1.5rem 0 0;
-  transition: opacity 0.3s;
-}
-
-.hero-stats.wait {
-  opacity: 0;
-}
-
-.hero-stats div {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 0.25rem;
-}
-
-.hero-stats dd {
-  margin: 0;
-  font-size: 2.25rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
-.hero-stats dt {
-  font-size: 0.9375rem;
-  color: var(--mut);
-}
-
-/* Живая сетка за первым экраном - во всю ширину окна, а не страницы. К
-   центру гаснет, чтобы заголовок читался. */
-.hero-pixels {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 100vw;
-  transform: translateX(-50%);
-  pointer-events: none;
-  -webkit-mask-image: radial-gradient(ellipse 55% 50% at 50% 50%, rgba(0, 0, 0, 0.3), #000 80%);
-  mask-image: radial-gradient(ellipse 55% 50% at 50% 50%, rgba(0, 0, 0, 0.3), #000 80%);
-}
-
-.hero-pixels canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.top-link {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.top-link:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* Карточка торга под первым экраном: та же карусель, своей секцией. Высоту ей
-   раньше давала колонка первого экрана, теперь - секция. */
-.live-section {
-  max-width: 90rem;
-  margin: 0 auto;
-  padding: 5rem 4.5rem 3rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2rem;
-  border-top: 1px solid var(--line);
-}
-
-.live-section h2 {
-  margin: 0;
-  font-size: 2.5rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.live-section .live-wrap {
-  width: min(35rem, 100%);
-  height: 44rem;
 }
 
 .find {
   display: inline-flex;
   padding: 1.25rem 2.125rem;
-  border-radius: 0;
+  border-radius: 999px;
   background: var(--ink);
   color: var(--bg);
   font-size: 0.9375rem;
@@ -262,7 +132,7 @@ h1 {
   height: 100%;
   max-height: 45rem;
   border: 1px solid var(--line);
-  border-radius: 0;
+  border-radius: 20px;
   background: var(--card);
   overflow: hidden;
   text-decoration: none;
@@ -318,7 +188,7 @@ h1 {
   top: 50%;
   transform: translate(-50%, -50%);
   padding: 3px 5px;
-  border-radius: 0;
+  border-radius: 3px;
   background: #e0381c;
   color: #fff;
   font-size: 0.8125rem;
@@ -353,7 +223,7 @@ h1 {
   align-items: center;
   gap: 6px;
   padding: 6px 9px;
-  border-radius: 0;
+  border-radius: 999px;
   background: var(--card);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -363,7 +233,7 @@ h1 {
 .now-pill .dot {
   width: 6px;
   height: 6px;
-  border-radius: 0;
+  border-radius: 50%;
   background: #e0381c;
 }
 
@@ -394,6 +264,14 @@ h1 {
 .live-sub {
   font-size: 0.9375rem;
   color: var(--mut);
+}
+
+/* Монета USDC у суммы. */
+.usdc-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  vertical-align: -2px;
 }
 
 /* Кто, где, когда - строками: подпись капителью над значением, всё по
@@ -458,43 +336,25 @@ h1 {
     display: none;
   }
 
-  .hero {
-    gap: 1.25rem;
+  .land-grid {
+    grid-template-columns: 1fr;
+    gap: 1.375rem;
+    align-items: stretch;
+    grid-template-rows: auto minmax(0, 1fr);
     min-height: calc(100svh - 6rem);
   }
 
+  .manifesto {
+    gap: 0.875rem;
+    margin-top: 1.75rem;
+  }
+
   .sub {
-    font-size: 1rem;
+    font-size: 0.9375rem;
   }
 
-  .find,
-  .how {
+  .find {
     padding: 0.875rem 1.5rem;
-  }
-
-  .hero-stats {
-    gap: 2.25rem;
-    margin-top: 0.75rem;
-  }
-
-  .hero-stats dd {
-    font-size: 1.5rem;
-  }
-
-  .hero-stats dt {
-    font-size: 0.8125rem;
-  }
-
-  .live-section {
-    padding: 3.5rem 1.25rem 2rem;
-  }
-
-  .live-section h2 {
-    font-size: 1.75rem;
-  }
-
-  .live-section .live-wrap {
-    height: auto;
   }
 
   .live-card {
@@ -520,7 +380,7 @@ h1 {
 .theme-flip {
   cursor: pointer;
   padding: 0.4375rem 0.875rem;
-  border-radius: 0;
+  border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
@@ -575,7 +435,7 @@ h1 {
   display: flex;
   gap: 2px;
   padding: 3px;
-  border-radius: 0;
+  border-radius: 999px;
   background: var(--card);
   border: 1px solid var(--line);
 }
@@ -584,7 +444,7 @@ h1 {
   cursor: pointer;
   border: 0;
   padding: 6px 12px;
-  border-radius: 0;
+  border-radius: 999px;
   background: transparent;
   color: var(--mut);
   font: inherit;
@@ -618,7 +478,7 @@ h1 {
   width: min(86cqw, 86cqh);
   height: min(86cqw, 86cqh);
   background: #e9e8e2;
-  border-radius: 0;
+  border-radius: 14px;
 }
 
 /* Прошлый торг под первым экраном: что продали, чьи логотипы и на ком,
@@ -649,7 +509,7 @@ h1 {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
-  border-radius: 0;
+  border-radius: 20px;
 }
 
 .live-rail::-webkit-scrollbar {
@@ -680,163 +540,94 @@ h1 {
   }
 }
 
+/* Стрелки - поверх кадра, по его краям. Отключённая не исчезает, а гаснет:
+   пропадая, она дёргала бы вторую, и край карточки прыгал. */
+.live-arrow {
+  position: absolute;
+  top: 40%;
+  z-index: 3;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 1.125rem;
+  color: inherit;
+  cursor: pointer;
+  transition: opacity 0.14s, background 0.14s;
+}
+
+.live-arrow.back {
+  left: 0.75rem;
+}
+
+.live-arrow.next {
+  right: 0.75rem;
+}
+
+.live-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.live-arrow:not(:disabled):hover {
+  background: var(--photo);
+}
+
+/* Точки: сколько всего слайдов и где ты сейчас. */
+.live-pager {
+  display: flex;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-top: 0.875rem;
+}
+
+.live-pager button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+  transition: background 0.14s, transform 0.14s;
+}
+
+.live-pager button.on {
+  background: var(--ink);
+  transform: scale(1.25);
+}
+
 /* Проданная вещь: та же плашка, что у живой, но без пульса - торг кончился. */
 .now-pill.done {
   background: var(--ink);
   color: var(--card);
 }
 
-/* Куда идут деньги: схема под первым экраном. Линии - цветом текста, деньги -
-   красным акцентом, фон - фоном страницы, чтобы схема жила в обеих темах. */
-.flow {
-  max-width: 90rem;
-  margin: 0 auto;
-  padding: 6rem 4.5rem 7rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2rem;
-  border-top: 1px solid var(--line);
+@media (max-width: 60rem) {
+  .live-arrow {
+    display: none;
+  }
 }
 
-.flow h2 {
-  margin: 0;
-  font-size: 2.5rem;
+/* Ссылка на страницу продавцов в шапке. */
+.top-link {
+  font-size: 0.8125rem;
   font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  text-align: center;
-  text-wrap: balance;
-}
-
-.flow-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.flow-tab {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.625rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: var(--card);
   color: var(--ink);
-  font: inherit;
-  font-size: 0.9375rem;
-  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
 }
 
-.flow-tab.on {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--bg);
-}
-
-.flow-tab:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
-.flow-num {
-  display: inline-grid;
-  place-items: center;
-  width: 1.375rem;
-  height: 1.375rem;
-  border: 1px solid currentColor;
-  border-radius: 0;
-  font-size: 0.75rem;
-  opacity: 0.7;
-}
-
-.flow-map {
-  width: 100%;
-  height: auto;
-  margin-top: 1rem;
-}
-
-.flow-edge rect {
-  fill: var(--ink);
-}
-
-.flow-edge polyline {
-  fill: none;
-  stroke: var(--ink);
-  stroke-linejoin: miter;
-}
-
-.flow-fill rect {
-  fill: var(--bg);
-}
-
-.flow-fill polyline {
-  fill: none;
-  stroke: var(--bg);
-  stroke-linejoin: miter;
-}
-
-.flow-name {
-  fill: var(--ink);
-  font-weight: 500;
-  transition: fill 0.2s;
-}
-
-.flow-name.off {
-  fill: var(--mut);
-}
-
-.flow-hint {
-  fill: var(--mut);
-}
-
-.flow-coin {
-  fill: #e0381c;
-}
-
-.flow-text {
-  margin: 0;
-  max-width: 40rem;
-  min-height: 4.5em;
-  font-size: 1.125rem;
-  line-height: 1.55;
-  color: var(--mut);
-  text-align: center;
-  text-wrap: pretty;
-}
-
-.flow-more {
-  font-size: 0.9375rem;
-  color: var(--ink);
+.top-link:hover {
+  text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-@media (max-width: 56rem) {
-  .flow {
-    padding: 3.5rem 1.25rem 4.5rem;
-    gap: 1.5rem;
-  }
-
-  .flow h2 {
-    font-size: 1.75rem;
-  }
-
-  .flow-tab {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.875rem;
-  }
-
-  .flow-text {
-    font-size: 1rem;
-    min-height: 6.5em;
-  }
-}
-
-/* Страница для продавцов: та же ширина и шапка, что у главной, блоки один
-   под другим. */
+/* Страница для продавцов: калькулятор, шаги, вопросы и форма. Углы
+   скруглённые, как на всём сайте. */
 .sell {
   max-width: 76rem;
   margin: 0 auto;
@@ -861,6 +652,13 @@ a.wordmark {
 .sell-intro h1 {
   max-width: 16ch;
   font-size: clamp(2.5rem, 5.5vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.sell .sub {
+  font-size: 1.25rem;
+  max-width: 38rem;
 }
 
 .sell h2 {
@@ -877,13 +675,17 @@ a.wordmark {
   color: var(--mut);
 }
 
+.sell-calc,
+.sell-block {
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--line);
+}
+
 .sell-calc {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 3rem;
   align-items: start;
-  padding-top: 2.5rem;
-  border-top: 1px solid var(--line);
 }
 
 .sell-inputs {
@@ -912,48 +714,57 @@ a.wordmark {
   font-variant-numeric: tabular-nums;
 }
 
-/* Ползунок - квадрат, полоса - прямая черта, залитая до него. */
+/* Ползунок - круглый бегунок на скруглённой полосе, залитой до него. */
 .sell-slider input {
   width: 100%;
   height: 20px;
   margin: 0;
   appearance: none;
   -webkit-appearance: none;
-  background: linear-gradient(var(--ink), var(--ink)) 0 50% / var(--fill, 0%) 3px no-repeat,
-    linear-gradient(var(--line), var(--line)) 0 50% / 100% 3px no-repeat;
+  background: transparent;
   cursor: pointer;
+}
+
+.sell-slider input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(var(--ink), var(--ink)) 0 0 / var(--fill, 0%) 100% no-repeat, var(--line);
+}
+
+.sell-slider input::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(var(--ink), var(--ink)) 0 0 / var(--fill, 0%) 100% no-repeat, var(--line);
 }
 
 .sell-slider input::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 18px;
   height: 18px;
-  background: var(--ink);
+  margin-top: -7px;
   border: 0;
-  transition: background 0.15s, transform 0.15s;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 0.15s;
 }
 
 .sell-slider input::-moz-range-thumb {
   width: 18px;
   height: 18px;
-  background: var(--ink);
   border: 0;
+  border-radius: 50%;
+  background: var(--ink);
 }
 
 .sell-slider input:hover::-webkit-slider-thumb,
 .sell-slider input:active::-webkit-slider-thumb {
-  background: #e0381c;
-  transform: scale(1.1);
-}
-
-.sell-slider input:hover::-moz-range-thumb,
-.sell-slider input:active::-moz-range-thumb {
-  background: #e0381c;
+  transform: scale(1.15);
 }
 
 .sell-slider input:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 4px;
+  border-radius: 999px;
 }
 
 .sell-sum {
@@ -962,7 +773,7 @@ a.wordmark {
   gap: 1.25rem;
   padding: 1.75rem;
   border: 1px solid var(--line);
-  border-radius: 0;
+  border-radius: 20px;
   background: var(--card);
 }
 
@@ -1009,12 +820,80 @@ a.wordmark {
   justify-content: center;
 }
 
+/* Итог картинкой: кружок на каждое место и полоса «твоё / комиссия». */
+.sell-spots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sell-spots i {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e0381c;
+  animation: spot-in 0.25s ease-out;
+}
+
+.sell-spots i:hover {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+@keyframes spot-in {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.sell-split {
+  display: flex;
+  height: 10px;
+  gap: 3px;
+}
+
+.sell-split span {
+  position: relative;
+  flex-basis: 0;
+  border-radius: 999px;
+  transition: flex-grow 0.25s ease-out;
+}
+
+.sell-split span:hover {
+  filter: brightness(1.15);
+}
+
+.sell-split .you {
+  background: var(--ink);
+}
+
+.sell-split .fee {
+  background: #e0381c;
+}
+
+.sell-spots i[data-tip]:hover::after,
+.sell-split span[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.375rem 0.625rem;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.8125rem;
+  font-style: normal;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
 .sell-block {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  padding-top: 2.5rem;
-  border-top: 1px solid var(--line);
 }
 
 .sell-steps {
@@ -1032,6 +911,17 @@ a.wordmark {
   gap: 0.75rem;
 }
 
+.sell-num {
+  display: inline-grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
 .sell-steps b {
   font-size: 1.0625rem;
 }
@@ -1043,9 +933,13 @@ a.wordmark {
   color: var(--mut);
 }
 
+/* Ответы раскрываются плавно; где браузер этого не умеет - просто сразу.
+   Отступ ответа - паддингом: маржин схлопывался в конце закрытия, и форма
+   под вопросами прыгала. */
 .sell-qa {
   display: flex;
   flex-direction: column;
+  interpolate-size: allow-keywords;
 }
 
 .sell-qa details {
@@ -1055,325 +949,13 @@ a.wordmark {
 
 .sell-qa summary {
   cursor: pointer;
-  font-size: 1.0625rem;
-  font-weight: 600;
-}
-
-.sell-qa p {
-  margin: 0;
-  padding-top: 0.75rem;
-  max-width: 44rem;
-  line-height: 1.55;
-  color: var(--mut);
-}
-
-.sell-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.25rem;
-}
-
-.sell-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  font-size: 0.9375rem;
-}
-
-.sell-form .wide {
-  grid-column: 1 / -1;
-}
-
-.sell-form input,
-.sell-form textarea {
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 0;
-  background: var(--card);
-  color: var(--ink);
-  font: inherit;
-}
-
-.sell-form input:focus,
-.sell-form textarea:focus {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-}
-
-.sell-send {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.sell-send .find {
-  border: 0;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.sell-send .find:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.sell-error {
-  font-size: 0.9375rem;
-  color: #e0381c;
-}
-
-@media (max-width: 56rem) {
-  .sell {
-    padding: 1.375rem 1.25rem 4rem;
-    gap: 3rem;
-  }
-
-  .sell-calc,
-  .sell-form {
-    grid-template-columns: 1fr;
-  }
-
-  .sell-steps {
-    grid-template-columns: 1fr;
-  }
-
-  .sell-steps li {
-    flex-direction: row;
-  }
-}
-
-/* Разделители секций гаснут к краям: сплошная черта во всю ширину резала
-   страницу, а не разделяла её. */
-.flow,
-.live-section,
-.sell-calc,
-.sell-block {
-  border-image: linear-gradient(90deg, transparent, var(--line) 25%, var(--line) 75%, transparent) 1;
-}
-
-/* Следующий торг - во всю ширину, как у backable: кадр слева, подписи
-   справа. Узкая карточка по центру оставляла по бокам пустоту. */
-.live-wrap.wide {
-  width: min(72rem, 100%);
-  height: 32rem;
-}
-
-.live-wrap.wide .live-card {
-  flex-direction: row;
-}
-
-.live-wrap.wide .live-card > .live-photo {
-  flex: 1.4;
-}
-
-.live-wrap.wide .live-card > .live-info {
-  flex: 0 0 26rem;
-  align-content: center;
-  border-top: 0;
-  border-left: 1px solid var(--line);
-  padding: 2.25rem;
-}
-
-/* Прошедшие торги под карточкой следующего. */
-.sold {
-  width: min(72rem, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  margin-top: 2rem;
-}
-
-.sold h3 {
-  margin: 0;
-  text-align: center;
-  font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-/* Лист прошедших торгов: плитки впритык, ровный тон, вещь по центру, цифры
-   строками моноширинным - как лист вариантов логотипа. */
-.sold-cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid var(--line);
-  border-left: 1px solid var(--line);
-}
-
-.sold-card {
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: var(--card);
-  color: inherit;
-  text-decoration: none;
-}
-
-.sold-pic {
-  aspect-ratio: 4 / 3;
-  display: grid;
-  place-items: center;
-  background: var(--photo);
-  transition: background 0.2s;
-}
-
-.sold-card:hover .sold-pic {
-  background: var(--line);
-}
-
-.sold-img {
-  width: 68%;
-  height: 86%;
-  object-fit: contain;
-  animation: shot-in 0.4s ease-out;
-}
-
-@keyframes shot-in {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: none; }
-}
-
-/* Невидимая сцена, с которой снимают вещь для плитки. */
-.sold-stage {
-  position: fixed;
-  left: -10000px;
-  top: 0;
-  width: 640px;
-  height: 640px;
-  pointer-events: none;
-}
-
-.sold-stage .stage {
-  width: 640px;
-  height: 640px;
-}
-
-.sold-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1.25rem 1.25rem 1.5rem;
-  text-align: center;
-}
-
-.sold-body b {
-  font-size: 1.125rem;
-}
-
-.sold-spec {
-  display: grid;
-  grid-template-columns: auto auto;
-  column-gap: 1rem;
-  row-gap: 0.25rem;
-  margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.875rem;
-}
-
-.sold-spec div {
-  display: contents;
-}
-
-.sold-spec dt {
-  text-align: right;
-  color: var(--mut);
-}
-
-.sold-spec dd {
-  margin: 0;
-  text-align: left;
-  font-variant-numeric: tabular-nums;
-}
-
-.sold-meta {
-  max-width: 100%;
-  font-size: 0.8125rem;
-  color: var(--mut);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@media (max-width: 56rem) {
-  .sold-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .live-wrap.wide {
-    height: auto;
-  }
-
-  .live-wrap.wide .live-card {
-    flex-direction: column;
-  }
-
-  .live-wrap.wide .live-card > .live-info {
-    flex: 0 0 auto;
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    padding: 1.125rem 1.25rem;
-  }
-}
-
-
-/* Итог калькулятора картинкой: квадрат на каждое место и полоса, поделённая
-   на твою часть и комиссию. */
-.sell-spots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.sell-spots i {
-  width: 22px;
-  height: 22px;
-  background: #e0381c;
-  animation: spot-in 0.25s ease-out;
-}
-
-@keyframes spot-in {
-  from { transform: scale(0.4); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.sell-split {
-  display: flex;
-  height: 10px;
-  gap: 2px;
-}
-
-.sell-split span {
-  flex-basis: 0;
-  transition: flex-grow 0.25s ease-out;
-}
-
-.sell-split .you {
-  background: var(--ink);
-}
-
-.sell-split .fee {
-  background: #e0381c;
-}
-
-/* Перед формой черта не нужна: вопросы и форма - один разговор. */
-.sell-block.plain {
-  border-top: 0;
-  padding-top: 0;
-}
-
-/* Ответы раскрываются плавно; где браузер этого не умеет - просто сразу. */
-.sell-qa {
-  interpolate-size: allow-keywords;
-}
-
-.sell-qa summary {
   list-style: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
 }
 
 .sell-qa summary::-webkit-details-marker {
@@ -1402,6 +984,90 @@ a.wordmark {
   height: auto;
 }
 
+.sell-qa p {
+  margin: 0;
+  padding-top: 0.75rem;
+  max-width: 44rem;
+  line-height: 1.55;
+  color: var(--mut);
+}
+
+/* Форма - отдельным блоком, чтобы не терялась под вопросами. */
+.sell-block.sell-pitch {
+  padding: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.sell-pitch h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sell-pitch h2::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: #e0381c;
+}
+
+.sell-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.sell-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.sell-form .wide {
+  grid-column: 1 / -1;
+}
+
+.sell-form input {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.sell-form input:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.sell-send {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sell-send .find {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sell-send .find:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sell-error {
+  font-size: 0.9375rem;
+  color: #e0381c;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sell-spots i {
     animation: none;
@@ -1413,69 +1079,29 @@ a.wordmark {
   }
 }
 
-/* Подсказка при наведении на квадрат места и на полосу. */
-.sell-spots i,
-.sell-split span {
-  position: relative;
-}
-
-.sell-spots i:hover {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-}
-
-.sell-spots i[data-tip]:hover::after,
-.sell-split span[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.375rem 0.625rem;
-  background: var(--ink);
-  color: var(--bg);
-  font-size: 0.8125rem;
-  font-style: normal;
-  font-weight: 600;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.sell-split span:hover {
-  filter: brightness(1.15);
-}
-
-/* Форма - отдельным блоком: в конце страницы она терялась среди вопросов.
-   Углы прямые, как у полей и кнопки внутри; красный квадрат у заголовка -
-   те же «деньги», что на главной. */
-.sell-block.sell-pitch {
-  padding: 2.5rem;
-  border: 1px solid var(--line);
-  border-image: none;
-  background: var(--card);
-}
-
-.sell-pitch h2 {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-}
-
-.sell-pitch h2::before {
-  content: "";
-  flex: 0 0 auto;
-  width: 0.875rem;
-  height: 0.875rem;
-  background: #e0381c;
-}
-
-.sell-pitch .sell-form input,
-.sell-pitch .sell-form textarea {
-  background: var(--bg);
-}
-
 @media (max-width: 56rem) {
+  .sell {
+    padding: 1.375rem 1.25rem 4rem;
+    gap: 3rem;
+  }
+
+  .sell .sub {
+    font-size: 1rem;
+  }
+
+  .sell-calc,
+  .sell-form {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-steps li {
+    flex-direction: row;
+  }
+
   .sell-block.sell-pitch {
     padding: 1.5rem 1.25rem;
   }

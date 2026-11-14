@@ -75,7 +75,7 @@ export function Sell() {
         <ol className="sell-steps">
           {STEPS.map(([title, text], at) => (
             <li key={title}>
-              <span className="flow-num">{at + 1}</span>
+              <span className="sell-num">{at + 1}</span>
               <div>
                 <b>{title}</b>
                 <p>{text}</p>
@@ -262,7 +262,7 @@ function Pitch() {
 
   if (state === "sent") {
     return (
-      <section className="sell-block plain sell-pitch" id="pitch">
+      <section className="sell-block sell-pitch" id="pitch">
         <h2>Got it.</h2>
         <p className="sub">We&apos;ll look at your spot and get back to you soon.</p>
       </section>
@@ -270,7 +270,7 @@ function Pitch() {
   }
 
   return (
-    <section className="sell-block plain sell-pitch" id="pitch">
+    <section className="sell-block sell-pitch" id="pitch">
       <h2>Got something people look at? Tell us.</h2>
       <form className="sell-form" onSubmit={submit}>
         <label className="wide">
