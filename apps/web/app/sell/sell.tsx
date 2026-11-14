@@ -136,6 +136,18 @@ function Calculator() {
       </div>
 
       <div className="sell-sum">
+        {/* Каждое место - квадрат, как деньги на схеме главной: ползунок
+            двигаешь - квадраты добавляются, полоса под ними делится на твою
+            часть и комиссию. */}
+        <div className="sell-spots" aria-hidden>
+          {Array.from({ length: spots }, (_, at) => (
+            <i key={at} data-tip={`Spot ${at + 1}: ${usd(winning)}`} />
+          ))}
+        </div>
+        <div className="sell-split" aria-hidden>
+          <span className="you" style={{ flexGrow: total - fee }} data-tip={`You keep ${usd(total - fee)}`} />
+          <span className="fee" style={{ flexGrow: fee }} data-tip={`OXAR fee ${usd(fee)}`} />
+        </div>
         <dl>
           <div>
             <dt>Total bid</dt>
@@ -193,7 +205,8 @@ function Slider({
 /**
  * Заявка уходит в ту же таблицу waitlist, что и прежняя форма лендинга:
  * у неё уже есть сторона «seller», поле «что продаю» и RLS только на insert.
- * Остальные поля - строками в notes, разбираем мы их всё равно руками.
+ * Полей три: длинная форма в конце страницы отпугивала, а где и когда
+ * человек и так напишет в «что это». Ссылка - строкой в notes.
  */
 function Pitch() {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
@@ -203,11 +216,7 @@ function Pitch() {
     const form = new FormData(event.currentTarget);
     const field = (name: string) => String(form.get(name) ?? "").trim();
     const notes = [
-      ["Name", field("name")],
-      ["Where and when", field("where")],
-      ["Audience", field("audience")],
       ["Link", field("link")],
-      ["More", field("more")],
     ]
       .filter(([, value]) => value)
       .map(([label, value]) => `${label}: ${value}`)
@@ -252,36 +261,26 @@ function Pitch() {
   }
 
   return (
-    <section className="sell-block" id="pitch">
+    <section className="sell-block plain" id="pitch">
       <h2>Got something people look at? Tell us.</h2>
       <form className="sell-form" onSubmit={submit}>
-        <label>
-          <span>What is it?</span>
-          <input name="what" required minLength={3} maxLength={500} placeholder="A shirt, a car, a stage, a campaign..." />
+        <label className="wide">
+          <span>What is it, and where will people see it?</span>
+          <input
+            name="what"
+            required
+            minLength={3}
+            maxLength={500}
+            placeholder="Flags at a Saturday run club in London, about 300 runners"
+          />
         </label>
         <label>
           <span>How do we reach you?</span>
           <input name="contact" required minLength={3} maxLength={320} placeholder="Email, Telegram or X" />
         </label>
         <label>
-          <span>Your name</span>
-          <input name="name" maxLength={80} />
-        </label>
-        <label>
-          <span>Where and when will people see it?</span>
-          <input name="where" maxLength={200} />
-        </label>
-        <label>
-          <span>Roughly how many people?</span>
-          <input name="audience" maxLength={60} />
-        </label>
-        <label>
-          <span>Link</span>
+          <span>Link (optional)</span>
           <input name="link" maxLength={200} placeholder="Website, page or post" />
-        </label>
-        <label className="wide">
-          <span>Anything else</span>
-          <textarea name="more" maxLength={400} rows={4} />
         </label>
         <div className="wide sell-send">
           <button className="find" type="submit" disabled={state === "sending"}>
