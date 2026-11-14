@@ -51,18 +51,38 @@ body {
   gap: 2.5rem;
 }
 
+/* Первый экран по центру, как у backable: крупный заголовок, две двери и
+   три цифры из базы под ними. Карточка торга уехала ниже, в свою секцию. */
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  text-align: center;
+}
+
 .land-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.wordmark,
-h1 {
+.wordmark {
   font-size: 1.75rem;
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.02em;
+}
+
+h1 {
+  position: relative;
+  max-width: 14ch;
+  font-size: clamp(3rem, 7.5vw, 6.5rem);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
 }
 
 .tagline {
@@ -70,34 +90,142 @@ h1 {
   color: var(--mut);
 }
 
-.land-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 35rem;
-  gap: 6rem;
-  align-items: center;
-  min-height: 0;
-}
-
-.manifesto {
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-}
-
 h1 {
   margin: 0;
   text-wrap: balance;
 }
 
-/* Поддержка тем же кеглем, что заголовок, но серым: это продолжение мысли,
-   а не подпись под ней. */
 .sub {
+  position: relative;
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.25rem;
   line-height: 1.5;
   color: var(--mut);
-  max-width: 34rem;
+  max-width: 38rem;
   text-wrap: pretty;
+}
+
+.hero-go {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.how {
+  display: inline-flex;
+  padding: 1.25rem 2.125rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.how:hover {
+  background: var(--photo);
+}
+
+/* Три цифры: пока база не ответила, место держится пустым, чтобы экран не
+   прыгал, когда цифры приедут. */
+.hero-stats {
+  position: relative;
+  display: flex;
+  gap: 3.5rem;
+  margin: 1.5rem 0 0;
+  transition: opacity 0.3s;
+}
+
+.hero-stats.wait {
+  opacity: 0;
+}
+
+.hero-stats div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.25rem;
+}
+
+.hero-stats dd {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-stats dt {
+  font-size: 0.9375rem;
+  color: var(--mut);
+}
+
+/* Квадраты-деньги на фоне: едва заметны и медленно мигают. */
+.hero-pixels {
+  position: absolute;
+  inset: -2.5rem -4.5rem;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hero-pixels i {
+  position: absolute;
+  width: 2.75rem;
+  height: 2.75rem;
+  background: #e0381c;
+  opacity: 0;
+  animation: pixel 6s ease-in-out infinite;
+}
+
+@keyframes pixel {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.07; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-pixels i {
+    animation: none;
+    opacity: 0.05;
+  }
+}
+
+.top-link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.top-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Карточка торга под первым экраном: та же карусель, своей секцией. Высоту ей
+   раньше давала колонка первого экрана, теперь - секция. */
+.live-section {
+  max-width: 90rem;
+  margin: 0 auto;
+  padding: 5rem 4.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  border-top: 1px solid var(--line);
+}
+
+.live-section h2 {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.live-section .live-wrap {
+  width: min(35rem, 100%);
+  height: 44rem;
 }
 
 .find {
@@ -336,25 +464,52 @@ h1 {
     display: none;
   }
 
-  .land-grid {
-    grid-template-columns: 1fr;
-    gap: 1.375rem;
-    align-items: stretch;
-    grid-template-rows: auto minmax(0, 1fr);
+  .hero {
+    gap: 1.25rem;
     min-height: calc(100svh - 6rem);
   }
 
-  .manifesto {
-    gap: 0.875rem;
-    margin-top: 1.75rem;
-  }
-
   .sub {
-    font-size: 0.9375rem;
+    font-size: 1rem;
   }
 
-  .find {
+  .find,
+  .how {
     padding: 0.875rem 1.5rem;
+  }
+
+  .hero-stats {
+    gap: 1.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .hero-stats dd {
+    font-size: 1.5rem;
+  }
+
+  .hero-stats dt {
+    font-size: 0.8125rem;
+  }
+
+  .hero-pixels {
+    inset: -1.375rem -1.25rem;
+  }
+
+  .hero-pixels i {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .live-section {
+    padding: 3.5rem 1.25rem 2rem;
+  }
+
+  .live-section h2 {
+    font-size: 1.75rem;
+  }
+
+  .live-section .live-wrap {
+    height: auto;
   }
 
   .live-card {
@@ -759,5 +914,272 @@ h1 {
   .flow-text {
     font-size: 1rem;
     min-height: 6.5em;
+  }
+}
+
+/* Страница для продавцов: та же ширина и шапка, что у главной, блоки один
+   под другим. */
+.sell {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 2.5rem 4.5rem 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4.5rem;
+}
+
+a.wordmark {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sell-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+.sell-intro h1 {
+  max-width: 16ch;
+  font-size: clamp(2.5rem, 5.5vw, 4.5rem);
+}
+
+.sell h2 {
+  margin: 0;
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.sell-note {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.sell-calc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.sell-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.sell-inputs > .sell-note {
+  margin-top: -1rem;
+}
+
+.sell-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.sell-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.0625rem;
+}
+
+.sell-row b {
+  font-variant-numeric: tabular-nums;
+}
+
+.sell-slider input {
+  width: 100%;
+  accent-color: var(--ink);
+}
+
+.sell-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.75rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.sell-sum dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sell-sum dl div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 1.0625rem;
+}
+
+.sell-sum dt {
+  color: var(--mut);
+}
+
+.sell-sum dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.sell-sum dl div.you {
+  border-bottom: 0;
+}
+
+.sell-sum dl div.you dt {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.sell-sum dl div.you dd {
+  font-size: 2.25rem;
+  letter-spacing: -0.02em;
+}
+
+.sell-sum .find {
+  justify-content: center;
+}
+
+.sell-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.sell-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.sell-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sell-steps b {
+  font-size: 1.0625rem;
+}
+
+.sell-steps p {
+  margin: 0.375rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.sell-qa {
+  display: flex;
+  flex-direction: column;
+}
+
+.sell-qa details {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sell-qa summary {
+  cursor: pointer;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.sell-qa p {
+  margin: 0.75rem 0 0;
+  max-width: 44rem;
+  line-height: 1.55;
+  color: var(--mut);
+}
+
+.sell-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.sell-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.sell-form .wide {
+  grid-column: 1 / -1;
+}
+
+.sell-form input,
+.sell-form textarea {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+}
+
+.sell-form input:focus,
+.sell-form textarea:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.sell-send {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sell-send .find {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sell-send .find:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sell-error {
+  font-size: 0.9375rem;
+  color: #e0381c;
+}
+
+@media (max-width: 56rem) {
+  .sell {
+    padding: 1.375rem 1.25rem 4rem;
+    gap: 3rem;
+  }
+
+  .sell-calc,
+  .sell-form {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .sell-steps li {
+    flex-direction: row;
   }
 }

@@ -11,6 +11,8 @@ import { useEffect, useRef, useState } from "react";
  *
  * Схема не обещает ничего сверх контракта. Проценты не пишем: комиссия
  * меняется в админке, и цифра на лендинге разошлась бы с цепочкой молча.
+ * Ни «Solana», ни «USDC» в текстах нет: лендинг говорит не только с теми,
+ * кто знает эти слова.
  */
 
 type Lane = "bid" | "refund" | "payout" | "fee";
@@ -105,7 +107,7 @@ type Stage = {
 const STAGES: Stage[] = [
   {
     tab: "You bid",
-    text: "You pay your bid upfront into an escrow program on Solana. If someone outbids you, your USDC comes straight back to your wallet.",
+    text: "You pay your bid upfront into escrow. If someone outbids you, your money comes straight back.",
     start: { sponsors: 6 },
     order: ["bid", "bid", "refund"],
   },
@@ -167,7 +169,7 @@ export function MoneyFlow() {
   const current = STAGES[stage];
 
   return (
-    <section className="flow" aria-labelledby="flow-title">
+    <section className="flow" id="how" aria-labelledby="flow-title">
       <h2 id="flow-title">Where your money goes, in a nutshell.</h2>
       <div className="flow-tabs" role="tablist" aria-label="Money flow stage">
         {STAGES.map((one, at) => (

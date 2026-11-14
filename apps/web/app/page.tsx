@@ -48,6 +48,14 @@ function WornRows({ worn }: { worn: { by: string | null; where: string | null; w
  * нужен. Без ключей или без сети карточка честно статична.
  */
 
+/**
+ * Первый экран говорит о месте на том, на что смотрят люди, а не об ивентах
+ * и не о крипте: продаём и на мероприятиях, и на кампаниях, и на вещах.
+ */
+const HEADLINE = "If people look at it, it's ad space.";
+const SUBHEADLINE =
+  "Bid on a logo spot on something real: a shirt, a van, a flag at the finish line. Your money waits in escrow until the photo is up.";
+
 /** Само приложение живёт на своём домене и деплоится отдельным проектом. */
 const APP_URL = "https://app.oxar.app";
 
@@ -255,6 +263,51 @@ async function loadPast(): Promise<Past | null> {
   };
 }
 
+/**
+ * Цифры первого экрана - по всем торгам, кроме репетиций. Ставки считаются
+ * все, вместе с перебитыми: это сколько люди готовы были поставить, а не
+ * сколько ушло продавцам.
+ */
+type Stats = { totalCents: number; bidders: number; averageCents: number };
+
+async function loadStats(): Promise<Stats | null> {
+  const lots = (await rest("lots?rehearsal=eq.true&select=id")) as { id: string }[] | null;
+  const bids = (await rest("lot_bids?select=lot_id,amount_cents,bidder_wallet")) as
+    | { lot_id: string; amount_cents: number; bidder_wallet: string }[]
+    | null;
+  if (!lots || !bids) return null;
+  const rehearsal = new Set(lots.map((one) => one.id));
+  const real = bids.filter((bid) => !rehearsal.has(bid.lot_id));
+  if (real.length === 0) return null;
+  const totalCents = real.reduce((sum, bid) => sum + bid.amount_cents, 0);
+  return {
+    totalCents,
+    bidders: new Set(real.map((bid) => bid.bidder_wallet)).size,
+    averageCents: Math.round(totalCents / real.length),
+  };
+}
+
+/** $13.7K, $233: круглые цифры читаются с первого взгляда. */
+function money(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: cents >= 1_000_000 ? "compact" : "standard",
+    maximumFractionDigits: cents >= 1_000_000 ? 1 : 0,
+  }).format(cents / 100);
+}
+
+/**
+ * Квадраты на фоне первого экрана - те же «деньги», что ездят по схеме ниже.
+ * Места заданы руками, а не случайно: иначе при каждой загрузке экран был бы
+ * другим, и сервер с клиентом рисовали бы его по-разному.
+ */
+const PIXELS: [number, number, number][] = [
+  [6, 18, 0], [14, 64, 1.4], [22, 30, 2.6], [31, 78, 0.8], [43, 12, 3.2],
+  [57, 84, 1.9], [66, 22, 0.4], [74, 58, 2.2], [83, 14, 1.1], [91, 70, 3.6],
+  [11, 88, 2.9], [50, 6, 1.6], [96, 36, 0.2], [3, 46, 3.9],
+];
+
 type Theme = "light" | "dark";
 
 export default function Home() {
@@ -263,6 +316,7 @@ export default function Home() {
   // Торги доехали: до этого «торга нет» - не факт, а ожидание.
   const [loaded, setLoaded] = useState(false);
   const [past, setPast] = useState<Past | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   // Тема: запомненная, иначе светлая. Ставится атрибутом на html, чтобы
@@ -287,6 +341,7 @@ export default function Home() {
     });
     void loadPast().then(setPast);
     void loadNext().then(setNext);
+    void loadStats().then(setStats);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, []);
@@ -384,6 +439,9 @@ export default function Home() {
         <span className="wordmark">OXAR</span>
         <span className="land-side">
           <span className="tagline">Ad space on physical things</span>
+          <a className="top-link" href="/sell">
+            Sell a spot
+          </a>
           <button
             type="button"
             className="theme-flip"
@@ -395,21 +453,41 @@ export default function Home() {
         </span>
       </header>
 
-      <div className="land-grid">
-        <div className="manifesto">
-          <h1>If people look at it, it&apos;s ad space.</h1>
-          <p className="sub">
-            Rent a spot on real things people see every day: a shirt someone
-            wears, a suitcase that travels, a laptop lid that opens at every
-            meetup.
-          </p>
-          <div>
-            <a className="find" href={APP_URL}>
-              Find a spot
-            </a>
-          </div>
+      <div className="hero">
+        <div className="hero-pixels" aria-hidden>
+          {PIXELS.map(([left, top, delay]) => (
+            <i key={`${left}-${top}`} style={{ left: `${left}%`, top: `${top}%`, animationDelay: `${delay}s` }} />
+          ))}
         </div>
+        <h1>{HEADLINE}</h1>
+        <p className="sub">{SUBHEADLINE}</p>
+        <div className="hero-go">
+          <a className="find" href={APP_URL}>
+            Find a spot
+          </a>
+          <a className="how" href="#how">
+            See how it works
+          </a>
+        </div>
+        <dl className={stats ? "hero-stats" : "hero-stats wait"}>
+          <div>
+            <dt>bid so far</dt>
+            <dd>{stats ? money(stats.totalCents) : "$0"}</dd>
+          </div>
+          <div>
+            <dt>bidders</dt>
+            <dd>{stats ? stats.bidders.toLocaleString("en-US") : "0"}</dd>
+          </div>
+          <div>
+            <dt>average bid</dt>
+            <dd>{stats ? money(stats.averageCents) : "$0"}</dd>
+          </div>
+        </dl>
+      </div>
+    </main>
 
+    <section className="live-section" aria-labelledby="live-title">
+      <h2 id="live-title">Auctions</h2>
         {/* Карточка перестала быть одной ссылкой: в 3D вещь крутят, и жест
             вращения не должен уводить на другой сайт. Дверь - нижняя полоса
             и кнопка Find a spot. */}
@@ -715,8 +793,7 @@ export default function Home() {
           </>
         )}
         </div>
-      </div>
-    </main>
+    </section>
     <MoneyFlow />
     </>
   );
