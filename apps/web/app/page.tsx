@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { isOpen, nextClose } from "@oxar/core";
 import { houseShape, SOON, ThingStage, type Stage } from "@oxar/stage";
-import { loadSold, SoldCards, SoldRows, type Sold } from "./auctions.tsx";
+import { loadSold, SoldCards, type Sold } from "./auctions.tsx";
 import { MoneyFlow } from "./money-flow.tsx";
 import { PixelField } from "./pixel-field.tsx";
 
-/** Как показать торги - временно, пока выбираем вариант. */
-const VARIANT: "rows" | "cards" = "rows";
 
 /**
  * Кто, где, когда - три строки под полосой карточки, подпись над значением,
@@ -383,7 +381,7 @@ export default function Home() {
             плашкой внизу страницы - списком логотипов под заголовком, - и
             читался как сноска. Здесь он показан на самой вещи и той же
             карточкой, что живой: тем же кадром, тем же 3D, теми же местами. */}
-        <div className={VARIANT === "rows" ? "live-wrap wide" : "live-wrap"}>
+        <div className="live-wrap">
         <div className="live-rail">
         {/* Ключи разные: обе карточки стоят в одной позиции дерева, и без
             ключа React оставлял сцену от первой, с футболкой, а знак вопроса
@@ -557,7 +555,7 @@ export default function Home() {
         {sold.length > 0 && (
           <div className="sold">
             <h3>Past auctions</h3>
-            {VARIANT === "rows" ? <SoldRows sold={sold} /> : <SoldCards sold={sold} />}
+            <SoldCards sold={sold} />
           </div>
         )}
     </section>

@@ -141,12 +141,12 @@ function Calculator() {
             часть и комиссию. */}
         <div className="sell-spots" aria-hidden>
           {Array.from({ length: spots }, (_, at) => (
-            <i key={at} />
+            <i key={at} data-tip={`Spot ${at + 1}: ${usd(winning)}`} />
           ))}
         </div>
         <div className="sell-split" aria-hidden>
-          <span className="you" style={{ flexGrow: total - fee }} />
-          <span className="fee" style={{ flexGrow: fee }} />
+          <span className="you" style={{ flexGrow: total - fee }} data-tip={`You keep ${usd(total - fee)}`} />
+          <span className="fee" style={{ flexGrow: fee }} data-tip={`OXAR fee ${usd(fee)}`} />
         </div>
         <dl>
           <div>

@@ -111,46 +111,7 @@ function Cover({ one, className }: { one: Sold; className: string }) {
   );
 }
 
-function closed(at: number): string {
-  return new Date(at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-/** Вариант «строками», как у backable список закрытых раундов. */
-export function SoldRows({ sold }: { sold: Sold[] }) {
-  return (
-    <div className="sold-rows">
-      {sold.map((one) => (
-        <a key={one.id} className="sold-row" href={`${APP_URL}/?thing=${one.id}`}>
-          <Cover one={one} className="sold-thumb" />
-          <span className="sold-name">
-            <b>{one.title}</b>
-            <span>{[one.where, one.when].filter(Boolean).join(" · ") || `Closed ${closed(one.closedAt)}`}</span>
-          </span>
-          <span className="sold-logos">
-            {one.logos.slice(0, 6).map((logo, at) => (
-              <img key={at} src={logo} alt="" loading="lazy" />
-            ))}
-          </span>
-          <span className="sold-num">
-            <span>Raised</span>
-            <b>{formatUsdFull(one.raisedCents)}</b>
-          </span>
-          <span className="sold-num">
-            <span>Spots</span>
-            <b>{one.spots}</b>
-          </span>
-          <span className="sold-num">
-            <span>Bidders</span>
-            <b>{one.bidders}</b>
-          </span>
-          <span className="sold-go">View</span>
-        </a>
-      ))}
-    </div>
-  );
-}
-
-/** Вариант «карточками»: сетка, у каждой торга своё фото. */
+/** Прошедшие торги сеткой карточек: у каждого своё фото или мозаика логотипов. */
 export function SoldCards({ sold }: { sold: Sold[] }) {
   return (
     <div className="sold-cards">
