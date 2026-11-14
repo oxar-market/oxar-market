@@ -6,6 +6,14 @@
   box-sizing: border-box;
 }
 
+/* Углы везде прямые - как у квадратов-денег. Скругление было у всего подряд
+   и ничем нас не отличало; правило здесь, чтобы новое не скруглилось само. */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}
+
 /* Палитра переменными: лендинг - первое место с настоящей темой. Тёмные
    значения из дизайн-борда. */
 :root {
@@ -119,7 +127,7 @@ h1 {
 .how {
   display: inline-flex;
   padding: 1.25rem 2.125rem;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
@@ -225,7 +233,7 @@ h1 {
 .find {
   display: inline-flex;
   padding: 1.25rem 2.125rem;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--ink);
   color: var(--bg);
   font-size: 0.9375rem;
@@ -254,7 +262,7 @@ h1 {
   height: 100%;
   max-height: 45rem;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 0;
   background: var(--card);
   overflow: hidden;
   text-decoration: none;
@@ -310,7 +318,7 @@ h1 {
   top: 50%;
   transform: translate(-50%, -50%);
   padding: 3px 5px;
-  border-radius: 3px;
+  border-radius: 0;
   background: #e0381c;
   color: #fff;
   font-size: 0.8125rem;
@@ -345,7 +353,7 @@ h1 {
   align-items: center;
   gap: 6px;
   padding: 6px 9px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--card);
   font-size: 0.6875rem;
   font-weight: 600;
@@ -355,7 +363,7 @@ h1 {
 .now-pill .dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: 0;
   background: #e0381c;
 }
 
@@ -512,7 +520,7 @@ h1 {
 .theme-flip {
   cursor: pointer;
   padding: 0.4375rem 0.875rem;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
@@ -567,7 +575,7 @@ h1 {
   display: flex;
   gap: 2px;
   padding: 3px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--card);
   border: 1px solid var(--line);
 }
@@ -576,7 +584,7 @@ h1 {
   cursor: pointer;
   border: 0;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: 0;
   background: transparent;
   color: var(--mut);
   font: inherit;
@@ -610,7 +618,7 @@ h1 {
   width: min(86cqw, 86cqh);
   height: min(86cqw, 86cqh);
   background: #e9e8e2;
-  border-radius: 14px;
+  border-radius: 0;
 }
 
 /* Прошлый торг под первым экраном: что продали, чьи логотипы и на ком,
@@ -641,7 +649,7 @@ h1 {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
-  border-radius: 20px;
+  border-radius: 0;
 }
 
 .live-rail::-webkit-scrollbar {
@@ -715,7 +723,7 @@ h1 {
   gap: 0.625rem;
   padding: 0.625rem 1rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--card);
   color: var(--ink);
   font: inherit;
@@ -740,7 +748,7 @@ h1 {
   width: 1.375rem;
   height: 1.375rem;
   border: 1px solid currentColor;
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 0.75rem;
   opacity: 0.7;
 }
@@ -904,9 +912,48 @@ a.wordmark {
   font-variant-numeric: tabular-nums;
 }
 
+/* Ползунок - квадрат, полоса - прямая черта, залитая до него. */
 .sell-slider input {
   width: 100%;
-  accent-color: var(--ink);
+  height: 20px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(var(--ink), var(--ink)) 0 50% / var(--fill, 0%) 3px no-repeat,
+    linear-gradient(var(--line), var(--line)) 0 50% / 100% 3px no-repeat;
+  cursor: pointer;
+}
+
+.sell-slider input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--ink);
+  border: 0;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.sell-slider input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--ink);
+  border: 0;
+}
+
+.sell-slider input:hover::-webkit-slider-thumb,
+.sell-slider input:active::-webkit-slider-thumb {
+  background: #e0381c;
+  transform: scale(1.1);
+}
+
+.sell-slider input:hover::-moz-range-thumb,
+.sell-slider input:active::-moz-range-thumb {
+  background: #e0381c;
+}
+
+.sell-slider input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
 }
 
 .sell-sum {
@@ -915,7 +962,7 @@ a.wordmark {
   gap: 1.25rem;
   padding: 1.75rem;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 0;
   background: var(--card);
 }
 
@@ -1041,7 +1088,7 @@ a.wordmark {
 .sell-form textarea {
   padding: 0.875rem 1rem;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--card);
   color: var(--ink);
   font: inherit;
@@ -1104,6 +1151,29 @@ a.wordmark {
   border-image: linear-gradient(90deg, transparent, var(--line) 25%, var(--line) 75%, transparent) 1;
 }
 
+/* Следующий торг - во всю ширину, как у backable: кадр слева, подписи
+   справа. Узкая карточка по центру оставляла по бокам пустоту. */
+.live-wrap.wide {
+  width: min(72rem, 100%);
+  height: 32rem;
+}
+
+.live-wrap.wide .live-card {
+  flex-direction: row;
+}
+
+.live-wrap.wide .live-card > .live-photo {
+  flex: 1.4;
+}
+
+.live-wrap.wide .live-card > .live-info {
+  flex: 0 0 26rem;
+  align-content: center;
+  border-top: 0;
+  border-left: 1px solid var(--line);
+  padding: 2.25rem;
+}
+
 /* Прошедшие торги под карточкой следующего. */
 .sold {
   width: min(72rem, 100%);
@@ -1121,117 +1191,132 @@ a.wordmark {
   letter-spacing: -0.02em;
 }
 
-/* Без фото - мозаика логотипов победителей. */
-.mosaic {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px;
-  padding: 4px;
-  overflow: hidden;
-}
-
-.mosaic img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  background: #fff;
-  border-radius: 2px;
-}
-
+/* Лист прошедших торгов: плитки впритык, ровный тон, вещь по центру, цифры
+   строками моноширинным - как лист вариантов логотипа. */
 .sold-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
 }
 
 .sold-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   background: var(--card);
   color: inherit;
   text-decoration: none;
-  overflow: hidden;
-  transition: transform 0.15s;
-}
-
-.sold-card:hover {
-  transform: translateY(-2px);
 }
 
 .sold-pic {
-  position: relative;
   aspect-ratio: 4 / 3;
-  overflow: hidden;
-  background: var(--photo);
-}
-
-.sold-pic .now-pill {
-  left: 0.875rem;
-  top: 0.875rem;
-}
-
-/* Кадр задаёт карточка, а не снимок: портретное фото иначе вытягивало
-   свою карточку выше соседних. */
-.sold-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.sold-pic .mosaic {
   display: grid;
-  padding: 2.75rem 15%;
-  align-content: center;
+  place-items: center;
+  background: var(--photo);
+  transition: background 0.2s;
+}
+
+.sold-card:hover .sold-pic {
+  background: var(--line);
+}
+
+.sold-img {
+  width: 68%;
+  height: 86%;
+  object-fit: contain;
+  animation: shot-in 0.4s ease-out;
+}
+
+@keyframes shot-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Невидимая сцена, с которой снимают вещь для плитки. */
+.sold-stage {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 640px;
+  height: 640px;
+  pointer-events: none;
+}
+
+.sold-stage .stage {
+  width: 640px;
+  height: 640px;
 }
 
 .sold-body {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  padding: 1rem 1.125rem 1.125rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  text-align: center;
 }
 
 .sold-body b {
   font-size: 1.125rem;
 }
 
-.sold-meta {
+.sold-spec {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.875rem;
+}
+
+.sold-spec div {
+  display: contents;
+}
+
+.sold-spec dt {
+  text-align: right;
+  color: var(--mut);
+}
+
+.sold-spec dd {
+  margin: 0;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.sold-meta {
+  max-width: 100%;
+  font-size: 0.8125rem;
   color: var(--mut);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.sold-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.sold-line span + span {
-  color: var(--mut);
-  font-weight: 500;
-}
-
 @media (max-width: 56rem) {
   .sold-cards {
     grid-template-columns: 1fr;
   }
+
+  .live-wrap.wide {
+    height: auto;
+  }
+
+  .live-wrap.wide .live-card {
+    flex-direction: column;
+  }
+
+  .live-wrap.wide .live-card > .live-info {
+    flex: 0 0 auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 1.125rem 1.25rem;
+  }
 }
 
-/* Кнопки, вкладки и поля - с прямыми углами, как квадраты-деньги: сплошное
-   скругление было у всех подряд и ничем не отличало нас. */
-:is(.find, .how, .flow-tab, .theme-flip, .flow-num, .sell-form input, .sell-form textarea) {
-  border-radius: 0;
-}
 
 /* Итог калькулятора картинкой: квадрат на каждое место и полоса, поделённая
    на твою часть и комиссию. */

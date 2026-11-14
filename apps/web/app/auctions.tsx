@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { formatUsdFull } from "@oxar/core";
+import { houseShape, ThingStage, type Stage } from "@oxar/stage";
 
 /**
- * Прошедшие торги наших вещей - списком под карточкой следующего. Прежде на
- * лендинге был виден только последний; теперь видна вся история: что, где,
- * сколько собрали и чьи логотипы победили.
+ * Прошедшие торги наших вещей - листом плиток под карточкой следующего:
+ * ровный тон, по центру сама вещь с логотипами победителей, под ней строки
+ * цифр. Фото с пруфов были крупными и пёстрыми и ломали палитру страницы.
  */
 
 const APP_URL = "https://app.oxar.app";
@@ -15,11 +17,11 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export type Sold = {
   id: string;
   title: string;
+  model: string | null;
   where: string | null;
   when: string | null;
-  /** Фото с пруфа, иначе снимок вещи; нет ни того, ни другого - null. */
-  image: string | null;
-  logos: string[];
+  /** Код места - логотип победителя: им вещь одевается на снимке. */
+  art: Record<string, string>;
   raisedCents: number;
   spots: number;
   bidders: number;
@@ -38,11 +40,6 @@ async function rest<T>(path: string): Promise<T | null> {
   }
 }
 
-/** Снимок из хранилища или из приложения: путь от корня - файл приложения. */
-function picture(path: string): string {
-  return path.startsWith("/") ? `${APP_URL}${path}` : `${SUPABASE}/storage/v1/object/public/things/${path}`;
-}
-
 export async function loadSold(): Promise<Sold[]> {
   const [things, lots, bids] = await Promise.all([
     rest<
@@ -51,14 +48,13 @@ export async function loadSold(): Promise<Sold[]> {
         title: string;
         house: boolean;
         prepared: boolean;
-        photos: string[] | null;
-        proof_photos: string[] | null;
+        model_url: string | null;
         worn_where: string | null;
         worn_when: string | null;
       }[]
-    >("things?active=eq.true&hidden=eq.false&select=id,title,house,prepared,photos,proof_photos,worn_where,worn_when"),
-    rest<{ id: string; thing_id: string; status: string; closes_at: string }[]>(
-      "lots?rehearsal=eq.false&status=eq.won&select=id,thing_id,status,closes_at",
+    >("things?active=eq.true&hidden=eq.false&select=id,title,house,prepared,model_url,worn_where,worn_when"),
+    rest<{ id: string; thing_id: string; closes_at: string; thing_spots: { code: string } | null }[]>(
+      "lots?rehearsal=eq.false&status=eq.won&select=id,thing_id,closes_at,thing_spots:spot_id(code)",
     ),
     rest<{ lot_id: string; amount_cents: number; media_url: string; bidder_wallet: string }[]>(
       "lot_bids?select=lot_id,amount_cents,media_url,bidder_wallet&order=amount_cents.desc",
@@ -81,15 +77,18 @@ export async function loadSold(): Promise<Sold[]> {
     const won = lots.filter((lot) => lot.thing_id === thing.id && top.has(lot.id));
     if (won.length === 0) continue;
     const people = new Set<string>();
-    for (const lot of won) for (const wallet of wallets.get(lot.id) ?? []) people.add(wallet);
-    const shot = thing.proof_photos?.[0] ?? thing.photos?.[0] ?? null;
+    const art: Record<string, string> = {};
+    for (const lot of won) {
+      for (const wallet of wallets.get(lot.id) ?? []) people.add(wallet);
+      if (lot.thing_spots?.code) art[lot.thing_spots.code] = top.get(lot.id)!.art;
+    }
     sold.push({
       id: thing.id,
       title: thing.title,
+      model: thing.model_url,
       where: thing.worn_where,
       when: thing.worn_when,
-      image: shot ? picture(shot) : null,
-      logos: won.map((lot) => top.get(lot.id)!.art),
+      art,
       raisedCents: won.reduce((sum, lot) => sum + top.get(lot.id)!.amount, 0),
       spots: won.length,
       bidders: people.size,
@@ -99,37 +98,86 @@ export async function loadSold(): Promise<Sold[]> {
   return sold.sort((a, b) => b.closedAt - a.closedAt);
 }
 
-/** Картинка торга: фото, а без него - мозаика логотипов победителей. */
-function Cover({ one, className }: { one: Sold; className: string }) {
-  if (one.image) return <img className={className} src={one.image} alt="" loading="lazy" />;
+/**
+ * Снимок вещи с логотипами победителей. Сцена собирается невидимой, одевается,
+ * отдаёт кадр на прозрачном фоне и сразу разбирается: три живые 3D-сцены на
+ * одной странице - три холста WebGL и три модели в памяти ради картинок,
+ * которые не крутят.
+ */
+function Shot({ one, onDone }: { one: Sold; onDone: (src: string | null) => void }) {
+  const stage = useRef<Stage | null>(null);
+  const done = useRef(onDone);
+  done.current = onDone;
+
+  async function dress() {
+    await Promise.all(
+      Object.entries(one.art).map(
+        ([code, url]) =>
+          new Promise<void>((resolve) => {
+            const image = new Image();
+            image.crossOrigin = "anonymous";
+            image.onload = () => {
+              stage.current?.show(code, image);
+              resolve();
+            };
+            image.onerror = () => resolve();
+            image.src = url;
+          }),
+      ),
+    );
+    const canvas = stage.current?.snapshot(0);
+    done.current(canvas ? canvas.toDataURL("image/png") : null);
+  }
+
+  // Модель не приехала - плитка остаётся без вещи, а не висит в загрузке.
+  useEffect(() => {
+    const giveUp = setTimeout(() => done.current(null), 20000);
+    return () => clearTimeout(giveUp);
+  }, []);
+
   return (
-    <span className={`${className} mosaic`}>
-      {one.logos.slice(0, 9).map((logo, at) => (
-        <img key={at} src={logo} alt="" loading="lazy" />
-      ))}
-    </span>
+    <div className="sold-stage" aria-hidden>
+      <ThingStage shape={houseShape(one.model)} picked={null} onPick={() => {}} stage={stage} onReady={() => void dress()} />
+    </div>
   );
 }
 
-/** Прошедшие торги сеткой карточек: у каждого своё фото или мозаика логотипов. */
+/** Лист прошедших торгов. */
 export function SoldCards({ sold }: { sold: Sold[] }) {
+  // Снимки снимаем по одному: следующая сцена собирается, когда прошлая
+  // отдала кадр и разобралась.
+  const [shots, setShots] = useState<Record<string, string | null>>({});
+  const next = sold.find((one) => !(one.id in shots));
+
   return (
     <div className="sold-cards">
+      {next && (
+        <Shot key={next.id} one={next} onDone={(src) => setShots((all) => ({ ...all, [next.id]: src }))} />
+      )}
       {sold.map((one) => (
         <a key={one.id} className="sold-card" href={`${APP_URL}/?thing=${one.id}`}>
           <span className="sold-pic">
-            <Cover one={one} className="sold-img" />
-            <span className="now-pill done">SOLD</span>
+            {shots[one.id] ? <img className="sold-img" src={shots[one.id]!} alt={one.title} /> : null}
           </span>
           <span className="sold-body">
             <b>{one.title}</b>
-            <span className="sold-meta">{[one.where, one.when].filter(Boolean).join(" · ")}</span>
-            <span className="sold-line">
-              <span>{formatUsdFull(one.raisedCents)} raised</span>
-              <span>
-                {one.spots} spots · {one.bidders} bidders
-              </span>
-            </span>
+            <dl className="sold-spec">
+              <div>
+                <dt>raised</dt>
+                <dd>{formatUsdFull(one.raisedCents)}</dd>
+              </div>
+              <div>
+                <dt>spots</dt>
+                <dd>{one.spots}</dd>
+              </div>
+              <div>
+                <dt>bidders</dt>
+                <dd>{one.bidders}</dd>
+              </div>
+            </dl>
+            {(one.where || one.when) && (
+              <span className="sold-meta">{[one.where, one.when].filter(Boolean).join(" · ")}</span>
+            )}
           </span>
         </a>
       ))}
