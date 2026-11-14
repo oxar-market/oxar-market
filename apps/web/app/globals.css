@@ -690,7 +690,7 @@ h1 {
   fill: var(--ink);
 }
 
-.flow-edge path {
+.flow-edge polyline {
   fill: none;
   stroke: var(--ink);
   stroke-linejoin: miter;
@@ -700,7 +700,7 @@ h1 {
   fill: var(--bg);
 }
 
-.flow-fill path {
+.flow-fill polyline {
   fill: none;
   stroke: var(--bg);
   stroke-linejoin: miter;

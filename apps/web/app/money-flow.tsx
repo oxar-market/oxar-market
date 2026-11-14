@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * «Куда идут деньги» - схема под первым экраном. Комнаты (спонсоры, эскроу,
- * организатор, комиссия) соединены трубами, по трубам едут квадраты - это
- * USDC. Три вкладки - три сценария, ровно как их ведёт контракт: ставка и
+ * организатор, комиссия) соединены трубами, квадраты - это USDC: квадрат
+ * уходит из стопки одной комнаты, едет по трубе и ложится в стопку другой.
+ * Три вкладки - три сценария, ровно как их ведёт контракт: ставка и
  * возврат перебитой, возврат победителям без пруфа, выплата после пруфа.
  *
  * Схема не обещает ничего сверх контракта. Проценты не пишем: комиссия
@@ -14,12 +15,14 @@ import { useEffect, useRef, useState } from "react";
 
 type Lane = "bid" | "refund" | "payout" | "fee";
 type Room = "sponsors" | "escrow" | "organizer" | "fee";
+type Point = [number, number];
 
 type Layout = {
   width: number;
   height: number;
   rooms: Record<Room, [number, number, number, number]>;
-  lanes: Record<Lane, string>;
+  /** Труба - точки ломаной от комнаты-источника к комнате-получателю. */
+  lanes: Record<Lane, Point[]>;
 };
 
 /** Десктоп: слева направо. */
@@ -33,10 +36,10 @@ const WIDE: Layout = {
     fee: [780, 170, 200, 90],
   },
   lanes: {
-    bid: "M200 125 L320 125",
-    refund: "M320 185 L200 185",
-    payout: "M540 155 L640 155 L700 95 L780 95",
-    fee: "M540 155 L640 155 L700 215 L780 215",
+    bid: [[200, 125], [320, 125]],
+    refund: [[320, 185], [200, 185]],
+    payout: [[540, 155], [640, 155], [700, 95], [780, 95]],
+    fee: [[540, 155], [640, 155], [700, 215], [780, 215]],
   },
 };
 
@@ -51,11 +54,19 @@ const TALL: Layout = {
     fee: [220, 470, 100, 130],
   },
   lanes: {
-    bid: "M110 130 L110 230",
-    refund: "M230 230 L230 130",
-    payout: "M170 350 L170 400 L110 440 L110 470",
-    fee: "M170 350 L170 400 L270 440 L270 470",
+    bid: [[110, 130], [110, 230]],
+    refund: [[230, 230], [230, 130]],
+    payout: [[170, 350], [170, 400], [110, 440], [110, 470]],
+    fee: [[170, 350], [170, 400], [270, 440], [270, 470]],
   },
+};
+
+/** Откуда и куда ведёт труба. */
+const ENDS: Record<Lane, [Room, Room]> = {
+  bid: ["sponsors", "escrow"],
+  refund: ["escrow", "sponsors"],
+  payout: ["escrow", "organizer"],
+  fee: ["escrow", "fee"],
 };
 
 const NAMES: Record<Room, string> = {
@@ -65,41 +76,50 @@ const NAMES: Record<Room, string> = {
   fee: "OXAR fee",
 };
 
+type Piles = Record<Room, number>;
+
 type Stage = {
   tab: string;
   text: string;
-  /** Труба - через сколько секунд выходит следующий квадрат. */
-  flow: Partial<Record<Lane, number>>;
-  /** Сколько квадратов лежит в комнате: где деньги сейчас. */
-  piles: Partial<Record<Room, number>>;
+  /** С чего сценарий начинается: сколько квадратов в какой комнате. */
+  start: Partial<Piles>;
+  /** По каким трубам по очереди уходят квадраты, по кругу. */
+  order: Lane[];
 };
 
 const STAGES: Stage[] = [
   {
     tab: "While bidding",
     text: "Every bid is paid upfront into an escrow program on Solana. Get outbid and your USDC comes straight back, in the same transaction.",
-    flow: { bid: 0.9, refund: 2.4 },
-    piles: { sponsors: 3, escrow: 4 },
+    start: { sponsors: 6 },
+    order: ["bid", "bid", "refund"],
   },
   {
     tab: "If there's no proof",
     text: "The organizer has a deadline to post a photo of your logo in place. No proof by then, and the winning bids go back automatically.",
-    flow: { refund: 0.8 },
-    piles: { sponsors: 5, escrow: 1 },
+    start: { escrow: 5 },
+    order: ["refund"],
   },
   {
     tab: "After the proof",
     text: "Once the photo is up, sponsors have 72 hours to dispute it. Then the program pays the organizer and takes the OXAR fee. Disputes go to an arbiter.",
-    flow: { payout: 0.8, fee: 4 },
-    piles: { organizer: 5, fee: 1 },
+    start: { escrow: 6 },
+    order: ["payout", "payout", "payout", "payout", "fee", "payout"],
   },
 ];
 
 /** Скорость квадрата, единиц схемы в секунду. */
-const SPEED = 150;
+const SPEED = 260;
+/** Через сколько секунд из комнаты уходит следующий квадрат. */
+const EVERY = 0.55;
+/** Пауза перед повтором, когда все деньги доехали. */
+const REPLAY = 1.2;
 const COIN = 9;
+const GAP = 3;
 /** Сам переключает вкладки, пока человек не выбрал свою. */
 const AUTO_MS = 6500;
+
+const EMPTY: Piles = { sponsors: 0, escrow: 0, organizer: 0, fee: 0 };
 
 export function MoneyFlow() {
   const [stage, setStage] = useState(0);
@@ -161,76 +181,121 @@ export function MoneyFlow() {
   );
 }
 
+/** Где в комнате лежит квадрат с этим номером: стопка снизу вверх, рядами. */
+function slot(layout: Layout, room: Room, at: number): Point {
+  const [x, y, w, h] = layout.rooms[room];
+  const row = Math.max(1, Math.floor((w - 32 + GAP) / (COIN + GAP)));
+  return [
+    x + 16 + (at % row) * (COIN + GAP) + COIN / 2,
+    y + h - 20 - Math.floor(at / row) * (COIN + GAP) - COIN / 2,
+  ];
+}
+
+/** Точка на ломаной на расстоянии `at` от её начала; null - доехали. */
+function along(route: Point[], at: number): Point | null {
+  let left = at;
+  for (let i = 1; i < route.length; i++) {
+    const [ax, ay] = route[i - 1];
+    const [bx, by] = route[i];
+    const step = Math.hypot(bx - ax, by - ay);
+    if (left <= step) {
+      const t = step === 0 ? 1 : left / step;
+      return [ax + (bx - ax) * t, ay + (by - ay) * t];
+    }
+    left -= step;
+  }
+  return null;
+}
+
 function Diagram({ layout, stage, still }: { layout: Layout; stage: Stage; still: boolean }) {
   const svg = useRef<SVGSVGElement | null>(null);
   const coins = useRef<SVGGElement | null>(null);
-  const paths = useRef<Partial<Record<Lane, SVGPathElement | null>>>({});
+  const [piles, setPiles] = useState<Piles>({ ...EMPTY, ...stage.start });
   const lanes = Object.keys(layout.lanes) as Lane[];
   const rooms = Object.keys(layout.rooms) as Room[];
 
-  // Квадраты двигаем сами, мимо React: шестьдесят перерисовок схемы в
-  // секунду ради нескольких прямоугольников не нужны. Анимация идёт, только
-  // пока схема на экране.
+  // Квадраты в пути двигаем сами, мимо React: шестьдесят перерисовок схемы в
+  // секунду ради пары прямоугольников не нужны. React рисует только стопки -
+  // они меняются, когда квадрат ушёл или приехал. Анимация идёт, только пока
+  // схема на экране.
   useEffect(() => {
     const group = coins.current;
     const box = svg.current;
     if (!group || !box) return;
     group.replaceChildren();
 
-    const place = (rect: SVGRectElement, lane: Lane, at: number) => {
-      const path = paths.current[lane];
-      if (!path) return false;
-      const length = path.getTotalLength();
-      if (at > length) return false;
-      const point = path.getPointAtLength(at);
-      rect.setAttribute("x", String(point.x - COIN / 2));
-      rect.setAttribute("y", String(point.y - COIN / 2));
-      return true;
-    };
-    const coin = () => {
-      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.setAttribute("width", String(COIN));
-      rect.setAttribute("height", String(COIN));
-      rect.setAttribute("class", "flow-coin");
-      group.appendChild(rect);
-      return rect;
-    };
+    const begin = (): Piles => ({ ...EMPTY, ...stage.start });
+    let count = begin();
+    setPiles(count);
+    if (still) return;
 
-    const active = Object.entries(stage.flow) as [Lane, number][];
-
-    // Без движения: по квадрату на середине каждой рабочей трубы.
-    if (still) {
-      for (const [lane] of active) {
-        const path = paths.current[lane];
-        if (path) place(coin(), lane, path.getTotalLength() / 2);
-      }
-      return;
-    }
-
+    // Сколько квадратов уже едут в комнату: их места в стопке заняты заранее.
+    const coming: Piles = { ...EMPTY };
+    const moving = new Set<{ rect: SVGRectElement; route: Point[]; at: number; to: Room }>();
+    let next = 0;
+    let wait = 0;
+    let idle = 0;
     let frame = 0;
     let visible = false;
     let last = performance.now();
-    const born = new Map<SVGRectElement, { lane: Lane; at: number }>();
-    // Первый квадрат каждой трубы - сразу, а не через интервал.
-    const wait = new Map<Lane, number>(active.map(([lane]) => [lane, 0]));
+
+    const send = () => {
+      // Труба без денег в источнике пропускает ход.
+      for (let tries = 0; tries < stage.order.length; tries++) {
+        const lane = stage.order[next % stage.order.length];
+        next += 1;
+        const [from, to] = ENDS[lane];
+        if (count[from] === 0) continue;
+        const start = slot(layout, from, count[from] - 1);
+        const end = slot(layout, to, count[to] + coming[to]);
+        count = { ...count, [from]: count[from] - 1 };
+        coming[to] += 1;
+        setPiles(count);
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("width", String(COIN));
+        rect.setAttribute("height", String(COIN));
+        rect.setAttribute("class", "flow-coin");
+        group.appendChild(rect);
+        moving.add({ rect, route: [start, ...layout.lanes[lane], end], at: 0, to });
+        return true;
+      }
+      return false;
+    };
 
     const tick = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      for (const [lane, every] of active) {
-        const left = (wait.get(lane) ?? 0) - dt;
-        if (left <= 0) {
-          born.set(coin(), { lane, at: 0 });
-          wait.set(lane, every);
+
+      wait -= dt;
+      if (wait <= 0) {
+        const sent = send();
+        wait = EVERY;
+        // Всё уехало и всё доехало: короткая пауза, и сценарий сначала.
+        if (!sent && moving.size === 0) {
+          idle += EVERY;
+          if (idle >= REPLAY) {
+            idle = 0;
+            next = 0;
+            count = begin();
+            setPiles(count);
+          }
         } else {
-          wait.set(lane, left);
+          idle = 0;
         }
       }
-      for (const [rect, one] of born) {
-        one.at += SPEED * dt;
-        if (!place(rect, one.lane, one.at)) {
-          rect.remove();
-          born.delete(rect);
+
+      for (const coin of moving) {
+        coin.at += SPEED * dt;
+        const point = along(coin.route, coin.at);
+        if (point) {
+          coin.rect.setAttribute("x", String(point[0] - COIN / 2));
+          coin.rect.setAttribute("y", String(point[1] - COIN / 2));
+        } else {
+          coin.rect.remove();
+          moving.delete(coin);
+          coming[coin.to] -= 1;
+          count = { ...count, [coin.to]: count[coin.to] + 1 };
+          setPiles(count);
         }
       }
       frame = requestAnimationFrame(tick);
@@ -254,7 +319,7 @@ function Diagram({ layout, stage, still }: { layout: Layout; stage: Stage; still
   }, [layout, stage, still]);
 
   const tall = layout === TALL;
-  const label = tall ? 15 : 17;
+  const used = new Set(stage.order.flatMap((lane) => ENDS[lane]));
 
   return (
     <svg
@@ -273,7 +338,7 @@ function Diagram({ layout, stage, still }: { layout: Layout; stage: Stage; still
           return <rect key={room} x={x - 1} y={y - 1} width={w + 2} height={h + 2} />;
         })}
         {lanes.map((lane) => (
-          <path key={lane} d={layout.lanes[lane]} strokeWidth={26} />
+          <polyline key={lane} points={layout.lanes[lane].join(" ")} strokeWidth={26} />
         ))}
       </g>
       <g className="flow-fill">
@@ -282,53 +347,40 @@ function Diagram({ layout, stage, still }: { layout: Layout; stage: Stage; still
           return <rect key={room} x={x} y={y} width={w} height={h} />;
         })}
         {lanes.map((lane) => (
-          <path
-            key={lane}
-            ref={(el) => {
-              paths.current[lane] = el;
-            }}
-            d={layout.lanes[lane]}
-            strokeWidth={24}
-          />
+          <polyline key={lane} points={layout.lanes[lane].join(" ")} strokeWidth={24} />
         ))}
       </g>
 
       {rooms.map((room) => {
-        const [x, y, , h] = layout.rooms[room];
-        const pile = stage.piles[room] ?? 0;
-        const lit = pile > 0 || Object.keys(stage.flow).some((lane) => touches(lane as Lane, room));
+        const [x, y] = layout.rooms[room];
         return (
           <g key={room}>
-            <text x={x + 16} y={y + 30} fontSize={label} className={lit ? "flow-name" : "flow-name off"}>
+            <text
+              x={x + 16}
+              y={y + 30}
+              fontSize={tall ? 15 : 17}
+              className={used.has(room) ? "flow-name" : "flow-name off"}
+            >
               {NAMES[room]}
             </text>
-            {Array.from({ length: pile }, (_, at) => (
-              <rect
-                key={at}
-                className="flow-coin"
-                x={x + 16 + at * (COIN + 3)}
-                y={y + h - 24}
-                width={COIN}
-                height={COIN}
-              />
-            ))}
+            {Array.from({ length: piles[room] }, (_, at) => {
+              const [cx, cy] = slot(layout, room, at);
+              return (
+                <rect
+                  key={at}
+                  className="flow-coin"
+                  x={cx - COIN / 2}
+                  y={cy - COIN / 2}
+                  width={COIN}
+                  height={COIN}
+                />
+              );
+            })}
           </g>
         );
       })}
 
-
       <g ref={coins} />
     </svg>
   );
-}
-
-/** Касается ли труба комнаты: так понятно, какие комнаты в этом сценарии работают. */
-function touches(lane: Lane, room: Room): boolean {
-  const ends: Record<Lane, Room[]> = {
-    bid: ["sponsors", "escrow"],
-    refund: ["escrow", "sponsors"],
-    payout: ["escrow", "organizer"],
-    fee: ["escrow", "fee"],
-  };
-  return ends[lane].includes(room);
 }
