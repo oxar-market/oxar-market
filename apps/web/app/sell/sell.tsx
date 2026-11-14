@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 
 /**
  * Страница для тех, кто продаёт место: как у backable страница для фаундеров.
@@ -196,7 +196,16 @@ function Slider({
         <span>{label}</span>
         <b>{show}</b>
       </span>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        // Сколько полосы залито до ползунка: браузер сам этого не рисует.
+        style={{ "--fill": `${max === min ? 100 : ((value - min) / (max - min)) * 100}%` } as CSSProperties}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
       <span className="sell-note">{children}</span>
     </label>
   );
