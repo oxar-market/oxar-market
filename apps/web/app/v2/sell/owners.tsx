@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { FEE, Pitch, QUESTIONS } from "../../sell/sell.tsx";
 import { APP_URL, load, usd, type Data } from "../data.ts";
 import { Foot, Top } from "../landing.tsx";
+import { MoneyFlow } from "./money.tsx";
 
 /**
  * Шаги для самостоятельного выставления: вещь продавец заводит сам в
@@ -79,6 +80,17 @@ export function Owners() {
             <p>{last ? `${last.owner} · ${last.title}` : " "}</p>
           </div>
         </div>
+      </section>
+
+      <section className="v2-section">
+        <p className="v2-label">The money</p>
+        <div className="v2-head">
+          <h2>
+            The money is there
+            <span> before you print anything.</span>
+          </h2>
+        </div>
+        <MoneyFlow />
       </section>
 
       <section className="v2-section">
