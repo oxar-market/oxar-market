@@ -15,7 +15,7 @@ import { SpotView, TreeView, useViews } from "./spots.tsx";
  * Охват: просмотры эфиров и постов с логотипами, сумма по всем торгам.
  * Цифру дал Даниил, посчитанной разбивки по источникам пока нет.
  */
-const REACH = "98K";
+const REACH = "98K+";
 
 /** Ролик вещи для первого экрана. Без ролика герой остаётся на подложке. */
 const VIDEOS: Record<string, { src: string; poster: string }> = {
@@ -151,15 +151,15 @@ export function Landing() {
         <section className="v2-numbers" aria-label="So far">
           <dl>
             <div>
-              <dd>{usd(data.totalCents)}</dd>
+              <dd>{usd(data.totalCents)}+</dd>
               <dt>bid on spots so far</dt>
             </div>
             <div>
-              <dd>{data.bids}</dd>
+              <dd>{data.bids}+</dd>
               <dt>bids placed</dt>
             </div>
             <div>
-              <dd>{data.bidders}</dd>
+              <dd>{data.bidders}+</dd>
               <dt>brands and people bid</dt>
             </div>
             <div>
