@@ -345,18 +345,28 @@
 
 .v2-strip-track {
   display: flex;
-  gap: 2.5rem;
+  align-items: center;
+  gap: 3.5rem;
   width: max-content;
   animation: v2-run 40s linear infinite;
 }
 
-.v2-strip img {
-  height: 2rem;
+/* Логотипы в один цвет: у брендов свои цвета и фоны, вместе они спорили бы. */
+.v2-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  opacity: 0.55;
+  white-space: nowrap;
+}
+
+.v2-brand img {
   width: auto;
-  max-width: 7rem;
-  object-fit: contain;
-  filter: grayscale(1);
-  opacity: 0.75;
+  filter: brightness(0);
 }
 
 @keyframes v2-run {

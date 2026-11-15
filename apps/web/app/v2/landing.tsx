@@ -37,6 +37,20 @@ const VIDEOS: Record<string, { src: string; poster: string }> = {
   "the-van": { src: "/v2/van-loop.mp4", poster: "/v2/van-poster.jpg" },
 };
 
+/**
+ * Самые громкие компании, что ставили на наших торгах. Логотипы с их сайтов,
+ * а не картинки со ставок: на ставке бывает QR-код и подпись ивента. У Jupiter
+ * на сайте значок плюс набранное слово - так и показываем. Высота в rem
+ * подобрана на глаз, чтобы ни один логотип не кричал громче соседей.
+ */
+const BRANDS: { name: string; src: string; height: number; word?: boolean }[] = [
+  { name: "Jupiter", src: "/v2/brands/jupiter.svg", height: 1.5, word: true },
+  { name: "Bitrefill", src: "/v2/brands/bitrefill.png", height: 1.375 },
+  { name: "Frontier Traders", src: "/v2/brands/frontier-traders.svg", height: 1.75 },
+  { name: "JPool", src: "/v2/brands/jpool.svg", height: 1.5 },
+  { name: "Superteam", src: "/v2/brands/superteam.svg", height: 1.125 },
+];
+
 type Auction = {
   id: string;
   slug: string;
@@ -48,7 +62,6 @@ type Auction = {
   spots: number;
   bidders: number;
   closedAt: number;
-  logos: { url: string; brand: string }[];
   /** Модель вещи: с её сцены снимается кадр с местами. */
   model: string | null;
   /** Код места - кто его выиграл и за сколько. */
@@ -60,7 +73,6 @@ type Data = {
   totalCents: number;
   bidders: number;
   averageCents: number;
-  logos: { url: string; brand: string }[];
 };
 
 async function rest<T>(path: string): Promise<T | null> {
@@ -128,7 +140,6 @@ async function load(): Promise<Data | null> {
       spots: shown.length,
       bidders: wallets.size,
       closedAt: Math.max(...shown.map((lot) => Date.parse(lot.closes_at))),
-      logos: shown.filter((lot) => top.has(lot.id)).map((lot) => ({ url: top.get(lot.id)!.media_url, brand: top.get(lot.id)!.brand ?? "" })),
       model: thing.model_url,
       won: winners,
     });
@@ -136,16 +147,11 @@ async function load(): Promise<Data | null> {
   auctions.sort((a, b) => (a.status === "live" ? -1 : 0) - (b.status === "live" ? -1 : 0) || b.closedAt - a.closedAt);
 
   const totalCents = counted.reduce((sum, bid) => sum + bid.amount_cents, 0);
-  const seen = new Set<string>();
-  const logos = auctions
-    .flatMap((one) => one.logos)
-    .filter((one) => (seen.has(one.url) ? false : (seen.add(one.url), true)));
   return {
     auctions,
     totalCents,
     bidders: new Set(counted.map((bid) => bid.bidder_wallet)).size,
     averageCents: counted.length ? Math.round(totalCents / counted.length) : 0,
-    logos,
   };
 }
 
@@ -263,15 +269,17 @@ export function Landing() {
           </div>
         </a>
 
-        {data && data.logos.length > 0 && (
-          <div className="v2-strip" aria-label="Brands that bid with us">
-            <div className="v2-strip-track">
-              {[...data.logos, ...data.logos].map((one, at) => (
-                <img key={at} src={one.url} alt={one.brand} loading="lazy" />
-              ))}
-            </div>
+        <div className="v2-strip" aria-label="Brands that bid with us">
+          {/* Четыре круга: пяти логотипов не хватает на ширину строки, и петля рвалась бы. */}
+          <div className="v2-strip-track">
+            {[...BRANDS, ...BRANDS, ...BRANDS, ...BRANDS].map((one, at) => (
+              <span key={at} className="v2-brand" aria-hidden={at >= BRANDS.length}>
+                <img src={one.src} alt={one.word ? "" : one.name} style={{ height: `${one.height}rem` }} />
+                {one.word && one.name}
+              </span>
+            ))}
           </div>
-        )}
+        </div>
       </section>
 
       <section className="v2-section" id="auctions">
