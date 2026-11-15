@@ -70,33 +70,6 @@ export function Shooter({
   );
 }
 
-/**
- * Ёлка новогоднего торга, пока модели нет: места игрушками, звезда сверху.
- * Те же уголки и номера, что на настоящих вещах.
- */
-const TREE: [number, number][] = [
-  [50, 30], [42, 44], [58, 44], [34, 58], [50, 58], [66, 58], [26, 72], [42, 72], [58, 72], [74, 72],
-];
-
-export function TreeView() {
-  return (
-    <div className="v2-tree" aria-hidden>
-      <span className="v2-tree-star" data-tip="Star · top spot">
-        <b>★</b>
-      </span>
-      {TREE.map(([x, y], at) => (
-        <span key={at} className="v2-spot open" style={{ left: `${x - 4}%`, top: `${y - 5}%`, width: "8%", height: "10%" }} data-tip={`Spot ${at + 1} · opens in December`}>
-          <i className="v2-c tl" />
-          <i className="v2-c tr" />
-          <i className="v2-c bl" />
-          <i className="v2-c br" />
-          <b>{at + 1}</b>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 /** Снимки всех вещей - по одной сцене за раз. */
 export function useViews(list: { id: string; model: string | null; won: Record<string, Spot> }[]) {
   const [views, setViews] = useState<Record<string, View | null>>({});

@@ -7,10 +7,9 @@ import { AuctionCard, NextCard } from "./cards.tsx";
 import { useViews } from "./spots.tsx";
 
 /**
- * Прототип лендинга в духе frontiertraders.com, на нашем материале: герой
- * выбирается по состоянию торгов, торги - карточками-кампаниями с логотипом
- * хозяина вещи и табличкой цифр, деньги объяснены тремя карточками, а не
- * схемой. Живёт на /v2 и в прод не ссылается.
+ * Главная в духе frontiertraders.com, на нашем материале: герой выбирается по
+ * состоянию торгов, под ним цифры, торги - карточками с вещью, путь денег -
+ * схемой из шести шагов. Шапка и подвал общие для всех страниц сайта.
  */
 
 /**
@@ -21,7 +20,7 @@ const REACH = "98K+";
 
 /** Ролик вещи для первого экрана. Без ролика герой остаётся на подложке. */
 const VIDEOS: Record<string, { src: string; poster: string }> = {
-  "the-van": { src: "/v2/van-loop.mp4", poster: "/v2/van-poster.jpg" },
+  "the-van": { src: "/site/van-loop.mp4", poster: "/site/van-poster.jpg" },
 };
 
 /**
@@ -32,11 +31,11 @@ const VIDEOS: Record<string, { src: string; poster: string }> = {
  * слово. Высота в rem подобрана на глаз, чтобы никто не кричал громче соседей.
  */
 const BRANDS: { name: string; src?: string; height?: number; word?: boolean }[] = [
-  { name: "Jupiter", src: "/v2/brands/jupiter.svg", height: 1.5, word: true },
-  { name: "Bitrefill", src: "/v2/brands/bitrefill.png", height: 1.375 },
-  { name: "Frontier Traders", src: "/v2/brands/frontier-traders.svg", height: 1.75 },
-  { name: "JPool", src: "/v2/brands/jpool.svg", height: 1.5 },
-  { name: "Superteam", src: "/v2/brands/superteam.svg", height: 1.125 },
+  { name: "Jupiter", src: "/site/brands/jupiter.svg", height: 1.5, word: true },
+  { name: "Bitrefill", src: "/site/brands/bitrefill.png", height: 1.375 },
+  { name: "Frontier Traders", src: "/site/brands/frontier-traders.svg", height: 1.75 },
+  { name: "JPool", src: "/site/brands/jpool.svg", height: 1.5 },
+  { name: "Superteam", src: "/site/brands/superteam.svg", height: 1.125 },
   { name: "Ecosystem Call", word: true },
 ];
 
@@ -153,7 +152,7 @@ export function Landing() {
           {NEXT && <NextCard next={NEXT} />}
           {cards.filter((one) => one.status !== "live").map((one) => <AuctionCard key={one.id} one={one} view={views[one.id]} />)}
         </div>
-        <a className="v2-more" href="/v2/auctions">
+        <a className="v2-more" href="/auctions">
           All auctions
           <span aria-hidden>&rarr;</span>
         </a>
@@ -176,7 +175,7 @@ export function Landing() {
           <h2>Got something people look at?</h2>
           <p>A shirt, a van, a stage, a campaign. Mark the spots, set starting prices, get paid once the logos are up.</p>
         </div>
-        <a className="v2-btn dark" href="/v2/sell">
+        <a className="v2-btn dark" href="/sell">
           Sell a spot
           <Grip />
         </a>
@@ -191,21 +190,21 @@ export function Landing() {
 export function Top() {
   return (
     <header className="v2-top">
-      <a className="v2-mark" href="/v2">
-        <img className="v2-mark-logo" src="/v2/oxar-mark.webp" alt="" />
+      <a className="v2-mark" href="/">
+        <img className="v2-mark-logo" src="/site/oxar-mark.webp" alt="" />
         OXAR
       </a>
       <nav className="v2-nav">
-        <a href="/v2/auctions">Auctions</a>
-        <a href="/v2#how">How it works</a>
-        <a href="/v2/sell">Sell a spot</a>
+        <a href="/auctions">Auctions</a>
+        <a href="/#how">How it works</a>
+        <a href="/sell">Sell a spot</a>
       </nav>
       <div className="v2-side">
-        <a className="v2-pill" href="/v2#auctions">
+        <a className="v2-pill" href="/#auctions">
           <span className="v2-dot" />
           Next: Holiday edition
         </a>
-        <a className="v2-btn dark" href="/v2/sell">
+        <a className="v2-btn dark" href="/sell">
           Sell a spot
         </a>
       </div>
@@ -216,8 +215,8 @@ export function Top() {
 export function Foot() {
   return (
     <footer className="v2-foot">
-      <a className="v2-mark small" href="/v2">
-        <img className="v2-mark-logo" src="/v2/oxar-mark.webp" alt="" />
+      <a className="v2-mark small" href="/">
+        <img className="v2-mark-logo" src="/site/oxar-mark.webp" alt="" />
         OXAR
       </a>
       <span>Ad space on physical things</span>

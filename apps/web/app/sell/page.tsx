@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Sell } from "./sell.tsx";
+import "../_site/site.css";
+import { Owners } from "../_site/owners.tsx";
 
 export const metadata: Metadata = {
   title: "Sell a spot - OXAR",
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <Sell />;
+  return <Owners />;
 }

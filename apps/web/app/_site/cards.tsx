@@ -10,7 +10,7 @@ import type { View } from "./spots.tsx";
  * игрушкой, поэтому где есть съёмка - показываем её, где нет - модель.
  */
 const PHOTOS: Record<string, string> = {
-  "the-van": "/v2/van-card.jpg",
+  "the-van": "/site/van-card.jpg",
 };
 
 export function AuctionCard({ one, view }: { one: Auction; view: View | null | undefined }) {

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AuctionCard, NextCard } from "../cards.tsx";
-import { FOLLOW, NEXT, load, type Data } from "../data.ts";
-import { Foot, Top } from "../landing.tsx";
-import { useViews } from "../spots.tsx";
+import { AuctionCard, NextCard } from "./cards.tsx";
+import { FOLLOW, NEXT, load, type Data } from "./data.ts";
+import { Foot, Top } from "./landing.tsx";
+import { useViews } from "./spots.tsx";
 
 /**
  * Все торги теми же карточками, что на главной, только без отбора. Объявленный

@@ -1,4 +1,4 @@
-/* Прототип лендинга /v2. Всё под .v2, чтобы не задеть рабочую главную. */
+/* Стили сайта. Всё под .v2 - так назывался прототип, имя классов осталось. */
 
 .v2 {
   --red: #e0381c;
@@ -17,6 +17,11 @@
   margin: 0;
   font-weight: 600;
   letter-spacing: -0.035em;
+}
+
+/* Строки заголовка ровные: без этого на /sell висело одинокое «it.». */
+.v2 h1 {
+  text-wrap: balance;
 }
 
 .v2 h1 span,
@@ -60,19 +65,6 @@
 .v2-mark-logo {
   height: 1.75rem;
   width: auto;
-}
-
-.v2-mark-box {
-  position: relative;
-  width: 1.125rem;
-  height: 1.125rem;
-}
-
-.v2-mark-box::after {
-  content: "";
-  position: absolute;
-  inset: 30%;
-  background: var(--red);
 }
 
 .v2-c {
@@ -833,50 +825,6 @@ a.v2-card:hover .v2-photo {
   width: auto;
 }
 
-.v2-spot {
-  position: absolute;
-  display: grid;
-  place-items: center;
-}
-
-.v2-spot b {
-  display: grid;
-  place-items: center;
-  min-width: 1.125rem;
-  height: 1.125rem;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #fff;
-  color: #16181d;
-  font-size: 0.625rem;
-  font-weight: 700;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-.v2-spot[data-tip]:hover::after,
-.v2-tree-star[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.375rem 0.625rem;
-  border-radius: 6px;
-  background: #16181d;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.v2-spot:hover {
-  outline: 1px solid var(--red);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
 .v2-wait {
   width: 40%;
   height: 50%;
@@ -988,46 +936,6 @@ a.v2-card:hover .v2-photo {
 
 a.v2-card:hover .v2-show-word {
   transform: translate(2px, -2px);
-}
-
-/* Ёлка новогоднего торга: треугольник мест и звезда. */
-.v2-tree {
-  position: absolute;
-  inset: 0;
-}
-
-.v2-tree::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 14%;
-  width: 62%;
-  height: 72%;
-  transform: translateX(-50%);
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.16));
-}
-
-.v2-tree .v2-spot {
-  color: #fff;
-}
-
-.v2-tree .v2-c {
-  border-color: rgba(255, 255, 255, 0.85);
-}
-
-.v2-tree-star {
-  position: absolute;
-  left: 50%;
-  top: 6%;
-  transform: translateX(-50%);
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: #f4c84a;
-  color: #2a0d08;
 }
 
 /* Пустой фильтр на странице всех торгов: не голая строка, а что дальше. */
@@ -1470,7 +1378,7 @@ a.v2-card:hover .v2-show-word {
   }
 }
 
-/* Страница продавца: калькулятор, вопросы и форма с /sell в одежде v2. */
+/* Страница продавца: вопросы и форма заявки в одежде сайта. */
 .v2-sell-terms {
   display: flex;
   flex-wrap: wrap;
@@ -1763,5 +1671,190 @@ a.v2-card:hover .v2-show-word {
   .v2 .flow-text {
     font-size: 1rem;
     min-height: 6.5em;
+  }
+}
+
+/* Вопросы и форма заявки - с прежней /sell, вместе с кнопкой .find. */
+.find {
+  display: inline-flex;
+  padding: 1.25rem 2.125rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.12s ease-out, opacity 0.12s;
+}
+
+.find:hover {
+  opacity: 0.88;
+}
+
+.find:active {
+  transform: scale(0.98);
+}
+
+.find:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.sell-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Ответы раскрываются плавно; где браузер этого не умеет - просто сразу.
+   Отступ ответа - паддингом: маржин схлопывался в конце закрытия, и форма
+   под вопросами прыгала. */
+.sell-qa {
+  display: flex;
+  flex-direction: column;
+  interpolate-size: allow-keywords;
+}
+
+.sell-qa details {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sell-qa summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.sell-qa summary::-webkit-details-marker {
+  display: none;
+}
+
+.sell-qa summary::after {
+  content: "+";
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 1;
+  transition: transform 0.25s ease-out;
+}
+
+.sell-qa details[open] summary::after {
+  transform: rotate(45deg);
+}
+
+.sell-qa details::details-content {
+  height: 0;
+  overflow: clip;
+  transition: height 0.3s ease-out, content-visibility 0.3s allow-discrete;
+}
+
+.sell-qa details[open]::details-content {
+  height: auto;
+}
+
+.sell-qa p {
+  margin: 0;
+  padding-top: 0.75rem;
+  max-width: 44rem;
+  line-height: 1.55;
+  color: var(--mut);
+}
+
+/* Форма - отдельным блоком, чтобы не терялась под вопросами. */
+.sell-block.sell-pitch {
+  padding: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.sell-pitch h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sell-pitch h2::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: #e0381c;
+}
+
+.sell-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.sell-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.sell-form .wide {
+  grid-column: 1 / -1;
+}
+
+.sell-form input {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.sell-form input:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.sell-send {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sell-send .find {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sell-send .find:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sell-error {
+  font-size: 0.9375rem;
+  color: #e0381c;
+}
+
+.v2-sell .sell-pitch .sub {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sell-qa details::details-content {
+    transition: none;
+  }
+}
+
+@media (max-width: 56rem) {
+  .sell-form {
+    grid-template-columns: 1fr;
   }
 }

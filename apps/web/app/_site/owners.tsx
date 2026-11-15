@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FEE, Pitch, QUESTIONS } from "../../sell/sell.tsx";
-import { APP_URL, load, usd, type Data } from "../data.ts";
-import { Foot, Top } from "../landing.tsx";
+import { FEE, Pitch, QUESTIONS } from "./pitch.tsx";
+import { APP_URL, load, usd, type Data } from "./data.ts";
+import { Foot, Top } from "./landing.tsx";
 import { MoneyFlow } from "./money.tsx";
 
 /**
@@ -23,8 +23,7 @@ const STEPS: [string, string][] = [
 const LIST_URL = `${APP_URL}/?tab=you`;
 
 /**
- * Страница продавца в стиле нового лендинга. Вопросы, форма и комиссия - те
- * же, что на /sell. Калькулятора нет намеренно: владелец вбивал бы цифры
+ * Страница продавца. Калькулятора нет намеренно: владелец вбивал бы цифры
  * наугад, а настоящий торг на первом экране убеждает сильнее.
  */
 export function Owners() {
@@ -70,7 +69,7 @@ export function Owners() {
 
         <div className="v2-feature">
           <div className="v2-feature-media">
-            <img src="/v2/van-card.jpg" alt="" />
+            <img src="/site/van-card.jpg" alt="" />
           </div>
           <div className="v2-feature-top">
             <span className="v2-meta">A real sale</span>

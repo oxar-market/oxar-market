@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 // Комиссия - та же, что в калькуляторе продавца, одна на оба места.
-import { FEE } from "../sell/sell.tsx";
+import { FEE } from "./pitch.tsx";
 
 /**
  * Как идут деньги - схемой из шести шагов, а не тремя карточками текста.
@@ -142,7 +142,7 @@ export function Flow() {
 
       <Node at={5} title="Photo is up" tag="proof">
         <div className="v2-ui-photo">
-          <img src="/v2/van-brand.jpg" alt="" />
+          <img src="/site/van-brand.jpg" alt="" />
           <span>71:58 left to dispute</span>
         </div>
       </Node>
