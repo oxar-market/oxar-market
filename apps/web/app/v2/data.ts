@@ -14,7 +14,7 @@ export const NEXT: { owner: string; title: string; spots: number; when: string }
   owner: "Ecosystem Call",
   title: "Holiday edition. Spots on the tree behind the host, live on air.",
   spots: 11,
-  when: "Opens in December",
+  when: "December",
 };
 
 const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL;

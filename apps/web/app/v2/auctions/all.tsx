@@ -81,7 +81,7 @@ export function All() {
               </span>
               <span className="v2-row-num">{upcoming.spots} spots</span>
               <span className="v2-row-num" />
-              <span className="v2-row-num">{upcoming.when}</span>
+              <span className="v2-row-num">Opens {upcoming.when}</span>
               <span className="v2-row-go" aria-hidden>&rarr;</span>
             </a>
           )}

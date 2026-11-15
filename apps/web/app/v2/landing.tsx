@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { APP_URL, FOLLOW, NEXT, TONES, day, load, usd, type Data } from "./data.ts";
-import { SpotView, TreeView, useViews } from "./spots.tsx";
+import { SpotView, useViews } from "./spots.tsx";
 
 /**
  * Прототип лендинга в духе frontiertraders.com, на нашем материале: герой
@@ -25,15 +25,17 @@ const VIDEOS: Record<string, { src: string; poster: string }> = {
 /**
  * Самые громкие компании, что ставили на наших торгах. Логотипы с их сайтов,
  * а не картинки со ставок: на ставке бывает QR-код и подпись ивента. У Jupiter
- * на сайте значок плюс набранное слово - так и показываем. Высота в rem
- * подобрана на глаз, чтобы ни один логотип не кричал громче соседей.
+ * на сайте значок плюс набранное слово - так и показываем. У Ecosystem Call
+ * отдельного знака нет вовсе, их логотип - набор названия, поэтому только
+ * слово. Высота в rem подобрана на глаз, чтобы никто не кричал громче соседей.
  */
-const BRANDS: { name: string; src: string; height: number; word?: boolean }[] = [
+const BRANDS: { name: string; src?: string; height?: number; word?: boolean }[] = [
   { name: "Jupiter", src: "/v2/brands/jupiter.svg", height: 1.5, word: true },
   { name: "Bitrefill", src: "/v2/brands/bitrefill.png", height: 1.375 },
   { name: "Frontier Traders", src: "/v2/brands/frontier-traders.svg", height: 1.75 },
   { name: "JPool", src: "/v2/brands/jpool.svg", height: 1.5 },
   { name: "Superteam", src: "/v2/brands/superteam.svg", height: 1.125 },
+  { name: "Ecosystem Call", word: true },
 ];
 
 /** Кадрирующие уголки - наш знак вместо пунктира frontier. */
@@ -70,19 +72,32 @@ export function Landing() {
     const sold = Object.keys(one.won).length;
     return (
       <a key={one.id} className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
-        <div className="v2-card-top">
+        <div className="v2-visual">
+          {view ? <SpotView view={view} won={one.won} /> : <span className="v2-wait" />}
           <span className={one.status === "live" ? "v2-tag live" : "v2-tag soft ended"}>
             <span className="v2-dot" />
             {one.status === "live" ? "Live" : "Ended"}
           </span>
           <span className="v2-chip">{total ? `${sold} of ${total} ${total === 1 ? "spot" : "spots"} sold` : `${sold} ${sold === 1 ? "spot" : "spots"} sold`}</span>
         </div>
-        <div className="v2-visual">{view ? <SpotView view={view} won={one.won} /> : <span className="v2-wait" />}</div>
-        <div className="v2-card-name">{one.owner}</div>
-        <p className="v2-card-sub">{one.title}</p>
-        <p className="v2-stats">
-          {usd(one.raisedCents)} raised · {one.bidders} bidders · {day(one.closedAt)}
-        </p>
+        <div className="v2-card-body">
+          <div className="v2-card-name">{one.owner}</div>
+          <p className="v2-card-sub">{one.title}</p>
+          <dl className="v2-facts">
+            <div>
+              <dt>{one.status === "live" ? "Top bids" : "Raised"}</dt>
+              <dd>{usd(one.raisedCents)}</dd>
+            </div>
+            <div>
+              <dt>Bidders</dt>
+              <dd>{one.bidders}</dd>
+            </div>
+            <div>
+              <dt>{one.status === "live" ? "Closes" : "Closed"}</dt>
+              <dd>{day(one.closedAt)}</dd>
+            </div>
+          </dl>
+        </div>
       </a>
     );
   }
@@ -139,7 +154,7 @@ export function Landing() {
           <div className="v2-strip-track">
             {[...BRANDS, ...BRANDS, ...BRANDS, ...BRANDS].map((one, at) => (
               <span key={at} className="v2-brand" aria-hidden={at >= BRANDS.length}>
-                <img src={one.src} alt={one.word ? "" : one.name} style={{ height: `${one.height}rem` }} />
+                {one.src && <img src={one.src} alt={one.word ? "" : one.name} style={{ height: `${one.height}rem` }} />}
                 {one.word && one.name}
               </span>
             ))}
@@ -182,21 +197,39 @@ export function Landing() {
         <div className="v2-grid">
           {cards.filter((one) => one.status === "live").map(card)}
           {NEXT && (
-            <a className="v2-card tone-red" href={FOLLOW}>
-              <div className="v2-card-top">
+            <a className="v2-card tone-show" href={FOLLOW}>
+              <div className="v2-visual v2-show">
+                <span className="v2-show-word" aria-hidden>
+                  The
+                  <br />
+                  Ecosystem
+                  <br />
+                  Call
+                </span>
                 <span className="v2-tag soft">
                   <span className="v2-dot" />
                   Coming soon
                 </span>
-                <span className="v2-chip">{NEXT.spots} spots</span>
+                <span className="v2-chip">Holiday edition</span>
               </div>
-              <div className="v2-visual">
-                <TreeView />
+              <div className="v2-card-body">
+                <div className="v2-card-name">{NEXT.owner}</div>
+                <p className="v2-card-sub">{NEXT.title}</p>
+                <dl className="v2-facts">
+                  <div>
+                    <dt>Spots</dt>
+                    <dd>{NEXT.spots}</dd>
+                  </div>
+                  <div>
+                    <dt>Format</dt>
+                    <dd>Live show</dd>
+                  </div>
+                  <div>
+                    <dt>Opens</dt>
+                    <dd>{NEXT.when}</dd>
+                  </div>
+                </dl>
               </div>
-              <div className="v2-card-name">{NEXT.owner}</div>
-              <p className="v2-card-sub">{NEXT.title}</p>
-              <p className="v2-stats">{NEXT.when}</p>
-              <span className="v2-btn light wide">Follow for the date</span>
             </a>
           )}
           {cards.filter((one) => one.status !== "live").map(card)}
