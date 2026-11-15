@@ -4,13 +4,9 @@ import { useRef, useState, useEffect } from "react";
 import { houseShape, ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
 
 /**
- * Вещь с местами - главное на карточке торга: мы продаём место на вещи, и без
- * мест карточка ничем не отличалась бы от карточки фандрейзинга.
- *
- * Кадр снимается с той же 3D-сцены, что в приложении, вместе с логотипами
- * победителей, а сцена отдаёт, где на этом кадре лежит каждое место. Поверх
- * кадра - наши кадрирующие уголки: у проданного места внутри логотип, у
- * свободного - номер. Наведение показывает, кто и за сколько.
+ * Кадр вещи для карточки торга: снимается с той же 3D-сцены, что в
+ * приложении, вместе с логотипами победителей. Сцена заодно отдаёт, где на
+ * кадре лежит каждое место, - по ним выбирается ракурс и считаются места.
  */
 
 export type Spot = { url: string; brand: string; cents: number };
@@ -70,65 +66,6 @@ export function Shooter({
   return (
     <div className="v2-shooter" aria-hidden>
       <ThingStage shape={houseShape(model)} picked={null} onPick={() => {}} stage={stage} onReady={(views) => void ready(views)} />
-    </div>
-  );
-}
-
-function usd(cents: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
-}
-
-/** Уголки рамки: от каждого угла - короткие отрезки вдоль двух сторон. */
-function brackets(corners: Corners): string {
-  const share = 0.24;
-  return corners
-    .map((corner, at) => {
-      const next = corners[(at + 1) % 4];
-      const prev = corners[(at + 3) % 4];
-      const toward = (to: [number, number]) => [corner[0] + (to[0] - corner[0]) * share, corner[1] + (to[1] - corner[1]) * share];
-      const [ax, ay] = toward(next);
-      const [bx, by] = toward(prev);
-      return `M${ax} ${ay} L${corner[0]} ${corner[1]} L${bx} ${by}`;
-    })
-    .join(" ");
-}
-
-/** Кадр вещи с размеченными местами. */
-export function SpotView({ view, won }: { view: View; won: Record<string, Spot> }) {
-  const visible = Object.entries(view.quads).filter((entry): entry is [string, Corners] => entry[1] !== null);
-  // Номер места - по порядку кода, как на торге.
-  const order = Object.keys(view.quads).sort();
-  return (
-    <div className="v2-spotview">
-      <img src={view.src} alt="" />
-      <svg viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden>
-        {visible.map(([code, corners]) => (
-          <path key={code} d={brackets(corners)} className={won[code] ? "sold" : "open"} />
-        ))}
-      </svg>
-      {visible.map(([code, corners]) => {
-        const xs = corners.map(([x]) => x);
-        const ys = corners.map(([, y]) => y);
-        const left = Math.min(...xs) * 100;
-        const top = Math.min(...ys) * 100;
-        const spot = won[code];
-        const number = order.indexOf(code) + 1;
-        return (
-          <span
-            key={code}
-            className={spot ? "v2-spot sold" : "v2-spot open"}
-            style={{
-              left: `${left}%`,
-              top: `${top}%`,
-              width: `${Math.max(...xs) * 100 - left}%`,
-              height: `${Math.max(...ys) * 100 - top}%`,
-            }}
-            data-tip={spot ? `Spot ${number} · ${spot.brand || "won"} · ${usd(spot.cents)}` : `Spot ${number} · open`}
-          >
-            {!spot && <b>{number}</b>}
-          </span>
-        );
-      })}
     </div>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { APP_URL, FOLLOW, NEXT, TONES, day, load, usd, type Data } from "./data.ts";
-import { SpotView, useViews } from "./spots.tsx";
+import { Flow } from "./flow.tsx";
+import { useViews } from "./spots.tsx";
 
 /**
  * Прототип лендинга в духе frontiertraders.com, на нашем материале: герой
@@ -73,7 +74,13 @@ export function Landing() {
     return (
       <a key={one.id} className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
         <div className="v2-visual">
-          {view ? <SpotView view={view} won={one.won} /> : <span className="v2-wait" />}
+          {view ? (
+            <div className="v2-spotview">
+              <img src={view.src} alt="" />
+            </div>
+          ) : (
+            <span className="v2-wait" />
+          )}
           <span className={one.status === "live" ? "v2-tag live" : "v2-tag soft ended"}>
             <span className="v2-dot" />
             {one.status === "live" ? "Live" : "Ended"}
@@ -240,34 +247,16 @@ export function Landing() {
         </a>
       </section>
 
-      <section className="v2-dark" id="how">
-        <div className="v2-dark-in">
-          <p className="v2-label">How it works</p>
+      <section className="v2-section v2-how" id="how">
+        <p className="v2-label">How it works</p>
+        <div className="v2-head">
           <h2>
             Your money waits
             <span> until the photo is up.</span>
           </h2>
-          <div className="v2-steps">
-            <Step
-              tag="You bid"
-              title="Pay upfront, into escrow"
-              text="Pick a spot and place a bid. The money goes into escrow, not to us. If someone outbids you, it comes straight back."
-              icon="bid"
-            />
-            <Step
-              tag="No photo, no pay"
-              title="Refund if it never goes up"
-              text="The owner has a deadline to post a photo of your logo in place. No photo by then, and you get your money back automatically."
-              icon="refund"
-            />
-            <Step
-              tag="Photo is up"
-              title="72 hours, then the owner is paid"
-              text="Once the photo is up you have 72 hours to dispute it. Then the owner gets paid and OXAR takes its fee."
-              icon="paid"
-            />
-          </div>
+          <p className="v2-head-sub">Six steps from picking a spot to the owner getting paid.</p>
         </div>
+        <Flow />
       </section>
 
       <section className="v2-band">
@@ -342,23 +331,5 @@ function Grip() {
     <svg className="v2-grip" viewBox="0 0 12 12" aria-hidden>
       {[2, 6, 10].flatMap((y) => [2, 6, 10].map((x) => <rect key={`${x}-${y}`} x={x - 0.75} y={y - 0.75} width="1.5" height="1.5" />))}
     </svg>
-  );
-}
-
-function Step({ tag, title, text, icon }: { tag: string; title: string; text: string; icon: "bid" | "refund" | "paid" }) {
-  return (
-    <div className="v2-step">
-      <span className="v2-tag soft dark">{tag}</span>
-      <span className="v2-icon">
-        <Corners />
-        <svg viewBox="0 0 24 24" aria-hidden>
-          {icon === "bid" && <path d="M5 15h6m-6-4h10m-10-4h14" />}
-          {icon === "refund" && <path d="M9 7 5 11l4 4M5 11h10a4 4 0 0 1 0 8h-2" />}
-          {icon === "paid" && <path d="M5 12.5 10 17l9-10" />}
-        </svg>
-      </span>
-      <h3>{title}</h3>
-      <p>{text}</p>
-    </div>
   );
 }
