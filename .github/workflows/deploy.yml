@@ -10,8 +10,8 @@ name: Deploy
 # PR по-прежнему только проверяется: тесты и сборка.
 #
 # Проектов Pages два, по одному на домен:
-#   apps/web -> oxar.app       (лендинг)
-#   apps/app -> app.oxar.app   (приложение)
+#   apps/web + apps/app -> oxar.app       (лендинг, приложение на /app)
+#   apps/app            -> app.oxar.app   (приложение, пока туда ведут ссылки)
 #
 # Оба уезжают одним прогоном, без разбора, что именно изменилось. Загрузка
 # готового каталога занимает секунды, а условная логика «деплоить только
@@ -139,12 +139,31 @@ jobs:
       # Wrangler стоит в зависимостях с точной версией, а не тянется из сети на
       # каждый деплой: в этом шаге есть токен Cloudflare, и подменённый пакет
       # исполнился бы с ним. Хэш пакета проверяется по lockfile.
-      - name: Лендинг -> oxar.app
+      # oxar.app - один каталог из двух сборок: сначала приложение, поверх
+      # лендинг. Совпадают у них корень, 404 и значки - их берёт лендинг;
+      # приложение открывается на /app, его модели и картинки лежат там же,
+      # где в app.oxar.app. Файлы в _next/static названы по хэшу содержимого,
+      # поэтому одинаковое имя у двух сборок - это один и тот же файл.
+      #
+      # Заголовки - приложения: Pages складывает все подходящие блоки, и две
+      # политики CSP на одной странице браузер применил бы обе сразу -
+      # приложение осталось бы без Privy и кошелька. Политика приложения шире
+      # лендинговой и покрывает всё, что нужно лендингу.
+      - name: Собрать oxar.app из лендинга и приложения
+        run: |
+          rm -rf site && mkdir site
+          cp -R apps/app/out/. site/
+          cp -R apps/web/out/. site/
+          cp apps/app/out/_headers site/_headers
+          test -f site/app.html || { echo "в oxar.app нет приложения на /app"; exit 1; }
+          grep -q "v2-top" site/index.html || { echo "корень oxar.app - не лендинг"; exit 1; }
+
+      - name: Лендинг и приложение -> oxar.app
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: >-
-          pnpm exec wrangler pages deploy apps/web/out
+          pnpm exec wrangler pages deploy site
           --project-name=oxar-landing --branch=main --commit-dirty=true
 
       - name: Приложение -> app.oxar.app
@@ -248,4 +267,11 @@ jobs:
             -H 'Access-Control-Request-Headers: authorization,content-type,x-privy-token' \
             | grep -ci 'access-control-allow-origin: https://app.oxar.app' || true)
           test "$ok" = "1" || { echo "предзапрос CORS не разрешён - браузер до функции не дойдёт"; exit 1; }
+          # То же для oxar.app/app: приложение переезжает туда.
+          ok=$(curl -s -D- -o /dev/null -X OPTIONS "$fn" \
+            -H 'Origin: https://oxar.app' \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: authorization,content-type,x-privy-token' \
+            | grep -ci 'access-control-allow-origin: https://oxar.app' || true)
+          test "$ok" = "1" || { echo "предзапрос CORS с oxar.app не разрешён"; exit 1; }
           echo "мост отвечает, отбивает чужое и пускает наш домен"

@@ -89,6 +89,9 @@ async function verifiedEmail(idToken: string, privyId: string): Promise<string |
  * сам. В облаке не подставляет, и баг живёт только в проде.
  */
 const ORIGINS = new Set([
+  // Приложение переезжает на oxar.app/app; app.oxar.app живёт, пока не
+  // переключены ссылки.
+  "https://oxar.app",
   "https://app.oxar.app",
   "https://oxar-app.pages.dev",
   "http://localhost:3000",

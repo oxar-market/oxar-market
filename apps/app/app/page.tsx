@@ -129,7 +129,7 @@ export default function Home() {
             secret={capture}
             onClose={() => {
               setCapture(null);
-              window.history.replaceState(null, "", "/");
+              window.history.replaceState(null, "", window.location.pathname);
             }}
           />
         </section>

@@ -47,7 +47,7 @@ export function AddOnDesktop({
   }, [session, onPhotos]);
 
   // В ссылке секрет сессии: по нему телефон снимает без входа и кошелька.
-  const link = session ? `${window.location.origin}/?c=${session.secret}` : "";
+  const link = session ? `${window.location.origin}/app?c=${session.secret}` : "";
 
   return (
     <div className="sl-desk">
