@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { FEE, Pitch, QUESTIONS } from "../../sell/sell.tsx";
 import { APP_URL, load, usd, type Data } from "../data.ts";
 import { Foot, Top } from "../landing.tsx";
-import { Simulator } from "./simulator.tsx";
 
 /**
  * Шаги для самостоятельного выставления: вещь продавец заводит сам в
@@ -24,7 +23,8 @@ const LIST_URL = `${APP_URL}/?tab=you`;
 
 /**
  * Страница продавца в стиле нового лендинга. Вопросы, форма и комиссия - те
- * же, что на /sell; калькулятор здесь свой - он играет пример торга.
+ * же, что на /sell. Калькулятора нет намеренно: владелец вбивал бы цифры
+ * наугад, а настоящий торг на первом экране убеждает сильнее.
  */
 export function Owners() {
   const [data, setData] = useState<Data | null>(null);
@@ -79,11 +79,6 @@ export function Owners() {
             <p>{last ? `${last.owner} · ${last.title}` : " "}</p>
           </div>
         </div>
-      </section>
-
-      <section className="v2-section">
-        <p className="v2-label">Your numbers</p>
-        <Simulator />
       </section>
 
       <section className="v2-section">
