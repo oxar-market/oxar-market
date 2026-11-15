@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SpotView, TreeView, useViews } from "./spots.tsx";
 
 /**
@@ -11,6 +11,8 @@ import { SpotView, TreeView, useViews } from "./spots.tsx";
  */
 
 const APP_URL = "https://app.oxar.app";
+/** Куда ведёт «следить за следующим»: формы подписки пока нет, анонсы - в X. */
+const FOLLOW = "https://x.com/oxar_app";
 /** Сколько последних проданных торгов показывать карточками на главной. */
 const RECENT = 4;
 const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -28,6 +30,11 @@ const TONES: Record<string, "dark" | "warm" | "light"> = {
   "the-van": "dark",
   "shirt-xx": "warm",
   "superteam-ua-tee": "light",
+};
+
+/** Ролик вещи для первого экрана. Без ролика герой остаётся на подложке. */
+const VIDEOS: Record<string, { src: string; poster: string }> = {
+  "the-van": { src: "/v2/van-loop.mp4", poster: "/v2/van-poster.jpg" },
 };
 
 type Auction = {
@@ -225,17 +232,15 @@ export function Landing() {
               Brands bid on logo spots on real things: a van on a road trip, a tie on a live show, a shirt at a run
               club. The money waits in escrow until the photo is up.
             </p>
-            <a className="v2-btn dark wide" href={live ? APP_URL : "#notify"}>
-              {live ? "Bid on a spot" : "Get notified about the next one"}
+            <a className="v2-btn dark wide" href={live ? APP_URL : FOLLOW}>
+              {live ? "Bid on a spot" : "Follow for the next one"}
               <Grip />
             </a>
           </div>
         </div>
 
         <a className="v2-feature" href={hero ? `${APP_URL}/?thing=${hero.id}` : APP_URL}>
-          <div className="v2-feature-media">
-            <span className="v2-video-note">Van video goes here</span>
-          </div>
+          <div className="v2-feature-media">{hero && VIDEOS[hero.slug] && <Loop {...VIDEOS[hero.slug]} />}</div>
           <div className="v2-feature-top">
             <span className="v2-meta">
               {hero ? [hero.owner, live ? null : `Sold ${day(hero.closedAt)}`].filter(Boolean).join(" · ") : ""}
@@ -292,7 +297,7 @@ export function Landing() {
 
         <div className="v2-grid">
           {filter !== "past" && (
-            <div className="v2-card tone-red" id="notify">
+            <a className="v2-card tone-red" href={FOLLOW}>
               <div className="v2-card-top">
                 <span className="v2-tag soft">
                   <span className="v2-dot" />
@@ -306,8 +311,8 @@ export function Landing() {
               <div className="v2-card-name">Ecosystem Call</div>
               <p className="v2-card-sub">Holiday edition. Spots on the tree behind the host, live on air.</p>
               <p className="v2-stats">Opens in December</p>
-              <span className="v2-btn light wide">Get notified</span>
-            </div>
+              <span className="v2-btn light wide">Follow for the date</span>
+            </a>
           )}
 
           {cards.map((one) => {
@@ -321,7 +326,7 @@ export function Landing() {
                     <span className="v2-dot" />
                     {one.status === "live" ? "Live" : "Ended"}
                   </span>
-                  <span className="v2-chip">{total ? `${sold} of ${total} spots sold` : `${sold} spots sold`}</span>
+                  <span className="v2-chip">{total ? `${sold} of ${total} ${total === 1 ? "spot" : "spots"} sold` : `${sold} ${sold === 1 ? "spot" : "spots"} sold`}</span>
                 </div>
                 <div className="v2-visual">{view ? <SpotView view={view} won={one.won} /> : <span className="v2-wait" />}</div>
                 <div className="v2-card-name">{one.owner}</div>
@@ -410,10 +415,19 @@ export function Landing() {
           OXAR
         </span>
         <span>Ad space on physical things</span>
-        <a href="https://x.com/oxar_app">X</a>
+        <a href={FOLLOW}>X</a>
       </footer>
     </div>
   );
+}
+
+/** Ролик без звука по кругу. Кто просил меньше движения, видит постер. */
+function Loop({ src, poster }: { src: string; poster: string }) {
+  const video = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) video.current?.pause();
+  }, []);
+  return <video ref={video} src={src} poster={poster} autoPlay muted loop playsInline preload="auto" aria-hidden />;
 }
 
 /** Значок на кнопке: девять точек-мест, как сетка на вещи. */
