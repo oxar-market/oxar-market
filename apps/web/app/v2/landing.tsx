@@ -206,9 +206,7 @@ export function Landing() {
       {shooter}
       <header className="v2-top">
         <a className="v2-mark" href="/v2">
-          <span className="v2-mark-box">
-            <Corners />
-          </span>
+          <img className="v2-mark-logo" src="/v2/oxar-mark.webp" alt="" />
           OXAR
         </a>
         <nav className="v2-nav">

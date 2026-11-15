@@ -56,6 +56,12 @@
   text-decoration: none;
 }
 
+/* Наш знак - тот же оранжевый, что в приложении. */
+.v2-mark-logo {
+  height: 1.75rem;
+  width: auto;
+}
+
 .v2-mark-box {
   position: relative;
   width: 1.125rem;
