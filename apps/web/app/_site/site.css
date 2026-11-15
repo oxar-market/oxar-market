@@ -703,7 +703,7 @@
   }
 
   .v2-nav,
-  .v2-pill {
+  .v2-side {
     display: none;
   }
 
@@ -1895,5 +1895,100 @@ a.v2-card:hover .v2-show-word {
 @media (max-width: 56rem) {
   .sell-form {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Меню на телефоне: бургер в шапке и панель на весь экран под ней. */
+.v2-burger {
+  display: none;
+  place-content: center;
+  gap: 5px;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: var(--ink);
+  cursor: pointer;
+}
+
+.v2-burger span {
+  display: block;
+  width: 1.125rem;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--bg);
+  transition: transform 0.2s ease-out;
+}
+
+@media (max-width: 56rem) {
+  .v2-burger {
+    display: grid;
+  }
+}
+
+/* Открытое меню - две черты складываются в крест. */
+.v2-top.open .v2-burger span:first-child {
+  transform: translateY(3.5px) rotate(45deg);
+}
+
+.v2-top.open .v2-burger span:last-child {
+  transform: translateY(-3.5px) rotate(-45deg);
+}
+
+.v2-menu {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: flex;
+  flex-direction: column;
+  padding: 6.5rem 1rem 1.5rem;
+  background: var(--bg);
+  animation: v2-menu-in 0.2s ease-out;
+}
+
+@keyframes v2-menu-in {
+  from { opacity: 0; transform: translateY(-8px); }
+}
+
+.v2-menu > a {
+  padding: 1.125rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.v2-menu-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: auto;
+}
+
+.v2-menu-foot .v2-btn {
+  padding: 1rem 1.125rem;
+  font-size: 1rem;
+}
+
+.v2-menu-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--mut);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-menu {
+    animation: none;
+  }
+
+  .v2-burger span {
+    transition: none;
   }
 }
