@@ -19,9 +19,22 @@
   letter-spacing: -0.035em;
 }
 
-/* Строки заголовка ровные: без этого на /sell висело одинокое «it.». */
-.v2 h1 {
+/* Ни одного слова в одиночку на последней строке: заголовки делят строки
+   поровну, абзацы не оставляют висящее слово. На /sell так висели «it.» и
+   «us.». */
+.v2 h1,
+.v2 h2,
+.v2 h3 {
   text-wrap: balance;
+}
+
+.v2 p,
+.v2 dt,
+.v2 dd,
+.v2 li,
+.v2 summary,
+.v2 label {
+  text-wrap: pretty;
 }
 
 .v2 h1 span,
@@ -715,6 +728,21 @@
 
   .v2-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Дата в узкой колонке переносилась «Oct 30, / 2026»: ей колонку шире,
+     числу ставивших - уже. */
+  .v2-facts {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.3fr);
+  }
+
+  .v2-facts div + div {
+    padding-left: 0.75rem;
+  }
+
+  .v2-facts dd {
+    font-size: 0.875rem;
+    white-space: nowrap;
   }
 
   .v2-numbers dl {
@@ -1482,8 +1510,15 @@ a.v2-card:hover .v2-show-word {
 }
 
 .v2-sell .sell-pitch h2 {
+  align-items: flex-start;
   font-size: 2.25rem;
+  line-height: 1.1;
   color: #fff;
+}
+
+/* Точка - у первой строки, а не посередине многострочного заголовка. */
+.v2-sell .sell-pitch h2::before {
+  margin-top: 0.4em;
 }
 
 .v2-sell .sell-pitch .sub {
@@ -1533,6 +1568,10 @@ a.v2-card:hover .v2-show-word {
 
   .v2-sell .sell-block.sell-pitch {
     padding: 2rem 1.25rem;
+  }
+
+  .v2-sell .sell-pitch h2 {
+    font-size: 1.75rem;
   }
 }
 
