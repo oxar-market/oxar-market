@@ -95,3 +95,84 @@ export function WornInfo({ thingId }: { thingId: string }) {
     </>
   );
 }
+
+/**
+ * То же про вещь - панелью под торгом вещи: история крупно, факты сбоку, а
+ * «где» через «>» - маршрутом с остановками. Хэндл в «кто» ведёт в X.
+ */
+export function WornAbout({ thingId }: { thingId: string }) {
+  const [worn, setWorn] = useState<Worn | null>(null);
+  useEffect(() => {
+    void loadWorn(thingId).then(setWorn);
+  }, [thingId]);
+  if (!worn) return null;
+  const stops = (worn.where ?? "").split(">").map((stop) => stop.trim()).filter(Boolean);
+  const route = stops.length > 1;
+  const handle = worn.by?.match(/@(\w{1,15})/)?.[1];
+  const facts: [string, string | null, string | null][] = [
+    ["Who has it", worn.by?.replace(/\s*\(@\w+\)/, "") ?? null, null],
+    ["When", worn.when, worn.whenWas],
+  ];
+  if (!route) facts.push(["Where", worn.where, worn.whereWas]);
+
+  return (
+    <section className="lt-about">
+      <h2>About this auction</h2>
+      <div className={worn.about ? "lt-about-grid" : "lt-about-grid bare"}>
+        {worn.about && (
+          <article className="lt-card lt-story">
+            <span className="lt-cap">The story</span>
+            <p>{worn.about}</p>
+          </article>
+        )}
+        <dl className="lt-card lt-facts">
+          {facts.map(([label, value, was]) => (
+            <div key={label}>
+              <dt className="lt-cap">
+                {label}
+                {was && label === "Where" && <span className="worn-up">Upgraded</span>}
+              </dt>
+              <dd className={value ? "" : "tba"}>
+                {value ?? "To be announced"}
+                {label === "Who has it" && handle && (
+                  <a href={`https://x.com/${handle}`} target="_blank" rel="noreferrer">
+                    @{handle}
+                  </a>
+                )}
+              </dd>
+              {was && <s className="worn-was">{was}</s>}
+            </div>
+          ))}
+          {worn.proofBy && (
+            <div>
+              <dt className="lt-cap">Proof by</dt>
+              <dd>{new Date(worn.proofBy).toLocaleDateString("en-US", { month: "long", day: "numeric" })}</dd>
+              <p className="lt-proof">
+                Your money stays in escrow until the seller shows the thing in use. You get 72 hours to
+                check it. No proof by this day, and your bid comes back.
+              </p>
+            </div>
+          )}
+        </dl>
+        {route && (
+          <div className="lt-card lt-route">
+            <span className="lt-cap">
+              The route · {stops.length} stops
+              {worn.whereWas && <span className="worn-up">Upgraded</span>}
+            </span>
+            <ol>
+              {stops.map((stop, at) => (
+                <li key={`${stop}-${at}`} className={at === 0 || at === stops.length - 1 ? "end" : ""}>
+                  <i />
+                  <b>{stop}</b>
+                  <span>{at === 0 ? "Start" : at === stops.length - 1 ? "Finish" : `Stop ${at + 1}`}</span>
+                </li>
+              ))}
+            </ol>
+            {worn.whereWas && <s className="worn-was">{worn.whereWas}</s>}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
