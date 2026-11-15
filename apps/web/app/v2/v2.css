@@ -912,3 +912,78 @@ a.v2-card:hover {
   background: #f4c84a;
   color: #2a0d08;
 }
+
+/* Все торги - строками. */
+.v2-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.v2-row {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr) 8rem 7rem 9rem 1.5rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.125rem 1.25rem;
+  border-radius: 14px;
+  background: var(--panel);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.v2-row:hover {
+  background: var(--line);
+}
+
+.v2-row .v2-tag {
+  justify-self: start;
+}
+
+.v2-row-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  font-size: 0.875rem;
+  color: var(--mut);
+}
+
+.v2-row-name b {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.v2-row-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  color: var(--mut);
+}
+
+.v2-row-go {
+  justify-self: end;
+  color: var(--mut);
+}
+
+.v2-row-none {
+  color: var(--mut);
+}
+
+@media (max-width: 56rem) {
+  .v2-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .v2-row-name {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .v2-row-num:empty,
+  .v2-row-go {
+    display: none;
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { APP_URL, FOLLOW, NEXT, TONES, day, load, usd, type Data } from "./data.ts";
 import { SpotView, TreeView, useViews } from "./spots.tsx";
 
 /**
@@ -10,27 +11,11 @@ import { SpotView, TreeView, useViews } from "./spots.tsx";
  * схемой. Живёт на /v2 и в прод не ссылается.
  */
 
-const APP_URL = "https://app.oxar.app";
-/** Куда ведёт «следить за следующим»: формы подписки пока нет, анонсы - в X. */
-const FOLLOW = "https://x.com/oxar_app";
-/** Сколько последних проданных торгов показывать карточками на главной. */
-const RECENT = 4;
-const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-/** Чья вещь - крупной надписью на карточке, как логотип бренда у frontier. */
-const OWNERS: Record<string, string> = {
-  "the-van": "Superteam Georgia",
-  "shirt-xx": "Ecosystem Call",
-  "superteam-ua-tee": "Superteam Ukraine",
-};
-
-/** Тон карточки - под хозяина вещи. */
-const TONES: Record<string, "dark" | "warm" | "light"> = {
-  "the-van": "dark",
-  "shirt-xx": "warm",
-  "superteam-ua-tee": "light",
-};
+/**
+ * Охват: просмотры эфиров и постов с логотипами, сумма по всем торгам.
+ * Цифру дал Даниил, посчитанной разбивки по источникам пока нет.
+ */
+const REACH = "98K";
 
 /** Ролик вещи для первого экрана. Без ролика герой остаётся на подложке. */
 const VIDEOS: Record<string, { src: string; poster: string }> = {
@@ -51,121 +36,6 @@ const BRANDS: { name: string; src: string; height: number; word?: boolean }[] = 
   { name: "Superteam", src: "/v2/brands/superteam.svg", height: 1.125 },
 ];
 
-type Auction = {
-  id: string;
-  slug: string;
-  title: string;
-  owner: string;
-  where: string | null;
-  status: "live" | "next" | "sold";
-  raisedCents: number;
-  spots: number;
-  bidders: number;
-  closedAt: number;
-  /** Модель вещи: с её сцены снимается кадр с местами. */
-  model: string | null;
-  /** Код места - кто его выиграл и за сколько. */
-  won: Record<string, { url: string; brand: string; cents: number }>;
-};
-
-type Data = {
-  auctions: Auction[];
-  /** Сколько заплачено за проданные места - выигравшие ставки, без перебитых. */
-  raisedCents: number;
-  spotsSold: number;
-  bids: number;
-  bidders: number;
-};
-
-async function rest<T>(path: string): Promise<T | null> {
-  if (!SUPABASE || !ANON) return null;
-  try {
-    const response = await fetch(`${SUPABASE}/rest/v1/${path}`, {
-      headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
-    });
-    return response.ok ? ((await response.json()) as T) : null;
-  } catch {
-    return null;
-  }
-}
-
-async function load(): Promise<Data | null> {
-  const [things, lots, bids] = await Promise.all([
-    rest<
-      { id: string; slug: string; title: string; house: boolean; prepared: boolean; worn_where: string | null; model_url: string | null }[]
-    >("things?active=eq.true&hidden=eq.false&select=id,slug,title,house,prepared,worn_where,model_url"),
-    rest<{ id: string; thing_id: string; status: string; closes_at: string; rehearsal: boolean; thing_spots: { code: string } | null }[]>(
-      "lots?select=id,thing_id,status,closes_at,rehearsal,thing_spots:spot_id(code)",
-    ),
-    rest<{ lot_id: string; amount_cents: number; media_url: string; bidder_wallet: string; brand: string | null }[]>(
-      "lot_bids?select=lot_id,amount_cents,media_url,bidder_wallet,brand&order=amount_cents.desc",
-    ),
-  ]);
-  if (!things || !lots || !bids) return null;
-
-  const real = new Set(lots.filter((lot) => !lot.rehearsal).map((lot) => lot.id));
-  const counted = bids.filter((bid) => real.has(bid.lot_id));
-  const top = new Map<string, (typeof bids)[number]>();
-  const people = new Map<string, Set<string>>();
-  for (const bid of counted) {
-    if (!top.has(bid.lot_id)) top.set(bid.lot_id, bid);
-    const set = people.get(bid.lot_id) ?? new Set<string>();
-    set.add(bid.bidder_wallet);
-    people.set(bid.lot_id, set);
-  }
-
-  const auctions: Auction[] = [];
-  for (const thing of things) {
-    if (!thing.house && !thing.prepared) continue;
-    const mine = lots.filter((lot) => lot.thing_id === thing.id && real.has(lot.id));
-    const open = mine.filter((lot) => lot.status === "open" && Date.parse(lot.closes_at) > Date.now());
-    const won = mine.filter((lot) => lot.status === "won" && top.has(lot.id));
-    const shown = open.length ? open : won;
-    if (shown.length === 0) continue;
-    const wallets = new Set<string>();
-    for (const lot of shown) for (const one of people.get(lot.id) ?? []) wallets.add(one);
-    const winners: Auction["won"] = {};
-    for (const lot of shown) {
-      const lead = top.get(lot.id);
-      if (lead && lot.thing_spots?.code) {
-        winners[lot.thing_spots.code] = { url: lead.media_url, brand: lead.brand ?? "", cents: lead.amount_cents };
-      }
-    }
-    auctions.push({
-      id: thing.id,
-      slug: thing.slug,
-      title: thing.title,
-      owner: OWNERS[thing.slug] ?? thing.title,
-      where: thing.worn_where,
-      status: open.length ? "live" : "sold",
-      raisedCents: shown.reduce((sum, lot) => sum + (top.get(lot.id)?.amount_cents ?? 0), 0),
-      spots: shown.length,
-      bidders: wallets.size,
-      closedAt: Math.max(...shown.map((lot) => Date.parse(lot.closes_at))),
-      model: thing.model_url,
-      won: winners,
-    });
-  }
-  auctions.sort((a, b) => (a.status === "live" ? -1 : 0) - (b.status === "live" ? -1 : 0) || b.closedAt - a.closedAt);
-
-  const sold = lots.filter((lot) => real.has(lot.id) && lot.status === "won" && top.has(lot.id));
-  return {
-    auctions,
-    raisedCents: sold.reduce((sum, lot) => sum + top.get(lot.id)!.amount_cents, 0),
-    spotsSold: sold.length,
-    bids: counted.length,
-    bidders: new Set(counted.map((bid) => bid.bidder_wallet)).size,
-  };
-}
-
-function usd(cents: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
-}
-
-function day(at: number): string {
-  return new Date(at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
 /** Кадрирующие уголки - наш знак вместо пунктира frontier. */
 function Corners() {
   return (
@@ -180,7 +50,6 @@ function Corners() {
 
 export function Landing() {
   const [data, setData] = useState<Data | null>(null);
-  const [filter, setFilter] = useState<"all" | "live" | "past">("all");
   useEffect(() => {
     void load().then(setData);
   }, []);
@@ -188,40 +57,40 @@ export function Landing() {
   const live = data?.auctions.find((one) => one.status === "live") ?? null;
   const last = data?.auctions.find((one) => one.status === "sold") ?? null;
   const hero = live ?? last;
-  // На главной - все идущие и только несколько последних проданных: при
-  // сотне торгов сотня карточек здесь не читалась бы. Весь архив - строками
-  // на отдельной странице.
+  // На главной две карточки: объявленный торг и самый свежий, а без
+  // объявления - два свежих. Идущий торг всегда впереди. Остальное - на
+  // странице всех торгов, иначе при сотне торгов здесь была бы сотня карточек.
   const all = data?.auctions ?? [];
-  const running = all.filter((one) => one.status === "live");
-  const recent = all.filter((one) => one.status === "sold").slice(0, RECENT);
-  const cards = filter === "live" ? running : filter === "past" ? recent : [...running, ...recent];
-  const more = all.length > 0;
-  // Кадры вещей с местами: снимаются в браузере по одной сцене за раз.
+  const cards = all.slice(0, NEXT ? 1 : 2);
   const { views, shooter } = useViews(cards);
+
+  function card(one: Data["auctions"][number]) {
+    const view = views[one.id];
+    const total = view ? Object.keys(view.quads).length : null;
+    const sold = Object.keys(one.won).length;
+    return (
+      <a key={one.id} className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
+        <div className="v2-card-top">
+          <span className={one.status === "live" ? "v2-tag live" : "v2-tag soft ended"}>
+            <span className="v2-dot" />
+            {one.status === "live" ? "Live" : "Ended"}
+          </span>
+          <span className="v2-chip">{total ? `${sold} of ${total} ${total === 1 ? "spot" : "spots"} sold` : `${sold} ${sold === 1 ? "spot" : "spots"} sold`}</span>
+        </div>
+        <div className="v2-visual">{view ? <SpotView view={view} won={one.won} /> : <span className="v2-wait" />}</div>
+        <div className="v2-card-name">{one.owner}</div>
+        <p className="v2-card-sub">{one.title}</p>
+        <p className="v2-stats">
+          {usd(one.raisedCents)} raised · {one.bidders} bidders · {day(one.closedAt)}
+        </p>
+      </a>
+    );
+  }
 
   return (
     <div className="v2">
       {shooter}
-      <header className="v2-top">
-        <a className="v2-mark" href="/v2">
-          <img className="v2-mark-logo" src="/v2/oxar-mark.webp" alt="" />
-          OXAR
-        </a>
-        <nav className="v2-nav">
-          <a href="#auctions">Auctions</a>
-          <a href="#how">How it works</a>
-          <a href="/sell">Sell a spot</a>
-        </nav>
-        <div className="v2-side">
-          <a className="v2-pill" href="#auctions">
-            <span className="v2-dot" />
-            Next: Holiday edition
-          </a>
-          <a className="v2-btn dark" href="/sell">
-            Sell a spot
-          </a>
-        </div>
-      </header>
+      <Top />
 
       <section className="v2-hero">
         <div className="v2-hero-text">
@@ -282,8 +151,8 @@ export function Landing() {
         <section className="v2-numbers" aria-label="So far">
           <dl>
             <div>
-              <dd>{usd(data.raisedCents)}</dd>
-              <dt>paid for {data.spotsSold} spots</dt>
+              <dd>{usd(data.totalCents)}</dd>
+              <dt>bid on spots so far</dt>
             </div>
             <div>
               <dd>{data.bids}</dd>
@@ -294,8 +163,8 @@ export function Landing() {
               <dt>brands and people bid</dt>
             </div>
             <div>
-              <dd>{usd(data.spotsSold ? Math.round(data.raisedCents / data.spotsSold) : 0)}</dd>
-              <dt>average price of a spot</dt>
+              <dd>{REACH}</dd>
+              <dt>views on streams and posts with the logos</dt>
             </div>
           </dl>
         </section>
@@ -308,69 +177,34 @@ export function Landing() {
             Real things,
             <span> real brands on them.</span>
           </h2>
-          <div className="v2-filter" role="tablist">
-            {(["all", "live", "past"] as const).map((one) => (
-              <button
-                key={one}
-                type="button"
-                className={filter === one ? "on" : ""}
-                onClick={() => setFilter(one)}
-              >
-                {one === "all" ? "All" : one === "live" ? "Live" : "Past"}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="v2-grid">
-          {filter !== "past" && (
+          {cards.filter((one) => one.status === "live").map(card)}
+          {NEXT && (
             <a className="v2-card tone-red" href={FOLLOW}>
               <div className="v2-card-top">
                 <span className="v2-tag soft">
                   <span className="v2-dot" />
                   Coming soon
                 </span>
-                <span className="v2-chip">11 spots</span>
+                <span className="v2-chip">{NEXT.spots} spots</span>
               </div>
               <div className="v2-visual">
                 <TreeView />
               </div>
-              <div className="v2-card-name">Ecosystem Call</div>
-              <p className="v2-card-sub">Holiday edition. Spots on the tree behind the host, live on air.</p>
-              <p className="v2-stats">Opens in December</p>
+              <div className="v2-card-name">{NEXT.owner}</div>
+              <p className="v2-card-sub">{NEXT.title}</p>
+              <p className="v2-stats">{NEXT.when}</p>
               <span className="v2-btn light wide">Follow for the date</span>
             </a>
           )}
-
-          {cards.map((one) => {
-            const view = views[one.id];
-            const total = view ? Object.keys(view.quads).length : null;
-            const sold = Object.keys(one.won).length;
-            return (
-              <a key={one.id} className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
-                <div className="v2-card-top">
-                  <span className={one.status === "live" ? "v2-tag live" : "v2-tag soft ended"}>
-                    <span className="v2-dot" />
-                    {one.status === "live" ? "Live" : "Ended"}
-                  </span>
-                  <span className="v2-chip">{total ? `${sold} of ${total} ${total === 1 ? "spot" : "spots"} sold` : `${sold} ${sold === 1 ? "spot" : "spots"} sold`}</span>
-                </div>
-                <div className="v2-visual">{view ? <SpotView view={view} won={one.won} /> : <span className="v2-wait" />}</div>
-                <div className="v2-card-name">{one.owner}</div>
-                <p className="v2-card-sub">{one.title}</p>
-                <p className="v2-stats">
-                  {usd(one.raisedCents)} raised · {one.bidders} bidders · {day(one.closedAt)}
-                </p>
-              </a>
-            );
-          })}
+          {cards.filter((one) => one.status !== "live").map(card)}
         </div>
-        {more && (
-          <a className="v2-more" href={APP_URL}>
-            All auctions
-            <span aria-hidden>&rarr;</span>
-          </a>
-        )}
+        <a className="v2-more" href="/v2/auctions">
+          All auctions
+          <span aria-hidden>&rarr;</span>
+        </a>
       </section>
 
       <section className="v2-dark" id="how">
@@ -414,17 +248,49 @@ export function Landing() {
         </a>
       </section>
 
-      <footer className="v2-foot">
-        <span className="v2-mark small">
-          <span className="v2-mark-box">
-            <Corners />
-          </span>
-          OXAR
-        </span>
-        <span>Ad space on physical things</span>
-        <a href={FOLLOW}>X</a>
-      </footer>
+      <Foot />
     </div>
+  );
+}
+
+/** Шапка - общая для главной и страницы всех торгов. */
+export function Top() {
+  return (
+    <header className="v2-top">
+      <a className="v2-mark" href="/v2">
+        <img className="v2-mark-logo" src="/v2/oxar-mark.webp" alt="" />
+        OXAR
+      </a>
+      <nav className="v2-nav">
+        <a href="/v2/auctions">Auctions</a>
+        <a href="/v2#how">How it works</a>
+        <a href="/sell">Sell a spot</a>
+      </nav>
+      <div className="v2-side">
+        <a className="v2-pill" href="/v2#auctions">
+          <span className="v2-dot" />
+          Next: Holiday edition
+        </a>
+        <a className="v2-btn dark" href="/sell">
+          Sell a spot
+        </a>
+      </div>
+    </header>
+  );
+}
+
+export function Foot() {
+  return (
+    <footer className="v2-foot">
+      <span className="v2-mark small">
+        <span className="v2-mark-box">
+          <Corners />
+        </span>
+        OXAR
+      </span>
+      <span>Ad space on physical things</span>
+      <a href={FOLLOW}>X</a>
+    </footer>
   );
 }
 
