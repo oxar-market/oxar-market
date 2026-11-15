@@ -1,0 +1,1860 @@
+/* Стили сайта. Всё под .v2 - так назывался прототип, имя классов осталось. */
+
+.v2 {
+  --red: #e0381c;
+  --panel: #f2f2ef;
+  --dark: #141619;
+  --dark-2: #1d2024;
+  max-width: 84rem;
+  margin: 0 auto;
+  padding: 0 2.5rem;
+  color: var(--ink);
+}
+
+.v2 h1,
+.v2 h2,
+.v2 h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+/* Строки заголовка ровные: без этого на /sell висело одинокое «it.». */
+.v2 h1 {
+  text-wrap: balance;
+}
+
+.v2 h1 span,
+.v2 h2 span {
+  color: var(--mut);
+}
+
+/* Шапка */
+.v2-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 1.25rem 0;
+}
+
+/* Подложка шапки - во всю ширину окна, а не только колонки страницы. */
+.v2-top::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.v2-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Наш знак - тот же оранжевый, что в приложении. */
+.v2-mark-logo {
+  height: 1.75rem;
+  width: auto;
+}
+
+.v2-c {
+  position: absolute;
+  width: 35%;
+  height: 35%;
+  border: 0 solid currentColor;
+}
+
+.v2-c.tl { left: 0; top: 0; border-left-width: 1.5px; border-top-width: 1.5px; }
+.v2-c.tr { right: 0; top: 0; border-right-width: 1.5px; border-top-width: 1.5px; }
+.v2-c.bl { left: 0; bottom: 0; border-left-width: 1.5px; border-bottom-width: 1.5px; }
+.v2-c.br { right: 0; bottom: 0; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+
+.v2-nav {
+  display: flex;
+  gap: 2rem;
+}
+
+.v2-nav a {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+.v2-nav a:hover {
+  opacity: 1;
+}
+
+.v2-side {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
+}
+
+.v2-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  background: var(--dark);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.v2-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+/* Кнопки: прямоугольные с мягким углом и значком-сеткой справа. */
+.v2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s, transform 0.12s;
+}
+
+.v2-btn:active {
+  transform: scale(0.98);
+}
+
+.v2-btn.dark {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.v2-btn.light {
+  background: #fff;
+  color: #16181d;
+}
+
+.v2-btn.wide {
+  width: 100%;
+}
+
+.v2-btn:hover {
+  opacity: 0.88;
+}
+
+.v2-grip {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+  opacity: 0.8;
+}
+
+/* Первый экран: светлая подложка, текст слева, кадр героя справа. */
+.v2-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 2rem;
+  margin-top: 1rem;
+  padding: 2rem;
+  border-radius: 24px;
+  background: var(--panel);
+}
+
+.v2-hero-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 3rem;
+  padding: 0.5rem 0.25rem 0;
+}
+
+.v2-hero h1 {
+  font-size: clamp(2.75rem, 4.6vw, 4.25rem);
+  line-height: 1.02;
+}
+
+.v2-hero h1 span {
+  display: block;
+}
+
+.v2-hero-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.v2-hero-foot p {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.v2-feature {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 34rem;
+  padding: 1.75rem;
+  border-radius: 18px;
+  overflow: hidden;
+  color: #fff;
+  text-decoration: none;
+  background: var(--dark);
+}
+
+.v2-feature-media {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(80% 70% at 60% 55%, #3a3f46 0%, #1a1d21 55%, #0f1114 100%);
+}
+
+.v2-feature-media::after {
+  content: "";
+  z-index: 1;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, transparent 30%, transparent 65%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.v2-feature-media img,
+.v2-feature-media video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.v2-feature-top,
+.v2-feature-title,
+.v2-feature-foot {
+  position: relative;
+  z-index: 1;
+}
+
+.v2-feature-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.v2-meta {
+  font-size: 0.875rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.v2-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3125rem 0.625rem;
+  border-radius: 6px;
+  background: #fff;
+  color: #16181d;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.v2-tag.ended .v2-dot {
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.v2-tag.live .v2-dot {
+  background: #2ecc71;
+}
+
+.v2-tag.soft {
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  font-weight: 600;
+}
+
+.v2-tag.soft.dark {
+  background: rgba(224, 56, 28, 0.16);
+  color: #ff8a73;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+}
+
+.v2-feature-title {
+  margin-top: auto;
+  margin-bottom: 1.5rem;
+}
+
+.v2-feature-title h2 {
+  font-size: clamp(2.25rem, 3.6vw, 3.25rem);
+  line-height: 1.02;
+  color: #fff;
+}
+
+.v2-feature-title p {
+  margin: 0.5rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.v2-feature-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.v2-feature-foot > span:first-child {
+  opacity: 0.8;
+}
+
+/* Бегущая строка: логотипы брендов, которые ставили. */
+.v2-strip {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.v2-strip-track {
+  display: flex;
+  align-items: center;
+  gap: 3.5rem;
+  width: max-content;
+  animation: v2-run 40s linear infinite;
+}
+
+/* Логотипы в один цвет: у брендов свои цвета и фоны, вместе они спорили бы. */
+.v2-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  opacity: 0.55;
+  white-space: nowrap;
+}
+
+.v2-brand img {
+  width: auto;
+  filter: brightness(0);
+}
+
+@keyframes v2-run {
+  to { transform: translateX(-50%); }
+}
+
+/* Секции */
+.v2-section {
+  padding: 6rem 0 2rem;
+}
+
+.v2-label {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mut);
+}
+
+.v2-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.v2-head h2 {
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  line-height: 1.05;
+}
+
+.v2-head h2 span {
+  display: block;
+}
+
+.v2-filter {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.v2-filter button {
+  padding: 0.5rem 0.875rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v2-filter button.on {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Карточки-кампании */
+.v2-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.v2-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  border-radius: 22px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.v2-card.tone-light {
+  background: var(--panel);
+}
+
+.v2-card.tone-warm {
+  background: #efe7da;
+  color: #16181d;
+}
+
+.v2-card.tone-dark {
+  background: var(--dark);
+  color: #fff;
+}
+
+.v2-card.tone-show {
+  background: #0b0b0d;
+  color: #fff;
+}
+
+/* Метки лежат на кадре: стекло поверх картинки, а не строка над ней. */
+.v2-visual > .v2-tag,
+.v2-visual > .v2-chip {
+  position: absolute;
+  top: 0.875rem;
+  z-index: 2;
+  backdrop-filter: blur(10px);
+}
+
+.v2-visual > .v2-tag {
+  left: 0.875rem;
+}
+
+.v2-visual > .v2-chip {
+  right: 0.875rem;
+}
+
+.v2-visual > .v2-tag.soft,
+.v2-chip {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.tone-light .v2-visual > .v2-tag.soft,
+.tone-warm .v2-visual > .v2-tag.soft,
+.tone-light .v2-chip,
+.tone-warm .v2-chip {
+  background: rgba(255, 255, 255, 0.7);
+  color: #16181d;
+}
+
+.v2-chip {
+  padding: 0.3125rem 0.625rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.v2-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 1.5rem 1.25rem 1.25rem;
+}
+
+.v2-card-name {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.v2-card-sub {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  opacity: 0.6;
+}
+
+/* Цифры торга - колонками с подписью, а не строкой через точки. */
+.v2-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: auto 0 0;
+  padding-top: 1.5rem;
+}
+
+.v2-facts div {
+  padding-top: 0.875rem;
+  border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.v2-facts div + div {
+  padding-left: 1rem;
+}
+
+.v2-facts dt {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.5;
+}
+
+.v2-facts dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.v2-more:hover {
+  background: var(--line);
+}
+
+/* Цифры - сразу под первым экраном. */
+.v2-numbers {
+  padding: 1rem 0 0;
+}
+
+.v2-numbers dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.v2-numbers div {
+  padding: 1.75rem 1.5rem;
+  border-radius: 18px;
+  background: var(--panel);
+}
+
+.v2-numbers dd {
+  margin: 0;
+  font-size: 3rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-numbers dt {
+  margin-top: 0.25rem;
+  font-size: 0.9375rem;
+  color: var(--mut);
+}
+
+/* Полоса для продавцов */
+.v2-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  margin: 4rem 0 0;
+  padding: 3rem;
+  border-radius: 24px;
+  background: var(--panel);
+}
+
+.v2-band h2 {
+  font-size: 2.25rem;
+}
+
+.v2-band p {
+  margin: 0.75rem 0 0;
+  max-width: 34rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.v2-band .v2-btn {
+  min-width: 14rem;
+}
+
+.v2-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3rem 0;
+  font-size: 0.875rem;
+  color: var(--mut);
+}
+
+.v2-foot a {
+  color: inherit;
+}
+
+.v2-mark.small {
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.v2-mark.small .v2-mark-logo {
+  height: 1.5rem;
+}
+
+.v2-foot .v2-x {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  transition: opacity 0.15s;
+}
+
+.v2-x:hover {
+  opacity: 0.85;
+}
+
+.v2-x svg {
+  width: 0.9375rem;
+  height: 0.9375rem;
+  fill: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-strip-track {
+    animation: none;
+  }
+}
+
+@media (max-width: 56rem) {
+  .v2 {
+    padding: 0 1rem;
+  }
+
+  .v2-top {
+    grid-template-columns: 1fr auto;
+  }
+
+  .v2-nav,
+  .v2-pill {
+    display: none;
+  }
+
+  .v2-hero {
+    grid-template-columns: 1fr;
+    padding: 1.25rem;
+  }
+
+  .v2-feature {
+    min-height: 26rem;
+  }
+
+  /* На узком экране заголовок ложится на середину кадра - тень гуще. */
+  .v2-feature-media::after {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 25%, rgba(0, 0, 0, 0.35) 50%, rgba(0, 0, 0, 0.75) 100%);
+  }
+
+  .v2-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .v2-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-numbers dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Две плитки в ряд на телефоне: «$13,749+» в 2.25rem вылезал за край. */
+  .v2-numbers div {
+    padding: 1.25rem 1rem;
+  }
+
+  .v2-numbers dd {
+    font-size: 1.75rem;
+  }
+
+  .v2-band {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 2rem 1.5rem;
+  }
+}
+
+/* Вещь с местами на карточке торга. */
+/* Кадр как в студии: свет сверху по центру, к краям темнее. */
+.v2-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  border-radius: 16px;
+  background: radial-gradient(70% 75% at 50% 38%, #ffffff 0%, #ecebe6 60%, #dedcd5 100%);
+}
+
+.v2-card.tone-dark .v2-visual {
+  background: radial-gradient(65% 70% at 50% 38%, #3a3f47 0%, #1b1d21 55%, #0c0d0f 100%);
+}
+
+.v2-card.tone-warm .v2-visual {
+  background: radial-gradient(70% 75% at 50% 38%, #fbf7f0 0%, #ece3d4 60%, #ddd1bd 100%);
+}
+
+/* Кадр задаёт карточка, а не снимок: высокий снимок галстука иначе
+   вытягивал свою карточку. Обёртка по размеру картинки - рамки мест лежат
+   ровно на ней. */
+.v2-spotview {
+  position: absolute;
+  top: 6%;
+  bottom: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  isolation: isolate;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+a.v2-card:hover .v2-spotview {
+  transform: translateX(-50%) scale(1.025);
+}
+
+/* Кадр со съёмки - во весь блок; сверху притенён, чтобы метки читались. */
+.v2-visual.photo {
+  overflow: hidden;
+}
+
+.v2-visual.photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, transparent 28%);
+  pointer-events: none;
+}
+
+.v2-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+a.v2-card:hover .v2-photo {
+  transform: scale(1.03);
+}
+
+/* Тень от пола: без неё вещь висит в воздухе. */
+.v2-spotview::before {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 9%;
+  height: 9%;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  filter: blur(14px);
+}
+
+.tone-light .v2-spotview::before,
+.tone-warm .v2-spotview::before {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.v2-spotview img {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.v2-wait {
+  width: 40%;
+  height: 50%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, transparent, rgba(127, 127, 127, 0.12), transparent) 0 0 / 200% 100%;
+  animation: v2-wait 1.4s linear infinite;
+}
+
+@keyframes v2-wait {
+  to { background-position: -200% 0; }
+}
+
+/* Невидимая сцена, с которой снимают вещи для карточек. */
+.v2-shooter {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 720px;
+  height: 540px;
+  pointer-events: none;
+}
+
+.v2-shooter .stage {
+  width: 720px;
+  height: 540px;
+}
+
+/* Анонс Ecosystem Call - их же языком: свечение за набором и длинная тень. */
+.v2-show {
+  overflow: hidden;
+  background:
+    radial-gradient(55% 70% at 66% 30%, #ffb03a 0%, #ff6a13 22%, #d2361f 40%, #6d1d5c 62%, transparent 82%),
+    #050506;
+}
+
+.v2-show-word {
+  position: absolute;
+  left: 9%;
+  bottom: 13%;
+  font-size: clamp(2.25rem, 4.6vw, 3.75rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  color: #fff;
+  /* Тень уходит вниз-влево и режет свечение - как на обложках шоу. */
+  text-shadow:
+    -1px 1px 0 #050506,
+    -2px 2px 0 #050506,
+    -3px 3px 0 #050506,
+    -4px 4px 0 #050506,
+    -5px 5px 0 #050506,
+    -6px 6px 0 #050506,
+    -7px 7px 0 #050506,
+    -8px 8px 0 #050506,
+    -9px 9px 0 #050506,
+    -10px 10px 0 #050506,
+    -11px 11px 0 #050506,
+    -12px 12px 0 #050506,
+    -13px 13px 0 #050506,
+    -14px 14px 0 #050506,
+    -15px 15px 0 #050506,
+    -16px 16px 0 #050506,
+    -17px 17px 0 #050506,
+    -18px 18px 0 #050506,
+    -19px 19px 0 #050506,
+    -20px 20px 0 #050506,
+    -21px 21px 0 #050506,
+    -22px 22px 0 #050506,
+    -23px 23px 0 #050506,
+    -24px 24px 0 #050506,
+    -25px 25px 0 #050506,
+    -26px 26px 0 #050506,
+    -27px 27px 0 #050506,
+    -28px 28px 0 #050506,
+    -29px 29px 0 #050506,
+    -30px 30px 0 #050506,
+    -31px 31px 0 #050506,
+    -32px 32px 0 #050506,
+    -33px 33px 0 #050506,
+    -34px 34px 0 #050506,
+    -35px 35px 0 #050506,
+    -36px 36px 0 #050506,
+    -37px 37px 0 #050506,
+    -38px 38px 0 #050506,
+    -39px 39px 0 #050506,
+    -40px 40px 0 #050506,
+    -41px 41px 0 #050506,
+    -42px 42px 0 #050506,
+    -43px 43px 0 #050506,
+    -44px 44px 0 #050506,
+    -45px 45px 0 #050506,
+    -46px 46px 0 #050506,
+    -47px 47px 0 #050506,
+    -48px 48px 0 #050506,
+    -49px 49px 0 #050506,
+    -50px 50px 0 #050506,
+    -51px 51px 0 #050506,
+    -52px 52px 0 #050506,
+    -53px 53px 0 #050506,
+    -54px 54px 0 #050506,
+    -55px 55px 0 #050506,
+    -56px 56px 0 #050506,
+    -57px 57px 0 #050506,
+    -58px 58px 0 #050506,
+    -59px 59px 0 #050506,
+    -60px 60px 0 #050506;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+a.v2-card:hover .v2-show-word {
+  transform: translate(2px, -2px);
+}
+
+/* Пустой фильтр на странице всех торгов: не голая строка, а что дальше. */
+.v2-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 5rem 2rem;
+  border-radius: 24px;
+  text-align: center;
+  background:
+    radial-gradient(circle, rgba(22, 24, 29, 0.13) 1px, transparent 1.4px) 0 0 / 18px 18px,
+    var(--panel);
+}
+
+.v2-empty-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 0.75rem;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--red);
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.2);
+}
+
+.v2-empty-mark .v2-c {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin: 0.75rem;
+}
+
+.v2-empty-mark .v2-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  animation: v2-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes v2-pulse {
+  50% { transform: scale(1.6); opacity: 0.5; }
+}
+
+.v2-empty h3 {
+  font-size: 1.75rem;
+}
+
+.v2-empty p {
+  margin: 0;
+  max-width: 28rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.v2-empty-go {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.625rem;
+  margin-top: 1rem;
+}
+
+.v2-empty-go button {
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v2-btn.line {
+  border: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-empty-mark .v2-dot {
+    animation: none;
+  }
+}
+
+/* Как это работает - схемой: шаги на точечной сетке, между ними стрелки. */
+.v2-head-sub {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.v2-flow {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 5rem;
+  row-gap: 4rem;
+  padding: 3.5rem 3rem;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle, rgba(22, 24, 29, 0.13) 1px, transparent 1.4px) 0 0 / 18px 18px,
+    var(--panel);
+}
+
+/* Змейка: первый ряд слева направо, второй - справа налево. */
+.v2-node.n1 { grid-area: 1 / 1; }
+.v2-node.n2 { grid-area: 1 / 2; margin-top: 7rem; }
+.v2-node.n3 { grid-area: 1 / 3; }
+.v2-node.n4 { grid-area: 2 / 3; }
+.v2-node.n5 { grid-area: 2 / 2; margin-top: 3rem; }
+.v2-node.n6 { grid-area: 2 / 1; }
+
+.v2-wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.v2-wires path {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+  animation: v2-flow 1.2s linear infinite;
+}
+
+.v2-wires marker path {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1.5;
+  stroke-dasharray: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: none;
+}
+
+@keyframes v2-flow {
+  to { stroke-dashoffset: -12; }
+}
+
+.v2-node {
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  padding: 1.125rem;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 32px -12px rgba(0, 0, 0, 0.14);
+  color: #16181d;
+}
+
+.v2-node-at {
+  position: absolute;
+  top: -0.75rem;
+  left: -0.75rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #16181d;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-node h3 {
+  margin: 0 0 0.875rem;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.v2-node-ui {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: #f4f4f1;
+  font-size: 0.8125rem;
+}
+
+/* Подпись - у левого края: по центру её перечёркивала стрелка вниз. */
+.v2-node-tag {
+  position: absolute;
+  left: 1.125rem;
+  bottom: -1.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--mut);
+}
+
+.v2-ui-list,
+.v2-ui-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v2-ui-list li,
+.v2-ui-board li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: #fff;
+  font-weight: 600;
+}
+
+.v2-ui-list li.on,
+.v2-ui-board li.on {
+  border-color: var(--red);
+}
+
+.v2-ui-list i,
+.v2-ui-board i {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: #16181d;
+  color: #fff;
+  font-size: 0.625rem;
+  font-style: normal;
+}
+
+.v2-ui-board i {
+  background: #d9d8d2;
+  color: #16181d;
+}
+
+.v2-ui-board li.on i {
+  background: var(--red);
+  color: #fff;
+}
+
+.v2-ui-list em,
+.v2-ui-board em {
+  margin-left: auto;
+  font-style: normal;
+  font-weight: 500;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-ui-list li.on em,
+.v2-ui-board li.on em {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.v2-ui-bid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.375rem 0.375rem 0.375rem 0.75rem;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-ui-bid b {
+  padding: 0.375rem 0.875rem;
+  border-radius: 7px;
+  background: #16181d;
+  color: #fff;
+  font-size: 0.8125rem;
+}
+
+.v2-ui-held {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.v2-ui-held svg {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.5rem;
+  border-radius: 9px;
+  background: rgba(224, 56, 28, 0.1);
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.v2-ui-held b {
+  display: block;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-ui-held span {
+  color: var(--mut);
+}
+
+.v2-ui-note {
+  margin: 0;
+  color: var(--mut);
+  line-height: 1.4;
+}
+
+.v2-ui-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 4.5rem;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--red);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.v2-ui-logo .v2-c {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.625rem;
+  color: var(--red);
+}
+
+.v2-ui-pills {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.v2-ui-pills span {
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #e3e2dc;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.v2-ui-pills span.ok {
+  border-color: transparent;
+  background: rgba(46, 204, 113, 0.16);
+  color: #1d8a4c;
+}
+
+.v2-ui-photo {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.v2-ui-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: 70% 50%;
+}
+
+.v2-ui-photo span {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-ui-pay {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+}
+
+.v2-ui-pay div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.v2-ui-pay dt {
+  color: var(--mut);
+}
+
+.v2-ui-pay dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-ui-pay div:last-child {
+  padding-top: 0.375rem;
+  border-top: 1px solid #e3e2dc;
+}
+
+.v2-ui-pay div:last-child dd {
+  color: #1d8a4c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-wires path {
+    animation: none;
+  }
+}
+
+/* На узком экране шаги идут столбиком, стрелки - сверху вниз. */
+@media (max-width: 56rem) {
+  .v2-flow {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 3.5rem;
+    padding: 2.5rem 1.25rem 3rem 1.75rem;
+  }
+
+  .v2-node.n1,
+  .v2-node.n2,
+  .v2-node.n3,
+  .v2-node.n4,
+  .v2-node.n5,
+  .v2-node.n6 {
+    grid-area: auto;
+    margin-top: 0;
+  }
+}
+
+/* Страница продавца: вопросы и форма заявки в одежде сайта. */
+.v2-sell-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v2-sell-terms li {
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.v2-sell .v2-feature-title h2 {
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-sell .find {
+  justify-content: center;
+  padding: 0.875rem 1.25rem;
+  border-radius: 8px;
+  background: #fff;
+  color: #16181d;
+}
+
+.v2-sell-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 2.5rem 2rem 2rem;
+  border-radius: 24px;
+  list-style: none;
+  background:
+    radial-gradient(circle, rgba(22, 24, 29, 0.13) 1px, transparent 1.4px) 0 0 / 18px 18px,
+    var(--panel);
+}
+
+.v2-sell-steps li {
+  position: relative;
+  padding: 1.5rem 1.125rem 1.25rem;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 32px -12px rgba(0, 0, 0, 0.14);
+}
+
+/* Пунктир между шагами - тот же, что на схеме главной. */
+.v2-sell-steps li + li::before {
+  content: "";
+  position: absolute;
+  top: 2.25rem;
+  right: 100%;
+  width: 1rem;
+  border-top: 1.5px dashed var(--red);
+}
+
+.v2-sell-steps h3 {
+  margin: 0.5rem 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.25;
+}
+
+.v2-sell-steps p {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--mut);
+}
+
+.v2-sell-qa {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 3rem;
+}
+
+.v2-sell-qa h2 {
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  line-height: 1.05;
+}
+
+.v2-sell-qa h2 span {
+  display: block;
+}
+
+.v2-sell .sell-qa details {
+  padding: 1.25rem 0;
+}
+
+/* Форма - тёмной полосой в конце, как главный призыв страницы. */
+.v2-sell .sell-block.sell-pitch {
+  margin-top: 5rem;
+  padding: 3rem;
+  border: 0;
+  border-radius: 24px;
+  background: var(--dark);
+  color: #fff;
+}
+
+.v2-sell .sell-pitch h2 {
+  font-size: 2.25rem;
+  color: #fff;
+}
+
+.v2-sell .sell-pitch .sub {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.v2-sell .sell-form label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.v2-sell .sell-form input {
+  border-color: rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.v2-sell .sell-form input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.v2-sell .sell-form input:focus {
+  outline-color: #fff;
+}
+
+@media (max-width: 56rem) {
+  .v2-sell-steps {
+    grid-template-columns: 1fr;
+    padding: 1.5rem 1.25rem;
+  }
+
+  .v2-sell-steps li + li::before {
+    top: auto;
+    bottom: 100%;
+    right: auto;
+    left: 2.25rem;
+    width: 0;
+    height: 1rem;
+    border-top: 0;
+    border-left: 1.5px dashed var(--red);
+  }
+
+  .v2-sell-qa {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .v2-sell .sell-block.sell-pitch {
+    padding: 2rem 1.25rem;
+  }
+}
+
+.v2-sell-go {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+/* Схема денег с прежнего лендинга - на точечной панели, комнаты белые и
+   скруглённые, деньги красными квадратами. */
+.v2 .flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2.5rem 2rem;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle, rgba(22, 24, 29, 0.13) 1px, transparent 1.4px) 0 0 / 18px 18px,
+    var(--panel);
+}
+
+.v2 .flow-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 10px;
+  background: #e8e7e2;
+}
+
+.v2 .flow-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v2 .flow-tab.on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.v2 .flow-num {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.6875rem;
+}
+
+.v2 .flow-tab:not(.on) .flow-num {
+  background: #c9c8c2;
+}
+
+.v2 .flow-map {
+  width: 100%;
+  height: auto;
+}
+
+.v2 .flow-edge rect {
+  fill: #dddcd6;
+  rx: 15px;
+}
+
+.v2 .flow-edge polyline {
+  fill: none;
+  stroke: #dddcd6;
+}
+
+.v2 .flow-fill rect {
+  fill: #fff;
+  rx: 14px;
+}
+
+.v2 .flow-fill polyline {
+  fill: none;
+  stroke: #fff;
+}
+
+.v2 .flow-name {
+  fill: var(--ink);
+  font-weight: 600;
+  transition: fill 0.2s;
+}
+
+.v2 .flow-name.off {
+  fill: #b5b4ae;
+}
+
+.v2 .flow-hint {
+  fill: var(--mut);
+}
+
+.v2 .flow-coin {
+  fill: var(--red);
+  rx: 2px;
+}
+
+.v2 .flow-text {
+  margin: 0;
+  max-width: 38rem;
+  min-height: 4.5em;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--mut);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.v2 .flow-more {
+  font-size: 0.875rem;
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 56rem) {
+  .v2 .flow {
+    padding: 1.5rem 1rem;
+  }
+
+  .v2 .flow-text {
+    font-size: 1rem;
+    min-height: 6.5em;
+  }
+}
+
+/* Вопросы и форма заявки - с прежней /sell, вместе с кнопкой .find. */
+.find {
+  display: inline-flex;
+  padding: 1.25rem 2.125rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.12s ease-out, opacity 0.12s;
+}
+
+.find:hover {
+  opacity: 0.88;
+}
+
+.find:active {
+  transform: scale(0.98);
+}
+
+.find:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.sell-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Ответы раскрываются плавно; где браузер этого не умеет - просто сразу.
+   Отступ ответа - паддингом: маржин схлопывался в конце закрытия, и форма
+   под вопросами прыгала. */
+.sell-qa {
+  display: flex;
+  flex-direction: column;
+  interpolate-size: allow-keywords;
+}
+
+.sell-qa details {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sell-qa summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.sell-qa summary::-webkit-details-marker {
+  display: none;
+}
+
+.sell-qa summary::after {
+  content: "+";
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 1;
+  transition: transform 0.25s ease-out;
+}
+
+.sell-qa details[open] summary::after {
+  transform: rotate(45deg);
+}
+
+.sell-qa details::details-content {
+  height: 0;
+  overflow: clip;
+  transition: height 0.3s ease-out, content-visibility 0.3s allow-discrete;
+}
+
+.sell-qa details[open]::details-content {
+  height: auto;
+}
+
+.sell-qa p {
+  margin: 0;
+  padding-top: 0.75rem;
+  max-width: 44rem;
+  line-height: 1.55;
+  color: var(--mut);
+}
+
+/* Форма - отдельным блоком, чтобы не терялась под вопросами. */
+.sell-block.sell-pitch {
+  padding: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.sell-pitch h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sell-pitch h2::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: #e0381c;
+}
+
+.sell-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.sell-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.sell-form .wide {
+  grid-column: 1 / -1;
+}
+
+.sell-form input {
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.sell-form input:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.sell-send {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sell-send .find {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sell-send .find:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sell-error {
+  font-size: 0.9375rem;
+  color: #e0381c;
+}
+
+.v2-sell .sell-pitch .sub {
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sell-qa details::details-content {
+    transition: none;
+  }
+}
+
+@media (max-width: 56rem) {
+  .sell-form {
+    grid-template-columns: 1fr;
+  }
+}
