@@ -189,7 +189,8 @@ export function Landing() {
 /**
  * Шапка - общая для всех страниц. На телефоне вместо ссылок - меню за
  * бургером, как у frontiertraders.com: рядом с бургером плашка ближайшего
- * торга и вход, а в меню ссылки группами под мелкими заголовками.
+ * торга и вход, а в меню ссылки группами под мелкими заголовками. Входа в
+ * меню нет: он и так в шапке, а «открыть приложение» вёл бы туда же.
  */
 /** Вход - вкладка You в приложении: там Privy и предлагает войти. */
 const LOGIN = `${APP_URL}/?tab=you`;
@@ -254,15 +255,9 @@ export function Top() {
             <a href="/sell">Sell a spot</a>
           </div>
           <div className="v2-menu-group">
-            <p>Account</p>
-            <a href={LOGIN}>Log in</a>
-            <a href={APP_URL}>Open the app</a>
-          </div>
-          <div className="v2-menu-group">
-            <p>Resources</p>
-            <a href="https://github.com/oxar-market/oxar-market">Github</a>
-            <a href={`${APP_URL}/terms`}>Terms of Service</a>
+            <p>Help</p>
             <a href="mailto:support@oxar.app">Support</a>
+            <a href={`${APP_URL}/terms`}>Terms of Service</a>
           </div>
           <a className="v2-menu-x" href={FOLLOW}>
             <XIcon />
