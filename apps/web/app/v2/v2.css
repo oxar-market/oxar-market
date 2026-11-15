@@ -494,50 +494,6 @@ a.v2-card:hover {
   opacity: 0.7;
 }
 
-.v2-table {
-  margin: auto 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.v2-table div {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.625rem 0.75rem;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.04);
-  font-size: 0.875rem;
-}
-
-.v2-card.tone-dark .v2-table div,
-.v2-card.tone-red .v2-table div {
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.v2-table dt {
-  opacity: 0.65;
-}
-
-.v2-table dd {
-  margin: 0;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-logos {
-  display: flex;
-  gap: 0.375rem;
-}
-
-.v2-logos img {
-  width: 1.75rem;
-  height: 1.75rem;
-  object-fit: contain;
-  border-radius: 6px;
-  background: #fff;
-}
-
 .v2-more {
   display: flex;
   justify-content: center;
@@ -754,4 +710,171 @@ a.v2-card:hover {
     align-items: flex-start;
     padding: 2rem 1.5rem;
   }
+}
+
+/* Вещь с местами на карточке торга. */
+.v2-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  margin: 0.25rem 0 0.5rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  overflow: visible;
+}
+
+.v2-card.tone-dark .v2-visual,
+.v2-card.tone-red .v2-visual {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Кадр задаёт карточка, а не снимок: высокий снимок галстука иначе
+   вытягивал свою карточку. Обёртка по размеру картинки - рамки мест лежат
+   ровно на ней. */
+.v2-spotview {
+  position: absolute;
+  top: 5%;
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.v2-spotview img {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.v2-spotview svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.v2-spotview path {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+.v2-spotview path.open {
+  stroke-dasharray: 3 2;
+}
+
+.v2-spot {
+  position: absolute;
+  display: grid;
+  place-items: center;
+}
+
+.v2-spot b {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.v2-spot[data-tip]:hover::after,
+.v2-tree-star[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.375rem 0.625rem;
+  border-radius: 6px;
+  background: #16181d;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.v2-spot:hover {
+  outline: 1.5px solid var(--red);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.v2-wait {
+  width: 40%;
+  height: 50%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, transparent, rgba(127, 127, 127, 0.12), transparent) 0 0 / 200% 100%;
+  animation: v2-wait 1.4s linear infinite;
+}
+
+@keyframes v2-wait {
+  to { background-position: -200% 0; }
+}
+
+.v2-stats {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+/* Невидимая сцена, с которой снимают вещи для карточек. */
+.v2-shooter {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 720px;
+  height: 540px;
+  pointer-events: none;
+}
+
+.v2-shooter .stage {
+  width: 720px;
+  height: 540px;
+}
+
+/* Ёлка новогоднего торга: треугольник мест и звезда. */
+.v2-tree {
+  position: absolute;
+  inset: 0;
+}
+
+.v2-tree::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  width: 62%;
+  height: 72%;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.16));
+}
+
+.v2-tree .v2-spot {
+  color: #fff;
+}
+
+.v2-tree .v2-c {
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
+.v2-tree-star {
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #f4c84a;
+  color: #2a0d08;
 }

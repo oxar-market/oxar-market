@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SpotView, TreeView, useViews } from "./spots.tsx";
 
 /**
  * Прототип лендинга в духе frontiertraders.com, на нашем материале: герой
@@ -41,6 +42,10 @@ type Auction = {
   bidders: number;
   closedAt: number;
   logos: { url: string; brand: string }[];
+  /** Модель вещи: с её сцены снимается кадр с местами. */
+  model: string | null;
+  /** Код места - кто его выиграл и за сколько. */
+  won: Record<string, { url: string; brand: string; cents: number }>;
 };
 
 type Data = {
@@ -65,11 +70,11 @@ async function rest<T>(path: string): Promise<T | null> {
 
 async function load(): Promise<Data | null> {
   const [things, lots, bids] = await Promise.all([
-    rest<{ id: string; slug: string; title: string; house: boolean; prepared: boolean; worn_where: string | null }[]>(
-      "things?active=eq.true&hidden=eq.false&select=id,slug,title,house,prepared,worn_where",
-    ),
-    rest<{ id: string; thing_id: string; status: string; closes_at: string; rehearsal: boolean }[]>(
-      "lots?select=id,thing_id,status,closes_at,rehearsal",
+    rest<
+      { id: string; slug: string; title: string; house: boolean; prepared: boolean; worn_where: string | null; model_url: string | null }[]
+    >("things?active=eq.true&hidden=eq.false&select=id,slug,title,house,prepared,worn_where,model_url"),
+    rest<{ id: string; thing_id: string; status: string; closes_at: string; rehearsal: boolean; thing_spots: { code: string } | null }[]>(
+      "lots?select=id,thing_id,status,closes_at,rehearsal,thing_spots:spot_id(code)",
     ),
     rest<{ lot_id: string; amount_cents: number; media_url: string; bidder_wallet: string; brand: string | null }[]>(
       "lot_bids?select=lot_id,amount_cents,media_url,bidder_wallet,brand&order=amount_cents.desc",
@@ -98,6 +103,13 @@ async function load(): Promise<Data | null> {
     if (shown.length === 0) continue;
     const wallets = new Set<string>();
     for (const lot of shown) for (const one of people.get(lot.id) ?? []) wallets.add(one);
+    const winners: Auction["won"] = {};
+    for (const lot of shown) {
+      const lead = top.get(lot.id);
+      if (lead && lot.thing_spots?.code) {
+        winners[lot.thing_spots.code] = { url: lead.media_url, brand: lead.brand ?? "", cents: lead.amount_cents };
+      }
+    }
     auctions.push({
       id: thing.id,
       slug: thing.slug,
@@ -110,6 +122,8 @@ async function load(): Promise<Data | null> {
       bidders: wallets.size,
       closedAt: Math.max(...shown.map((lot) => Date.parse(lot.closes_at))),
       logos: shown.filter((lot) => top.has(lot.id)).map((lot) => ({ url: top.get(lot.id)!.media_url, brand: top.get(lot.id)!.brand ?? "" })),
+      model: thing.model_url,
+      won: winners,
     });
   }
   auctions.sort((a, b) => (a.status === "live" ? -1 : 0) - (b.status === "live" ? -1 : 0) || b.closedAt - a.closedAt);
@@ -171,9 +185,12 @@ export function Landing() {
   const recent = all.filter((one) => one.status === "sold").slice(0, RECENT);
   const cards = filter === "live" ? running : filter === "past" ? recent : [...running, ...recent];
   const more = all.length > 0;
+  // Кадры вещей с местами: снимаются в браузере по одной сцене за раз.
+  const { views, shooter } = useViews(cards);
 
   return (
     <div className="v2">
+      {shooter}
       <header className="v2-top">
         <a className="v2-mark" href="/v2">
           <span className="v2-mark-box">
@@ -281,58 +298,40 @@ export function Landing() {
                   <span className="v2-dot" />
                   Coming soon
                 </span>
-                <span className="v2-chip">December</span>
+                <span className="v2-chip">11 spots</span>
+              </div>
+              <div className="v2-visual">
+                <TreeView />
               </div>
               <div className="v2-card-name">Ecosystem Call</div>
               <p className="v2-card-sub">Holiday edition. Spots on the tree behind the host, live on air.</p>
-              <dl className="v2-table">
-                <div>
-                  <dt>Spots</dt>
-                  <dd>To be announced</dd>
-                </div>
-                <div>
-                  <dt>Opens</dt>
-                  <dd>December</dd>
-                </div>
-              </dl>
+              <p className="v2-stats">Opens in December</p>
               <span className="v2-btn light wide">Get notified</span>
             </div>
           )}
 
-          {cards.map((one) => (
-            <a key={one.id} className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
-              <div className="v2-card-top">
-                <span className={one.status === "live" ? "v2-tag live" : "v2-tag soft ended"}>
-                  <span className="v2-dot" />
-                  {one.status === "live" ? "Live" : "Ended"}
-                </span>
-                <span className="v2-chip">
-                  {one.spots} {one.spots === 1 ? "spot" : "spots"}
-                </span>
-              </div>
-              <div className="v2-card-name">{one.owner}</div>
-              <p className="v2-card-sub">{one.title}</p>
-              <dl className="v2-table">
-                <div>
-                  <dt>Raised</dt>
-                  <dd>{usd(one.raisedCents)}</dd>
+          {cards.map((one) => {
+            const view = views[one.id];
+            const total = view ? Object.keys(view.quads).length : null;
+            const sold = Object.keys(one.won).length;
+            return (
+              <a key={one.id} className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
+                <div className="v2-card-top">
+                  <span className={one.status === "live" ? "v2-tag live" : "v2-tag soft ended"}>
+                    <span className="v2-dot" />
+                    {one.status === "live" ? "Live" : "Ended"}
+                  </span>
+                  <span className="v2-chip">{total ? `${sold} of ${total} spots sold` : `${sold} spots sold`}</span>
                 </div>
-                <div>
-                  <dt>Bidders</dt>
-                  <dd>{one.bidders}</dd>
-                </div>
-                <div>
-                  <dt>Closed</dt>
-                  <dd>{day(one.closedAt)}</dd>
-                </div>
-              </dl>
-              <div className="v2-logos">
-                {one.logos.slice(0, 9).map((logo, at) => (
-                  <img key={at} src={logo.url} alt={logo.brand} loading="lazy" />
-                ))}
-              </div>
-            </a>
-          ))}
+                <div className="v2-visual">{view ? <SpotView view={view} won={one.won} /> : <span className="v2-wait" />}</div>
+                <div className="v2-card-name">{one.owner}</div>
+                <p className="v2-card-sub">{one.title}</p>
+                <p className="v2-stats">
+                  {usd(one.raisedCents)} raised · {one.bidders} bidders · {day(one.closedAt)}
+                </p>
+              </a>
+            );
+          })}
         </div>
         {more && (
           <a className="v2-more" href={APP_URL}>
