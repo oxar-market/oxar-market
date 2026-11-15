@@ -9545,3 +9545,888 @@ body::after {
   }
 }
 
+
+/* ── Торг вещи в стиле сайта ─────────────────────────────────────────────
+   Шапка как у oxar.app, под ней одна серая подложка с белыми карточками:
+   ставки, вещь, места и ставка. Под торгом - такая же панель про вещь.
+   Красный - у «Live», выбора и «перебили», чёрный - у главной кнопки,
+   зелёного нет: на сайте его нет нигде. Цвета - токены приложения, чтобы
+   тёмная тема не сломалась. */
+.lot-v2 {
+  --v2-red: #e0381c;
+  --red: #e0381c;
+  --redtint: rgba(224, 56, 28, 0.08);
+  --redink: #9f2a14;
+  font-size: 0.875rem;
+}
+
+.app:has(.lot-v2) {
+  max-width: 120rem;
+  padding-top: 0;
+  padding-inline: 1.5rem;
+}
+
+.lot-v2 button {
+  font: inherit;
+}
+
+.lt-cap {
+  display: block;
+  color: var(--mut);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Шапка */
+.lt-top {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin: 0 -1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.lt-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.lt-brand img {
+  width: 1.625rem;
+  height: 1.625rem;
+  object-fit: contain;
+}
+
+.lt-nav {
+  display: flex;
+  gap: 2rem;
+}
+
+.lt-nav a,
+.lt-sell {
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.lt-sell {
+  justify-self: end;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* Заголовок торга и часы */
+.lt-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.lt-back {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mut);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lt-back:hover {
+  color: var(--ink);
+}
+
+.lt-owner {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 1.25rem;
+  margin: 0.875rem 0 0.375rem;
+}
+
+.lt-owner .seller-line {
+  margin: 0;
+  color: var(--mut);
+  font-size: 0.875rem;
+}
+
+.lt-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 4px;
+  background: var(--v2-red);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lt-live i {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: #fff;
+  animation: lt-blink 1.6s ease-in-out infinite;
+}
+
+@keyframes lt-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.lt-title h1 {
+  margin: 0;
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.lt-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  color: var(--mut);
+}
+
+.lt-sum b {
+  color: var(--ink);
+}
+
+.lot-v2 .share-auction {
+  margin: 0;
+  padding: 0.3125rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.lt-clock {
+  flex: none;
+  text-align: right;
+}
+
+.lt-clock b {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+/* Подложка и карточки */
+.lot-v2 .lot-body {
+  gap: 0.625rem;
+  padding: 0.625rem;
+  border-radius: 10px;
+  background: var(--soft);
+}
+
+.lot-v2 .lot-center,
+.lot-v2 .lot-right {
+  gap: 0.625rem;
+}
+
+.lot-v2 .lot-scene,
+.lot-v2 .lot-right,
+.lot-v2 .lot-left {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow: none;
+}
+
+.lot-v2 .lot-right,
+.lot-v2 .lot-left {
+  padding: 1rem;
+}
+
+.lot-v2 .lot-scene {
+  overflow: hidden;
+  background: radial-gradient(70% 75% at 50% 40%, var(--card) 0%, var(--st2) 70%, var(--st1) 100%);
+}
+
+/* Вид, кнопки сцены и ракурсы - строго, без пилюль. */
+.lot-v2 .looks.over-scene {
+  padding: 0.1875rem;
+  border: 0;
+  border-radius: 4px;
+  background: var(--line2);
+  box-shadow: none;
+}
+
+.lot-v2 .look-tab {
+  padding: 0.3125rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.lot-v2 .look-tab.on {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.lot-v2 .scene-tool {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  box-shadow: none;
+}
+
+.lot-v2 .scene-angle {
+  border-radius: 4px;
+}
+
+.lot-v2 .scene-angle.on {
+  border-color: var(--v2-red);
+  box-shadow: none;
+}
+
+.lot-v2 .angle {
+  border-radius: 4px;
+}
+
+/* Лента ставок */
+.lot-v2 .feed-head {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  border: 0;
+}
+
+.lot-v2 .feed-tab {
+  padding: 0.3125rem 0.625rem;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--mut);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.lot-v2 .feed-tab::after {
+  display: none;
+}
+
+.lot-v2 .feed-tab.on {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.lot-v2 .feed-count {
+  margin-left: auto;
+  color: var(--mut);
+  font-size: 0.8125rem;
+}
+
+.lot-v2 .bid-row {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  grid-template-areas:
+    "art who amt"
+    "art who tag";
+  column-gap: 0.625rem;
+  row-gap: 0.125rem;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.625rem 0;
+  border: 0;
+  border-top: 1px solid var(--line2);
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+}
+
+.lot-v2 .lot-left .bid-row-art {
+  grid-area: art;
+  /* Перебивает !important широкой раскладки: здесь логотип квадратный. */
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  padding: 0;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.lot-v2 .bid-row-who {
+  grid-area: who;
+  min-width: 0;
+}
+
+.lot-v2 .bid-row-who > span {
+  font-weight: 600;
+}
+
+.lot-v2 .bid-row-who em {
+  color: var(--mut);
+  font-size: 0.75rem;
+  font-style: normal;
+}
+
+.lot-v2 .bid-row-amt {
+  grid-area: amt;
+  justify-self: end;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lot-v2 .bid-row .tagchip {
+  grid-area: tag;
+  justify-self: end;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mut);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.lot-v2 .bid-row .tagchip::before {
+  display: none;
+}
+
+.lot-v2 .bid-row .tagchip.red {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Перебитая ставка - тише и зачёркнута: держит место только верхняя. */
+.lot-v2 .bid-row:has(.tagchip:not(.red)) .bid-row-amt {
+  color: var(--mut);
+  font-weight: 500;
+  text-decoration: line-through;
+  text-decoration-color: var(--line3);
+}
+
+.lot-v2 .bid-row:has(.tagchip:not(.red)) .bid-row-art {
+  opacity: 0.6;
+}
+
+@media (hover: hover) {
+  .lot-v2 .bid-row:hover {
+    background: none;
+  }
+
+  .lot-v2 .bid-row:hover .bid-row-who > span {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+/* Места */
+.lot-v2 .pick-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  border: 0;
+}
+
+.lot-v2 .pick-title {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.lot-v2 .pick-grid {
+  gap: 0;
+  margin: 0;
+}
+
+.lot-v2 .pick-cell {
+  min-height: 3.5rem;
+  padding: 0.5rem 0.5rem;
+  border: 0;
+  border-top: 1px solid var(--line2);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.lot-v2 .pick-cell .pick-thumb {
+  border-radius: 4px;
+}
+
+.lot-v2 .pick-n {
+  font-weight: 600;
+}
+
+.lot-v2 .pick-price {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lot-v2 .pick-from {
+  color: var(--mut);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.lot-v2 .pick-count {
+  color: var(--mut);
+  font-size: 0.75rem;
+}
+
+@media (hover: hover) {
+  .lot-v2 .pick-cell:hover {
+    background: var(--bg);
+  }
+}
+
+.lot-v2 .pick-cell.on {
+  border-color: var(--line2);
+  background: var(--redtint);
+  box-shadow: inset 2px 0 0 var(--v2-red);
+}
+
+/* Узкий экран: места сеткой со снимками - выбранное в красной рамке. */
+@media (max-width: 71.99rem) {
+  .lot-v2 .pick-cell.on {
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 2px var(--v2-red);
+  }
+}
+
+/* Ставка на выбранное место */
+.lot-v2 .spot-back {
+  font-weight: 600;
+}
+
+.lot-v2 .spot-preview polygon {
+  fill: rgba(224, 56, 28, 0.32);
+  stroke: var(--v2-red);
+}
+
+.lot-v2 .lot-right .spot-card .pick-thumb {
+  border-radius: 4px;
+}
+
+.lot-v2 .spot-preview {
+  border-radius: 6px;
+}
+
+.lot-v2 .spot-card-text b {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.lot-v2 .spot-chip {
+  padding: 0.1875rem 0.5rem;
+  border: 0;
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.lot-v2 .spot-chip.lead {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.lot-v2 .bid-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.lot-v2 .bid-head {
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: var(--soft);
+}
+
+.lot-v2 .bid-field {
+  border: 1px solid var(--line3);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.lot-v2 .bid-field:focus-within {
+  border-color: var(--ink);
+  box-shadow: none;
+}
+
+.lot-v2 .bump {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.lot-v2 .bump.min {
+  border-color: var(--ink);
+}
+
+.lot-v2 .art-row,
+.lot-v2 .bid-brand input,
+.lot-v2 .bid-back,
+.lot-v2 .my-logos button {
+  border-radius: 6px;
+}
+
+.lot-v2 .bid-brand input {
+  border: 1px solid var(--line3);
+}
+
+.lot-v2 .primary {
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.lot-v2 .sl-btn,
+.lot-v2 .share-lead {
+  border-radius: 4px;
+}
+
+/* До открытия - те же строгие углы. */
+.lot-v2 .pre-open-icon {
+  border-radius: 6px;
+}
+
+.lot-v2 .pre-open-chips span {
+  border-radius: 4px;
+}
+
+.lot-v2 .pre-open-notify input {
+  border-radius: 6px;
+}
+
+.lot-v2 .pre-open-notify button {
+  border-radius: 4px;
+}
+
+/* Про вещь - своей панелью под торгом. */
+.lt-about {
+  margin-top: 2.5rem;
+}
+
+.lt-about > h2 {
+  margin: 0 0 0.875rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+.lt-about-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.625rem;
+  padding: 0.625rem;
+  border-radius: 10px;
+  background: var(--soft);
+}
+
+.lt-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.lt-story {
+  padding: 1.5rem;
+}
+
+.lt-story p {
+  max-width: 46rem;
+  margin: 0.75rem 0 0;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+
+.lt-facts {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 1.5rem;
+}
+
+.lt-facts > div {
+  padding: 1.25rem 0;
+}
+
+.lt-facts > div + div {
+  border-top: 1px solid var(--line2);
+}
+
+.lt-facts dt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lt-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.375rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.lt-facts dd.tba {
+  color: var(--mut);
+  font-weight: 500;
+}
+
+.lt-facts dd a {
+  color: var(--mut);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.lt-facts dd a:hover {
+  color: var(--ink);
+}
+
+.lt-proof {
+  margin: 0.5rem 0 0;
+  color: var(--mut);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* Маршрут: остановки на одной линии, старт и финиш - красные. */
+.lt-route {
+  padding: 1.25rem;
+}
+
+.lt-route ol {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lt-route ol::before {
+  content: "";
+  position: absolute;
+  top: 0.375rem;
+  bottom: 1.75rem;
+  left: 0.3125rem;
+  width: 2px;
+  background: var(--line);
+}
+
+.lt-route li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 0 1rem 1.5rem;
+}
+
+.lt-route li:last-child {
+  padding-bottom: 0;
+}
+
+.lt-route i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--line3);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.lt-route li.end i {
+  background: var(--v2-red);
+  box-shadow: 0 0 0 1px var(--v2-red);
+}
+
+.lt-route b {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.lt-route li span {
+  color: var(--mut);
+  font-size: 0.75rem;
+}
+
+/* Телефон: шапка без ссылок, всё одной колонкой. */
+@media (max-width: 47.99rem) {
+  .app:has(.lot-v2) {
+    padding-inline: 1rem;
+  }
+
+  .lt-top {
+    grid-template-columns: 1fr auto;
+    margin: 0 -1rem;
+    padding: 1rem;
+  }
+
+  .lt-nav {
+    display: none;
+  }
+
+  .lt-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .lt-clock {
+    text-align: left;
+  }
+
+  .lot-v2 .lot-body,
+  .lt-about-grid {
+    padding: 0.375rem;
+  }
+
+  .lt-story {
+    padding: 1.25rem;
+  }
+
+  .lt-facts {
+    padding: 0 1.25rem;
+  }
+}
+
+@media (min-width: 48rem) {
+  .lt-about-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
+  }
+
+  .lt-about-grid.bare {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lt-about-grid.bare .lt-facts {
+    flex-direction: row;
+  }
+
+  .lt-about-grid.bare .lt-facts > div {
+    flex: 1;
+  }
+
+  .lt-about-grid.bare .lt-facts > div + div {
+    padding-left: 1.5rem;
+    border-top: 0;
+    border-left: 1px solid var(--line2);
+  }
+
+  .lt-route {
+    grid-column: 1 / -1;
+    padding: 1.5rem;
+  }
+
+  .lt-route ol {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .lt-route ol::before {
+    top: 0.3125rem;
+    bottom: auto;
+    left: 0.375rem;
+    right: 0.375rem;
+    width: auto;
+    height: 2px;
+  }
+
+  .lt-route li {
+    padding: 1.5rem 0 0;
+  }
+
+  .lt-route li:last-child {
+    align-items: flex-end;
+  }
+
+  .lt-route li:last-child i {
+    left: auto;
+    right: 0;
+  }
+}
+
+/* Широкий экран: три колонки в рост окна - вещь крупно, лента и список
+   прокручиваются внутри своих карточек. */
+@media (min-width: 72rem) {
+  .lot-v2 .lot-body {
+    --scene-h: clamp(36rem, calc(100vh - 8rem), 56rem);
+    grid-template-columns: minmax(0, 21rem) minmax(0, 1fr) minmax(0, 25rem);
+    padding-top: 0.625rem;
+  }
+
+  .lot-v2 .lot-body.two {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
+  }
+
+  .lot-v2 .lot-scene,
+  .lot-v2 .lot-left,
+  .lot-v2 .lot-right {
+    border-radius: 6px;
+  }
+
+  .lot-v2 .lot-left,
+  .lot-v2 .lot-right {
+    padding: 1rem;
+  }
+
+  .lot-v2 .lot-left .bid-row {
+    padding: 0.625rem 0;
+    border-bottom: 0;
+  }
+}

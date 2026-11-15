@@ -15,7 +15,7 @@ import { Notify } from "../notify-me.tsx";
 import { TIE } from "@oxar/stage";
 import { useConnectedStandardWallets } from "@privy-io/react-auth/solana";
 import { useAdmin } from "../admin/use-admin.ts";
-import { WornInfo } from "../worn.tsx";
+import { WornAbout } from "../worn.tsx";
 import { Stickers } from "./stickers.tsx";
 import type { PaidSticker } from "@/lib/stickers";
 
@@ -104,6 +104,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       if (mine) window.sessionStorage.removeItem("oxar.jump");
       const first = loaded.spots.find((spot) => loaded.lots.some((lot) => lot.spot_code === spot.code));
       setPicked(mine ? jump : (first?.code ?? loaded.spots[0]?.code ?? null));
+      // Место одно - выбирать нечего: справа сразу ставка, без списка.
+      if (loaded.spots.length === 1 && !loaded.stickerSheet) setChoosing(false);
     });
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
@@ -361,59 +363,58 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const logoCount = stuck.reduce((sum, one) => sum + one.count, 0);
 
   return (
-    <section className="lot">
-      <div className="lot-brandbar">
-        <span className="mk-title">
-          OXAR <span>Auction</span>
+    <section className="lot lot-v2">
+      {/* Шапка как у сайта: торг - часть oxar.app, а не отдельное приложение. */}
+      <nav className="lt-top">
+        <a className="lt-brand" href="https://oxar.app">
+          <img src="/oxar-mark.webp" alt="" />
+          OXAR
+        </a>
+        <span className="lt-nav">
+          <a href="https://oxar.app/auctions">Auctions</a>
+          <a href="https://oxar.app/#how">How it works</a>
+          <a href="https://oxar.app/sell">Sell a spot</a>
         </span>
-      </div>
+        <a className="lt-sell" href="https://oxar.app/sell">
+          Sell a spot
+        </a>
+      </nav>
 
-      <header className="lot-top">
-        <div className="lot-title">
-          <button type="button" className="case-back" onClick={onBack}>
-            &larr; Market
+      <header className="lt-head">
+        <div className="lt-title">
+          <button type="button" className="lt-back" onClick={onBack}>
+            &larr; All auctions
           </button>
-          {thing.seller && <SellerLine seller={thing.seller} house={ours} />}
+          <div className="lt-owner">
+            {started && closesAt !== null && closesAt > now && (
+              <span className="lt-live">
+                <i aria-hidden />
+                Live
+              </span>
+            )}
+            {thing.seller && <SellerLine seller={thing.seller} house={ours} />}
+          </div>
           <h1>{thing.title}</h1>
-          {/* Сумма и «поделиться» - одной строкой: столбиком угол был
-              перегружен. LIVE переехал к часам - он про время торга. */}
-          <div className="lot-meta">
+          <div className="lt-sum">
             {pot > 0 && (
-              <p className="lot-pot">
-                <strong>{formatUsd(pot)}</strong> bid so far
-              </p>
+              <span>
+                <b>{formatUsd(pot)}</b> bid so far · {feed.length} {feed.length === 1 ? "bid" : "bids"}
+              </span>
             )}
             <ShareAuction thingId={thingId} />
           </div>
         </div>
-        <div className="lot-side">
-          {!started && opensAt !== null && (
-            <div className="lot-cd">
-              <span className="lot-cd-cap">Opens in</span>
-              <span className="lot-cd-num" suppressHydrationWarning>
-                {clock(opensAt - now)}
-              </span>
-            </div>
-          )}
-          {started && closesAt !== null && (
-            <div className="lot-cd">
-              {closesAt > now ? (
-                <span className="lot-cd-live">
-                  <span className="live-badge">
-                    <i aria-hidden />
-                    LIVE
-                  </span>
-                  Auction ends in
-                </span>
-              ) : (
-                <span className="lot-cd-cap">Auction ended</span>
-              )}
-              <span className="lot-cd-num" suppressHydrationWarning>
-                {clock(closesAt - now)}
-              </span>
-            </div>
-          )}
-        </div>
+        {(started ? closesAt : opensAt) !== null && (
+          <div className="lt-clock">
+            <span className="lt-cap">{!started ? "Opens in" : closesAt! > now ? "Ends in" : "Auction ended"}</span>
+            <b suppressHydrationWarning>
+              {/* Закрытый торг - датой закрытия, а не нулями. */}
+              {started && closesAt! <= now
+                ? new Date(closesAt!).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                : clock((started ? closesAt! : opensAt!) - now)}
+            </b>
+          </div>
+        )}
       </header>
 
       {/* На широком экране три колонки: живые ставки слева, вещь по центру,
@@ -607,7 +608,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
 
       </div>
 
-      <div className={bumper ? "lot-right bumper" : choosing ? "lot-right choosing" : "lot-right chosen"}>
+      {/* Ставить уже или ещё нельзя - список мест: без него у закрытого торга
+          с одним местом колонка стояла бы пустой. */}
+      <div className={bumper ? "lot-right bumper" : choosing || !running ? "lot-right choosing" : "lot-right chosen"}>
       {bumper && (
         <>
           <button type="button" className="spot-back bumper-back" onClick={() => setBumper(false)}>
@@ -622,7 +625,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         </>
       )}
-      {lot && running && (
+      {lot && running && !(thing.spots.length === 1 && !thing.stickerSheet) && (
         <button type="button" className="spot-back" onClick={() => setChoosing(true)}>
           &larr; All spots
         </button>
@@ -924,7 +927,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             >
               All bids
             </button>
-            {picked && (
+            {/* Место одно - его ставки и есть все ставки, вторая вкладка лишняя. */}
+            {picked && thing.spots.length > 1 && (
               <button
                 type="button"
                 role="tab"
@@ -963,7 +967,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                     <span>{one.name}</span>
                     <em>Bumper{one.count > 1 ? ` · ×${one.count}` : ""}</em>
                   </span>
-                  <span className="tagchip">BOUGHT</span>
+                  <span className="tagchip">Bought</span>
                   <span className="bid-row-amt">{formatUsd(stickerCents * one.count)}</span>
                 </div>
               ))
@@ -994,7 +998,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                           {ago(bid.created_at, now)}
                         </em>
                       </span>
-                      <span className={leads ? "tagchip red" : "tagchip"}>{leads ? "LEADING" : "OUTBID"}</span>
+                      <span className={leads ? "tagchip red" : "tagchip"}>{leads ? "Top bid" : "Outbid"}</span>
                       <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
                     </button>
                   );
@@ -1020,7 +1024,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                       </em>
                     </span>
                     <span className={index === 0 ? "tagchip red" : "tagchip"}>
-                      {index === 0 ? "LEADING" : "REFUNDED"}
+                      {index === 0 ? "Top bid" : "Refunded"}
                     </span>
                     <span className="bid-row-amt">{formatUsd(bid.amount_cents)}</span>
                   </button>
@@ -1030,14 +1034,12 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         </div>
       )}
-      {/* Кто носит вещь, где, когда и срок пруфа - до выбора места: деньги
-          победителя держит программа до пруфа, и этот срок покупатель видит
-          прежде, чем ставит. На широком экране - под всеми тремя колонками,
-          на телефоне - сразу под вещью. */}
-      <div className="lot-info">
-        <WornInfo thingId={thingId} />
       </div>
-      </div>
+
+      {/* Кто носит вещь, где, когда и срок пруфа - своей панелью под торгом:
+          деньги победителя держит программа до пруфа, и этот срок покупатель
+          видит прежде, чем ставит. */}
+      <WornAbout thingId={thingId} />
     </section>
   );
 }

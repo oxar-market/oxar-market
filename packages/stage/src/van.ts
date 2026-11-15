@@ -177,7 +177,7 @@ export const VAN: Shape = {
   // остаются как есть.
   surfaces: ["carpaint", "windowglass"],
   // На чёрном кузове лучше всего читается белый, как плёнка оклейки;
-  // выбранная зона - фиолетовым, как подсветка выбора в интерфейсе.
-  mark: { idle: 0xffffff, hot: 0x8b5cff },
+  // выбранная зона - красным, как выбор в интерфейсе сайта.
+  mark: { idle: 0xffffff, hot: 0xe0381c },
   stickers: { slots: VAN_STICKER_SLOTS, centimeter: len(0.01) },
 };
