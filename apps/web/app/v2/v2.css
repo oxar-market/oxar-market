@@ -609,10 +609,14 @@ a.v2-card:hover {
   color: rgba(255, 255, 255, 0.65);
 }
 
-/* Цифры */
+/* Цифры - сразу под первым экраном. */
+.v2-numbers {
+  padding: 1rem 0 0;
+}
+
 .v2-numbers dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   margin: 0;
 }
@@ -723,9 +727,16 @@ a.v2-card:hover {
   }
 
   .v2-grid,
-  .v2-steps,
-  .v2-numbers dl {
+  .v2-steps {
     grid-template-columns: 1fr;
+  }
+
+  .v2-numbers dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v2-numbers dd {
+    font-size: 2.25rem;
   }
 
   .v2-band {

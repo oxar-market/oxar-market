@@ -70,9 +70,11 @@ type Auction = {
 
 type Data = {
   auctions: Auction[];
-  totalCents: number;
+  /** Сколько заплачено за проданные места - выигравшие ставки, без перебитых. */
+  raisedCents: number;
+  spotsSold: number;
+  bids: number;
   bidders: number;
-  averageCents: number;
 };
 
 async function rest<T>(path: string): Promise<T | null> {
@@ -146,22 +148,18 @@ async function load(): Promise<Data | null> {
   }
   auctions.sort((a, b) => (a.status === "live" ? -1 : 0) - (b.status === "live" ? -1 : 0) || b.closedAt - a.closedAt);
 
-  const totalCents = counted.reduce((sum, bid) => sum + bid.amount_cents, 0);
+  const sold = lots.filter((lot) => real.has(lot.id) && lot.status === "won" && top.has(lot.id));
   return {
     auctions,
-    totalCents,
+    raisedCents: sold.reduce((sum, lot) => sum + top.get(lot.id)!.amount_cents, 0),
+    spotsSold: sold.length,
+    bids: counted.length,
     bidders: new Set(counted.map((bid) => bid.bidder_wallet)).size,
-    averageCents: counted.length ? Math.round(totalCents / counted.length) : 0,
   };
 }
 
-function usd(cents: number, compact = false): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    notation: compact ? "compact" : "standard",
-    maximumFractionDigits: compact ? 1 : 0,
-  }).format(cents / 100);
+function usd(cents: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
 }
 
 function day(at: number): string {
@@ -280,6 +278,29 @@ export function Landing() {
         </div>
       </section>
 
+      {data && (
+        <section className="v2-numbers" aria-label="So far">
+          <dl>
+            <div>
+              <dd>{usd(data.raisedCents)}</dd>
+              <dt>paid for {data.spotsSold} spots</dt>
+            </div>
+            <div>
+              <dd>{data.bids}</dd>
+              <dt>bids placed</dt>
+            </div>
+            <div>
+              <dd>{data.bidders}</dd>
+              <dt>brands and people bid</dt>
+            </div>
+            <div>
+              <dd>{usd(data.spotsSold ? Math.round(data.raisedCents / data.spotsSold) : 0)}</dd>
+              <dt>average price of a spot</dt>
+            </div>
+          </dl>
+        </section>
+      )}
+
       <section className="v2-section" id="auctions">
         <p className="v2-label">Auctions</p>
         <div className="v2-head">
@@ -381,26 +402,6 @@ export function Landing() {
           </div>
         </div>
       </section>
-
-      {data && (
-        <section className="v2-section v2-numbers">
-          <p className="v2-label">So far</p>
-          <dl>
-            <div>
-              <dd>{usd(data.totalCents, true)}</dd>
-              <dt>bid in total, outbid bids included</dt>
-            </div>
-            <div>
-              <dd>{data.bidders}</dd>
-              <dt>brands and people who bid</dt>
-            </div>
-            <div>
-              <dd>{usd(data.averageCents)}</dd>
-              <dt>average bid</dt>
-            </div>
-          </dl>
-        </section>
-      )}
 
       <section className="v2-band">
         <div>
