@@ -187,10 +187,13 @@ export function Landing() {
 }
 
 /**
- * Шапка - общая для всех страниц. На телефоне вместо ссылок и кнопки - меню
- * за бургером: одной кнопки «Sell a spot» не хватало, чтобы дойти до торгов
- * и до приложения.
+ * Шапка - общая для всех страниц. На телефоне вместо ссылок - меню за
+ * бургером, как у frontiertraders.com: рядом с бургером плашка ближайшего
+ * торга и вход, а в меню ссылки группами под мелкими заголовками.
  */
+/** Вход - вкладка You в приложении: там Privy и предлагает войти. */
+const LOGIN = `${APP_URL}/?tab=you`;
+
 export function Top() {
   const [open, setOpen] = useState(false);
 
@@ -220,10 +223,15 @@ export function Top() {
       <div className="v2-side">
         <a className="v2-pill" href="/#auctions">
           <span className="v2-dot" />
-          Next: Holiday edition
+          <span className="v2-wide-only">Next: Holiday edition</span>
+          {/* На телефоне место есть только под месяц. */}
+          <span className="v2-narrow-only">Next: {NEXT ? NEXT.when.slice(0, 3) : "soon"}</span>
         </a>
-        <a className="v2-btn dark" href="/sell">
+        <a className="v2-btn dark v2-wide-only" href="/sell">
           Sell a spot
+        </a>
+        <a className="v2-btn dark v2-narrow-only" href={LOGIN}>
+          Log in
         </a>
       </div>
       <button
@@ -239,24 +247,27 @@ export function Top() {
       </button>
       {open && (
         <nav className="v2-menu" id="v2-menu" onClick={(event) => (event.target as HTMLElement).closest("a") && setOpen(false)}>
-          <a href="/auctions">All auctions</a>
-          <a href="/#how">How it works</a>
-          <a href="/sell">Sell a spot</a>
-          <div className="v2-menu-foot">
-            <a className="v2-btn dark wide" href={APP_URL}>
-              Open the app
-              <Grip />
-            </a>
-            {NEXT && (
-              <a className="v2-menu-line" href="/#auctions">
-                <span className="v2-dot" />
-                Next: {NEXT.owner}, {NEXT.when}
-              </a>
-            )}
-            <a className="v2-menu-line" href={FOLLOW}>
-              Follow on X
-            </a>
+          <div className="v2-menu-group">
+            <p>OXAR</p>
+            <a href="/auctions">All auctions</a>
+            <a href="/#how">How it works</a>
+            <a href="/sell">Sell a spot</a>
           </div>
+          <div className="v2-menu-group">
+            <p>Account</p>
+            <a href={LOGIN}>Log in</a>
+            <a href={APP_URL}>Open the app</a>
+          </div>
+          <div className="v2-menu-group">
+            <p>Resources</p>
+            <a href="https://github.com/oxar-market/oxar-market">Github</a>
+            <a href={`${APP_URL}/terms`}>Terms of Service</a>
+            <a href="mailto:support@oxar.app">Support</a>
+          </div>
+          <a className="v2-menu-x" href={FOLLOW}>
+            <XIcon />
+            @oxar_app
+          </a>
         </nav>
       )}
     </header>
@@ -272,11 +283,18 @@ export function Foot() {
       </a>
       <span>Ad space on physical things</span>
       <a className="v2-x" href={FOLLOW} aria-label="OXAR on X">
-        <svg viewBox="0 0 24 24" aria-hidden>
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
+        <XIcon />
       </a>
     </footer>
+  );
+}
+
+/** Знак X - в подвале и в меню. */
+function XIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
   );
 }
 
