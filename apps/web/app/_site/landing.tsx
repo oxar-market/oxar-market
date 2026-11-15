@@ -186,10 +186,28 @@ export function Landing() {
   );
 }
 
-/** Шапка - общая для главной и страницы всех торгов. */
+/**
+ * Шапка - общая для всех страниц. На телефоне вместо ссылок и кнопки - меню
+ * за бургером: одной кнопки «Sell a spot» не хватало, чтобы дойти до торгов
+ * и до приложения.
+ */
 export function Top() {
+  const [open, setOpen] = useState(false);
+
+  // Пока меню открыто, страница под ним не крутится, а Escape его закрывает.
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
+    document.documentElement.style.overflow = "hidden";
+    window.addEventListener("keydown", close);
+    return () => {
+      document.documentElement.style.overflow = "";
+      window.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
   return (
-    <header className="v2-top">
+    <header className={open ? "v2-top open" : "v2-top"}>
       <a className="v2-mark" href="/">
         <img className="v2-mark-logo" src="/site/oxar-mark.webp" alt="" />
         OXAR
@@ -208,6 +226,39 @@ export function Top() {
           Sell a spot
         </a>
       </div>
+      <button
+        type="button"
+        className="v2-burger"
+        aria-expanded={open}
+        aria-controls="v2-menu"
+        aria-label={open ? "Close menu" : "Open menu"}
+        onClick={() => setOpen(!open)}
+      >
+        <span />
+        <span />
+      </button>
+      {open && (
+        <nav className="v2-menu" id="v2-menu" onClick={(event) => (event.target as HTMLElement).closest("a") && setOpen(false)}>
+          <a href="/auctions">All auctions</a>
+          <a href="/#how">How it works</a>
+          <a href="/sell">Sell a spot</a>
+          <div className="v2-menu-foot">
+            <a className="v2-btn dark wide" href={APP_URL}>
+              Open the app
+              <Grip />
+            </a>
+            {NEXT && (
+              <a className="v2-menu-line" href="/#auctions">
+                <span className="v2-dot" />
+                Next: {NEXT.owner}, {NEXT.when}
+              </a>
+            )}
+            <a className="v2-menu-line" href={FOLLOW}>
+              Follow on X
+            </a>
+          </div>
+        </nav>
+      )}
     </header>
   );
 }
