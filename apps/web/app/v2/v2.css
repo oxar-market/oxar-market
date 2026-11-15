@@ -538,6 +538,26 @@ a.v2-card:hover {
   background: #fff;
 }
 
+.v2-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.v2-more:hover {
+  background: var(--line);
+}
+
 /* Тёмная секция: как работают деньги, тремя карточками. */
 .v2-dark {
   margin: 4rem calc(50% - 50vw) 0;

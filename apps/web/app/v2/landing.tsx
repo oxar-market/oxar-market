@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
  */
 
 const APP_URL = "https://app.oxar.app";
+/** Сколько последних проданных торгов показывать карточками на главной. */
+const RECENT = 4;
 const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -161,9 +163,14 @@ export function Landing() {
   const live = data?.auctions.find((one) => one.status === "live") ?? null;
   const last = data?.auctions.find((one) => one.status === "sold") ?? null;
   const hero = live ?? last;
-  const cards = (data?.auctions ?? []).filter((one) =>
-    filter === "all" ? true : filter === "live" ? one.status === "live" : one.status === "sold",
-  );
+  // На главной - все идущие и только несколько последних проданных: при
+  // сотне торгов сотня карточек здесь не читалась бы. Весь архив - строками
+  // на отдельной странице.
+  const all = data?.auctions ?? [];
+  const running = all.filter((one) => one.status === "live");
+  const recent = all.filter((one) => one.status === "sold").slice(0, RECENT);
+  const cards = filter === "live" ? running : filter === "past" ? recent : [...running, ...recent];
+  const more = all.length > 0;
 
   return (
     <div className="v2">
@@ -327,6 +334,12 @@ export function Landing() {
             </a>
           ))}
         </div>
+        {more && (
+          <a className="v2-more" href={APP_URL}>
+            All auctions
+            <span aria-hidden>&rarr;</span>
+          </a>
+        )}
       </section>
 
       <section className="v2-dark" id="how">
