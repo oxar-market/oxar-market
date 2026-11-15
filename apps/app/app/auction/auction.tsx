@@ -1099,7 +1099,7 @@ export function Between({ onBack }: { onBack?: () => void } = {}) {
           <div className="bw-seller">
             <b>Have a thing people will see?</b>
             A shirt on stage, a van on a road trip, a laptop at a conference. Sell spots on it.{" "}
-            <a href="/?tab=you">Apply as a seller</a>
+            <a href="/app?tab=you">Apply as a seller</a>
           </div>
         </aside>
       </div>

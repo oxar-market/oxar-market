@@ -111,7 +111,7 @@ export default function How() {
           <a href="mailto:support@oxar.app">support@oxar.app</a>
         </p>
 
-        <a className="ghost" href="/">
+        <a className="ghost" href="/app">
           Back to the auction
         </a>
       </section>

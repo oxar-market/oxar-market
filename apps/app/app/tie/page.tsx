@@ -10,7 +10,7 @@ import { TIE_THING } from "@/lib/share";
  */
 export default function Tie() {
   useEffect(() => {
-    window.location.replace(`/?thing=${TIE_THING}`);
+    window.location.replace(`/app?thing=${TIE_THING}`);
   }, []);
   return null;
 }
