@@ -18,6 +18,14 @@ import { useViews } from "./spots.tsx";
  */
 const REACH = "98K+";
 
+/**
+ * Настоящий кадр вещи для карточки. Снимок 3D-модели рядом с ним выглядел
+ * игрушкой, поэтому где есть съёмка - показываем её, где нет - модель.
+ */
+const PHOTOS: Record<string, string> = {
+  "the-van": "/v2/van-card.jpg",
+};
+
 /** Ролик вещи для первого экрана. Без ролика герой остаётся на подложке. */
 const VIDEOS: Record<string, { src: string; poster: string }> = {
   "the-van": { src: "/v2/van-loop.mp4", poster: "/v2/van-poster.jpg" },
@@ -73,8 +81,10 @@ export function Landing() {
     const sold = Object.keys(one.won).length;
     return (
       <a key={one.id} className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
-        <div className="v2-visual">
-          {view ? (
+        <div className={PHOTOS[one.slug] ? "v2-visual photo" : "v2-visual"}>
+          {PHOTOS[one.slug] ? (
+            <img className="v2-photo" src={PHOTOS[one.slug]} alt="" />
+          ) : view ? (
             <div className="v2-spotview">
               <img src={view.src} alt="" />
             </div>
