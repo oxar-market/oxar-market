@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { APP_URL, FOLLOW, NEXT, TONES, day, load, usd, type Data } from "./data.ts";
+import { APP_URL, FOLLOW, NEXT, day, load, usd, type Data } from "./data.ts";
 import { Flow } from "./flow.tsx";
+import { AuctionCard, NextCard } from "./cards.tsx";
 import { useViews } from "./spots.tsx";
 
 /**
@@ -17,14 +18,6 @@ import { useViews } from "./spots.tsx";
  * Цифру дал Даниил, посчитанной разбивки по источникам пока нет.
  */
 const REACH = "98K+";
-
-/**
- * Настоящий кадр вещи для карточки. Снимок 3D-модели рядом с ним выглядел
- * игрушкой, поэтому где есть съёмка - показываем её, где нет - модель.
- */
-const PHOTOS: Record<string, string> = {
-  "the-van": "/v2/van-card.jpg",
-};
 
 /** Ролик вещи для первого экрана. Без ролика герой остаётся на подложке. */
 const VIDEOS: Record<string, { src: string; poster: string }> = {
@@ -62,50 +55,6 @@ export function Landing() {
   const all = data?.auctions ?? [];
   const cards = all.slice(0, NEXT ? 1 : 2);
   const { views, shooter } = useViews(cards);
-
-  function card(one: Data["auctions"][number]) {
-    const view = views[one.id];
-    const total = view ? Object.keys(view.quads).length : null;
-    const sold = Object.keys(one.won).length;
-    return (
-      <a key={one.id} className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
-        <div className={PHOTOS[one.slug] ? "v2-visual photo" : "v2-visual"}>
-          {PHOTOS[one.slug] ? (
-            <img className="v2-photo" src={PHOTOS[one.slug]} alt="" />
-          ) : view ? (
-            <div className="v2-spotview">
-              <img src={view.src} alt="" />
-            </div>
-          ) : (
-            <span className="v2-wait" />
-          )}
-          <span className={one.status === "live" ? "v2-tag live" : "v2-tag soft ended"}>
-            <span className="v2-dot" />
-            {one.status === "live" ? "Live" : "Ended"}
-          </span>
-          <span className="v2-chip">{total ? `${sold} of ${total} ${total === 1 ? "spot" : "spots"} sold` : `${sold} ${sold === 1 ? "spot" : "spots"} sold`}</span>
-        </div>
-        <div className="v2-card-body">
-          <div className="v2-card-name">{one.owner}</div>
-          <p className="v2-card-sub">{one.title}</p>
-          <dl className="v2-facts">
-            <div>
-              <dt>{one.status === "live" ? "Top bids" : "Raised"}</dt>
-              <dd>{usd(one.raisedCents)}</dd>
-            </div>
-            <div>
-              <dt>Bidders</dt>
-              <dd>{one.bidders}</dd>
-            </div>
-            <div>
-              <dt>{one.status === "live" ? "Closes" : "Closed"}</dt>
-              <dd>{day(one.closedAt)}</dd>
-            </div>
-          </dl>
-        </div>
-      </a>
-    );
-  }
 
   return (
     <div className="v2">
@@ -200,44 +149,9 @@ export function Landing() {
         </div>
 
         <div className="v2-grid">
-          {cards.filter((one) => one.status === "live").map(card)}
-          {NEXT && (
-            <a className="v2-card tone-show" href={FOLLOW}>
-              <div className="v2-visual v2-show">
-                <span className="v2-show-word" aria-hidden>
-                  The
-                  <br />
-                  Ecosystem
-                  <br />
-                  Call
-                </span>
-                <span className="v2-tag soft">
-                  <span className="v2-dot" />
-                  Coming soon
-                </span>
-                <span className="v2-chip">Holiday edition</span>
-              </div>
-              <div className="v2-card-body">
-                <div className="v2-card-name">{NEXT.owner}</div>
-                <p className="v2-card-sub">{NEXT.title}</p>
-                <dl className="v2-facts">
-                  <div>
-                    <dt>Spots</dt>
-                    <dd>{NEXT.spots}</dd>
-                  </div>
-                  <div>
-                    <dt>Format</dt>
-                    <dd>Live show</dd>
-                  </div>
-                  <div>
-                    <dt>Opens</dt>
-                    <dd>{NEXT.when}</dd>
-                  </div>
-                </dl>
-              </div>
-            </a>
-          )}
-          {cards.filter((one) => one.status !== "live").map(card)}
+          {cards.filter((one) => one.status === "live").map((one) => <AuctionCard key={one.id} one={one} view={views[one.id]} />)}
+          {NEXT && <NextCard next={NEXT} />}
+          {cards.filter((one) => one.status !== "live").map((one) => <AuctionCard key={one.id} one={one} view={views[one.id]} />)}
         </div>
         <a className="v2-more" href="/v2/auctions">
           All auctions
@@ -262,7 +176,7 @@ export function Landing() {
           <h2>Got something people look at?</h2>
           <p>A shirt, a van, a stage, a campaign. Mark the spots, set starting prices, get paid once the logos are up.</p>
         </div>
-        <a className="v2-btn dark" href="/sell">
+        <a className="v2-btn dark" href="/v2/sell">
           Sell a spot
           <Grip />
         </a>
@@ -284,14 +198,14 @@ export function Top() {
       <nav className="v2-nav">
         <a href="/v2/auctions">Auctions</a>
         <a href="/v2#how">How it works</a>
-        <a href="/sell">Sell a spot</a>
+        <a href="/v2/sell">Sell a spot</a>
       </nav>
       <div className="v2-side">
         <a className="v2-pill" href="/v2#auctions">
           <span className="v2-dot" />
           Next: Holiday edition
         </a>
-        <a className="v2-btn dark" href="/sell">
+        <a className="v2-btn dark" href="/v2/sell">
           Sell a spot
         </a>
       </div>

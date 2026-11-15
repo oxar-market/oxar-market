@@ -18,13 +18,13 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
  * Комиссия для калькулятора. В контракте она задаётся на торг из админки,
  * для новых продавцов договорились о 15%. Поменялась - правится здесь.
  */
-const FEE = 0.15;
+export const FEE = 0.15;
 
 function usd(dollars: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(dollars);
 }
 
-const STEPS: [string, string][] = [
+export const STEPS: [string, string][] = [
   ["Tell us what you've got", "A shirt, a van, a stage, a campaign. Where people will see it, when, and roughly how many."],
   ["We mark the spots together", "We agree on how many logos fit and what each spot starts at."],
   ["The auction goes live", "Bidders pay upfront into escrow, and we bring bidders to your page."],
@@ -32,7 +32,7 @@ const STEPS: [string, string][] = [
   ["You get paid", "72 hours after the photo, the money goes to you, minus the OXAR fee."],
 ];
 
-const QUESTIONS: [string, string][] = [
+export const QUESTIONS: [string, string][] = [
   ["Do I pay anything upfront?", "No. Listing is free, and OXAR takes its fee only from spots that sell."],
   ["What if a spot doesn't sell?", "Nothing happens. No fee and no obligation, and you can put it up again later."],
   [
@@ -102,7 +102,7 @@ export function Sell() {
   );
 }
 
-function Calculator() {
+export function Calculator() {
   const [spots, setSpots] = useState(9);
   const [start, setStart] = useState(300);
   const [average, setAverage] = useState(450);
@@ -217,7 +217,7 @@ function Slider({
  * Полей три: длинная форма в конце страницы отпугивала, а где и когда
  * человек и так напишет в «что это». Ссылка - строкой в notes.
  */
-function Pitch() {
+export function Pitch() {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
 
   async function submit(event: FormEvent<HTMLFormElement>) {

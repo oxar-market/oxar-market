@@ -1,6 +1,8 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+// Комиссия - та же, что в калькуляторе продавца, одна на оба места.
+import { FEE } from "../sell/sell.tsx";
 
 /**
  * Как идут деньги - схемой из шести шагов, а не тремя карточками текста.
@@ -9,8 +11,6 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
  * широком экране змейкой, на узком - столбиком.
  */
 
-/** Комиссия площадки - та же, что в калькуляторе на /sell. */
-const FEE = 0.15;
 const BID = 450;
 
 function usd(dollars: number): string {

@@ -10,10 +10,12 @@ export const FOLLOW = "https://x.com/oxar_app";
  * Объявленный, но ещё не открытый торг. Его нет в базе, пока торг не открыт,
  * поэтому он здесь. Откроется - убрать, он придёт из базы как идущий.
  */
-export const NEXT: { owner: string; title: string; spots: number; when: string } | null = {
+export type Next = { owner: string; title: string; when: string };
+
+/** Сколько мест и где они - с Ecosystem Call ещё не договорились, поэтому не пишем. */
+export const NEXT: Next | null = {
   owner: "Ecosystem Call",
-  title: "Holiday edition. Spots on the tree behind the host, live on air.",
-  spots: 11,
+  title: "Holiday edition. Logo spots on the set, live on air.",
   when: "December",
 };
 
