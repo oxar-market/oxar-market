@@ -24,7 +24,7 @@ function usd(dollars: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(dollars);
 }
 
-export const STEPS: [string, string][] = [
+const STEPS: [string, string][] = [
   ["Tell us what you've got", "A shirt, a van, a stage, a campaign. Where people will see it, when, and roughly how many."],
   ["We mark the spots together", "We agree on how many logos fit and what each spot starts at."],
   ["The auction goes live", "Bidders pay upfront into escrow, and we bring bidders to your page."],
@@ -102,7 +102,7 @@ export function Sell() {
   );
 }
 
-export function Calculator() {
+function Calculator() {
   const [spots, setSpots] = useState(9);
   const [start, setStart] = useState(300);
   const [average, setAverage] = useState(450);

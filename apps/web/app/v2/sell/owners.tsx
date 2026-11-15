@@ -1,14 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calculator, FEE, Pitch, QUESTIONS, STEPS } from "../../sell/sell.tsx";
-import { load, usd, type Data } from "../data.ts";
+import { FEE, Pitch, QUESTIONS } from "../../sell/sell.tsx";
+import { APP_URL, load, usd, type Data } from "../data.ts";
 import { Foot, Top } from "../landing.tsx";
+import { Simulator } from "./simulator.tsx";
 
 /**
- * Страница продавца в стиле нового лендинга. Калькулятор, шаги, вопросы и
- * форма - те же, что на /sell, отсюда только новая обёртка: правила и
- * комиссия живут в одном месте.
+ * Шаги для самостоятельного выставления: вещь продавец заводит сам в
+ * приложении (вкладка You, раздел Seller), а мы одобряем её перед торгом -
+ * admin_reviews_thing. Писать нам заранее не нужно.
+ */
+const STEPS: [string, string][] = [
+  ["List your thing", "Sign in, photograph it and mark the spots yourself. A shirt, a van, a stage, anything people look at."],
+  ["Set your prices", "Pick a starting price for each spot and when bidding ends."],
+  ["We approve it", "We check every listing before it goes live, so brands know what they're bidding on."],
+  ["Brands bid", "Bidders pay upfront into escrow, and outbid bids go straight back."],
+  ["Logos up, you get paid", "Place the winning logos and post a photo. 72 hours later the money is yours, minus the OXAR fee."],
+];
+
+/** Куда ведёт «выставить»: кабинет продавца в приложении. */
+const LIST_URL = `${APP_URL}/?tab=you`;
+
+/**
+ * Страница продавца в стиле нового лендинга. Вопросы, форма и комиссия - те
+ * же, что на /sell; калькулятор здесь свой - он играет пример торга.
  */
 export function Owners() {
   const [data, setData] = useState<Data | null>(null);
@@ -32,16 +48,21 @@ export function Owners() {
           </h1>
           <div className="v2-hero-foot">
             <p>
-              A shirt, a van, a stage, a campaign. We mark the spots with you, brands bid on them, and you get paid once
-              the logos are up.
+              A shirt, a van, a stage, a campaign. List it, mark the spots, set the prices. Brands bid, and you get paid
+              once the logos are up.
             </p>
-            <a className="v2-btn dark wide" href="#pitch">
-              Put my spot up
-            </a>
+            <div className="v2-sell-go">
+              <a className="v2-btn dark" href={LIST_URL}>
+                List your thing
+              </a>
+              <a className="v2-btn light line" href="#pitch">
+                Talk to us first
+              </a>
+            </div>
             <ul className="v2-sell-terms">
-              <li>Free to list</li>
+              <li>Nothing to pay us upfront</li>
+              <li>We approve every listing</li>
               <li>{Math.round(FEE * 100)}% only on sold spots</li>
-              <li>Paid 72h after the photo</li>
             </ul>
           </div>
         </div>
@@ -62,15 +83,15 @@ export function Owners() {
 
       <section className="v2-section">
         <p className="v2-label">Your numbers</p>
-        <Calculator />
+        <Simulator />
       </section>
 
       <section className="v2-section">
         <p className="v2-label">How it works</p>
         <div className="v2-head">
           <h2>
-            Five steps,
-            <span> and we do them with you.</span>
+            List it yourself.
+            <span> We approve it.</span>
           </h2>
         </div>
         <ol className="v2-sell-steps">
