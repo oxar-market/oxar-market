@@ -1,0 +1,7 @@
+# app.oxar.app - только перенаправление на oxar.app. Скрипт один, встроенный.
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cache-Control: no-cache

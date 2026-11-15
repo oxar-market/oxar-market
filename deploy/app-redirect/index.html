@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="robots" content="noindex" />
+<title>OXAR</title>
+<!--
+  app.oxar.app переехал на oxar.app/app. Переход в браузере, а не правилом
+  _redirects: так гарантированно сохраняются ?thing= и ?tab= из старых постов
+  и писем. Корень ведёт в /app, остальные пути (/tie, /terms) - туда же,
+  где они теперь на oxar.app.
+-->
+<script>
+  var path = location.pathname === "/" || location.pathname === "/index.html" ? "/app" : location.pathname;
+  location.replace("https://oxar.app" + path + location.search + location.hash);
+</script>
+<noscript><a href="https://oxar.app/app">OXAR moved to oxar.app/app</a></noscript>
+</html>

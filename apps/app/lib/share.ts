@@ -7,7 +7,7 @@ import { formatUsd } from "@oxar/core";
  * меню «Поделиться» на телефоне или вставка из буфера на компьютере
  * (см. share.tsx). Здесь только то, что можно проверить тестом.
  */
-const SITE = "app.oxar.app";
+const SITE = "oxar.app";
 
 /** Кто носит вещь, где и когда - что знает торг; пустое не пишется. */
 export type ShareWorn = { by: string | null; where: string | null; when: string | null };
@@ -17,7 +17,7 @@ const LIMIT = 280;
 
 /** Ссылка прямо на торг вещи: приложение открывает его по `?thing=`. */
 export function auctionLink(thingId: string): string {
-  return `https://${SITE}/?thing=${thingId}`;
+  return `https://${SITE}/app?thing=${thingId}`;
 }
 
 /** Ведущее «The» в названии - со строчной: оно в середине фразы. */
@@ -83,7 +83,7 @@ export function leadText({
   return compose(`Top bid on ${where}: ${formatUsd(cents)}.`, worn, `\n\nOutbid it: ${link}`);
 }
 
-/** Id вещи-галстука в базе (slug shirt-xx): на него ведёт app.oxar.app/tie. */
+/** Id вещи-галстука в базе (slug shirt-xx): на него ведёт oxar.app/tie. */
 export const TIE_THING = "3bbef1e7-9398-4164-84cb-4f48f1a39ec6";
 const TIE_PATH = `${SITE}/tie`;
 

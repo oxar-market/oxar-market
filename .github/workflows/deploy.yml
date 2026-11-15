@@ -10,8 +10,8 @@ name: Deploy
 # PR по-прежнему только проверяется: тесты и сборка.
 #
 # Проектов Pages два, по одному на домен:
-#   apps/web + apps/app -> oxar.app       (лендинг, приложение на /app)
-#   apps/app            -> app.oxar.app   (приложение, пока туда ведут ссылки)
+#   apps/web + apps/app  -> oxar.app       (лендинг, приложение на /app)
+#   deploy/app-redirect  -> app.oxar.app   (перенаправление на oxar.app/app)
 #
 # Оба уезжают одним прогоном, без разбора, что именно изменилось. Загрузка
 # готового каталога занимает секунды, а условная логика «деплоить только
@@ -166,13 +166,18 @@ jobs:
           pnpm exec wrangler pages deploy site
           --project-name=oxar-landing --branch=main --commit-dirty=true
 
-      - name: Приложение -> app.oxar.app
+      # Старый адрес - только перенаправление: ссылки из постов и писем
+      # приходят на oxar.app/app с тем же ?thing= и ?tab=. Пуш-воркер и его
+      # значок остаются на месте: подписки, оформленные на app.oxar.app,
+      # принадлежат ему, и без файла уведомления этих людей замолчали бы.
+      - name: Перенаправление app.oxar.app -> oxar.app/app
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: >-
-          pnpm exec wrangler pages deploy apps/app/out
-          --project-name=oxar-app --branch=main --commit-dirty=true
+        run: |
+          cp apps/app/out/push-worker.js apps/app/out/opengraph-image.png deploy/app-redirect/
+          pnpm exec wrangler pages deploy deploy/app-redirect \
+            --project-name=oxar-app --branch=main --commit-dirty=true
 
       # Вторая половина продукта живёт в Supabase, и она не уезжала вовсе.
       #

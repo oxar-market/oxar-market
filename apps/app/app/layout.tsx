@@ -28,13 +28,13 @@ const oxar = Inter({
  * так - в самом маршруте.
  */
 export const metadata: Metadata = {
-  metadataBase: new URL("https://app.oxar.app"),
+  metadataBase: new URL("https://oxar.app"),
   title: "OXAR",
   description: "Auctions for ad spots on things people carry.",
   openGraph: {
     title: "OXAR",
     description: "The highest bid when the clock runs out wins the spot.",
-    url: "https://app.oxar.app",
+    url: "https://oxar.app/app",
     siteName: "OXAR",
     type: "website",
     images: [
