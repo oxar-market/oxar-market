@@ -47,18 +47,6 @@ const BRANDS: { name: string; src?: string; height?: number; word?: boolean }[] 
   { name: "Ecosystem Call", word: true },
 ];
 
-/** Кадрирующие уголки - наш знак вместо пунктира frontier. */
-function Corners() {
-  return (
-    <>
-      <i className="v2-c tl" />
-      <i className="v2-c tr" />
-      <i className="v2-c bl" />
-      <i className="v2-c br" />
-    </>
-  );
-}
-
 export function Landing() {
   const [data, setData] = useState<Data | null>(null);
   useEffect(() => {
@@ -314,14 +302,16 @@ export function Top() {
 export function Foot() {
   return (
     <footer className="v2-foot">
-      <span className="v2-mark small">
-        <span className="v2-mark-box">
-          <Corners />
-        </span>
+      <a className="v2-mark small" href="/v2">
+        <img className="v2-mark-logo" src="/v2/oxar-mark.webp" alt="" />
         OXAR
-      </span>
+      </a>
       <span>Ad space on physical things</span>
-      <a href={FOLLOW}>X</a>
+      <a className="v2-x" href={FOLLOW} aria-label="OXAR on X">
+        <svg viewBox="0 0 24 24" aria-hidden>
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      </a>
     </footer>
   );
 }

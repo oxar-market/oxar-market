@@ -656,6 +656,31 @@
   color: var(--ink);
 }
 
+.v2-mark.small .v2-mark-logo {
+  height: 1.5rem;
+}
+
+.v2-foot .v2-x {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  transition: opacity 0.15s;
+}
+
+.v2-x:hover {
+  opacity: 0.85;
+}
+
+.v2-x svg {
+  width: 0.9375rem;
+  height: 0.9375rem;
+  fill: currentColor;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .v2-strip-track {
     animation: none;
