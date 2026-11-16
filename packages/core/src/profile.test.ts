@@ -52,3 +52,21 @@ test("одна вещь дважды - один раз в сумме", () => {
 test("ничего не выиграл - ноль и пусто", () => {
   assert.deepEqual(passReach([], {}), { total: 0, lines: [], estimated: false });
 });
+
+test("имя не притворяется кошельком: ни адресом, ни коротким видом", () => {
+  assert.equal(cleanProfile({ name: "7MvL..8LgV", brand: "", x: "" }).ok, false);
+  assert.equal(cleanProfile({ name: "7MvL…8LgV", brand: "", x: "" }).ok, false);
+  assert.equal(cleanProfile({ name: "7MvLvtgvPtTN4VgjCm1kmK6dkKDMPxq2u7q9pKfz8LgV", brand: "", x: "" }).ok, false);
+});
+
+test("невидимые знаки в имени и бренде не проходят", () => {
+  assert.equal(cleanProfile({ name: "Ali​ce", brand: "", x: "" }).ok, false);
+  assert.equal(cleanProfile({ name: "", brand: "Ac‮me", x: "" }).ok, false);
+});
+
+test("имя приводится к NFKC: широкие буквы - обычные", () => {
+  assert.deepEqual(cleanProfile({ name: "Ａlice", brand: "", x: "" }), {
+    ok: true,
+    value: { display_name: "Alice", brand: null, x_handle: null },
+  });
+});

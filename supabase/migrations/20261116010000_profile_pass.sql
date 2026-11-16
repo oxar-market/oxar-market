@@ -15,6 +15,25 @@ alter table things
   add column post_reach integer check (post_reach is null or post_reach >= 0),
   add column post_reach_checked_at timestamptz;
 
+-- Охват ставим только мы. Продавец заводит вещь сам и родил бы её с
+-- охватом в миллион - а это раздуло бы пропуска её победителей.
+drop policy if exists "одобренный продавец заводит вещь" on things;
+create policy "одобренный продавец заводит вещь" on things for insert
+  with check (
+    seller = auth.uid()
+    and not active
+    and not hidden
+    and not house
+    and not prepared
+    and permit_sale is null
+    and sticker_sheet is null
+    and post_reach is null
+    and post_reach_checked_at is null
+    and exists (
+      select 1 from profiles p where p.user_id = auth.uid() and p.is_seller
+    )
+  );
+
 -- Тестовые охваты, пока статистика постов не подключена: экран помечает их
 -- как оценку.
 update things set post_reach = 50000 where slug = 'the-van';
@@ -33,10 +52,29 @@ create index wallet_owners_by_user on wallet_owners (user_id);
 -- работает под service_role, который RLS обходит.
 alter table wallet_owners enable row level security;
 
+-- Имя в рейтинге стоит на месте кошелька, поэтому оно не может выглядеть
+-- кошельком - ни целым адресом, ни коротким видом «7MvL..8LgV», - и не может
+-- прятать невидимые знаки: «Ali​ce» с пробелом нулевой ширины выглядит как
+-- «Alice». Занятость имени - после нормализации NFKC без учёта регистра:
+-- широкая «Ａlice» - та же «Alice».
 create table public_profiles (
   user_id uuid primary key default auth.uid() references auth.users (id) on delete cascade,
-  display_name text check (display_name is null or (display_name = btrim(display_name) and length(display_name) between 1 and 40)),
-  brand text check (brand is null or (brand = btrim(brand) and length(brand) between 1 and 40)),
+  display_name text check (
+    display_name is null or (
+      display_name = btrim(display_name)
+      and length(display_name) between 1 and 40
+      and display_name !~ '^[1-9A-HJ-NP-Za-km-z]{32,44}$'
+      and display_name !~ '^[1-9A-HJ-NP-Za-km-z]{2,8}(\.{2,3}|…)[1-9A-HJ-NP-Za-km-z]{2,8}$'
+      and display_name !~ '[[:cntrl:]\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]'
+    )
+  ),
+  brand text check (
+    brand is null or (
+      brand = btrim(brand)
+      and length(brand) between 1 and 40
+      and brand !~ '[[:cntrl:]\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]'
+    )
+  ),
   x_handle text check (x_handle is null or x_handle ~ '^[A-Za-z0-9_]{1,15}$'),
   -- Пути в bucket faces, и только в своей папке.
   avatar_path text check (avatar_path is null or avatar_path like user_id::text || '/%'),
@@ -44,7 +82,7 @@ create table public_profiles (
   updated_at timestamptz not null default now()
 );
 
-create unique index public_profiles_name_once on public_profiles (lower(display_name)) where display_name is not null;
+create unique index public_profiles_name_once on public_profiles (lower(normalize(display_name, NFKC))) where display_name is not null;
 
 alter table public_profiles enable row level security;
 

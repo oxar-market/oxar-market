@@ -190,7 +190,7 @@ export function BoardRow({ one, at, me, pinned, face }: { one: Bidder; at: numbe
             {face?.display_name ?? shortWallet(one.wallet)}
             {(me || pinned) && <em>You</em>}
           </b>
-          <span className="ym-brands">{face?.brand ?? (one.brands.join(", ") || "No name")}</span>
+          <span className="ym-brands">{under(one, face)}</span>
         </span>
       </span>
       <span className="ym-num">{one.spots}</span>
@@ -220,7 +220,7 @@ export function Podium({ top, me, faces }: { top: Bidder[]; me: Bidder | null; f
               {faces[one.wallet]?.display_name ?? shortWallet(one.wallet)}
               {one === me && <em>You</em>}
             </b>
-            <span className="ym-brands">{faces[one.wallet]?.brand ?? (one.brands.join(", ") || "No name")}</span>
+            <span className="ym-brands">{under(one, faces[one.wallet])}</span>
             <b className="ym-step-paid">{formatUsd(one.paidCents)}</b>
             <span className="ym-brands">
               {one.spots} {one.spots === 1 ? "spot" : "spots"}
@@ -246,3 +246,13 @@ function Ava({ wallet, face, big }: { wallet: string; face?: Face; big?: boolean
 function people(n: number): string {
   return n >= 1000 ? `${Math.round(n / 1000)}K` : String(n);
 }
+
+/**
+ * Строка под именем. Своё имя всегда идёт с коротким кошельком: имя выбирает
+ * человек, а кошелёк - нет, по нему и видно, кто это на самом деле.
+ */
+function under(one: Bidder, face?: Face): string {
+  const brand = face?.brand ?? (one.brands.join(", ") || "No name");
+  return face?.display_name ? `${shortWallet(one.wallet)} · ${brand}` : brand;
+}
+

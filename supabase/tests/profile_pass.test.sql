@@ -12,8 +12,11 @@ insert into auth.users (id, email) values
   ('bbbbbbbb-0000-4000-8000-000000000002', 'bob@test.invalid');
 
 -- Роли продавца и покупателя: строка есть у каждого, правит её только сервер.
+-- Боб - одобренный продавец.
 insert into profiles (user_id) values ('aaaaaaaa-0000-4000-8000-000000000001')
   on conflict (user_id) do nothing;
+insert into profiles (user_id, is_seller) values ('bbbbbbbb-0000-4000-8000-000000000002', true)
+  on conflict (user_id) do update set is_seller = true;
 
 -- Кошелёк Алисы привязала функция входа (service_role, то есть мимо RLS).
 insert into wallet_owners (wallet, user_id)
@@ -22,6 +25,19 @@ insert into wallet_owners (wallet, user_id)
 -- ---------- Боб ----------
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-0000-4000-8000-000000000002","role":"authenticated"}', true);
+
+-- Продавец заводит вещь, но не с охватом: охват вносим мы, и завышенный
+-- охват своей вещи раздул бы пропуска её победителей.
+do $$ begin
+  insert into things (seller, slug, title, model_url, active, post_reach)
+    values ('bbbbbbbb-0000-4000-8000-000000000002', 'bob-fake-reach', 'Bob thing', '/models/shirt.glb', false, 1000000);
+  raise exception 'FAIL: продавец завёл вещь с охватом';
+exception when insufficient_privilege then null;
+end $$;
+
+-- Та же вещь без охвата - можно: отбивает именно охват.
+insert into things (seller, slug, title, model_url, active)
+  values ('bbbbbbbb-0000-4000-8000-000000000002', 'bob-plain', 'Bob thing', '/models/shirt.glb', false);
 
 do $$ begin
   insert into public_profiles (user_id, display_name) values ('aaaaaaaa-0000-4000-8000-000000000001', 'Not Alice');
@@ -74,6 +90,33 @@ do $$ begin
 exception when check_violation then null;
 end $$;
 
+-- Имя не притворяется кошельком: ни целым адресом, ни коротким видом из
+-- рейтинга.
+do $$ begin
+  update public_profiles set display_name = '7MvL..8LgV';
+  raise exception 'FAIL: имя в виде короткого кошелька';
+exception when check_violation then null;
+end $$;
+
+do $$ begin
+  update public_profiles set display_name = '7MvL...8LgV';
+  raise exception 'FAIL: имя в виде короткого кошелька с тремя точками';
+exception when check_violation then null;
+end $$;
+
+do $$ begin
+  update public_profiles set display_name = '7MvLvtgvPtTN4VgjCm1kmK6dkKDMPxq2u7q9pKfz8LgV';
+  raise exception 'FAIL: имя - чужой адрес';
+exception when check_violation then null;
+end $$;
+
+-- Невидимые знаки: «Ali​ce» с пробелом нулевой ширины выглядит как «Alice».
+do $$ begin
+  update public_profiles set display_name = 'Ali' || U&'\200B' || 'ce';
+  raise exception 'FAIL: невидимый знак в имени';
+exception when check_violation then null;
+end $$;
+
 do $$
 declare n int;
 begin
@@ -118,6 +161,13 @@ end $$;
 do $$ begin
   insert into public_profiles (display_name) values ('ALICE');
   raise exception 'FAIL: занятое имя взяли другим регистром';
+exception when unique_violation then null;
+end $$;
+
+-- Широкая «Ａ» - та же «A» после нормализации NFKC.
+do $$ begin
+  insert into public_profiles (display_name) values (U&'\FF21lice');
+  raise exception 'FAIL: занятое имя взяли широкой буквой';
 exception when unique_violation then null;
 end $$;
 

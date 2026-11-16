@@ -8,13 +8,25 @@ import { cleanHandle } from "./handle.ts";
 /** Имя вместо кошелька - не длиннее этого. */
 export const NAME_MAX = 40;
 
+/**
+ * Имя стоит в рейтинге на месте кошелька, поэтому не может им выглядеть, и
+ * не может прятать невидимые знаки («Ali\u200Bce» выглядит как «Alice»). Те
+ * же правила - у колонки в базе.
+ */
+const WALLET = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const SHORT_WALLET = /^[1-9A-HJ-NP-Za-km-z]{2,8}(\.{2,3}|…)[1-9A-HJ-NP-Za-km-z]{2,8}$/;
+const INVISIBLE = /[\p{Cc}\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u;
+
 export type ProfileInput = { name: string; brand: string; x: string };
 export type ProfileRow = { display_name: string | null; brand: string | null; x_handle: string | null };
 
 /** Пустое поле - «не указано»; непустое и неверное - ошибка с причиной. */
 export function cleanProfile(input: ProfileInput): { ok: true; value: ProfileRow } | { ok: false; error: string } {
-  const name = input.name.trim().replace(/\s+/g, " ");
+  // Широкие и составные буквы - к обычным: так же база сравнивает занятость.
+  const name = input.name.normalize("NFKC").trim().replace(/\s+/g, " ");
   if (name.length > NAME_MAX) return { ok: false, error: `Name is longer than ${NAME_MAX} characters.` };
+  if (WALLET.test(name) || SHORT_WALLET.test(name)) return { ok: false, error: "A name can't look like a wallet." };
+  if (INVISIBLE.test(name) || INVISIBLE.test(input.brand)) return { ok: false, error: "Remove invisible characters." };
   const brand = input.brand.trim() ? cleanBrand(input.brand) : null;
   if (input.brand.trim() && !brand) return { ok: false, error: `Brand is longer than ${BRAND_MAX} characters.` };
   const x = input.x.trim() ? cleanHandle(input.x) : null;
