@@ -85,11 +85,18 @@ function DisputeCard({ dispute, onDone }: { dispute: Dispute; onDone: () => void
       {dispute.proof && (
         <>
           <Gallery urls={dispute.proof.photos.map(photoUrl)} listClass="ad-photos" itemClass="sl-photo" />
-          {dispute.proof.links.map((link) => (
-            <a key={link} className="win-link" href={link} target="_blank" rel="noreferrer">
-              {link}
-            </a>
-          ))}
+          {/* Ссылкой - только https, как у победителя. */}
+          {dispute.proof.links.map((link) =>
+            link.startsWith("https://") ? (
+              <a key={link} className="win-link" href={link} target="_blank" rel="noreferrer">
+                {link}
+              </a>
+            ) : (
+              <span key={link} className="win-link">
+                {link}
+              </span>
+            ),
+          )}
           {dispute.proof.note && <p className="muted">{dispute.proof.note}</p>}
         </>
       )}

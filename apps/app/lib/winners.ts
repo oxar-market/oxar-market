@@ -55,7 +55,9 @@ export async function loadWinners(thingId: string): Promise<Winner[]> {
       status: lot.status === "won" ? "won" : "leading",
       brand: top.brand,
       amountCents: top.amount_cents,
-      mediaUrl: top.media_url,
+      // Логотип - только из нашего хранилища, как в архиве ниже: чужой адрес
+      // в печать не уходит.
+      mediaUrl: isCreativeUrl(top.media_url, STORAGE) ? top.media_url : "",
       wallet: top.bidder_wallet,
       closesAt: lot.closes_at,
       settleSignature: lot.settle_signature ?? null,

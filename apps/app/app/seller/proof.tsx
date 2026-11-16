@@ -156,6 +156,12 @@ function SaleProof({
             disabled={!seller || state === "busy" || (files.length === 0 && links.trim() === "")}
             onClick={async () => {
               if (!seller) return;
+              // Ссылки - только https, и проверяем до подписи: отпечаток
+              // пруфа уходит в цепочку раньше, чем строка в базу, а база
+              // ссылку без https не примет.
+              if (links.split("\n").some((line) => line.trim() && !line.trim().startsWith("https://"))) {
+                return setProblem("Links have to start with https://");
+              }
               setState("busy");
               setProblem("");
               const result = await submitProof(
