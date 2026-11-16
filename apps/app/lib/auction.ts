@@ -744,6 +744,12 @@ export async function lotNoLockup(lotId: string): Promise<boolean | null> {
   return (Array.isArray(thing) ? thing[0]?.permit_sale : thing.permit_sale) != null;
 }
 
+/**
+ * Ставку в базу пишет функция record-bid, а не браузер: кто поставил, на какой
+ * лот и сколько, она читает из подтверждённой транзакции по подписи. Кошелёк
+ * и сумму отсюда она не берёт - они в аргументах только для вызывающих,
+ * которым так удобнее.
+ */
 export async function recordBid(bid: {
   lotId: string;
   wallet: string;
@@ -753,20 +759,9 @@ export async function recordBid(bid: {
   signature: string;
 }): Promise<boolean> {
   if (!db) return false;
-
-  const { data } = await db.auth.getUser();
-  if (!data.user) return false;
-
-  const { error } = await db.from("lot_bids").insert({
-    lot_id: bid.lotId,
-    bidder: data.user.id,
-    bidder_wallet: bid.wallet,
-    amount_cents: bid.amountCents,
-    media_url: bid.mediaUrl,
-    brand: bid.brand,
-    signature: bid.signature,
+  const { error } = await db.functions.invoke("record-bid", {
+    body: { lotId: bid.lotId, signature: bid.signature, mediaUrl: bid.mediaUrl, brand: bid.brand },
   });
-
   return !error;
 }
 
