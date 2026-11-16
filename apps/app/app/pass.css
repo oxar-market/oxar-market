@@ -40,6 +40,8 @@
 .ym-pass-wrap {
   position: relative;
   z-index: 3;
+  /* Вертикально - прокрутка страницы, горизонтально - качание пропуска. */
+  touch-action: pan-y;
   display: flex;
   justify-content: center;
   padding-bottom: 0.5rem;
