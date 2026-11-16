@@ -44,8 +44,14 @@
   bottom: -2rem;
   width: 4.5rem;
   height: 4.5rem;
+  display: grid;
+  place-items: center;
   border: 3px solid #f4f4f1;
   border-radius: 6px;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .ym-who {
@@ -475,6 +481,15 @@
   min-width: 0;
 }
 
+/* Имя с брендами сжимается и режется многоточием, а не выдавливает
+   соседние колонки. */
+.ym-who-cell > span:last-child {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .ym-ava {
   flex: none;
   width: 1.75rem;
@@ -511,23 +526,10 @@ b.ym-num {
   color: var(--ink);
 }
 
-.ym-row.me {
-  border-radius: 4px;
-  background: #fff;
-}
-
+/* Своя строка - лёгкой подсветкой, без рамки и отступов. */
+.ym-row.me,
 .ym-row.pinned {
-  margin-top: 0.75rem;
-  border: 1px solid var(--ink);
-  border-radius: 4px;
-  background: #fff;
-}
-
-.ym-foot {
-  margin: 0.75rem 0 0;
-  font-size: 0.75rem;
-  color: var(--mut);
-  text-align: right;
+  background: rgba(224, 56, 28, 0.06);
 }
 
 .ym-soon {
@@ -560,53 +562,10 @@ b.ym-num {
   white-space: nowrap;
 }
 
-.ym-balance {
-  margin: 0 1.25rem 1rem;
-  padding: 0.875rem;
-  border: 1px solid #e7e6e1;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.ym-cap {
-  display: block;
-  color: var(--mut);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.ym-balance-row {
+.ym-acts {
   display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  margin-top: 0.375rem;
-}
-
-.ym-balance-row b {
-  font-size: 1.75rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
-}
-
-.ym-sol {
-  margin-left: auto;
-  color: var(--mut);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.ym-balance-acts {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
-
-.ym-balance-acts .ym-btn {
-  flex: 1;
-  margin-top: 0;
+  gap: 1rem;
+  margin: 0.5rem 0 0;
 }
 
 .ym-funds {
@@ -718,20 +677,47 @@ b.ym-num {
   color: var(--mut);
 }
 
+/* Венок в пропорциях его рисунка (80 на 68), цифра - в центре круга. */
 .ym-row > i.ym-place {
   position: relative;
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 1.75rem;
+  width: 2.25rem;
+  height: 1.9rem;
   color: var(--ink);
+  line-height: 1;
 }
 
 .ym-row > i.ym-place .ym-laurel {
   position: absolute;
-  inset: -0.125rem 0;
+  inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.ym-pages {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  color: var(--mut);
+  font-size: 0.75rem;
+}
+
+.ym-pages button {
+  padding: 0.3125rem 0.625rem;
+  border: 1px solid #e3e2dc;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ym-pages button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .ym-brands {
@@ -743,24 +729,54 @@ b.ym-num {
   white-space: nowrap;
 }
 
-/* Продажи, настройки и админка пока в прежнем оформлении - внутри белой
-   карточки кабинета. */
+/* Продажи, настройки, админка и свои победы - прежние экраны со всеми их
+   кнопками и полями, но в материале сайта: белые карточки с волосяной
+   рамкой на сером, углы 4-6px вместо пилюль, без теней. */
 .ym-legacy {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.ym-legacy :is(input, textarea, select) {
+:is(.ym, .ym-bare) :is(.role-card, .sl-card, .sl-photo, .sl-qr-card, .sl-waiting, .win-card, .ad-viewer) {
+  border: 1px solid #e7e6e1;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+}
+
+:is(.ym, .ym-bare) :is(input, textarea, select, .sl-input, .sl-field, .sl-line, .addr-box, .sl-qr, .ad-check, .ad-give, .ad-prepare, .ad-reason, .ad-row, .ad-scene) {
   border-radius: 6px;
 }
 
-.ym-legacy :is(button, a.primary) {
+:is(.ym, .ym-bare) :is(button, a.primary, .primary, .ghost, .sl-btn, .sl-next, .sl-open-camera, .sl-qr-actions, .sl-yesno, .viewer-close, .sl-chip, .sl-kind, .sl-pill, .role-toggle, .theme-row) {
   border-radius: 4px;
 }
 
-.ym-foot a {
-  color: inherit;
+:is(.ym, .ym-bare) :is(.primary, .sl-btn.dark) {
+  background: var(--ink);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Заголовок «Your wins» - как подписи разделов кабинета. */
+.ym .bids-head {
+  margin: 0.25rem 0 0.5rem;
+}
+
+.ym .hist-title {
+  color: var(--mut);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ym .wins {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .ym-signout {
@@ -807,6 +823,18 @@ b.ym-num {
 
   .ym-tabs {
     overflow-x: auto;
+  }
+
+  /* На телефоне цифрам - сколько им нужно, остальное - кошельку и брендам. */
+  .ym-row {
+    grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem 4.25rem;
+    gap: 0.5rem;
+    padding: 0.625rem 0.5rem;
+  }
+
+  .ym-ava {
+    width: 1.5rem;
+    height: 1.5rem;
   }
 }
 

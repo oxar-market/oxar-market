@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useExportWallet } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
-import { formatUsd, shortWallet, unitsToCents, type Bidder, type Score } from "@oxar/core";
-import { BUILD } from "@/lib/build";
+import { avatarLetter, formatUsd, shortWallet, unitsToCents, type Bidder, type Score } from "@oxar/core";
 import { connection, walletUnits } from "@/lib/chain";
 import { loadMyStands, type MyStand } from "@/lib/auction";
 import { loadBidders } from "@/lib/board";
@@ -17,12 +16,12 @@ import { Admin } from "./admin/admin.tsx";
 import { SellerApply } from "./seller/apply.tsx";
 import { YourWins } from "./wins.tsx";
 import { Notifications } from "./notify.tsx";
-import { Usdc } from "./usdc.tsx";
 import { loadScoreOf } from "@/lib/reviews";
 import { signedInWith } from "@/lib/identity";
 import { NEXT, load, type Data } from "./_site/data.ts";
 import { useViews } from "./_site/spots.tsx";
-import { BoardRow, Box, Copy, Laurel, avatar } from "./cabinet.tsx";
+import { BoardRow, Box, Copy, Laurel } from "./cabinet.tsx";
+import { avatar } from "./_site/me.ts";
 
 /**
  * Кабинет человека - страница сайта: слева он сам, баланс и цифры, справа
@@ -127,6 +126,8 @@ export function You({
   const [tab, setTab] = useState<Tab>("auctions");
   // Все торги - только свои.
   const [mineOnly, setMineOnly] = useState(false);
+  // Страница рейтинга: по 25 кошельков.
+  const [page, setPage] = useState(0);
   // Пополнить: адрес и правило сети раскрываются по кнопке.
   const [funds, setFunds] = useState(false);
 
@@ -197,10 +198,11 @@ export function You({
   const { views, shooter } = useViews(auctions);
 
   const me = wallet ? (bidders.find((one) => one.wallet === wallet) ?? null) : null;
+  // Тот же аватар, что в шапке: зерно - кошелёк, без него почта.
+  const seed = wallet ?? user?.email?.address ?? "you";
   const rank = me ? bidders.indexOf(me) + 1 : 0;
-  const wins = stands.filter((one) => one.won).length;
   const joined = user?.createdAt ? new Date(user.createdAt) : null;
-  const standsOf = (thingId: string) => stands.filter((one) => one.sellerThing === thingId);
+  const standsOf = (thingId: string) => stands.filter((one) => one.thingId === thingId);
   const shown = mineOnly ? auctions.filter((one) => standsOf(one.id).length > 0) : auctions;
   const name = signIn?.by === "email" ? signIn.email : wallet ? shortWallet(wallet) : "You";
   const sub = [
@@ -235,7 +237,9 @@ export function You({
       <div className="ym-grid">
         <aside className="ym-side">
           <div className="ym-banner">
-            <span className="ym-avatar" style={avatar(wallet ?? name)} />
+            <span className="ym-avatar" style={avatar(seed)}>
+              {avatarLetter(user?.email?.address ?? seed)}
+            </span>
           </div>
           <div className="ym-who">
             <h1>
@@ -245,58 +249,64 @@ export function You({
             <p>{sub}</p>
           </div>
 
-          {wallet && (
-            <div className="ym-balance">
-              <span className="ym-cap">Balance</span>
-              <div className="ym-balance-row">
-                <b>{money(usdc)}</b>
-                <Usdc />
-                <span className="ym-sol">{sol === null ? "" : `${sol.toFixed(3)} SOL`}</span>
-              </div>
-              {failed && (
-                <p className="ym-bad">
-                  Could not read the balance from the network.{" "}
-                  <button type="button" className="ym-link" onClick={() => setTries((was) => was + 1)}>
-                    Try again
-                  </button>
-                </p>
-              )}
-              <div className="ym-balance-acts">
-                <button type="button" className="ym-btn" onClick={() => setFunds(!funds)}>
-                  {funds ? "Hide" : "Add funds"}
-                </button>
-                {embedded && (
-                  <button
-                    type="button"
-                    className="ym-btn ghost"
-                    onClick={() => {
-                      setExportFailed(false);
-                      exportWallet({ address: wallet }).catch(() => setExportFailed(true));
-                    }}
-                  >
-                    Export key
-                  </button>
-                )}
-              </div>
-              {exportFailed && <p className="ym-bad">Could not open the export window. Sign in again and retry.</p>}
-              {funds && (
-                <div className="ym-funds">
-                  <code>{wallet}</code>
-                  <p>
-                    Send USDC, plus a little SOL for fees, on the Solana network to this address. Anything sent on
-                    another network is lost.
-                  </p>
-                  <p>
-                    {embedded
-                      ? "Created by Privy when you signed in. Yours, not ours: export the key into Phantom or Solflare any time. OXAR never sees it."
-                      : "Connected from your own wallet app."}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
           <div className="ym-stats">
+            {wallet && (
+              <>
+                <p className="ym-divider">
+                  <span>Wallet</span>
+                </p>
+                <dl>
+                  <div>
+                    <dt>Balance</dt>
+                    <dd>{money(usdc)} USDC</dd>
+                  </div>
+                  <div>
+                    <dt>For network fees</dt>
+                    <dd>{sol === null ? "-" : `${sol.toFixed(3)} SOL`}</dd>
+                  </div>
+                </dl>
+                {failed && (
+                  <p className="ym-bad">
+                    Could not read the balance from the network.{" "}
+                    <button type="button" className="ym-link" onClick={() => setTries((was) => was + 1)}>
+                      Try again
+                    </button>
+                  </p>
+                )}
+                <p className="ym-acts">
+                  <button type="button" className="ym-link" onClick={() => setFunds(!funds)}>
+                    {funds ? "Hide" : "Add funds"}
+                  </button>
+                  {embedded && (
+                    <button
+                      type="button"
+                      className="ym-link"
+                      onClick={() => {
+                        setExportFailed(false);
+                        exportWallet({ address: wallet }).catch(() => setExportFailed(true));
+                      }}
+                    >
+                      Export key
+                    </button>
+                  )}
+                </p>
+                {exportFailed && <p className="ym-bad">Could not open the export window. Sign in again and retry.</p>}
+                {funds && (
+                  <div className="ym-funds">
+                    <code>{wallet}</code>
+                    <p>
+                      Send USDC, plus a little SOL for fees, on the Solana network to this address. Anything sent on
+                      another network is lost.
+                    </p>
+                    <p>
+                      {embedded
+                        ? "Created by Privy when you signed in. Yours, not ours: export the key into Phantom or Solflare any time. OXAR never sees it."
+                        : "Connected from your own wallet app."}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
             <p className="ym-divider">
               <span>Stats</span>
             </p>
@@ -311,7 +321,7 @@ export function You({
               </div>
               <div>
                 <span>Spots won</span>
-                <b>{wins}</b>
+                <b>{me?.spots ?? 0}</b>
               </div>
             </div>
             <dl>
@@ -450,14 +460,23 @@ export function You({
                   <span>Spots</span>
                   <span>Paid</span>
                 </div>
-                {bidders.slice(0, 10).map((one, at) => (
-                  <BoardRow key={one.wallet} one={one} at={at + 1} me={one === me} />
+                {bidders.slice(page * PAGE, (page + 1) * PAGE).map((one, at) => (
+                  <BoardRow key={one.wallet} one={one} at={page * PAGE + at + 1} me={one === me} />
                 ))}
-                {me && rank > 10 && <BoardRow one={me} at={rank} pinned />}
+                {/* Свою строку видно всегда: не на этой странице - внизу. */}
+                {me && (rank <= page * PAGE || rank > (page + 1) * PAGE) && <BoardRow one={me} at={rank} pinned />}
               </div>
-              <p className="ym-foot">
-                1-{Math.min(10, bidders.length)} of {bidders.length}
-              </p>
+              <div className="ym-pages">
+                <span>
+                  {bidders.length ? page * PAGE + 1 : 0}-{Math.min((page + 1) * PAGE, bidders.length)} of {bidders.length}
+                </span>
+                <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>
+                  Prev
+                </button>
+                <button type="button" disabled={(page + 1) * PAGE >= bidders.length} onClick={() => setPage(page + 1)}>
+                  Next
+                </button>
+              </div>
             </div>
           )}
 
@@ -488,9 +507,6 @@ export function You({
               <button type="button" className="ym-btn ghost ym-signout" onClick={logout}>
                 Sign out
               </button>
-              <p className="ym-foot">
-                build {BUILD} · <a href="/terms">Terms</a> · <a href="mailto:support@oxar.app">support@oxar.app</a>
-              </p>
             </div>
           )}
 
@@ -506,6 +522,9 @@ export function You({
 }
 
 type Tab = "auctions" | "leaders" | "campaigns" | "sales" | "settings" | "admin";
+
+/** Кошельков на странице рейтинга. */
+const PAGE = 25;
 
 /** Деньги на балансе: прочерк, пока не прочитали, а не ноль. */
 function money(usd: number | null): string {

@@ -5,6 +5,7 @@ import { APP_URL, FOLLOW, NEXT, day, load, usd, type Data } from "./data.ts";
 import { Flow } from "./flow.tsx";
 import { AuctionCard, NextCard } from "./cards.tsx";
 import { useViews } from "./spots.tsx";
+import { avatar, readMe, type Me } from "./me.ts";
 
 /**
  * Главная в духе frontiertraders.com, на нашем материале: герой выбирается по
@@ -196,13 +197,17 @@ export function Landing() {
 const LOGIN = `${APP_URL}?tab=you`;
 
 /**
- * Вход в шапке. На лендинге Privy нет, и он всегда ведёт на вход в кабинете;
- * страницы кабинета и торга подставляют сюда вошедшего человека.
+ * Вход в шапке: вошёл - его аватар, ведёт в профиль; нет - «Log in». Страницы
+ * приложения знают это от Privy и подставляют сами, на лендинге Privy нет, и
+ * шапка читает подсказку, оставленную приложением после входа.
  */
-export type Account = { label: string; href?: string; onClick?: () => void };
+export type Account = { label: string; href?: string; onClick?: () => void; me?: Me | null };
 
-export function Top({ account = { label: "Log in", href: LOGIN } }: { account?: Account }) {
+export function Top({ account }: { account?: Account }) {
   const [open, setOpen] = useState(false);
+  const [hint, setHint] = useState<Me | null>(null);
+  useEffect(() => setHint(readMe()), []);
+  const shown: Account = account ?? (hint ? { label: "Profile", href: "/app", me: hint } : { label: "Log in", href: LOGIN });
 
   // Пока меню открыто, страница под ним не крутится, а Escape его закрывает.
   useEffect(() => {
@@ -230,20 +235,24 @@ export function Top({ account = { label: "Log in", href: LOGIN } }: { account?: 
       <div className="v2-side">
         <a className="v2-pill" href="/#auctions">
           <span className="v2-dot" />
-          <span className="v2-wide-only">Next: Holiday edition</span>
-          {/* На телефоне место есть только под месяц. */}
-          <span className="v2-narrow-only">Next: {NEXT ? NEXT.when.slice(0, 3) : "soon"}</span>
+          {/* «Next: Dec» не читалось: следующее что? Называем торг и месяц. */}
+          <span className="v2-wide-only">Next auction: {NEXT ? NEXT.when : "soon"}</span>
+          <span className="v2-narrow-only">{NEXT ? `${NEXT.when.slice(0, 3)} auction` : "Next auction"}</span>
         </a>
         <a className="v2-btn dark v2-wide-only" href="/sell">
           Sell a spot
         </a>
-        {account.href ? (
-          <a className="v2-btn light v2-account" href={account.href}>
-            {account.label}
+        {shown.me ? (
+          <a className="v2-me" href={shown.href ?? "/app"} aria-label="Your profile" style={avatar(shown.me.seed)}>
+            {shown.me.letter}
+          </a>
+        ) : shown.href ? (
+          <a className="v2-btn light v2-account" href={shown.href}>
+            {shown.label}
           </a>
         ) : (
-          <button type="button" className="v2-btn light v2-account" onClick={account.onClick}>
-            {account.label}
+          <button type="button" className="v2-btn light v2-account" onClick={shown.onClick}>
+            {shown.label}
           </button>
         )}
       </div>
@@ -265,6 +274,7 @@ export function Top({ account = { label: "Log in", href: LOGIN } }: { account?: 
             <a href="/auctions">All auctions</a>
             <a href="/#how">How it works</a>
             <a href="/sell">Sell a spot</a>
+            <a href="/app">Profile</a>
           </div>
           <div className="v2-menu-group">
             <p>Help</p>

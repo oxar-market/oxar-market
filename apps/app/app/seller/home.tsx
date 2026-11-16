@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { HANDLE_MAX, handleInput, rentDays, rentTotalCents } from "@oxar/core";
 import type { DealToRate, Score, SellerRequest, SellerThing } from "@/lib/seller";
 import { loadMyHandle, saveMyHandle } from "@/lib/reviews";
-import { BUILD } from "@/lib/build";
 import { Thumb, clock, shortDay, usd } from "./parts.tsx";
 import { HouseLogos } from "../winners.tsx";
 
@@ -146,12 +145,6 @@ export function SellerHome({
       {/* Наши вещи, которые печатаем мы: логотипы победителей - здесь, у
           того, на кого вещь записана, а не в админке. */}
       <HouseLogos />
-
-      <p className="sl-foot">
-        <span className="build">Build {BUILD}</span>
-        <a href="/how">How it works</a>
-        <a href="/terms">Terms</a>
-      </p>
     </>
   );
 }

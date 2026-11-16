@@ -279,6 +279,8 @@ export type MyStand = {
   thing: string;
   /** Id вещи, если она продавца: торг у неё на своей странице. */
   sellerThing: string | null;
+  /** Id вещи - любой, и нашей, и продавца. */
+  thingId: string;
   closesAt: string;
   /** Торг ещё идёт. */
   open: boolean;
@@ -295,7 +297,8 @@ export type MyStand = {
 /**
  * До этой минуты площадка жила прогонами: торги на доллар-два, которыми мы
  * проверяли цикл перед запуском. В историю людей они не идут - это наша
- * репетиция, а не их биография.
+ * репетиция, а не их биография. Прогоны и после неё помечены rehearsal - их
+ * отсекаем по метке.
  */
 const PUBLIC_OPENING = Date.parse("2026-09-24T09:00:00Z");
 
@@ -309,16 +312,20 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
   const { data } = await db
     .from("lot_bids")
     .select(
-      "amount_cents, lot_id, lots!inner(status, closes_at, thing_spots(code, label), things:thing_id(id, title, house))",
+      "amount_cents, lot_id, lots!inner(status, closes_at, rehearsal, thing_spots(code, label), things:thing_id(id, title, house))",
     )
     .eq("bidder_wallet", wallet)
     .order("amount_cents", { ascending: false })
     .limit(300);
   if (!data) return [];
 
-  // Моя верхняя по каждому лоту: строки уже от высокой к низкой.
+  // Моя верхняя по каждому лоту: строки уже от высокой к низкой. Прогоны -
+  // мимо.
   const mine = new Map<string, (typeof data)[number]>();
-  for (const row of data) if (!mine.has(row.lot_id)) mine.set(row.lot_id, row);
+  for (const row of data) {
+    if ((row.lots as unknown as { rehearsal: boolean }).rehearsal) continue;
+    if (!mine.has(row.lot_id)) mine.set(row.lot_id, row);
+  }
 
   const tops = await loadTopBids([...mine.keys()]);
   const now = Date.now();
@@ -339,6 +346,7 @@ export async function loadMyStands(wallet: string): Promise<MyStand[]> {
       code: lot.thing_spots?.code ?? "",
       thing: lot.things?.title ?? "",
       sellerThing: lot.things && !lot.things.house ? (lot.things.id ?? null) : null,
+      thingId: lot.things?.id ?? "",
       closesAt: lot.closes_at,
       open,
       mineCents: row.amount_cents,

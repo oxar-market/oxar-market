@@ -5,7 +5,9 @@ import { useIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
 import { db, exchange, syncContact } from "@/lib/session";
 import { loadOnAir } from "@/lib/auction";
 import { isShirt } from "@/lib/shape";
+import { avatarLetter } from "@oxar/core";
 import { Foot, Top, type Account } from "../../_site/landing.tsx";
+import { saveMe, type Me } from "../../_site/me.ts";
 import { You } from "../../you";
 import { PhoneCapture } from "../../seller/flow.tsx";
 import { ListingAuction } from "../../listing/listing.tsx";
@@ -102,9 +104,17 @@ export default function Home() {
     });
   }, [linked, identityToken, getAccessToken]);
 
-  // Вошёл - в шапке кабинет, нет - вход. Пока Privy поднимается, кнопка
-  // тоже «Log in»: так она не прыгает у тех, кто не входил.
-  const account: Account = ready && authenticated ? { label: "You", href: "/app" } : { label: "Log in", onClick: login };
+  // Вошёл - в шапке его аватар, ведёт в профиль; нет - вход. Пока Privy
+  // поднимается, кнопка тоже «Log in»: так она не прыгает у тех, кто не входил.
+  const seed = user?.wallet?.address ?? user?.email?.address ?? null;
+  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(user?.email?.address ?? seed) } : null;
+  const account: Account = me ? { label: "Profile", href: "/app", me } : { label: "Log in", onClick: login };
+  // Подсказка для шапки лендинга: там Privy нет, и без неё был бы «Log in».
+  useEffect(() => {
+    if (!ready) return;
+    saveMe(me);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, me?.seed, me?.letter]);
   const thing = view && typeof view === "object" ? view.thing : null;
 
   return (
@@ -117,6 +127,9 @@ export default function Home() {
           </p>
         )}
 
+        {/* Пока не ясно, что показывать, место под содержимое держим: иначе
+            подвал вставал сразу под шапкой и мигал второй шапкой. */}
+        {view === null && <div className="ym-wait" />}
         {thing && <ListingAuction thingId={thing} onBack={() => window.location.assign("/auctions")} />}
         {view === "shirt" && <Auction />}
         {view === "you" &&
@@ -133,7 +146,7 @@ export default function Home() {
           ) : // Пока Privy не готов, не показываем ни вход, ни кабинет: иначе
           // вошедшему на миг мелькнёт «Sign in», пока не подтвердится сессия.
           !ready ? (
-            <section className="screen" />
+            <div className="ym-wait" />
           ) : authenticated ? (
             <You onOpenAuction={openAuction} linked={linked === "ready"} />
           ) : (

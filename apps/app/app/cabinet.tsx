@@ -2,22 +2,16 @@
 
 import "./cabinet.css";
 
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { formatUsd, shortWallet, spotName, type Bidder } from "@oxar/core";
 import type { MyStand } from "@/lib/auction";
 import type { Auction } from "./_site/data.ts";
+import { avatar } from "./_site/me.ts";
 
 /**
  * Части кабинета: копирование адреса, венок первых трёх мест, торг
  * коробочкой и строка рейтинга. Сам кабинет - в you.tsx.
  */
-
-/** Аватар из адреса: свой цвет у каждого кошелька, без картинок. */
-export function avatar(seed: string): CSSProperties {
-  let hash = 0;
-  for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-  return { background: `linear-gradient(135deg, hsl(${hash} 70% 62%), hsl(${(hash + 50) % 360} 70% 45%))` };
-}
 
 /** Скопировать полный адрес: на секунду значок меняется на галочку. */
 export function Copy({ text }: { text: string }) {
