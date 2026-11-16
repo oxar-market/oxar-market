@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { NAME_MAX, cleanProfile, passReach } from "./profile.ts";
+import { INVISIBLE, NAME_MAX, cleanProfile, passReach } from "./profile.ts";
 
 test("профиль: пробелы по краям и внутри сжимаются, @ у X снимается", () => {
   assert.deepEqual(cleanProfile({ name: "  Danylo   L ", brand: " OXAR ", x: "@oxar_app" }), {
@@ -79,4 +79,23 @@ test("пустые знаки хангыля и Брайля и метки-те�
 
 test("короткий кошелёк широкими знаками - всё равно кошелёк", () => {
   assert.equal(cleanProfile({ name: "７ＭｖＬ．．８ＬｇＶ", brand: "", x: "" }).ok, false);
+});
+
+test("база отбивает ровно те невидимые знаки, что и экран", async () => {
+  // Класс знаков из правила экрана - диапазонами, как он записан в миграции.
+  const hex = (c: number) => (c <= 0xffff ? `\\u${c.toString(16).toUpperCase().padStart(4, "0")}` : `\\U${c.toString(16).toUpperCase().padStart(8, "0")}`);
+  const ranges: string[] = [];
+  let start = -1;
+  for (let c = 1; c <= 0x110000; c++) {
+    const hit = c <= 0x10ffff && (c < 0xd800 || c > 0xdfff) && INVISIBLE.test(String.fromCodePoint(c));
+    if (hit && start < 0) start = c;
+    if (!hit && start >= 0) {
+      ranges.push(start === c - 1 ? hex(start) : `${hex(start)}-${hex(c - 1)}`);
+      start = -1;
+    }
+  }
+  const { readFile } = await import("node:fs/promises");
+  const sql = await readFile(new URL("../../../supabase/migrations/20261116030000_profile_invisible.sql", import.meta.url), "utf8");
+  assert.ok(sql.includes(`display_name !~ '[${ranges.join("")}]'`), "класс имени в базе разошёлся с экраном");
+  assert.ok(sql.includes(`brand !~ '[${ranges.join("")}]'`), "класс бренда в базе разошёлся с экраном");
 });
