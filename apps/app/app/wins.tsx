@@ -156,11 +156,19 @@ function WinCard({
               {win.proof.photos.length > 0 && (
                 <Gallery urls={win.proof.photos.map(photoUrl)} listClass="sl-minis" itemClass="sl-mini" />
               )}
-              {win.proof.links.map((link) => (
-                <a key={link} className="win-link" href={link} target="_blank" rel="noreferrer">
-                  {link}
-                </a>
-              ))}
+              {/* Ссылкой - только https: адрес даёт продавец, и чужая схема
+                  в нём - путь к фишингу. Прочее видно текстом. */}
+              {win.proof.links.map((link) =>
+                link.startsWith("https://") ? (
+                  <a key={link} className="win-link" href={link} target="_blank" rel="noreferrer">
+                    {link}
+                  </a>
+                ) : (
+                  <span key={link} className="win-link">
+                    {link}
+                  </span>
+                ),
+              )}
               {win.proof.note && <p className="muted">{win.proof.note}</p>}
             </>
           )}
