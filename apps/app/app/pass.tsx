@@ -103,13 +103,18 @@ export function ReachPass({
 
   useEffect(draw);
 
+  // Мышь качает пропуск без нажатия, палец - ведя по нему: на телефоне
+  // pointermove приходит только пока палец на экране. Вертикальный жест
+  // остаётся прокруткой страницы (touch-action: pan-y), горизонтальный -
+  // наш.
   function move(event: PointerEvent<HTMLDivElement>) {
-    if (still || event.pointerType !== "mouse") return;
+    if (still) return;
     const s = state.current;
     const now = performance.now();
     if (s.lastX) {
       const vx = (event.clientX - s.lastX) / Math.max(8, now - (s.lastT || now - 16));
-      s.speed += vx * 0.09;
+      // Палец ведут медленнее мыши - ему отклик сильнее.
+      s.speed += vx * (event.pointerType === "mouse" ? 0.09 : 0.22);
     }
     s.lastX = event.clientX;
     const box = card.current?.getBoundingClientRect();
@@ -124,6 +129,17 @@ export function ReachPass({
     kick();
   }
 
+  // Касание - лёгкий толчок в ту сторону, где палец, чтобы пропуск отвечал
+  // и на тап.
+  function press(event: PointerEvent<HTMLDivElement>) {
+    if (still || event.pointerType === "mouse") return;
+    const s = state.current;
+    const box = card.current?.getBoundingClientRect();
+    if (box) s.speed += ((event.clientX - box.left) / box.width - 0.5) * 2.4;
+    s.lastX = event.clientX;
+    kick();
+  }
+
   function leave() {
     const s = state.current;
     s.tx = 0;
@@ -133,7 +149,16 @@ export function ReachPass({
   }
 
   return (
-    <div className="ym-pass-wrap" ref={wrap} onPointerMove={move} onPointerLeave={leave} style={{ paddingTop: STRAP }}>
+    <div
+      className="ym-pass-wrap"
+      ref={wrap}
+      onPointerDown={press}
+      onPointerMove={move}
+      onPointerUp={leave}
+      onPointerCancel={leave}
+      onPointerLeave={leave}
+      style={{ paddingTop: STRAP }}
+    >
       <svg className="ym-strap" width={width} height={STRAP + 40} aria-hidden>
         <defs>
           <linearGradient id={metal} x1="0" x2="1">

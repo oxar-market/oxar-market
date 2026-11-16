@@ -235,9 +235,10 @@ export function Top({ account }: { account?: Account }) {
       <div className="v2-side">
         <a className="v2-pill" href="/#auctions">
           <span className="v2-dot" />
-          {/* «Next: Dec» не читалось: следующее что? Называем торг и месяц. */}
+          {/* «Next: Dec» и «Dec auction» не читались. Называем, что это:
+              следующий торг; месяц - где для него есть место. */}
           <span className="v2-wide-only">Next auction: {NEXT ? NEXT.when : "soon"}</span>
-          <span className="v2-narrow-only">{NEXT ? `${NEXT.when.slice(0, 3)} auction` : "Next auction"}</span>
+          <span className="v2-narrow-only">Next auction</span>
         </a>
         <a className="v2-btn dark v2-wide-only" href="/sell">
           Sell a spot
