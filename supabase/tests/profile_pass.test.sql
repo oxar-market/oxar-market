@@ -110,6 +110,27 @@ do $$ begin
 exception when check_violation then null;
 end $$;
 
+-- Широкими знаками короткий кошелёк выглядит так же. База хранит имя
+-- только в виде NFKC, и правило кошелька видит его обычными знаками.
+do $$ begin
+  update public_profiles set display_name = U&'\FF17\FF2D\FF56\FF2C\FF0E\FF0E\FF18\FF2C\FF47\FF36';
+  raise exception 'FAIL: короткий кошелёк широкими знаками';
+exception when check_violation then null;
+end $$;
+
+-- Пустые знаки, которые не нули ширины, но и не видны: хангыль, Брайль.
+do $$ begin
+  update public_profiles set display_name = 'Alice' || U&'\3164';
+  raise exception 'FAIL: пустой знак хангыля в имени';
+exception when check_violation then null;
+end $$;
+
+do $$ begin
+  update public_profiles set display_name = 'Alice' || U&'\2800';
+  raise exception 'FAIL: пустой знак Брайля в имени';
+exception when check_violation then null;
+end $$;
+
 -- Невидимые знаки: «Ali​ce» с пробелом нулевой ширины выглядит как «Alice».
 do $$ begin
   update public_profiles set display_name = 'Ali' || U&'\200B' || 'ce';
@@ -164,11 +185,12 @@ do $$ begin
 exception when unique_violation then null;
 end $$;
 
--- Широкая «Ａ» - та же «A» после нормализации NFKC.
+-- Широкая «Ａ» - та же «A» после нормализации NFKC: имя не в NFKC база не
+-- хранит вовсе, а в NFKC оно занято.
 do $$ begin
   insert into public_profiles (display_name) values (U&'\FF21lice');
   raise exception 'FAIL: занятое имя взяли широкой буквой';
-exception when unique_violation then null;
+exception when unique_violation or check_violation then null;
 end $$;
 
 -- Своё имя - пожалуйста.
