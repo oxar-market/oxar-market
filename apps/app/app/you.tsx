@@ -20,7 +20,7 @@ import { loadScoreOf } from "@/lib/reviews";
 import { signedInWith } from "@/lib/identity";
 import { NEXT, load, type Data } from "./_site/data.ts";
 import { useViews } from "./_site/spots.tsx";
-import { BoardRow, Box, Copy, Laurel } from "./cabinet.tsx";
+import { BoardRow, Box, Copy, Laurel, Podium } from "./cabinet.tsx";
 import { avatar } from "./_site/me.ts";
 
 /**
@@ -128,8 +128,6 @@ export function You({
   const [mineOnly, setMineOnly] = useState(false);
   // Страница рейтинга: по 25 кошельков.
   const [page, setPage] = useState(0);
-  // Пополнить: адрес и правило сети раскрываются по кнопке.
-  const [funds, setFunds] = useState(false);
 
   // Продавцу роль выдаём мы после звонка. У него переключатель встаёт наверх
   // и Seller открывает кабинет; остальным Seller - по-прежнему разговор.
@@ -201,6 +199,8 @@ export function You({
   // Тот же аватар, что в шапке: зерно - кошелёк, без него почта.
   const seed = wallet ?? user?.email?.address ?? "you";
   const rank = me ? bidders.indexOf(me) + 1 : 0;
+  // Под пьедесталом - с четвёртого места.
+  const rest = bidders.slice(3);
   const joined = user?.createdAt ? new Date(user.createdAt) : null;
   const standsOf = (thingId: string) => stands.filter((one) => one.thingId === thingId);
   const shown = mineOnly ? auctions.filter((one) => standsOf(one.id).length > 0) : auctions;
@@ -238,7 +238,7 @@ export function You({
         <aside className="ym-side">
           <div className="ym-banner">
             <span className="ym-avatar" style={avatar(seed)}>
-              {avatarLetter(user?.email?.address ?? seed)}
+              {avatarLetter(seed)}
             </span>
           </div>
           <div className="ym-who">
@@ -273,11 +273,8 @@ export function You({
                     </button>
                   </p>
                 )}
-                <p className="ym-acts">
-                  <button type="button" className="ym-link" onClick={() => setFunds(!funds)}>
-                    {funds ? "Hide" : "Add funds"}
-                  </button>
-                  {embedded && (
+                {embedded && (
+                  <p className="ym-acts">
                     <button
                       type="button"
                       className="ym-link"
@@ -288,23 +285,9 @@ export function You({
                     >
                       Export key
                     </button>
-                  )}
-                </p>
-                {exportFailed && <p className="ym-bad">Could not open the export window. Sign in again and retry.</p>}
-                {funds && (
-                  <div className="ym-funds">
-                    <code>{wallet}</code>
-                    <p>
-                      Send USDC, plus a little SOL for fees, on the Solana network to this address. Anything sent on
-                      another network is lost.
-                    </p>
-                    <p>
-                      {embedded
-                        ? "Created by Privy when you signed in. Yours, not ours: export the key into Phantom or Solflare any time. OXAR never sees it."
-                        : "Connected from your own wallet app."}
-                    </p>
-                  </div>
+                  </p>
                 )}
+                {exportFailed && <p className="ym-bad">Could not open the export window. Sign in again and retry.</p>}
               </>
             )}
             <p className="ym-divider">
@@ -453,6 +436,7 @@ export function You({
                   <p>Wallets by what they paid for spots they won.</p>
                 </div>
               </div>
+              <Podium top={bidders.slice(0, 3)} me={me} />
               <div className="ym-board">
                 <div className="ym-row head">
                   <span>#</span>
@@ -460,20 +444,22 @@ export function You({
                   <span>Spots</span>
                   <span>Paid</span>
                 </div>
-                {bidders.slice(page * PAGE, (page + 1) * PAGE).map((one, at) => (
-                  <BoardRow key={one.wallet} one={one} at={page * PAGE + at + 1} me={one === me} />
+                {rest.slice(page * PAGE, (page + 1) * PAGE).map((one, at) => (
+                  <BoardRow key={one.wallet} one={one} at={page * PAGE + at + 4} me={one === me} />
                 ))}
-                {/* Свою строку видно всегда: не на этой странице - внизу. */}
-                {me && (rank <= page * PAGE || rank > (page + 1) * PAGE) && <BoardRow one={me} at={rank} pinned />}
+                {/* Свою строку видно всегда: не на пьедестале и не на этой странице - внизу. */}
+                {me && rank > 3 && (rank - 3 <= page * PAGE || rank - 3 > (page + 1) * PAGE) && (
+                  <BoardRow one={me} at={rank} pinned />
+                )}
               </div>
               <div className="ym-pages">
                 <span>
-                  {bidders.length ? page * PAGE + 1 : 0}-{Math.min((page + 1) * PAGE, bidders.length)} of {bidders.length}
+                  {rest.length ? page * PAGE + 4 : 0}-{Math.min((page + 1) * PAGE, rest.length) + 3} of {bidders.length}
                 </span>
                 <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>
                   Prev
                 </button>
-                <button type="button" disabled={(page + 1) * PAGE >= bidders.length} onClick={() => setPage(page + 1)}>
+                <button type="button" disabled={(page + 1) * PAGE >= rest.length} onClick={() => setPage(page + 1)}>
                   Next
                 </button>
               </div>
