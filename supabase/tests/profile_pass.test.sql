@@ -145,6 +145,13 @@ do $$ begin
 exception when check_violation then null;
 end $$;
 
+-- Разделитель строки ломает строку рейтинга.
+do $$ begin
+  update public_profiles set display_name = 'Ali' || U&'\2028' || 'ce';
+  raise exception 'FAIL: разделитель строки в имени';
+exception when check_violation then null;
+end $$;
+
 -- Невидимые знаки: «Ali​ce» с пробелом нулевой ширины выглядит как «Alice».
 do $$ begin
   update public_profiles set display_name = 'Ali' || U&'\200B' || 'ce';

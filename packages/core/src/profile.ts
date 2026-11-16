@@ -16,8 +16,9 @@ export const NAME_MAX = 40;
 const WALLET = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const SHORT_WALLET = /^[1-9A-HJ-NP-Za-km-z]{2,8}(\.{2,3}|…)[1-9A-HJ-NP-Za-km-z]{2,8}$/;
 // Невидимые - управляющие, форматные и все Default_Ignorable, плюс пустая
-// клетка Брайля: она не «ignorable», но рисуется пустотой.
-export const INVISIBLE = /[\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}\u2800]/u;
+// клетка Брайля: она не «ignorable», но рисуется пустотой. И разделители
+// строки и абзаца U+2028/2029: в имени они ломают строку рейтинга.
+export const INVISIBLE = /[\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}\u2800\u2028\u2029]/u;
 
 export type ProfileInput = { name: string; brand: string; x: string };
 export type ProfileRow = { display_name: string | null; brand: string | null; x_handle: string | null };
