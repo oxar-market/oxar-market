@@ -903,31 +903,22 @@ b.ym-num {
     flex-direction: column;
   }
 
-  /* На телефоне вкладки не влезают в строку, и лента ездила под пальцем,
-     обрезая крайние. Теперь они кнопками в две строки - видны все сразу. */
+  /* На телефоне вкладки не влезают в строку - лента прокручивается вбок, и
+     только вбок. С overflow-x браузер давал прокрутку и по вертикали, а
+     подчёркивание выступало за ленту на пиксель - лента ездила вверх-вниз. */
   .ym-tabs {
-    flex-wrap: wrap;
-    gap: 0.375rem;
-    overflow: visible;
-    border-bottom: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .ym-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .ym .ym-tabs button {
     margin-bottom: 0;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 0;
-    border-radius: 4px;
-    background: #ecebe6;
-  }
-
-  .ym .ym-tabs button.on {
-    background: var(--ink);
-    color: #fff;
-  }
-
-  .ym .ym-tabs button.on em {
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
   }
 
   /* На телефоне цифрам - сколько им нужно, остальное - кошельку и брендам. */
