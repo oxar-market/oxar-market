@@ -95,7 +95,18 @@ test("база отбивает ровно те невидимые знаки, �
     }
   }
   const { readFile } = await import("node:fs/promises");
-  const sql = await readFile(new URL("../../../supabase/migrations/20261116030000_profile_invisible.sql", import.meta.url), "utf8");
-  assert.ok(sql.includes(`display_name !~ '[${ranges.join("")}]'`), "класс имени в базе разошёлся с экраном");
-  assert.ok(sql.includes(`brand !~ '[${ranges.join("")}]'`), "класс бренда в базе разошёлся с экраном");
+  // [[:cntrl:]] в базе - сверх списка: что он ловит, зависит от локали базы,
+  // и лишним он быть не может.
+  const sql = await readFile(new URL("../../../supabase/migrations/20261116040000_profile_separators.sql", import.meta.url), "utf8");
+  assert.ok(sql.includes(`display_name !~ '[[:cntrl:]${ranges.join("")}]'`), "класс имени в базе разошёлся с экраном");
+  assert.ok(sql.includes(`brand !~ '[[:cntrl:]${ranges.join("")}]'`), "класс бренда в базе разошёлся с экраном");
+});
+
+test("разделитель строки в имени становится пробелом, в бренде - не проходит", () => {
+  // В базу уходит уже чистое имя: разделитель там запрещён, а пробел - нет.
+  assert.deepEqual(cleanProfile({ name: "Ali\u2028ce", brand: "", x: "" }), {
+    ok: true,
+    value: { display_name: "Ali ce", brand: null, x_handle: null },
+  });
+  assert.equal(cleanProfile({ name: "", brand: "Ac\u2029me", x: "" }).ok, false);
 });
