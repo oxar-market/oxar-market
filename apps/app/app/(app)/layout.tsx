@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Login } from "./providers";
-import "./globals.css";
+import { Login } from "../providers";
+import "../globals.css";
 
 /**
  * Тот же шрифт, что на лендинге: человек приходит оттуда, и смена букв на
