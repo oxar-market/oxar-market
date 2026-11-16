@@ -4134,25 +4134,6 @@ a.sl-pill {
   background: #f2a900;
 }
 
-.sl-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  width: 100%;
-  padding: 10px 4px 0;
-  font-size: 0.8125rem;
-  color: var(--mut);
-}
-
-.sl-foot .build {
-  margin: 0;
-}
-
-.sl-foot a {
-  color: inherit;
-  text-underline-offset: 3px;
-}
-
 .sl-empty {
   margin: 0;
   padding: 14px 0;
@@ -9574,6 +9555,10 @@ body:has(.app-v2)::after {
 .v2.v2-wide {
   max-width: 120rem;
   padding: 0 1.5rem;
+}
+
+.ym-wait {
+  min-height: 80vh;
 }
 
 .lot-v2 button {
