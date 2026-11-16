@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useLogin, usePrivy } from "@privy-io/react-auth";
+import { useIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
 import {
   useConnectedStandardWallets,
   useStandardSignTransaction,
@@ -29,6 +29,7 @@ import {
   walletUnits,
 } from "@/lib/chain";
 import { lotNoLockup, recordBid, uploadCreative, type Lot } from "@/lib/auction";
+import { syncContact } from "@/lib/session";
 
 /**
  * Ставка.
@@ -76,7 +77,8 @@ export function BidForm({
   /** Шаг с картинкой: живёт в форме, как в направлении дизайна. */
   children?: React.ReactNode;
 }) {
-  const { authenticated } = usePrivy();
+  const { authenticated, getAccessToken } = usePrivy();
+  const { identityToken } = useIdentityToken();
   const { login } = useLogin();
   const { wallets } = useConnectedStandardWallets();
   const { signTransaction } = useStandardSignTransaction();
@@ -178,6 +180,13 @@ export function BidForm({
       // Без SOL на комиссию ставку сеть не примет - говорим это до подписи,
       // а не через полминуты «потеряли ставку».
       if (await lacksFeeSol(new PublicKey(wallet.address))) return setError(NO_FEE_SOL);
+
+      // Ставку запишет сервер, и только если кошелёк из транзакции - этого
+      // человека. Связь кошелька с ним сервер берёт из подписанного Privy
+      // identity-токена: освежаем её до подписи, чтобы только что созданный
+      // кошелёк не остался без привязки и ставка не потерялась на записи.
+      const privyToken = await getAccessToken();
+      if (privyToken && identityToken) await syncContact(privyToken, identityToken);
 
       const mediaUrl = await uploadCreative(lot.id, art.file);
       if (!mediaUrl) return setError("Could not upload the artwork. Try again.");

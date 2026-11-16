@@ -67,9 +67,9 @@ jobs:
 
       # Текст уведомлений и письма. Функция notify живёт вне пакетов pnpm,
       # поэтому turbo её не видит - гоняем отдельно и так же требуем число.
-      - name: Тесты текста уведомлений
+      - name: Тесты текста уведомлений и разбора ставки
         run: |
-          node --test --experimental-strip-types supabase/functions/notify/*.test.ts 2>&1 | tee /tmp/notify.log
+          node --test --experimental-strip-types supabase/functions/notify/*.test.ts supabase/functions/record-bid/*.test.ts 2>&1 | tee /tmp/notify.log
           grep -qE '# pass [1-9]' /tmp/notify.log \
             || { echo "ни одного пройденного теста уведомлений"; exit 1; }
           grep -qE '# fail 0' /tmp/notify.log \
@@ -222,11 +222,22 @@ jobs:
             echo "RESEND_API_KEY не заведён - писем не будет, только пуши"
           fi
 
+      # Нода для record-bid: та же, что у сайта. Пусто - публичная нода
+      # mainnet, а пустое значение не затирает положенное раньше.
+      - name: Нода Solana -> Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SOLANA_RPC: ${{ secrets.NEXT_PUBLIC_SOLANA_RPC }}
+        run: |
+          if [ -n "$SOLANA_RPC" ]; then
+            supabase secrets set SOLANA_RPC="$SOLANA_RPC" --project-ref islmypspqjxuhplcibam
+          fi
+
       - name: Функции -> Supabase
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: >-
-          supabase functions deploy privy-session notify
+          supabase functions deploy privy-session notify record-bid
           --project-ref islmypspqjxuhplcibam
 
       # Прежние пуш-функции звать мог кто угодно с анонимным ключом, и
@@ -270,3 +281,6 @@ jobs:
             | grep -ci 'access-control-allow-origin: https://oxar.app' || true)
           test "$ok" = "1" || { echo "предзапрос CORS с oxar.app не разрешён"; exit 1; }
           echo "мост отвечает, отбивает чужое и пускает наш домен"
+          # Запись ставки: без сессии человека - отказ, даже с анонимным ключом.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$URL/functions/v1/record-bid" -H "Authorization: Bearer $ANON" -H 'Content-Type: application/json' -d '{}')
+          test "$code" = "401" || { echo "record-bid без сессии ожидали 401, получили $code"; exit 1; }
