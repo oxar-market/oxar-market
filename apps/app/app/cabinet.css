@@ -240,6 +240,20 @@
   color: var(--ink);
 }
 
+/* Подчёркивание - прямой чертой ровно по линии вкладок: общее правило
+   кнопок кабинета скругляло ему концы, а нажатие на телефоне оставляло
+   серую рамку подсветки. */
+.ym .ym-tabs button {
+  margin-bottom: -1px;
+  border-radius: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ym .ym-tabs button:focus-visible {
+  background: #ecebe6;
+}
+
 .ym-tabs em {
   padding: 0.0625rem 0.3125rem;
   border-radius: 4px;
@@ -568,31 +582,11 @@ b.ym-num {
   margin: 0.5rem 0 0;
 }
 
-.ym-funds {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #f0efea;
-}
-
-.ym-funds code {
-  display: block;
-  padding: 0.5rem 0.625rem;
-  border-radius: 4px;
-  background: var(--panel);
-  font-size: 0.75rem;
-  overflow-wrap: anywhere;
-}
-
-.ym-funds p,
 .ym-bad {
   margin: 0.5rem 0 0;
-  color: var(--mut);
+  color: var(--red);
   font-size: 0.75rem;
   line-height: 1.5;
-}
-
-.ym-bad {
-  color: var(--red);
 }
 
 .ym-link {
@@ -695,6 +689,94 @@ b.ym-num {
   height: 100%;
 }
 
+/* Пьедестал: три карточки в ряд, первая выше и по центру. */
+.ym-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+}
+
+.ym-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 1rem 0.75rem;
+  border: 1px solid #e7e6e1;
+  border-radius: 6px;
+  background: #fff;
+  text-align: center;
+}
+
+.ym-step.p1 {
+  padding-top: 1.75rem;
+  padding-bottom: 1.5rem;
+}
+
+.ym-step.me {
+  background: #fff7f5;
+  border-color: rgba(224, 56, 28, 0.35);
+}
+
+.ym-step-place {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 2.975rem;
+  margin-bottom: 0.25rem;
+}
+
+.ym-step-place .ym-laurel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ym-step-place b {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.ym-ava.big {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.ym-step-who {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+.ym-step-who em {
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 3px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.5625rem;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ym-step .ym-brands {
+  max-width: 100%;
+}
+
+.ym-step-paid {
+  margin-top: 0.375rem;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
 .ym-pages {
   display: flex;
   align-items: center;
@@ -738,22 +820,22 @@ b.ym-num {
   gap: 1rem;
 }
 
-:is(.ym, .ym-bare) :is(.role-card, .sl-card, .sl-photo, .sl-qr-card, .sl-waiting, .win-card, .ad-viewer) {
+:is(.ym-legacy, .ym-bare, .ym .wins) :is(.role-card, .sl-card, .sl-photo, .sl-qr-card, .sl-waiting, .win-card, .ad-viewer) {
   border: 1px solid #e7e6e1;
   border-radius: 6px;
   background: #fff;
   box-shadow: none;
 }
 
-:is(.ym, .ym-bare) :is(input, textarea, select, .sl-input, .sl-field, .sl-line, .addr-box, .sl-qr, .ad-check, .ad-give, .ad-prepare, .ad-reason, .ad-row, .ad-scene) {
+:is(.ym-legacy, .ym-bare, .ym .wins) :is(input, textarea, select, .sl-input, .sl-field, .sl-line, .addr-box, .sl-qr, .ad-check, .ad-give, .ad-prepare, .ad-reason, .ad-row, .ad-scene) {
   border-radius: 6px;
 }
 
-:is(.ym, .ym-bare) :is(button, a.primary, .primary, .ghost, .sl-btn, .sl-next, .sl-open-camera, .sl-qr-actions, .sl-yesno, .viewer-close, .sl-chip, .sl-kind, .sl-pill, .role-toggle, .theme-row) {
+:is(.ym-legacy, .ym-bare, .ym .wins) :is(button, a.primary, .primary, .ghost, .sl-btn, .sl-next, .sl-open-camera, .sl-qr-actions, .sl-yesno, .viewer-close, .sl-chip, .sl-kind, .sl-pill, .role-toggle, .theme-row) {
   border-radius: 4px;
 }
 
-:is(.ym, .ym-bare) :is(.primary, .sl-btn.dark) {
+:is(.ym-legacy, .ym-bare, .ym .wins) :is(.primary, .sl-btn.dark) {
   background: var(--ink);
   color: #fff;
   font-weight: 600;
@@ -835,6 +917,23 @@ b.ym-num {
   .ym-ava {
     width: 1.5rem;
     height: 1.5rem;
+  }
+
+  .ym-ava.big {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .ym-podium {
+    gap: 0.375rem;
+  }
+
+  .ym-step {
+    padding: 0.75rem 0.375rem;
+  }
+
+  .ym-step-paid {
+    font-size: 1rem;
   }
 }
 

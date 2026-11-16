@@ -7,7 +7,7 @@ import { loadOnAir } from "@/lib/auction";
 import { isShirt } from "@/lib/shape";
 import { avatarLetter } from "@oxar/core";
 import { Foot, Top, type Account } from "../../_site/landing.tsx";
-import { saveMe, type Me } from "../../_site/me.ts";
+import { readMe, saveMe, type Me } from "../../_site/me.ts";
 import { You } from "../../you";
 import { PhoneCapture } from "../../seller/flow.tsx";
 import { ListingAuction } from "../../listing/listing.tsx";
@@ -106,9 +106,15 @@ export default function Home() {
 
   // Вошёл - в шапке его аватар, ведёт в профиль; нет - вход. Пока Privy
   // поднимается, кнопка тоже «Log in»: так она не прыгает у тех, кто не входил.
+  // Буква - первый символ кошелька, без него - почты.
   const seed = user?.wallet?.address ?? user?.email?.address ?? null;
-  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(user?.email?.address ?? seed) } : null;
-  const account: Account = me ? { label: "Profile", href: "/app", me } : { label: "Log in", onClick: login };
+  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed) } : null;
+  // Пока Privy поднимается, верим подсказке с прошлого входа: иначе по
+  // нажатию на аватар на миг мелькал «Log in».
+  const [hint, setHint] = useState<Me | null>(null);
+  useEffect(() => setHint(readMe()), []);
+  const shown = me ?? (!ready ? hint : null);
+  const account: Account = shown ? { label: "Profile", href: "/app", me: shown } : { label: "Log in", onClick: login };
   // Подсказка для шапки лендинга: там Privy нет, и без неё был бы «Log in».
   useEffect(() => {
     if (!ready) return;

@@ -189,3 +189,37 @@ export function BoardRow({ one, at, me, pinned }: { one: Bidder; at: number; me?
     </div>
   );
 }
+
+/**
+ * Первые три места - пьедесталом над таблицей: второе, первое, третье, первое
+ * выше. Венок своего металла, кошелёк, бренды и сколько заплатил.
+ */
+export function Podium({ top, me }: { top: Bidder[]; me: Bidder | null }) {
+  const order = [1, 0, 2].filter((at) => top[at]);
+  return (
+    <div className="ym-podium">
+      {order.map((at) => {
+        const one = top[at]!;
+        return (
+          <div key={one.wallet} className={`ym-step p${at + 1}${one === me ? " me" : ""}`}>
+            <span className="ym-step-place">
+              <Laurel place={at + 1} />
+              <b>{at + 1}</b>
+            </span>
+            <span className="ym-ava big" style={avatar(one.wallet)} />
+            <b className="ym-step-who">
+              {shortWallet(one.wallet)}
+              {one === me && <em>You</em>}
+            </b>
+            <span className="ym-brands">{one.brands.join(", ") || "No name"}</span>
+            <b className="ym-step-paid">{formatUsd(one.paidCents)}</b>
+            <span className="ym-brands">
+              {one.spots} {one.spots === 1 ? "spot" : "spots"}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
