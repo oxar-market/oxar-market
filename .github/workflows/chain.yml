@@ -89,8 +89,18 @@ jobs:
       #
       # Ссылка в rustup переставляется заодно: anchor трогает её при сборке
       # IDL, и старый набор там ни к чему.
+      #
+      # Сам архив качаем по прямой ссылке на релиз, а не через --install-only:
+      # тот ходит в API GitHub без токена, и под лимитом на общий IP раннера
+      # падал с «Failed to parse Github response». Когда набор уже лежит в
+      # кэше, build-sbf в сеть не ходит.
       - name: Platform-tools
         run: |
+          tools="$HOME/.cache/solana/v1.52/platform-tools"
+          mkdir -p "$tools"
+          curl -sSfL --retry 3 \
+            https://github.com/anza-xyz/platform-tools/releases/download/v1.52/platform-tools-linux-x86_64.tar.bz2 \
+            | tar xjf - -C "$tools"
           sbf="$HOME/.local/share/solana/install/active_release/bin/cargo-build-sbf"
           "$sbf" --version
           "$sbf" --tools-version v1.52 --install-only
