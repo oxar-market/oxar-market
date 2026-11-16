@@ -9560,10 +9560,20 @@ body::after {
   font-size: 0.875rem;
 }
 
-.app:has(.lot-v2) {
+/* Страницы приложения - страницы сайта: колонка и поля задаёт .v2, торгу
+   вещи она шире, а полосы под нижним меню больше нет - нет и меню. */
+.app.app-v2 {
+  max-width: none;
+  padding: 0;
+}
+
+body:has(.app-v2)::after {
+  display: none;
+}
+
+.v2.v2-wide {
   max-width: 120rem;
-  padding-top: 0;
-  padding-inline: 1.5rem;
+  padding: 0 1.5rem;
 }
 
 .lot-v2 button {
@@ -9577,59 +9587,6 @@ body::after {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-/* Шапка */
-.lt-top {
-  position: sticky;
-  top: 0;
-  z-index: 9;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  margin: 0 -1.5rem;
-  padding: 1.25rem 1.5rem;
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.lt-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--ink);
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  text-decoration: none;
-}
-
-.lt-brand img {
-  width: 1.625rem;
-  height: 1.625rem;
-  object-fit: contain;
-}
-
-.lt-nav {
-  display: flex;
-  gap: 2rem;
-}
-
-.lt-nav a,
-.lt-sell {
-  color: var(--ink);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.lt-sell {
-  justify-self: end;
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  background: var(--ink);
-  color: var(--bg);
 }
 
 /* Заголовок торга и часы */
@@ -10306,18 +10263,8 @@ body::after {
 
 /* Телефон: шапка без ссылок, всё одной колонкой. */
 @media (max-width: 47.99rem) {
-  .app:has(.lot-v2) {
-    padding-inline: 1rem;
-  }
-
-  .lt-top {
-    grid-template-columns: 1fr auto;
-    margin: 0 -1rem;
-    padding: 1rem;
-  }
-
-  .lt-nav {
-    display: none;
+  .v2.v2-wide {
+    padding: 0 1rem;
   }
 
   .lt-head {

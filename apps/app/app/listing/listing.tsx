@@ -364,22 +364,6 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
 
   return (
     <section className="lot lot-v2">
-      {/* Шапка как у сайта: торг - часть oxar.app, а не отдельное приложение. */}
-      <nav className="lt-top">
-        <a className="lt-brand" href="https://oxar.app">
-          <img src="/oxar-mark.webp" alt="" />
-          OXAR
-        </a>
-        <span className="lt-nav">
-          <a href="https://oxar.app/auctions">Auctions</a>
-          <a href="https://oxar.app/#how">How it works</a>
-          <a href="https://oxar.app/sell">Sell a spot</a>
-        </span>
-        <a className="lt-sell" href="https://oxar.app/sell">
-          Sell a spot
-        </a>
-      </nav>
-
       <header className="lt-head">
         <div className="lt-title">
           <button type="button" className="lt-back" onClick={onBack}>

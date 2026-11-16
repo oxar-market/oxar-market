@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Login } from "../providers";
 import "../globals.css";
+import "../_site/site.css";
 
 /**
  * Тот же шрифт, что на лендинге: человек приходит оттуда, и смена букв на
@@ -59,16 +60,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={oxar.variable} suppressHydrationWarning>
+    <html lang="en" className={oxar.variable}>
       <body>
-        {/* Тема ставится до первой отрисовки, иначе тёмный экран мигает
-            светлым кадром. Выбор лежит в localStorage; пусто - светлая,
-            а за системной темой идём, только если её выбрали явно. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("oxar.theme");if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}else if(t!=="dark"){t="light"}document.documentElement.dataset.theme=t}catch(e){}`,
-          }}
-        />
         <Login>{children}</Login>
       </body>
     </html>
