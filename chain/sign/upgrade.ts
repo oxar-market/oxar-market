@@ -16,6 +16,11 @@
  * принадлежат подключённому кошельку, и прогоняет транзакцию вхолостую:
  * показывает, сколько SOL будет на кошельке после неё.
  *
+ * И сверяет сам код: sha256 кода в буфере должен совпасть с хэшем своей
+ * сборки, вписанным руками. Иначе чужой буфер, переданный владельцу, с чужой
+ * ссылкой на эту страницу прошёл бы все остальные проверки. Нода из ссылки
+ * не берётся по той же причине: подложная нода показала бы «всё сошлось».
+ *
  * Сборка (из chain/): ../node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/bin/esbuild
  *   sign/upgrade.ts --bundle --format=iife --platform=browser
  *   --alias:buffer=./node_modules/.pnpm/buffer@6.0.3/node_modules/buffer
@@ -54,6 +59,13 @@ async function check() {
     const buffer = new PublicKey(($("buffer") as HTMLInputElement).value.trim());
     const info = await inspect(connection, PROGRAM, buffer);
 
+    // Код в буфере - после заголовка: 4 байта типа, 1 - флаг владельца, 32 - владелец.
+    const bufferAccount = await connection.getAccountInfo(buffer);
+    if (!bufferAccount) throw new Error("Буфер не найден в сети");
+    const digest = await crypto.subtle.digest("SHA-256", new Uint8Array(bufferAccount.data.subarray(37)));
+    const codeHash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const expected = ($("hash") as HTMLInputElement).value.trim().toLowerCase();
+
     const lines = [
       `Сеть:                 ${($("rpc") as HTMLInputElement).value.trim()}`,
       `Кошелёк:              ${owner.toBase58()}`,
@@ -63,7 +75,10 @@ async function check() {
       `Код сейчас / новый:   ${info.codeNow} / ${info.codeNew} байт`,
       `Расширить на:         ${info.extend} байт`,
       `Залог буфера:         ${sol(info.bufferLamports)} - вернётся на кошелёк`,
+      `sha256 кода в буфере: ${codeHash}`,
+      `sha256 своей сборки:  ${expected || "не вписан"}`,
     ];
+    if (codeHash !== expected) throw new Error(`${lines.join("\n")}\n\nКод в буфере - не твоя сборка. Не подписывай.`);
     if (!info.upgradeAuthority?.equals(owner)) throw new Error(`${lines.join("\n")}\n\nПраво обновления не у этого кошелька.`);
     if (!info.bufferAuthority?.equals(owner)) throw new Error(`${lines.join("\n")}\n\nБуфер не передан этому кошельку.`);
 
@@ -109,7 +124,7 @@ async function sign() {
 
 $("check").addEventListener("click", () => void check());
 $("sign").addEventListener("click", () => void sign());
+// Ноду из ссылки не берём: подложная нода показала бы, что всё сошлось.
 const params = new URLSearchParams(location.search);
-if (params.get("rpc")) ($("rpc") as HTMLInputElement).value = params.get("rpc")!;
 if (params.get("program")) ($("program") as HTMLInputElement).value = params.get("program")!;
 if (params.get("buffer")) ($("buffer") as HTMLInputElement).value = params.get("buffer")!;
