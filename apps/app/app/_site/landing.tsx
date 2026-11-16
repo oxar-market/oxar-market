@@ -243,8 +243,8 @@ export function Top({ account }: { account?: Account }) {
           Sell a spot
         </a>
         {shown.me ? (
-          <a className="v2-me" href={shown.href ?? "/app"} aria-label="Your profile" style={avatar(shown.me.seed)}>
-            {shown.me.letter}
+          <a className="v2-me" href={shown.href ?? "/app"} aria-label="Your profile" style={shown.me.img ? undefined : avatar(shown.me.seed)}>
+            {shown.me.img ? <img src={shown.me.img} alt="" /> : shown.me.letter}
           </a>
         ) : shown.href ? (
           <a className="v2-btn light v2-account" href={shown.href}>

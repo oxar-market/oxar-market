@@ -71,3 +71,5 @@ export { normalizeProof, proofPayload, type ProofParts } from "./proof-payload.t
 export { PREVIEW_SIDE, imageExt, isCreativeUrl, needsPreview, originalUrl, previewPath, previewSize } from "./preview.ts";
 
 export { rankBidders, type Bidder, type BoardBid, type BoardLot } from "./board.ts";
+
+export { NAME_MAX, cleanProfile, passReach, type ProfileInput, type ProfileRow, type ThingReach } from "./profile.ts";
