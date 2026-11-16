@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
 import { db, exchange, syncContact } from "@/lib/session";
 import { BUILD } from "@/lib/build";
-import { Market } from "./market";
-import { Tabs, useTab } from "./tabs";
-import { ThemeRow, You } from "./you";
-import { PhoneCapture } from "./seller/flow.tsx";
-import { ListingAuction } from "./listing/listing.tsx";
-import { AuctionTab } from "./auction/on-air.tsx";
+import { Market } from "../../market";
+import { Tabs, useTab } from "../../tabs";
+import { ThemeRow, You } from "../../you";
+import { PhoneCapture } from "../../seller/flow.tsx";
+import { ListingAuction } from "../../listing/listing.tsx";
+import { AuctionTab } from "../../auction/on-air.tsx";
 
 /**
  * Приложение.

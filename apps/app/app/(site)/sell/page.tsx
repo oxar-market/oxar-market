@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import "../_site/site.css";
-import { Owners } from "../_site/owners.tsx";
+import "../../_site/site.css";
+import { Owners } from "../../_site/owners.tsx";
 
 export const metadata: Metadata = {
   title: "Sell a spot - OXAR",
