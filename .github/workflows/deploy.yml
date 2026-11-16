@@ -9,6 +9,9 @@ name: Deploy
 #
 # PR по-прежнему только проверяется: тесты и сборка.
 #
+# Сторонние actions закреплены хэшем коммита, а не тегом: тег можно
+# переписать, а шаги после них работают с токенами Cloudflare и Supabase.
+#
 # Проектов Pages два, по одному на домен:
 #   apps/app             -> oxar.app       (лендинг, торги и кабинет)
 #   deploy/app-redirect  -> app.oxar.app   (перенаправление на oxar.app/app)
@@ -36,13 +39,11 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # Версию берём из поля packageManager в package.json —
       # если задать её и здесь, action падает на конфликте версий.
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -81,7 +82,7 @@ jobs:
       # переписать, чужой кошелёк не привязать, роль продавца себе не выдать.
       # Проверяются на настоящей базе с теми же миграциями: она поднимается
       # здесь же, тесты идут в откатываемой транзакции.
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
         with:
           version: 2.122.1
       - name: SQL-тесты инвариантов базы
@@ -95,11 +96,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -180,7 +179,7 @@ jobs:
       # Не latest: 2 ноября 2026 вышел CLI 3.0, и он не принимает наш
       # config.toml ([inbucket] переименован) - деплой схемы упал. Переезд на
       # 3.x - отдельно, вместе с локальным стеком (у всех worktree он 2.x).
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
         with:
           version: 2.122.1
 
@@ -199,14 +198,19 @@ jobs:
 
       # Секреты функций ставятся перед выкаткой: функция, поднявшаяся без
       # PRIVY_APP_ID, принимала бы токены чужих приложений.
+      # Значения - через env, а не подстановкой в команду: подставленный
+      # секрет оказывается в тексте скрипта на диске раннера.
       - name: Секреты функций -> Supabase
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
         run: >-
           supabase secrets set
-          PRIVY_APP_ID=${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
-          VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }}
-          VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }}
+          PRIVY_APP_ID="$PRIVY_APP_ID"
+          VAPID_PUBLIC_KEY="$VAPID_PUBLIC_KEY"
+          VAPID_PRIVATE_KEY="$VAPID_PRIVATE_KEY"
           --project-ref islmypspqjxuhplcibam
 
       # Ключ почты - отдельно и только если он заведён: без него notify шлёт
