@@ -15,7 +15,9 @@ export const NAME_MAX = 40;
  */
 const WALLET = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const SHORT_WALLET = /^[1-9A-HJ-NP-Za-km-z]{2,8}(\.{2,3}|…)[1-9A-HJ-NP-Za-km-z]{2,8}$/;
-const INVISIBLE = /[\p{Cc}\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/u;
+// Невидимые - управляющие, форматные и все Default_Ignorable, плюс пустая
+// клетка Брайля: она не «ignorable», но рисуется пустотой.
+const INVISIBLE = /[\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}\u2800]/u;
 
 export type ProfileInput = { name: string; brand: string; x: string };
 export type ProfileRow = { display_name: string | null; brand: string | null; x_handle: string | null };

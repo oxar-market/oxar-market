@@ -70,3 +70,13 @@ test("имя приводится к NFKC: широкие буквы - обыч�
     value: { display_name: "Alice", brand: null, x_handle: null },
   });
 });
+
+test("пустые знаки хангыля и Брайля и метки-теги - тоже невидимые", () => {
+  assert.equal(cleanProfile({ name: "Aliceㅤ", brand: "", x: "" }).ok, false);
+  assert.equal(cleanProfile({ name: "Alice⠀", brand: "", x: "" }).ok, false);
+  assert.equal(cleanProfile({ name: "Alice\u{E0041}", brand: "", x: "" }).ok, false);
+});
+
+test("короткий кошелёк широкими знаками - всё равно кошелёк", () => {
+  assert.equal(cleanProfile({ name: "７ＭｖＬ．．８ＬｇＶ", brand: "", x: "" }).ok, false);
+});
