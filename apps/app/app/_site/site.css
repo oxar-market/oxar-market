@@ -191,6 +191,15 @@
   width: 100%;
 }
 
+/* Вход или кабинет в шапке - светлой кнопкой рядом с тёмной «Sell a spot». */
+.v2-account {
+  border: 1px solid #e3e2dc;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .v2-btn:hover {
   opacity: 0.88;
 }

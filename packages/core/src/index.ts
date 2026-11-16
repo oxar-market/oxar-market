@@ -69,3 +69,5 @@ export {
 export { normalizeProof, proofPayload, type ProofParts } from "./proof-payload.ts";
 
 export { PREVIEW_SIDE, imageExt, isCreativeUrl, needsPreview, originalUrl, previewPath, previewSize } from "./preview.ts";
+
+export { rankBidders, type Bidder, type BoardBid, type BoardLot } from "./board.ts";

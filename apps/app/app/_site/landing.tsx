@@ -195,7 +195,13 @@ export function Landing() {
 /** Вход - вкладка You в приложении: там Privy и предлагает войти. */
 const LOGIN = `${APP_URL}?tab=you`;
 
-export function Top() {
+/**
+ * Вход в шапке. На лендинге Privy нет, и он всегда ведёт на вход в кабинете;
+ * страницы кабинета и торга подставляют сюда вошедшего человека.
+ */
+export type Account = { label: string; href?: string; onClick?: () => void };
+
+export function Top({ account = { label: "Log in", href: LOGIN } }: { account?: Account }) {
   const [open, setOpen] = useState(false);
 
   // Пока меню открыто, страница под ним не крутится, а Escape его закрывает.
@@ -231,9 +237,15 @@ export function Top() {
         <a className="v2-btn dark v2-wide-only" href="/sell">
           Sell a spot
         </a>
-        <a className="v2-btn dark v2-narrow-only" href={LOGIN}>
-          Log in
-        </a>
+        {account.href ? (
+          <a className="v2-btn light v2-account" href={account.href}>
+            {account.label}
+          </a>
+        ) : (
+          <button type="button" className="v2-btn light v2-account" onClick={account.onClick}>
+            {account.label}
+          </button>
+        )}
       </div>
       <button
         type="button"

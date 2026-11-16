@@ -3,20 +3,24 @@
 import { useEffect, useState } from "react";
 import { useIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
 import { db, exchange, syncContact } from "@/lib/session";
-import { BUILD } from "@/lib/build";
-import { Market } from "../../market";
-import { Tabs, useTab } from "../../tabs";
-import { ThemeRow, You } from "../../you";
+import { loadOnAir } from "@/lib/auction";
+import { isShirt } from "@/lib/shape";
+import { Foot, Top, type Account } from "../../_site/landing.tsx";
+import { You } from "../../you";
 import { PhoneCapture } from "../../seller/flow.tsx";
 import { ListingAuction } from "../../listing/listing.tsx";
-import { AuctionTab } from "../../auction/on-air.tsx";
+import { Auction } from "../../auction/auction.tsx";
 
 /**
- * Приложение.
+ * Приложение - страницы того же сайта, что лендинг: его шапка и подвал, без
+ * своего меню. Маркета нет: все торги - на /auctions и вкладкой в кабинете.
+ *
+ * ?thing=<id> - торг вещи, иначе - кабинет. Старые ссылки из писем и постов
+ * ведут сюда же: ?tab=market - на /auctions, ?tab=auction - на идущий или
+ * ближайший торг.
  *
  * Торг виден до входа: гость должен увидеть, за что идёт борьба, раньше чем у
- * него спросят кто он. Вход возникает в момент ставки, а не на пороге - на
- * пустой странице никто не регистрируется.
+ * него спросят кто он. Вход возникает в момент ставки, а не на пороге.
  *
  * Обмен токена на сессию идёт один раз после входа: токен Privy живёт около
  * часа, а сессия Supabase обновляется сама.
@@ -24,39 +28,42 @@ import { AuctionTab } from "../../auction/on-air.tsx";
 export default function Home() {
   const { ready, authenticated, user, getAccessToken } = usePrivy();
   const { login } = useLogin();
-  const [tab, setTab] = useTab();
-  // Вещь продавца, открытая с маркета или из кабинета. Пусто - на вкладке
-  // торга идущие и назначенные торги каруселью.
-  const [openThing, setOpenThing] = useState<string | null>(null);
-  // Открыли нашу вещь - карусель встаёт на неё, а не на первый торг.
-  const [toHouse, setToHouse] = useState(false);
+  // Что на странице: торг вещи, наша футболка своим экраном или кабинет.
+  const [view, setView] = useState<{ thing: string } | "shirt" | "you" | null>(null);
   function openAuction(thingId?: string) {
-    setOpenThing(thingId ?? null);
-    setToHouse(!thingId);
-    setTab("auction");
+    // Через адрес, а не состояние: ссылкой можно поделиться, «назад» ведёт в кабинет.
+    window.location.assign(thingId ? `/app?thing=${thingId}` : "/app?tab=auction");
   }
   const [linked, setLinked] = useState<"idle" | "linking" | "ready" | "failed">(
     "idle",
   );
 
-  // Телефон пришёл по QR с десктопа продавца: сразу камера на вкладке You.
   // Телефон пришёл по QR с десктопа: сразу камера, без входа - в ссылке
   // секрет сессии съёмки, он и есть допуск.
   const [capture, setCapture] = useState<string | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    // Кнопка из письма ведёт на вкладку: ?tab=you, ?tab=auction, ?tab=market.
     const opened = params.get("tab");
-    if (opened === "market" || opened === "auction" || opened === "you") setTab(opened);
-    // Ссылка «поделиться торгом» ведёт прямо на него: ?thing=<id вещи>.
     const thing = params.get("thing");
-    if (thing && /^[0-9a-f-]{36}$/.test(thing)) openAuction(thing);
     const secret = params.get("c");
     if (secret && /^[a-z0-9]{10}$/.test(secret)) {
       setCapture(secret);
-      setTab("you");
+      setView("you");
+    } else if (thing && /^[0-9a-f-]{36}$/.test(thing)) {
+      setView({ thing });
+    } else if (opened === "market") {
+      window.location.replace("/auctions");
+    } else if (opened === "auction") {
+      // Идущий торг, а нет его - ближайший назначенный; нет и того - все торги.
+      void loadOnAir().then((air) => {
+        const first = air[0];
+        if (!first) return window.location.replace("/auctions");
+        if (first.house && isShirt(first.model)) setView("shirt");
+        else setView({ thing: first.thingId });
+      });
+    } else {
+      setView("you");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Вышел из Privy - выходит и из базы. Раньше сессия Supabase переживала
@@ -95,81 +102,58 @@ export default function Home() {
     });
   }, [linked, identityToken, getAccessToken]);
 
-  // Торг виден до входа, поэтому весь экран на готовность Privy не держим:
-  // раньше `if (!ready) return <main />` отдавал белый лист, пока Privy
-  // поднимается, и на медленной инициализации это выглядело как «сайт не
-  // загрузился, надо перезайти». Оболочку и торг показываем сразу, а на Privy
-  // ждёт только то, что без него бессмысленно, - вкладка You.
+  // Вошёл - в шапке кабинет, нет - вход. Пока Privy поднимается, кнопка
+  // тоже «Log in»: так она не прыгает у тех, кто не входил.
+  const account: Account = ready && authenticated ? { label: "You", href: "/app" } : { label: "Log in", onClick: login };
+  const thing = view && typeof view === "object" ? view.thing : null;
+
   return (
-    <main className="app">
-      {linked === "failed" && (
-        <p className="bad banner">
-          Could not reach the database. Bidding is off until it is back.
-        </p>
-      )}
+    <main className="app app-v2">
+      <div className={thing ? "v2 v2-wide" : "v2"}>
+        <Top account={account} />
+        {linked === "failed" && (
+          <p className="bad banner">
+            Could not reach the database. Bidding is off until it is back.
+          </p>
+        )}
 
-      {tab === "market" && (
-        <Market onOpenAuction={openAuction} />
-      )}
-      {tab === "auction" &&
-        (openThing ? (
-          <ListingAuction
-            thingId={openThing}
-            onBack={() => {
-              setOpenThing(null);
-              setTab("market");
-            }}
-          />
-        ) : (
-          <AuctionTab house={toHouse} onBack={() => setTab("market")} />
-        ))}
-      {tab === "you" && capture ? (
-        <section className="screen">
-          <PhoneCapture
-            secret={capture}
-            onClose={() => {
-              setCapture(null);
-              window.history.replaceState(null, "", window.location.pathname);
-            }}
-          />
-        </section>
-      ) : tab === "you" &&
-        // Пока Privy не готов, не показываем ни Guest, ни You: иначе вошедшему
-        // на миг мелькнёт «Sign in», пока не подтвердится сессия.
-        (!ready ? (
-          <section className="screen" />
-        ) : authenticated ? (
-          <You onOpenAuction={openAuction} linked={linked === "ready"} />
-        ) : (
-          <Guest onSignIn={login} />
-        ))}
-
-      <Tabs
-        tab={tab}
-        onPick={(next) => {
-          if (next === "auction") {
-            setOpenThing(null);
-            setToHouse(false);
-          }
-          setTab(next);
-        }}
-      />
+        {thing && <ListingAuction thingId={thing} onBack={() => window.location.assign("/auctions")} />}
+        {view === "shirt" && <Auction />}
+        {view === "you" &&
+          (capture ? (
+            <section className="screen">
+              <PhoneCapture
+                secret={capture}
+                onClose={() => {
+                  setCapture(null);
+                  window.history.replaceState(null, "", window.location.pathname);
+                }}
+              />
+            </section>
+          ) : // Пока Privy не готов, не показываем ни вход, ни кабинет: иначе
+          // вошедшему на миг мелькнёт «Sign in», пока не подтвердится сессия.
+          !ready ? (
+            <section className="screen" />
+          ) : authenticated ? (
+            <You onOpenAuction={openAuction} linked={linked === "ready"} />
+          ) : (
+            <Guest onSignIn={login} />
+          ))}
+        <Foot />
+      </div>
     </main>
   );
 }
 
+/** Кабинет до входа: зачем входить и кнопка. */
 function Guest({ onSignIn }: { onSignIn: () => void }) {
   return (
-    <section className="screen">
-      <h1 className="mk-title">
-        OXAR <span>You</span>
-      </h1>
-      <p className="lead">Sign in to bid and to see what you have won.</p>
-      <button type="button" className="primary" onClick={onSignIn}>
+    <section className="ym-guest">
+      <h1>Your logo, on real things.</h1>
+      <p>Sign in to bid, see where your logo went and what comes back when someone outbids you.</p>
+      <button type="button" className="v2-btn dark" onClick={onSignIn}>
         Sign in
       </button>
-      <ThemeRow />
-      <p className="build">build {BUILD}</p>
     </section>
   );
 }
