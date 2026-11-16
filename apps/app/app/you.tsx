@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useExportWallet } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
-import { avatarLetter, formatUsd, shortWallet, unitsToCents, type Bidder, type Score } from "@oxar/core";
+import { avatarLetter, formatUsd, passReach, shortWallet, unitsToCents, type Bidder, type Score } from "@oxar/core";
 import { connection, walletUnits } from "@/lib/chain";
 import { loadMyStands, type MyStand } from "@/lib/auction";
 import { loadBidders } from "@/lib/board";
+import { EMPTY, faceUrl, loadFaces, loadMyProfile, loadReach, type Face, type Profile, type Reach } from "@/lib/profile";
 import { db } from "@/lib/session";
 import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
@@ -22,6 +23,8 @@ import { NEXT, load, type Data } from "./_site/data.ts";
 import { useViews } from "./_site/spots.tsx";
 import { BoardRow, Box, Copy, Laurel, Podium } from "./cabinet.tsx";
 import { avatar } from "./_site/me.ts";
+import { EditModal, ShareModal } from "./modals.tsx";
+import { ReachPass } from "./pass.tsx";
 
 /**
  * Кабинет человека - страница сайта: слева он сам, баланс и цифры, справа
@@ -185,13 +188,24 @@ export function You({
     );
   }
 
-  // Рейтинг и все торги - публичные данные, те же, что видит любой.
+  // Рейтинг, все торги, охват вещей и лица кошельков - публичные данные, те
+  // же, что видит любой.
   const [bidders, setBidders] = useState<Bidder[]>([]);
   const [data, setData] = useState<Data | null>(null);
+  const [reach, setReach] = useState<Record<string, Reach>>({});
+  const [faces, setFaces] = useState<Record<string, Face>>({});
   useEffect(() => {
     void loadBidders().then(setBidders);
     void load().then(setData);
+    void loadReach().then(setReach);
+    void loadFaces().then(setFaces);
   }, []);
+  // Свой профиль - когда сессия базы выписана на этого человека.
+  const [profile, setProfile] = useState<Profile>(EMPTY);
+  useEffect(() => {
+    if (linked) void loadMyProfile().then(setProfile);
+  }, [linked]);
+  const [open, setOpen] = useState<"share" | "edit" | null>(null);
   const auctions = data?.auctions ?? [];
   const { views, shooter } = useViews(auctions);
 
@@ -204,14 +218,38 @@ export function You({
   const joined = user?.createdAt ? new Date(user.createdAt) : null;
   const standsOf = (thingId: string) => stands.filter((one) => one.thingId === thingId);
   const shown = mineOnly ? auctions.filter((one) => standsOf(one.id).length > 0) : auctions;
-  const name = signIn?.by === "email" ? signIn.email : wallet ? shortWallet(wallet) : "You";
+  const name = profile.display_name ?? (signIn?.by === "email" ? signIn.email : wallet ? shortWallet(wallet) : "You");
+  const brands = profile.brand ?? me?.brands.join(", ") ?? "";
+  const picture = faceUrl(profile.avatar_path);
   const sub = [
-    signIn?.by === "email" && wallet ? shortWallet(wallet) : null,
-    me?.brands.length ? `Bids as ${me.brands.join(", ")}` : "No bids yet",
+    (profile.display_name || signIn?.by === "email") && wallet ? shortWallet(wallet) : null,
+    brands ? `Bids as ${brands}` : "No bids yet",
     joined ? `since ${joined.toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
+
+  // Пропуск - сумма охватов торгов, где стоял логотип человека.
+  const pass = passReach(me?.won ?? [], reach);
+  const thumbs: Record<string, string | undefined> = {};
+  for (const one of auctions) thumbs[one.id] = one.slug === "the-van" ? "/site/van-card.jpg" : views[one.id]?.src;
+  const passLines = pass.lines.map((line) => ({
+    title: reach[line.thingId]?.title ?? "Auction",
+    reach: line.reach >= 1000 ? `${Math.round(line.reach / 1000)}K` : String(line.reach),
+    thumb: thumbs[line.thingId],
+  }));
+  const holder = profile.display_name ?? (wallet ? shortWallet(wallet) : name);
+  const makePass = () => (
+    <ReachPass
+      holder={holder}
+      brands={brands}
+      reach={pass.total}
+      estimated={pass.estimated}
+      lines={passLines}
+      avatar={avatar(seed)}
+      picture={picture}
+    />
+  );
 
   const tabs: { id: Tab; label: string; soon?: boolean; count?: number }[] = [
     { id: "auctions", label: "Auctions", count: outbid.length + toRate.length },
@@ -237,9 +275,28 @@ export function You({
       <div className="ym-grid">
         <aside className="ym-side">
           <div className="ym-banner">
-            <span className="ym-avatar" style={avatar(seed)}>
-              {avatarLetter(seed)}
+            <span className="ym-avatar" style={picture ? undefined : avatar(seed)}>
+              {picture ? <img src={picture} alt="" /> : avatarLetter(seed)}
             </span>
+            <div className="ym-icons">
+              {pass.total > 0 && (
+                <button type="button" aria-label="Share your reach" onClick={() => setOpen("share")}>
+                  <svg viewBox="0 0 24 24" aria-hidden>
+                    <circle cx="18" cy="5" r="2.5" />
+                    <circle cx="6" cy="12" r="2.5" />
+                    <circle cx="18" cy="19" r="2.5" />
+                    <path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4" />
+                  </svg>
+                </button>
+              )}
+              {wallet && (
+                <button type="button" aria-label="Edit profile" onClick={() => setOpen("edit")}>
+                  <svg viewBox="0 0 24 24" aria-hidden>
+                    <path d="M4 20h4L19 9l-4-4L4 16v4Z" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
           <div className="ym-who">
             <h1>
@@ -248,6 +305,8 @@ export function You({
             </h1>
             <p>{sub}</p>
           </div>
+
+          {pass.total > 0 && <div className="ym-pad">{makePass()}</div>}
 
           <div className="ym-stats">
             {wallet && (
@@ -414,6 +473,7 @@ export function You({
                     view={views[one.id]?.src}
                     places={views[one.id] ? Object.keys(views[one.id]!.quads).length : null}
                     stands={standsOf(one.id)}
+                    reach={reach[one.id]}
                     onRaise={(stand) => {
                       // Торг откроется сразу на этом месте.
                       window.sessionStorage.setItem("oxar.jump", stand.code);
@@ -436,7 +496,7 @@ export function You({
                   <p>Wallets by what they paid for spots they won.</p>
                 </div>
               </div>
-              <Podium top={bidders.slice(0, 3)} me={me} />
+              <Podium top={bidders.slice(0, 3)} me={me} faces={faces} />
               <div className="ym-board">
                 <div className="ym-row head">
                   <span>#</span>
@@ -445,11 +505,11 @@ export function You({
                   <span>Paid</span>
                 </div>
                 {rest.slice(page * PAGE, (page + 1) * PAGE).map((one, at) => (
-                  <BoardRow key={one.wallet} one={one} at={page * PAGE + at + 4} me={one === me} />
+                  <BoardRow key={one.wallet} one={one} at={page * PAGE + at + 4} me={one === me} face={faces[one.wallet]} />
                 ))}
                 {/* Свою строку видно всегда: не на пьедестале и не на этой странице - внизу. */}
                 {me && rank > 3 && (rank - 3 <= page * PAGE || rank - 3 > (page + 1) * PAGE) && (
-                  <BoardRow one={me} at={rank} pinned />
+                  <BoardRow one={me} at={rank} pinned face={faces[me.wallet]} />
                 )}
               </div>
               <div className="ym-pages">
@@ -503,6 +563,28 @@ export function You({
           )}
         </section>
       </div>
+      {open === "share" && (
+        <ShareModal
+          data={{ name: holder, brands, reach: pass.total, estimated: pass.estimated, lines: passLines }}
+          onClose={() => setOpen(null)}
+        >
+          {makePass()}
+        </ShareModal>
+      )}
+      {open === "edit" && wallet && (
+        <EditModal
+          profile={profile}
+          wallet={wallet}
+          avatarStyle={avatar(seed)}
+          onSaved={(next) => {
+            setProfile(next);
+            // Шапка тоже показывает аватар - пусть узнает о новом сразу.
+            window.dispatchEvent(new CustomEvent("oxar:face", { detail: faceUrl(next.avatar_path) }));
+            void loadFaces().then(setFaces);
+          }}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </div>
   );
 }

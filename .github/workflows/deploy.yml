@@ -77,6 +77,19 @@ jobs:
 
       - run: pnpm build
 
+      # Инварианты базы: что человек может и чего не может - чужое имя не
+      # переписать, чужой кошелёк не привязать, роль продавца себе не выдать.
+      # Проверяются на настоящей базе с теми же миграциями: она поднимается
+      # здесь же, тесты идут в откатываемой транзакции.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - name: SQL-тесты инвариантов базы
+        run: |
+          supabase db start
+          supabase migration up --local
+          scripts/sql-tests.sh
+
   deploy:
     name: deploy
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

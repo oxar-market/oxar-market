@@ -3,8 +3,9 @@
 import "./cabinet.css";
 
 import { useState } from "react";
-import { formatUsd, shortWallet, spotName, type Bidder } from "@oxar/core";
+import { formatUsd, shortWallet, spotName, type Bidder, type ThingReach } from "@oxar/core";
 import type { MyStand } from "@/lib/auction";
+import { faceUrl, type Face } from "@/lib/profile";
 import type { Auction } from "./_site/data.ts";
 import { avatar } from "./_site/me.ts";
 
@@ -113,6 +114,7 @@ export function Box({
   view,
   places,
   stands,
+  reach,
   onRaise,
 }: {
   one: Auction;
@@ -121,6 +123,8 @@ export function Box({
   places: number | null;
   /** Ставки человека на этой вещи. */
   stands: MyStand[];
+  /** Охват постов о торге - у выигранного места его видно в строке. */
+  reach?: ThingReach;
   onRaise: (stand: MyStand) => void;
 }) {
   const sold = Object.keys(one.won).length;
@@ -134,7 +138,12 @@ export function Box({
     : leading
       ? { text: leading === 1 ? "You lead on 1 spot" : `You lead on ${leading} spots`, tone: "good" }
       : won
-        ? { text: won === 1 ? "Your logo is on it" : `Your logo is on it · ${won} spots`, tone: "good" }
+        ? {
+            text: [won === 1 ? "Your logo is on it" : `Your logo is on it · ${won} spots`, reach?.reach ? `${reach.checked ? "" : "~"}${people(reach.reach)} reach` : ""]
+              .filter(Boolean)
+              .join(" · "),
+            tone: "good",
+          }
         : stands.length
           ? { text: "You bid, someone else won", tone: "" }
           : { text: "You didn't bid", tone: "" };
@@ -167,7 +176,7 @@ export function Box({
 }
 
 /** Строка рейтинга: место, кошелёк с брендами, места и сколько заплатил. */
-export function BoardRow({ one, at, me, pinned }: { one: Bidder; at: number; me?: boolean; pinned?: boolean }) {
+export function BoardRow({ one, at, me, pinned, face }: { one: Bidder; at: number; me?: boolean; pinned?: boolean; face?: Face }) {
   return (
     <div className={pinned ? "ym-row pinned" : me ? "ym-row me" : "ym-row"}>
       <i className={at <= 3 ? "ym-place" : undefined}>
@@ -175,13 +184,13 @@ export function BoardRow({ one, at, me, pinned }: { one: Bidder; at: number; me?
         {at}
       </i>
       <span className="ym-who-cell">
-        <span className="ym-ava" style={avatar(one.wallet)} />
+        <Ava wallet={one.wallet} face={face} />
         <span>
           <b>
-            {shortWallet(one.wallet)}
+            {face?.display_name ?? shortWallet(one.wallet)}
             {(me || pinned) && <em>You</em>}
           </b>
-          <span className="ym-brands">{one.brands.join(", ") || "No name"}</span>
+          <span className="ym-brands">{under(one, face)}</span>
         </span>
       </span>
       <span className="ym-num">{one.spots}</span>
@@ -194,7 +203,7 @@ export function BoardRow({ one, at, me, pinned }: { one: Bidder; at: number; me?
  * Первые три места - пьедесталом над таблицей: второе, первое, третье, первое
  * выше. Венок своего металла, кошелёк, бренды и сколько заплатил.
  */
-export function Podium({ top, me }: { top: Bidder[]; me: Bidder | null }) {
+export function Podium({ top, me, faces }: { top: Bidder[]; me: Bidder | null; faces: Record<string, Face> }) {
   const order = [1, 0, 2].filter((at) => top[at]);
   return (
     <div className="ym-podium">
@@ -206,12 +215,12 @@ export function Podium({ top, me }: { top: Bidder[]; me: Bidder | null }) {
               <Laurel place={at + 1} />
               <b>{at + 1}</b>
             </span>
-            <span className="ym-ava big" style={avatar(one.wallet)} />
+            <Ava wallet={one.wallet} face={faces[one.wallet]} big />
             <b className="ym-step-who">
-              {shortWallet(one.wallet)}
+              {faces[one.wallet]?.display_name ?? shortWallet(one.wallet)}
               {one === me && <em>You</em>}
             </b>
-            <span className="ym-brands">{one.brands.join(", ") || "No name"}</span>
+            <span className="ym-brands">{under(one, faces[one.wallet])}</span>
             <b className="ym-step-paid">{formatUsd(one.paidCents)}</b>
             <span className="ym-brands">
               {one.spots} {one.spots === 1 ? "spot" : "spots"}
@@ -221,5 +230,29 @@ export function Podium({ top, me }: { top: Bidder[]; me: Bidder | null }) {
       })}
     </div>
   );
+}
+
+/** Аватар кошелька: своя картинка из профиля или цвет из адреса. */
+function Ava({ wallet, face, big }: { wallet: string; face?: Face; big?: boolean }) {
+  const picture = faceUrl(face?.avatar_path ?? null);
+  return (
+    <span className={big ? "ym-ava big" : "ym-ava"} style={picture ? undefined : avatar(wallet)}>
+      {picture && <img src={picture} alt="" />}
+    </span>
+  );
+}
+
+/** Охват коротко: 50K. */
+function people(n: number): string {
+  return n >= 1000 ? `${Math.round(n / 1000)}K` : String(n);
+}
+
+/**
+ * Строка под именем. Своё имя всегда идёт с коротким кошельком: имя выбирает
+ * человек, а кошелёк - нет, по нему и видно, кто это на самом деле.
+ */
+function under(one: Bidder, face?: Face): string {
+  const brand = face?.brand ?? (one.brands.join(", ") || "No name");
+  return face?.display_name ? `${shortWallet(one.wallet)} · ${brand}` : brand;
 }
 

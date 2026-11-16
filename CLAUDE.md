@@ -113,6 +113,7 @@ pnpm install         # зависимости всего монорепо
 pnpm dev             # оба приложения
 pnpm build           # сборка, должна быть зелёной до коммита
 pnpm test            # тесты packages/core
+scripts/sql-tests.sh # инварианты базы (RLS): в откатываемой транзакции, можно на общей локальной базе
 pnpm typecheck
 ```
 

@@ -5,6 +5,7 @@ import { useIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
 import { db, exchange, syncContact } from "@/lib/session";
 import { loadOnAir } from "@/lib/auction";
 import { isShirt } from "@/lib/shape";
+import { faceUrl, loadMyProfile } from "@/lib/profile";
 import { avatarLetter } from "@oxar/core";
 import { Foot, Top, type Account } from "../../_site/landing.tsx";
 import { readMe, saveMe, type Me } from "../../_site/me.ts";
@@ -108,7 +109,18 @@ export default function Home() {
   // поднимается, кнопка тоже «Log in»: так она не прыгает у тех, кто не входил.
   // Буква - первый символ кошелька, без него - почты.
   const seed = user?.wallet?.address ?? user?.email?.address ?? null;
-  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed) } : null;
+  // Своя картинка профиля - когда сессия базы выписана на этого человека, и
+  // сразу после сохранения в кабинете.
+  const [img, setImg] = useState<string | null>(null);
+  useEffect(() => {
+    if (linked === "ready") void loadMyProfile().then((profile) => setImg(faceUrl(profile.avatar_path)));
+  }, [linked]);
+  useEffect(() => {
+    const saved = (event: Event) => setImg((event as CustomEvent<string | null>).detail);
+    window.addEventListener("oxar:face", saved);
+    return () => window.removeEventListener("oxar:face", saved);
+  }, []);
+  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed), img } : null;
   // Пока Privy поднимается, верим подсказке с прошлого входа: иначе по
   // нажатию на аватар на миг мелькал «Log in».
   const [hint, setHint] = useState<Me | null>(null);
@@ -120,7 +132,7 @@ export default function Home() {
     if (!ready) return;
     saveMe(me);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, me?.seed, me?.letter]);
+  }, [ready, me?.seed, me?.letter, me?.img]);
   const thing = view && typeof view === "object" ? view.thing : null;
 
   return (

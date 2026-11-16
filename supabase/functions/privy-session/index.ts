@@ -51,27 +51,39 @@ function mailbox(privyId: string): string {
 }
 
 /**
- * Настоящая почта человека - из identity-токена Privy.
+ * Настоящие почта и кошельки человека - из identity-токена Privy.
  *
- * Токен подписан Privy тем же ключом, что и токен входа, а почта в нём -
- * привязанная, то есть подтверждённая кодом. Поэтому ей можно писать. Почту,
- * присланную браузером открытым текстом, мы не берём: так любой подписал бы
- * чужой адрес на наши письма.
+ * Токен подписан Privy тем же ключом, что и токен входа, а привязки в нём
+ * подтверждены: почта - кодом, кошелёк - подписью. Поэтому почте можно
+ * писать, а кошельку - показывать имя человека в рейтинге. Присланное
+ * браузером открытым текстом мы не берём: так любой подписал бы чужой адрес
+ * на наши письма или чужой кошелёк своим именем.
  *
- * undefined - токена нет или он не подошёл: почту не трогаем. null - токен
- * настоящий, а почты в нём нет: её отвязали, стираем и у себя.
+ * undefined - токена нет или он не подошёл: ничего не трогаем. Почта null -
+ * токен настоящий, а почты в нём нет: её отвязали, стираем и у себя.
  */
-async function verifiedEmail(idToken: string, privyId: string): Promise<string | null | undefined> {
+const SOLANA_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+async function verifiedAccounts(
+  idToken: string,
+  privyId: string,
+): Promise<{ email: string | null; wallets: string[] } | undefined> {
   if (!idToken) return undefined;
   try {
     const { payload } = await jwtVerify(idToken, jwks, { issuer: "privy.io", audience: PRIVY_APP_ID });
     if (payload.sub !== privyId) return undefined;
     // Privy кладёт список привязок строкой JSON.
     const raw = payload.linked_accounts;
-    const accounts = (typeof raw === "string" ? JSON.parse(raw) : raw) as { type?: string; address?: string }[] | undefined;
+    const accounts = (typeof raw === "string" ? JSON.parse(raw) : raw) as
+      | { type?: string; address?: string; chain_type?: string }[]
+      | undefined;
     if (!Array.isArray(accounts)) return undefined;
     const email = accounts.find((one) => one.type === "email" && typeof one.address === "string");
-    return email?.address?.toLowerCase() ?? null;
+    const wallets = accounts
+      .filter((one) => one.type === "wallet" && one.chain_type === "solana" && typeof one.address === "string")
+      .map((one) => one.address!)
+      .filter((address) => SOLANA_ADDRESS.test(address));
+    return { email: email?.address?.toLowerCase() ?? null, wallets };
   } catch {
     return undefined;
   }
@@ -146,12 +158,19 @@ Deno.serve(async (request) => {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
     auth: { persistSession: false },
   });
-  const email = await verifiedEmail(request.headers.get("X-Privy-Identity-Token") ?? "", privyId);
+  const verified = await verifiedAccounts(request.headers.get("X-Privy-Identity-Token") ?? "", privyId);
+  const email = verified === undefined ? undefined : verified.email;
 
   // Строка настроек есть у каждого вошедшего: переключатели человек правит
   // сам, а завести строку может только сервер. Почту меняем, только если
   // identity-токен её подтвердил или подтвердил, что её нет.
   const saveContact = async (userId: string) => {
+    // Кошельки - за аккаунтом, чьи они по подписи Privy: по ним рейтинг
+    // находит имя человека. Кошелёк, перепривязанный к другому аккаунту,
+    // переезжает вместе с подписью.
+    for (const wallet of verified?.wallets ?? []) {
+      await admin.from("wallet_owners").upsert({ wallet, user_id: userId }, { onConflict: "wallet" });
+    }
     if (email === undefined) {
       await admin.from("notification_settings").upsert({ user_id: userId }, { onConflict: "user_id", ignoreDuplicates: true });
     } else {
