@@ -62,7 +62,7 @@ async function check() {
     // Код в буфере - после заголовка: 4 байта типа, 1 - флаг владельца, 32 - владелец.
     const bufferAccount = await connection.getAccountInfo(buffer);
     if (!bufferAccount) throw new Error("Буфер не найден в сети");
-    const digest = await crypto.subtle.digest("SHA-256", bufferAccount.data.subarray(37));
+    const digest = await crypto.subtle.digest("SHA-256", new Uint8Array(bufferAccount.data.subarray(37)));
     const codeHash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
     const expected = ($("hash") as HTMLInputElement).value.trim().toLowerCase();
 
