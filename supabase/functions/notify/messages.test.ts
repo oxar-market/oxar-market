@@ -9,9 +9,9 @@ const at = (ms: number) => new Date(NOW + ms).toISOString();
 const lot: Lot = { spot: "Spot 1", thing: "Test Tee", house: false, closesAt: null };
 const houseLot: Lot = { spot: "4", thing: "OXAR Tee", house: true, closesAt: null };
 
-const YOU = "https://app.oxar.app/?tab=you";
-const AUCTION = "https://app.oxar.app/?tab=auction";
-const MARKET = "https://app.oxar.app/?tab=market";
+const YOU = "https://oxar.app/app?tab=you";
+const AUCTION = "https://oxar.app/app?tab=auction";
+const MARKET = "https://oxar.app/app?tab=market";
 
 const KINDS = [
   "outbid", "proof", "ending", "won", "appeal_last_day", "refunded",
@@ -39,7 +39,7 @@ test("каждый вид события даёт заголовок, текст
     const m = message(kind, DATA[kind], lot, NOW);
     assert.ok(m, kind);
     assert.ok(m.title && m.body && m.action, kind);
-    assert.match(m.url, /^https:\/\/app\.oxar\.app\/\?tab=(you|auction|market)$/, kind);
+    assert.match(m.url, /^https:\/\/oxar\.app\/app\?tab=(you|auction|market)$/, kind);
     // Никаких длинных и средних тире в английском тексте.
     assert.doesNotMatch(m.title + m.body + m.action, /[\u2013\u2014]/, kind);
   }
@@ -197,7 +197,7 @@ test("письмо HTML: логотип, заголовок, текст, кно�
   const html = emailHtml(m);
   assert.match(html, /<img src="https:\/\/oxar\.app\/mark\.png"/);
   assert.match(html, /<h1[^>]*>Proof is in for Spot 1<\/h1>/);
-  assert.match(html, /<a href="https:\/\/app\.oxar\.app\/\?tab=you"[^>]*>Check the proof<\/a>/);
+  assert.match(html, /<a href="https:\/\/oxar\.app\/app\?tab=you"[^>]*>Check the proof<\/a>/);
   assert.match(html, /To change or stop these emails, open You &gt; Notifications in the app\./);
   // Только встроенные стили: ни внешних таблиц, ни блока style, ни скриптов.
   assert.doesNotMatch(html, /<link|<style|<script/i);
@@ -216,7 +216,7 @@ test("письмо текстом: текст, действие со ссылк�
   const m = message("proof_due", { proof_by: "2026-10-06T10:00:00Z", days: 7 }, lot, NOW)!;
   assert.equal(
     emailText(m),
-    `${m.body}\n\nSend the proof: https://app.oxar.app/?tab=you\n\n` +
+    `${m.body}\n\nSend the proof: https://oxar.app/app?tab=you\n\n` +
       "To change or stop these emails, open You > Notifications in the app.",
   );
 });

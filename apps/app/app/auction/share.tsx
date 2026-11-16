@@ -331,7 +331,7 @@ function drawCard(
 
   ctx.fillStyle = "#6b6e76";
   ctx.font = `500 30px ${font}`;
-  ctx.fillText("Outbid me at app.oxar.app", left, 600, 460);
+  ctx.fillText("Outbid me at oxar.app", left, 600, 460);
   return canvas;
 }
 
@@ -426,7 +426,7 @@ function drawBroadcast(shot: HTMLCanvasElement | null, brand: string) {
   ctx.textAlign = "right";
   ctx.fillStyle = "#0b1020";
   ctx.font = `600 28px ${font}`;
-  ctx.fillText("app.oxar.app", 1160, 590);
+  ctx.fillText("oxar.app", 1160, 590);
   ctx.textAlign = "left";
 
   // Тонкая полоса под титром - бегущая строка эфира.

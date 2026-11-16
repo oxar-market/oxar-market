@@ -78,7 +78,7 @@ export function Landing() {
           </div>
         </div>
 
-        <a className="v2-feature" href={hero ? `${APP_URL}/?thing=${hero.id}` : APP_URL}>
+        <a className="v2-feature" href={hero ? `${APP_URL}?thing=${hero.id}` : APP_URL}>
           <div className="v2-feature-media">{hero && VIDEOS[hero.slug] && <Loop {...VIDEOS[hero.slug]} />}</div>
           <div className="v2-feature-top">
             <span className="v2-meta">
@@ -193,7 +193,7 @@ export function Landing() {
  * меню нет: он и так в шапке, а «открыть приложение» вёл бы туда же.
  */
 /** Вход - вкладка You в приложении: там Privy и предлагает войти. */
-const LOGIN = `${APP_URL}/?tab=you`;
+const LOGIN = `${APP_URL}?tab=you`;
 
 export function Top() {
   const [open, setOpen] = useState(false);
@@ -257,7 +257,7 @@ export function Top() {
           <div className="v2-menu-group">
             <p>Help</p>
             <a href="mailto:support@oxar.app">Support</a>
-            <a href={`${APP_URL}/terms`}>Terms of Service</a>
+            <a href="/terms">Terms of Service</a>
           </div>
           <a className="v2-menu-x" href={FOLLOW}>
             <XIcon />

@@ -4,7 +4,7 @@
 // Чистые функции без Deno и без сети: их гоняет node --test, а index.ts
 // только достаёт факты из базы и рассылает.
 
-const APP = "https://app.oxar.app/";
+const APP = "https://oxar.app/app";
 // Знак OXAR с лендинга: картинка по адресу, вложений в письме нет.
 const LOGO = "https://oxar.app/mark.png";
 const FOOTER = "To change or stop these emails, open You > Notifications in the app.";

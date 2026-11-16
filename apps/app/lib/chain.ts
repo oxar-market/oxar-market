@@ -402,7 +402,7 @@ export async function bidTransaction(
       new TransactionInstruction({
         programId: MEMO_PROGRAM_ID,
         keys: [],
-        data: Buffer.from("You've been outbid on OXAR - app.oxar.app", "utf8"),
+        data: Buffer.from("You've been outbid on OXAR - oxar.app", "utf8"),
       }),
     );
   }

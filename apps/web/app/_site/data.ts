@@ -2,7 +2,7 @@
  * Торги: главная, страница всех торгов и страница продавца читают одно и то же.
  */
 
-export const APP_URL = "https://app.oxar.app";
+export const APP_URL = "/app";
 /** Куда ведёт «следить за следующим»: формы подписки пока нет, анонсы - в X. */
 export const FOLLOW = "https://x.com/oxar_app";
 

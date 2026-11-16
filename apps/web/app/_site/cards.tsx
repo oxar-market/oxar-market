@@ -17,7 +17,7 @@ export function AuctionCard({ one, view }: { one: Auction; view: View | null | u
   const total = view ? Object.keys(view.quads).length : null;
   const sold = Object.keys(one.won).length;
   return (
-    <a className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}/?thing=${one.id}`}>
+    <a className={`v2-card tone-${TONES[one.slug] ?? "light"}`} href={`${APP_URL}?thing=${one.id}`}>
       <div className={PHOTOS[one.slug] ? "v2-visual photo" : "v2-visual"}>
         {PHOTOS[one.slug] ? (
           <img className="v2-photo" src={PHOTOS[one.slug]} alt="" />
