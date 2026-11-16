@@ -131,6 +131,20 @@ do $$ begin
 exception when check_violation then null;
 end $$;
 
+-- Форматные знаки, которых не было в первом списке базы: арабский знак
+-- числа и якорь аннотации. Экран их отбивает - и база отбивает тоже.
+do $$ begin
+  update public_profiles set display_name = 'Alice' || U&'\0600';
+  raise exception 'FAIL: арабский знак числа в имени';
+exception when check_violation then null;
+end $$;
+
+do $$ begin
+  update public_profiles set brand = 'Acme' || U&'\FFF9';
+  raise exception 'FAIL: якорь аннотации в бренде';
+exception when check_violation then null;
+end $$;
+
 -- Невидимые знаки: «Ali​ce» с пробелом нулевой ширины выглядит как «Alice».
 do $$ begin
   update public_profiles set display_name = 'Ali' || U&'\200B' || 'ce';
