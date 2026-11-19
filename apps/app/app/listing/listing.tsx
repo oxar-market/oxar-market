@@ -345,6 +345,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   const offer = from && lot && from.lot_id === lot.id ? from : top;
   const need = lot ? minBidCents(lot.reserve_cents, top?.amount_cents ?? null, lot.min_step_cents) : 0;
   const running = lot ? started && isOpen(Date.parse(lot.closes_at), now) : false;
+  // Все места закрыты - вместо цен итог: кто забрал место и за сколько.
+  const ended = started && lots.length > 0 && lots.every((one) => !isOpen(Date.parse(one.closes_at), now));
   // Мой кошелёк ведёт на этом месте - значит, есть чем поделиться.
   const leading = Boolean(lot && running && top && wallets[0] && top.bidder_wallet === wallets[0].address);
   const pot = lots.reduce((sum, one) => sum + (tops[one.id]?.amount_cents ?? 0), 0);
@@ -382,7 +384,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           <div className="lt-sum">
             {pot > 0 && (
               <span>
-                <b>{formatUsd(pot)}</b> bid so far · {feed.length} {feed.length === 1 ? "bid" : "bids"}
+                <b>{formatUsd(pot)}</b> {ended ? "raised" : "bid so far"} · {feed.length} {feed.length === 1 ? "bid" : "bids"}
               </span>
             )}
             <ShareAuction thingId={thingId} />
@@ -634,7 +636,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       {started && lots.length > 0 && (
         <>
           <div className="pick-head">
-            <span className="pick-title">Pick a spot</span>
+            <span className="pick-title">{ended ? "Results" : "Pick a spot"}</span>
             <span className="muted small">{thing.spots.length === 1 ? "1 spot" : `${thing.spots.length} spots`}</span>
           </div>
           <div className="pick-grid" role="group" aria-label="Spots with prices">
@@ -650,12 +652,17 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   onClick={() => choose(spot.code)}
                 >
                   <SpotThumb views={views} code={spot.code} width={48} height={38} />
-                  <span className="pick-n">{spot.label}</span>
+                  <span className="pick-n">
+                    {spot.label}
+                    {ended && one && <span className="muted"> · {holder?.brand || "Not sold"}</span>}
+                  </span>
                   <span className="pick-price">
                     {/* Цена места - сколько поставить сейчас: старт, пока
                         ставок нет, и следующая ставка, когда есть лидер. Логотип
                         лидера у цены убран: его и так видно на самой вещи. */}
-                    {one ? (
+                    {one && ended ? (
+                      holder ? formatUsd(holder.amount_cents) : "-"
+                    ) : one ? (
                       <>
                         <span className="pick-from">from</span>{" "}
                         {formatUsd(minBidCents(one.reserve_cents, holder?.amount_cents ?? null, one.min_step_cents))}
@@ -665,7 +672,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                     )}
                   </span>
                   <span className="pick-count">
-                    {one ? holder?.brand || "No bids yet" : "not for sale"}
+                    {one && ended ? holder?.brand || "Not sold" : one ? holder?.brand || "No bids yet" : "not for sale"}
                   </span>
                   <span className="pick-go" aria-hidden>
                     ›

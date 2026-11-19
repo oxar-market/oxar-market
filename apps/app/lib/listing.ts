@@ -2,6 +2,7 @@
 
 import type { Shape, Spot } from "@oxar/stage";
 import type { Lot } from "./auction.ts";
+import { finalLots } from "./final-lots.ts";
 import { db } from "./session.ts";
 import { photoUrl, type Rect } from "./seller.ts";
 import { houseShape } from "./shape.ts";
@@ -128,11 +129,14 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
   const spots = listedSpots((thing.thing_spots as SpotRow[] | null) ?? []);
   const codeOf = new Map(spots.map((spot) => [spot.id, spot.code]));
 
-  const { data: lots } = await db
+  const { data: rows } = await db
     .from("lots")
-    .select("id, spot_id, status, reserve_cents, min_step_cents, opens_at, closes_at")
+    .select("id, spot_id, status, reserve_cents, min_step_cents, opens_at, closes_at, rehearsal")
     .eq("thing_id", thingId)
-    .eq("status", "open");
+    .in("status", ["open", "won", "unsold"]);
+  // Идёт торг - его места. Нет - итог последнего: кто и за сколько забрал.
+  const open = (rows ?? []).filter((lot) => lot.status === "open");
+  const lots = open.length ? open : finalLots(rows ?? []);
 
   return {
     id: thing.id,
@@ -141,7 +145,7 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
     photos: ((thing.photos as string[] | null) ?? []).map(photoUrl),
     shape: shapeOf((thing.model_url as string) || null, spots),
     spots,
-    lots: (lots ?? []).flatMap((lot) => {
+    lots: lots.flatMap((lot) => {
       const spot_code = codeOf.get(lot.spot_id);
       return spot_code ? [{ ...lot, spot_code } as Lot] : [];
     }),
