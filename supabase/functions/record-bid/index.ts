@@ -24,6 +24,8 @@ const ORIGINS = new Set([
   "https://oxar.app",
   "https://app.oxar.app",
   "https://oxar-app.pages.dev",
+  // Тестовый стенд на devnet: своя база, но функции те же.
+  "https://oxar-test.pages.dev",
   "http://localhost:3000",
 ]);
 
