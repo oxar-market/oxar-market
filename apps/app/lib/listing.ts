@@ -1,6 +1,6 @@
 "use client";
 
-import type { Shape, Spot } from "@oxar/stage";
+import { SHIRT, type Shape, type Spot } from "@oxar/stage";
 import type { Lot } from "./auction.ts";
 import { finalLots } from "./final-lots.ts";
 import { db } from "./session.ts";
@@ -94,7 +94,9 @@ export function listedSpots(rows: SpotRow[]): ListedSpot[] {
 /** Сцена по модели вещи и местам на ней. Нет модели или мест - нет сцены. */
 export function shapeOf(model: string | null, spots: ListedSpot[]): Shape | null {
   // Наша вещь со своей разметкой в коде - она, а не разметка из базы.
-  const fixed = houseShape(model);
+  // Наша футболка тоже: её места slot_01... размечены сеткой в коде, в базе у
+  // них координат нет - без этого у её торга вещь стояла пустой.
+  const fixed = houseShape(model) ?? (model?.includes("shirt") ? SHIRT : undefined);
   if (fixed) return fixed;
   if (!model || spots.length === 0 || spots.some((spot) => !spot.geo)) return null;
   return {
