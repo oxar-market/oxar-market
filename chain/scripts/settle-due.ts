@@ -42,7 +42,7 @@ const RPC = process.env.SOLANA_RPC ?? "https://api.devnet.solana.com";
 function env(name: string): string {
   const straight = process.env[name];
   if (straight) return straight;
-  const file = readFileSync("../.env.local", "utf8");
+  const file = readFileSync(process.env.OXAR_ENV ?? "../.env.local", "utf8");
   for (const line of file.split("\n")) {
     const at = line.indexOf("=");
     if (at > 0 && line.slice(0, at).trim() === name) return line.slice(at + 1).trim();

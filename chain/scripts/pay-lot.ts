@@ -36,7 +36,7 @@ function arg(name: string): string | undefined {
 
 /** Переменные из .env.local в корне репозитория: ключ от базы лежит там. */
 function env(name: string): string {
-  const file = readFileSync("../.env.local", "utf8");
+  const file = readFileSync(process.env.OXAR_ENV ?? "../.env.local", "utf8");
   for (const line of file.split("\n")) {
     const at = line.indexOf("=");
     if (at > 0 && line.slice(0, at).trim() === name) return line.slice(at + 1).trim();
