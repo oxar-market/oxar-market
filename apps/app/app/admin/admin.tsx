@@ -78,6 +78,34 @@ export function Admin() {
     );
   }
 
+  // Что ждёт решения - одним списком наверху, а не по числам на вкладках:
+  // нажал - и ты сразу в деле, без поиска по разделам.
+  const waiting = (things ?? []).filter(awaitsReview);
+  const inbox = (waiting.length > 0 || people > 0 || disputes > 0) && (
+    <div className="sl-card sl-things ad-inbox">
+      <span className="ad-inbox-head">Needs you</span>
+      {waiting.map((one) => (
+        <button type="button" key={one.id} className="sl-thing" onClick={() => setOpen(one.id)}>
+          <Thumb src={one.photos[0] ?? null} />
+          <span className="sl-thing-name">{one.title}</span>
+          <span className="sl-thing-sub">Approve or decline</span>
+        </button>
+      ))}
+      {people > 0 && (
+        <button type="button" className="sl-thing" onClick={() => setSection("people")}>
+          <span className="sl-thing-name">{people === 1 ? "1 seller request" : `${people} seller requests`}</span>
+          <span className="sl-thing-sub">Approve or decline</span>
+        </button>
+      )}
+      {disputes > 0 && (
+        <button type="button" className="sl-thing" onClick={() => setSection("disputes")}>
+          <span className="sl-thing-name">{disputes === 1 ? "1 dispute" : `${disputes} disputes`}</span>
+          <span className="sl-thing-sub">Money is frozen until you decide</span>
+        </button>
+      )}
+    </div>
+  );
+
   const sections = (
     <div className="role-toggle slim">
       {(["things", "people", "disputes", "fee"] as const).map((one) => {
@@ -100,6 +128,7 @@ export function Admin() {
   if (section === "disputes") {
     return (
       <>
+        {inbox}
         {sections}
         <Disputes onCount={setDisputes} />
       </>
@@ -109,6 +138,7 @@ export function Admin() {
   if (section === "fee") {
     return (
       <>
+        {inbox}
         {sections}
         <FeeTerms />
       </>
@@ -118,6 +148,7 @@ export function Admin() {
   if (section === "people") {
     return (
       <>
+        {inbox}
         {sections}
         <Applications onChanged={reload} />
       </>
@@ -126,6 +157,7 @@ export function Admin() {
 
   return (
     <>
+      {inbox}
       {sections}
 
       <div className="sl-head">
@@ -290,6 +322,119 @@ function AdminThingView({
   return (
     <>
       <Bar title="Admin" onBack={onBack} />
+
+      {/* Решение по вещи - первым: ради него админ сюда и пришёл, а не
+          листать двенадцать карточек до конца. */}
+      {!thing.house && !giveable(thing) && (
+      <div className="sl-card ad-card">
+        <h3>Review</h3>
+        {state === "approved" ? (
+          <p className="muted">Approved. It shows on the Market while its auction is open.</p>
+        ) : state === "hidden" ? (
+          <p className="muted">Approved, hidden from the Market. Bidding continues on chain.</p>
+        ) : thing.declinedReason ? (
+          <p className="muted">Declined: {thing.declinedReason}</p>
+        ) : (
+          <p className="muted">
+            {thing.published
+              ? "The seller published the auction. Check the prices and approve it to show it on the Market."
+              : "Draft. The seller has not set prices and published yet - approve once they do."}
+          </p>
+        )}
+        {/* Отклонённую не одобряют: продавцу остаётся только удалить её.
+            Черновик тоже: без цен и «кто, где, когда» одобрять нечего. */}
+        {state === "awaiting" && thing.published && (
+          <button
+            type="button"
+            className="sl-btn dark"
+            disabled={busy}
+            onClick={async () => {
+              if (!(await saleModeOk(thing))) return setError(LOCKUP_MISMATCH);
+              void decide(() => reviewThing(thing.id, true), "Could not approve it.");
+            }}
+          >
+            Approve
+          </button>
+        )}
+        {state === "approved" && !confirmHide && (
+          <button
+            type="button"
+            className="sl-btn light"
+            disabled={busy}
+            onClick={() =>
+              thing.prices.length > 0
+                ? setConfirmHide(true)
+                : run(() => updateThing(thing.id, { active: false, hidden: true }), "Could not hide it.")
+            }
+          >
+            Hide from market
+          </button>
+        )}
+        {state === "approved" && confirmHide && (
+          <>
+            <p className="muted">
+              Bidding continues on chain; the current leader keeps the spot. You can show it on the Market
+              again any time.
+            </p>
+            <div className="ad-decide">
+              <button type="button" className="sl-btn light" disabled={busy} onClick={() => setConfirmHide(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="sl-btn dark"
+                disabled={busy}
+                onClick={() => {
+                  setConfirmHide(false);
+                  void run(() => updateThing(thing.id, { active: false, hidden: true }), "Could not hide it.");
+                }}
+              >
+                Hide it
+              </button>
+            </div>
+          </>
+        )}
+        {state === "hidden" && (
+          <button
+            type="button"
+            className="sl-btn dark"
+            disabled={busy}
+            onClick={async () => {
+              if (!(await saleModeOk(thing))) return setError(LOCKUP_MISMATCH);
+              void run(() => updateThing(thing.id, { active: true, hidden: false }), "Could not show it.");
+            }}
+          >
+            Show on Market
+          </button>
+        )}
+        {/* Отклонить можно только до одобрения: после него торг уже идёт
+            или прошёл, и отказ продавцу ничего бы не значил. */}
+        {(state === "draft" || state === "awaiting") && (
+          <>
+            <label className="sl-field ad-reason">
+              Reason to decline - the seller sees it
+              <textarea
+                value={reason}
+                maxLength={500}
+                rows={3}
+                placeholder="The spots are on a curved part, logos would not print well."
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="sl-btn light"
+              disabled={busy || reason.trim().length < 3}
+              onClick={() => decide(() => reviewThing(thing.id, false, reason.trim()), "Could not decline it.")}
+            >
+              Decline
+            </button>
+          </>
+        )}
+      </div>
+      )}
+
+      {error && <p className="bad">{error}</p>}
 
       <div className="sl-card ad-card">
         <label className="sl-field">
@@ -696,116 +841,6 @@ function AdminThingView({
         </div>
       )}
 
-      {!thing.house && !giveable(thing) && (
-      <div className="sl-card ad-card">
-        <h3>Review</h3>
-        {state === "approved" ? (
-          <p className="muted">Approved. It shows on the Market while its auction is open.</p>
-        ) : state === "hidden" ? (
-          <p className="muted">Approved, hidden from the Market. Bidding continues on chain.</p>
-        ) : thing.declinedReason ? (
-          <p className="muted">Declined: {thing.declinedReason}</p>
-        ) : (
-          <p className="muted">
-            {thing.published
-              ? "The seller published the auction. Check the prices and approve it to show it on the Market."
-              : "Draft. The seller has not set prices and published yet - approve once they do."}
-          </p>
-        )}
-        {/* Отклонённую не одобряют: продавцу остаётся только удалить её.
-            Черновик тоже: без цен и «кто, где, когда» одобрять нечего. */}
-        {state === "awaiting" && thing.published && (
-          <button
-            type="button"
-            className="sl-btn dark"
-            disabled={busy}
-            onClick={async () => {
-              if (!(await saleModeOk(thing))) return setError(LOCKUP_MISMATCH);
-              void decide(() => reviewThing(thing.id, true), "Could not approve it.");
-            }}
-          >
-            Approve
-          </button>
-        )}
-        {state === "approved" && !confirmHide && (
-          <button
-            type="button"
-            className="sl-btn light"
-            disabled={busy}
-            onClick={() =>
-              thing.prices.length > 0
-                ? setConfirmHide(true)
-                : run(() => updateThing(thing.id, { active: false, hidden: true }), "Could not hide it.")
-            }
-          >
-            Hide from market
-          </button>
-        )}
-        {state === "approved" && confirmHide && (
-          <>
-            <p className="muted">
-              Bidding continues on chain; the current leader keeps the spot. You can show it on the Market
-              again any time.
-            </p>
-            <div className="ad-decide">
-              <button type="button" className="sl-btn light" disabled={busy} onClick={() => setConfirmHide(false)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="sl-btn dark"
-                disabled={busy}
-                onClick={() => {
-                  setConfirmHide(false);
-                  void run(() => updateThing(thing.id, { active: false, hidden: true }), "Could not hide it.");
-                }}
-              >
-                Hide it
-              </button>
-            </div>
-          </>
-        )}
-        {state === "hidden" && (
-          <button
-            type="button"
-            className="sl-btn dark"
-            disabled={busy}
-            onClick={async () => {
-              if (!(await saleModeOk(thing))) return setError(LOCKUP_MISMATCH);
-              void run(() => updateThing(thing.id, { active: true, hidden: false }), "Could not show it.");
-            }}
-          >
-            Show on Market
-          </button>
-        )}
-        {/* Отклонить можно только до одобрения: после него торг уже идёт
-            или прошёл, и отказ продавцу ничего бы не значил. */}
-        {(state === "draft" || state === "awaiting") && (
-          <>
-            <label className="sl-field ad-reason">
-              Reason to decline - the seller sees it
-              <textarea
-                value={reason}
-                maxLength={500}
-                rows={3}
-                placeholder="The spots are on a curved part, logos would not print well."
-                onChange={(event) => setReason(event.target.value)}
-              />
-            </label>
-            <button
-              type="button"
-              className="sl-btn light"
-              disabled={busy || reason.trim().length < 3}
-              onClick={() => decide(() => reviewThing(thing.id, false, reason.trim()), "Could not decline it.")}
-            >
-              Decline
-            </button>
-          </>
-        )}
-      </div>
-      )}
-
-      {error && <p className="bad">{error}</p>}
     </>
   );
 }
