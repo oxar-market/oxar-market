@@ -52,6 +52,13 @@ jobs:
           NEXT_PUBLIC_PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
           NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
 
+      # Политика безопасности сайта (_headers) пускает запросы только в боевую
+      # базу - на стенде браузер отбил бы каждый запрос в тестовую.
+      - name: Пустить стенд в тестовую базу
+        run: |
+          sed -i "s/islmypspqjxuhplcibam/$TEST_REF/g" apps/app/out/_headers
+          grep -q "$TEST_REF" apps/app/out/_headers || { echo "в _headers нет тестовой базы"; exit 1; }
+
       - name: Проверить, что сборка смотрит в тестовую базу
         run: |
           grep -rq "$TEST_REF" apps/app/out/_next/static || { echo "в сборке нет адреса тестовой базы"; exit 1; }
