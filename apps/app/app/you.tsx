@@ -174,19 +174,6 @@ export function You({
 
   const outbid = stands.filter((one) => one.open && !one.leading);
 
-  if (rating) {
-    return (
-      <section className="screen">
-        <BuyerRating
-          key={rating.lotId ?? rating.requestId}
-          deal={rating}
-          onDone={() => setRating(null)}
-          // Оценки подряд: следующая сделка сама, пустая очередь - обратно на You.
-          onSent={() => void loadDealsToRate("buyer").then((left) => setRating(left[0] ?? null))}
-        />
-      </section>
-    );
-  }
 
   // Рейтинг, все торги, охват вещей и лица кошельков - публичные данные, те
   // же, что видит любой.
@@ -261,6 +248,22 @@ export function You({
   ];
 
   // Шаги кабинета продавца со своей шапкой занимают весь кабинет.
+  // Оценка сделки - после всех хуков: ранний return выше них менял число
+  // хуков между рендерами, и React падал, стоило нажать «Rate».
+  if (rating) {
+    return (
+      <section className="screen">
+        <BuyerRating
+          key={rating.lotId ?? rating.requestId}
+          deal={rating}
+          onDone={() => setRating(null)}
+          // Оценки подряд: следующая сделка сама, пустая очередь - обратно на You.
+          onSent={() => void loadDealsToRate("buyer").then((left) => setRating(left[0] ?? null))}
+        />
+      </section>
+    );
+  }
+
   if (tab === "sales" && seller && sellerView !== "home") {
     return (
       <section className="ym-bare">
