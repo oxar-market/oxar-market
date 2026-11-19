@@ -264,16 +264,14 @@ export function You({
     );
   }
 
-  if (tab === "sales" && seller && sellerView !== "home") {
-    return (
-      <section className="ym-bare">
-        <SellerFlow onView={setSellerView} onOpen={onOpenAuction} />
-      </section>
-    );
-  }
+  // Шаг продавца (новая вещь, места, пруф) - во всю ширину, без колонки
+  // человека и вкладок. Тот же SellerFlow в том же месте дерева: прежде на
+  // шаг рисовался второй, новый, он начинал с главной и сразу возвращал туда -
+  // «Add a thing» отскакивал обратно.
+  const focus = tab === "sales" && seller && sellerView !== "home";
 
   return (
-    <div className="ym">
+    <div className={focus ? "ym focus" : "ym"}>
       {shooter}
       <div className="ym-grid">
         <aside className="ym-side">
