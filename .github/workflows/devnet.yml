@@ -7,6 +7,11 @@ name: Devnet
 #
 # Выкатывается вслед за продом с каждого пуша в main, чтобы стенд не отставал
 # от кода. Адрес - oxar-test.pages.dev.
+#
+# Здесь только сайт. Схему и функции базы oxar-test отсюда не выкатить: ключ
+# Supabase в секретах выдан на проект oxar и к oxar-test доступа не имеет.
+# Их накатывают руками той же командой, что и прод (supabase db push и
+# functions deploy с --project-ref ijcfazillqigywcjwpac).
 
 on:
   push:
@@ -50,37 +55,6 @@ jobs:
       - name: Проверить, что сборка смотрит в тестовую базу
         run: |
           grep -rq "$TEST_REF" apps/app/out/_next/static || { echo "в сборке нет адреса тестовой базы"; exit 1; }
-
-      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
-        with:
-          version: 2.122.1
-
-      - name: Схема -> oxar-test
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          supabase link --project-ref "$TEST_REF"
-          supabase db push
-
-      # record-bid читает ставку из транзакции - на стенде из devnet.
-      - name: Секреты функций -> oxar-test
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          PRIVY_APP_ID: ${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}
-          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
-          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
-        run: >-
-          supabase secrets set
-          PRIVY_APP_ID="$PRIVY_APP_ID"
-          VAPID_PUBLIC_KEY="$VAPID_PUBLIC_KEY"
-          VAPID_PRIVATE_KEY="$VAPID_PRIVATE_KEY"
-          SOLANA_RPC="https://api.devnet.solana.com"
-          --project-ref "$TEST_REF"
-
-      - name: Функции -> oxar-test
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: supabase functions deploy privy-session notify record-bid --project-ref "$TEST_REF"
 
       - name: Завести проект стенда, если его нет
         env:
