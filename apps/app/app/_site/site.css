@@ -9,6 +9,11 @@
   margin: 0 auto;
   padding: 0 2.5rem;
   color: var(--ink);
+  /* Колонка на всю высоту экрана: на короткой странице подвал уходит вниз,
+     а не висит посреди экрана сразу под содержимым. */
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
 }
 
 .v2 h1,
@@ -707,6 +712,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: auto;
   padding: 3rem 0;
   font-size: 0.875rem;
   color: var(--mut);
