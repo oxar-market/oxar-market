@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
 import type { Story } from "@/lib/story";
@@ -80,35 +80,59 @@ export function StoryHero({
 }
 
 /**
- * Места одной таблицей: строка - место, его победитель и цена; нажал -
- * раскрываются все ставки на него, и перебитые тоже. Ниже - пруф превью.
+ * Места одной таблицей. Два режима: «Winners» - строка на место, победитель
+ * и цена, нажал - раскрываются все ставки на это место; «All bids» - все
+ * ставки торга по времени, перебитые тоже.
  */
-export function StoryBody({
-  thingId,
+export function StorySpots({
   story,
   labelOf,
-  proof,
-  onProof,
   refundedAt,
 }: {
-  thingId: string;
   story: Story;
   labelOf: (code: string) => string;
-  proof: ThingProof | null | undefined;
-  onProof: (proof: ThingProof | null) => void;
   refundedAt: string | null;
 }) {
-  useEffect(() => {
-    void loadThingProof(thingId).then(onProof);
-  }, [thingId, onProof]);
-
+  const [all, setAll] = useState(false);
   const winnerOf = new Map(story.winners.map((one) => [one.spot, one]));
   const bidOn = new Set(story.rounds.map((one) => one.spot));
+  const tag = (won: boolean, sold: boolean) =>
+    won ? (refundedAt ? "Won, refunded" : "Won") : sold ? "Outbid, refunded" : "Refunded";
+  // Все ставки по времени, новые сверху: у каждой - место и чем кончилась.
+  const timeline = story.rounds
+    .flatMap((round) => round.steps.map((step, index) => ({ ...step, spot: round.spot, won: round.won && index === 0, sold: round.won })))
+    .sort((a, b) => b.at.localeCompare(a.at));
 
   return (
-    <>
-      <section className="sx-section">
-        <h2>{story.total === 1 ? "The spot" : "The spots"}</h2>
+    <section className="sx-section">
+      <header className="sx-spots-head">
+        <h2>{all ? "Every bid" : story.total === 1 ? "The spot" : "The spots"}</h2>
+        <div className="sx-toggle" role="group" aria-label="Show">
+          <button type="button" className={all ? "" : "on"} aria-pressed={!all} onClick={() => setAll(false)}>
+            Winners
+          </button>
+          <button type="button" className={all ? "on" : ""} aria-pressed={all} onClick={() => setAll(true)}>
+            All bids <span>{story.bids}</span>
+          </button>
+        </div>
+      </header>
+
+      {all ? (
+        <ol className="sx-all">
+          {timeline.map((step, index) => (
+            <li key={index} className={step.won ? "won" : ""}>
+              <span className="sx-r-amt">{formatUsd(step.amountCents)}</span>
+              <span className="sx-who">
+                <b>{step.brand}</b>
+                <span>
+                  {labelOf(step.spot)} · {day(step.at)}
+                </span>
+              </span>
+              <span className="sx-r-tag">{tag(step.won, step.sold)}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
         <div className="sx-spots">
           {story.rounds.map((round) => {
             const winner = winnerOf.get(round.spot);
@@ -126,18 +150,13 @@ export function StoryBody({
                   <span className="sx-amt">{winner ? formatUsd(winner.amountCents) : "-"}</span>
                 </summary>
                 <ol>
-                  {round.steps.map((step, index) => {
-                    const won = round.won && index === 0;
-                    return (
-                      <li key={index} className={won ? "won" : ""}>
-                        <span className="sx-r-amt">{formatUsd(step.amountCents)}</span>
-                        <span className="sx-r-who">{step.brand}</span>
-                        <span className="sx-r-tag">
-                          {won ? (refundedAt ? "Won, refunded" : "Won") : round.won ? "Outbid, refunded" : "Refunded"}
-                        </span>
-                      </li>
-                    );
-                  })}
+                  {round.steps.map((step, index) => (
+                    <li key={index} className={round.won && index === 0 ? "won" : ""}>
+                      <span className="sx-r-amt">{formatUsd(step.amountCents)}</span>
+                      <span className="sx-r-who">{step.brand}</span>
+                      <span className="sx-r-tag">{tag(round.won && index === 0, round.won)}</span>
+                    </li>
+                  ))}
                 </ol>
               </details>
             );
@@ -155,22 +174,38 @@ export function StoryBody({
               </div>
             ))}
         </div>
-      </section>
-
-      {proof && (proof.photos.length > 0 || proof.note) && (
-        <section className="sx-section">
-          <h2>Proof</h2>
-          {proof.photos.length > 0 && <Gallery urls={proof.photos} listClass="sx-proof" itemClass="sx-proof-item" />}
-          {proof.note && <p className="sx-sub">{proof.note}</p>}
-          {proof.links
-            .filter((link) => link.startsWith("https://"))
-            .map((link) => (
-              <a key={link} className="sx-link" href={link} target="_blank" rel="noreferrer">
-                {link.replace(/^https:\/\//, "")}
-              </a>
-            ))}
-        </section>
       )}
-    </>
+    </section>
+  );
+}
+
+/** Пруф под вещью: превью во весь экран по тапу, заметка и ссылки. */
+export function StoryProof({
+  thingId,
+  proof,
+  onProof,
+}: {
+  thingId: string;
+  proof: ThingProof | null | undefined;
+  onProof: (proof: ThingProof | null) => void;
+}) {
+  useEffect(() => {
+    void loadThingProof(thingId).then(onProof);
+  }, [thingId, onProof]);
+
+  if (!proof || (proof.photos.length === 0 && !proof.note)) return null;
+  return (
+    <section className="sx-section sx-proof-block">
+      <h2>Proof</h2>
+      {proof.photos.length > 0 && <Gallery urls={proof.photos} listClass="sx-proof" itemClass="sx-proof-item" />}
+      {proof.note && <p className="sx-sub">{proof.note}</p>}
+      {proof.links
+        .filter((link) => link.startsWith("https://"))
+        .map((link) => (
+          <a key={link} className="sx-link" href={link} target="_blank" rel="noreferrer">
+            {link.replace(/^https:\/\//, "")}
+          </a>
+        ))}
+    </section>
   );
 }

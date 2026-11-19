@@ -10331,9 +10331,12 @@ body:has(.app-v2)::after {
   background: none;
 }
 
+/* Слева вещь, под ней пруф и «About» - колонка не стоит пустой рядом с
+   длинной историей справа. */
 .lot-v2 .lot-body.solo .lot-center {
-  position: sticky;
-  top: 5.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
   grid-column: 1;
   grid-row: 1;
 }
@@ -10463,6 +10466,86 @@ body:has(.app-v2)::after {
   color: var(--mut);
   font-size: 0.9375rem;
   line-height: 1.5;
+}
+
+/* Заголовок мест и переключатель «Winners / All bids». */
+.sx-spots-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.sx-spots-head h2 {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.sx-toggle {
+  display: flex;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.sx-toggle button {
+  padding: 0.375rem 0.75rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--mut);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sx-toggle button.on {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.sx-toggle span {
+  color: var(--mut);
+  font-weight: 500;
+}
+
+/* Все ставки по времени: сумма, кто и на какое место, чем кончилась. */
+.sx-all {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ink);
+}
+
+.sx-all li {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--mut);
+  font-size: 0.875rem;
+}
+
+.sx-all li .sx-who b {
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.sx-all li.won .sx-r-amt,
+.sx-all li.won .sx-r-tag {
+  color: var(--red);
+}
+
+.sx-all li.won .sx-who b {
+  font-weight: 600;
 }
 
 /* Места: строка - победитель и цена, раскрывается в ставки. */
@@ -10595,8 +10678,8 @@ body:has(.app-v2)::after {
 
 .sx-proof-item {
   flex: none;
-  width: 8.5rem;
-  height: 8.5rem;
+  width: 12rem;
+  height: 12rem;
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -10622,7 +10705,7 @@ body:has(.app-v2)::after {
 /* «About» у закрытого торга - в том же свободном виде: без подложки и
    рамок, разделы на волосяных линиях. */
 .lot-v2:has(.sx-side) .lt-about {
-  margin-top: 4rem;
+  margin-top: 0;
 }
 
 .lot-v2:has(.sx-side) .lt-about > h2 {
@@ -10665,11 +10748,24 @@ body:has(.app-v2)::after {
   }
 
   .lot-v2 .lot-body.solo .lot-center {
-    position: static;
+    display: contents;
+  }
+
+  .lot-v2 .lot-body.solo .lot-scene {
+    order: 1;
+  }
+
+  .lot-v2 .lot-body.solo .sx-proof-block {
+    order: 3;
+  }
+
+  .lot-v2 .lot-body.solo .lt-about {
+    order: 4;
   }
 
   .lot-v2 .lot-body.solo .sx-side {
-    grid-column: 1;
-    grid-row: 2;
+    order: 2;
+    grid-column: auto;
+    grid-row: auto;
   }
 }
