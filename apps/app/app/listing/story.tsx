@@ -125,7 +125,9 @@ export function StoryBody({
       {fight && (
         <section className="sx-section">
           <h2>
-            The fight for the {labelOf(fight.spot)}
+            {/* «the Hood», но «Spot 04» - у номера артикль лишний. */}
+            The fight for {labelOf(fight.spot).startsWith("Spot ") ? "" : "the "}
+            {labelOf(fight.spot)}
           </h2>
           <p className="sx-sub">
             {plural(fight.steps.length, "bid", "bids")} from {plural(fight.brands, "bidder", "bidders")},{" "}
