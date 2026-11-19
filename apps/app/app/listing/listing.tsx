@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { formatUsd, hasOpened, isCreativeUrl, isOpen, minBidCents, originalUrl, shortWallet } from "@oxar/core";
 import { ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
 import { loadBids, loadFeed, loadMyBids, loadTopBids, myBrands, type Bid, type MyBid } from "@/lib/auction";
-import { loadListedThing, type ListedThing } from "@/lib/listing";
+import { loadListedThing, type ListedThing, type ThingProof } from "@/lib/listing";
+import { storyOf } from "@/lib/story";
+import { StoryBody, StoryStats, StoryTimeline } from "./story.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
@@ -45,6 +47,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     setBumper(false);
   }
   const [tops, setTops] = useState<Record<string, Bid | undefined>>({});
+  // Пруф вещи: грузит история закрытого торга, нужен и таймлайну.
+  const [proof, setProof] = useState<ThingProof | null | undefined>(undefined);
   const [bids, setBids] = useState<Bid[]>([]);
   // Общая лента: все ставки на все места, чтобы было видно, где идёт торг,
   // а не только историю выбранного места.
@@ -361,7 +365,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
 
   // Колонка ставок - пока идёт торг: до открытия ставить некуда, и пустая
   // колонка слева только сдвигала бы вещь.
-  const showBids = started && lots.length > 0;
+  // Закрытый торг - история вместо живой колонки: все ставки видны в битвах за места.
+  const showBids = started && lots.length > 0 && !ended;
+  const story = ended ? storyOf(lots, feed) : null;
+  const labelOf = (code: string) => thing.spots.find((spot) => spot.code === code)?.label ?? code;
   const logoCount = stuck.reduce((sum, one) => sum + one.count, 0);
 
   return (
@@ -382,7 +389,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
           <h1>{thing.title}</h1>
           <div className="lt-sum">
-            {pot > 0 && (
+            {pot > 0 && !story && (
               <span>
                 <b>{formatUsd(pot)}</b> {ended ? "raised" : "bid so far"} · {feed.length} {feed.length === 1 ? "bid" : "bids"}
               </span>
@@ -390,7 +397,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             <ShareAuction thingId={thingId} />
           </div>
         </div>
-        {(started ? closesAt : opensAt) !== null && (
+        {story && closesAt !== null ? (
+          <StoryStats story={story} closedAt={closesAt} />
+        ) : (started ? closesAt : opensAt) !== null && (
           <div className="lt-clock">
             <span className="lt-cap">{!started ? "Opens in" : closesAt! > now ? "Ends in" : "Auction ended"}</span>
             <b suppressHydrationWarning>
@@ -597,6 +606,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       {/* Ставить уже или ещё нельзя - список мест: без него у закрытого торга
           с одним местом колонка стояла бы пустой. */}
       <div className={bumper ? "lot-right bumper" : choosing || !running ? "lot-right choosing" : "lot-right chosen"}>
+      {story && closesAt !== null && (
+        <StoryTimeline openedAt={opensAt} closedAt={closesAt} bids={story.bids} proof={proof} />
+      )}
       {bumper && (
         <>
           <button type="button" className="spot-back bumper-back" onClick={() => setBumper(false)}>
@@ -1030,6 +1042,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       {/* Кто носит вещь, где, когда и срок пруфа - своей панелью под торгом:
           деньги победителя держит программа до пруфа, и этот срок покупатель
           видит прежде, чем ставит. */}
+      {story && <StoryBody thingId={thingId} story={story} labelOf={labelOf} onProof={setProof} />}
       <WornAbout thingId={thingId} />
     </section>
   );

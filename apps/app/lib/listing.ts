@@ -158,3 +158,24 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
     stickerSheet: (thing.sticker_sheet as string | null) ?? null,
   };
 }
+
+/** Пруф вещи - последний: фото или ссылка, что логотипы показаны. Нет - null. */
+export type ThingProof = { photos: string[]; links: string[]; note: string | null; provedAt: string | null };
+
+export async function loadThingProof(thingId: string): Promise<ThingProof | null> {
+  if (!db) return null;
+  const { data } = await db
+    .from("proofs")
+    .select("photos, links, note, proved_at")
+    .eq("thing_id", thingId)
+    .order("proved_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    photos: ((data.photos as string[] | null) ?? []).map(photoUrl),
+    links: (data.links as string[] | null) ?? [],
+    note: (data.note as string | null) ?? null,
+    provedAt: (data.proved_at as string | null) ?? null,
+  };
+}
