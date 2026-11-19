@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
 import type { Story } from "@/lib/story";
-import { Media } from "../gallery.tsx";
+import { Gallery } from "../gallery.tsx";
 
 /**
  * Закрытый торг - не пустая витрина, а история, рассказанная крупным шрифтом
@@ -79,7 +79,10 @@ export function StoryHero({
   );
 }
 
-/** Кто забрал места, самая жаркая борьба и пруф - под вещью. */
+/**
+ * Места одной таблицей: строка - место, его победитель и цена; нажал -
+ * раскрываются все ставки на него, и перебитые тоже. Ниже - пруф превью.
+ */
 export function StoryBody({
   thingId,
   story,
@@ -99,55 +102,29 @@ export function StoryBody({
     void loadThingProof(thingId).then(onProof);
   }, [thingId, onProof]);
 
-  return (
-    <div className="sx-body">
-      <section className="sx-section">
-        <h2>{story.total === 1 ? "Who took the spot" : "Who took the spots"}</h2>
-        <ol className="sx-winners">
-          {story.winners.map((one, index) => (
-            <li key={one.spot}>
-              <span className="sx-n">{String(index + 1).padStart(2, "0")}</span>
-              <span className="sx-logo">{one.mediaUrl && <img src={one.mediaUrl} alt="" />}</span>
-              <span className="sx-who">
-                <b>{one.brand}</b>
-                <span>
-                  {labelOf(one.spot)}
-                  {refundedAt && " · refunded"}
-                </span>
-              </span>
-              <span className="sx-amt">{formatUsd(one.amountCents)}</span>
-            </li>
-          ))}
-          {story.unsold.map((code) => (
-            <li key={code} className="off">
-              <span className="sx-n">-</span>
-              <span className="sx-logo" />
-              <span className="sx-who">
-                <b>{labelOf(code)}</b>
-                <span>No brand this time</span>
-              </span>
-              <span className="sx-amt">-</span>
-            </li>
-          ))}
-        </ol>
-      </section>
+  const winnerOf = new Map(story.winners.map((one) => [one.spot, one]));
+  const bidOn = new Set(story.rounds.map((one) => one.spot));
 
-      {/* Все ставки по местам, и перебитые тоже: кто и сколько давал, и что
-          их деньги вернулись. Перебитым программа вернула ставку сразу. */}
-      {story.rounds.length > 0 && (
-        <section className="sx-section">
-          <h2>Every bid</h2>
-          <p className="sx-sub">
-            {plural(story.bids, "bid", "bids")} from {plural(story.bidders, "bidder", "bidders")}. An outbid bid went
-            straight back to its wallet.
-          </p>
-          <div className="sx-rounds">
-            {story.rounds.map((round) => (
-              <section key={round.spot} className="sx-round">
-                <header>
-                  <b>{labelOf(round.spot)}</b>
-                  <span>{plural(round.steps.length, "bid", "bids")}</span>
-                </header>
+  return (
+    <>
+      <section className="sx-section">
+        <h2>{story.total === 1 ? "The spot" : "The spots"}</h2>
+        <div className="sx-spots">
+          {story.rounds.map((round) => {
+            const winner = winnerOf.get(round.spot);
+            return (
+              <details key={round.spot} className="sx-spot">
+                <summary>
+                  <span className="sx-logo">{winner?.mediaUrl && <img src={winner.mediaUrl} alt="" />}</span>
+                  <span className="sx-who">
+                    <b>{winner?.brand ?? "No winner"}</b>
+                    <span>
+                      {labelOf(round.spot)} · {plural(round.steps.length, "bid", "bids")}
+                      {refundedAt && winner && " · refunded"}
+                    </span>
+                  </span>
+                  <span className="sx-amt">{winner ? formatUsd(winner.amountCents) : "-"}</span>
+                </summary>
                 <ol>
                   {round.steps.map((step, index) => {
                     const won = round.won && index === 0;
@@ -162,22 +139,28 @@ export function StoryBody({
                     );
                   })}
                 </ol>
-              </section>
+              </details>
+            );
+          })}
+          {story.unsold
+            .filter((code) => !bidOn.has(code))
+            .map((code) => (
+              <div key={code} className="sx-spot off">
+                <span className="sx-logo" />
+                <span className="sx-who">
+                  <b>{labelOf(code)}</b>
+                  <span>No bids</span>
+                </span>
+                <span className="sx-amt">-</span>
+              </div>
             ))}
-          </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {proof && (proof.photos.length > 0 || proof.note) && (
         <section className="sx-section">
           <h2>Proof</h2>
-          {proof.photos.length > 0 && (
-            <div className="sx-proof">
-              {proof.photos.map((url) => (
-                <Media key={url} src={url} play />
-              ))}
-            </div>
-          )}
+          {proof.photos.length > 0 && <Gallery urls={proof.photos} listClass="sx-proof" itemClass="sx-proof-item" />}
           {proof.note && <p className="sx-sub">{proof.note}</p>}
           {proof.links
             .filter((link) => link.startsWith("https://"))
@@ -188,6 +171,6 @@ export function StoryBody({
             ))}
         </section>
       )}
-    </div>
+    </>
   );
 }

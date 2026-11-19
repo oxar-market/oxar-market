@@ -418,10 +418,6 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           места и ставка справа - всё на одном экране, без прокрутки вниз к
           истории. На телефоне одна колонка в порядке разметки: вещь, ставка,
           история. */}
-      {story && closesAt !== null && (
-        <StoryHero story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} refundedAt={thing.refundedAt} />
-      )}
-
       <div className={story ? "lot-body solo" : showBids ? "lot-body" : "lot-body two"}>
       <div className="lot-center">
       <div className="lot-scene">
@@ -1040,19 +1036,25 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         </div>
       )}
+      {/* Закрытый торг: справа от вещи - история вместо колонки мест. */}
+      {story && closesAt !== null && (
+        <div className="sx-side">
+          <StoryHero story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} refundedAt={thing.refundedAt} />
+          <StoryBody
+            thingId={thingId}
+            story={story}
+            labelOf={labelOf}
+            proof={proof}
+            onProof={setProof}
+            refundedAt={thing.refundedAt}
+          />
+        </div>
+      )}
       </div>
 
       {/* Кто носит вещь, где, когда и срок пруфа - своей панелью под торгом:
           деньги победителя держит программа до пруфа, и этот срок покупатель
           видит прежде, чем ставит. */}
-      {story && <StoryBody
-          thingId={thingId}
-          story={story}
-          labelOf={labelOf}
-          proof={proof}
-          onProof={setProof}
-          refundedAt={thing.refundedAt}
-        />}
       <WornAbout thingId={thingId} />
     </section>
   );
