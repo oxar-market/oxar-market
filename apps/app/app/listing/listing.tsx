@@ -6,7 +6,7 @@ import { ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
 import { loadBids, loadFeed, loadMyBids, loadTopBids, myBrands, type Bid, type MyBid } from "@/lib/auction";
 import { loadListedThing, type ListedThing, type ThingProof } from "@/lib/listing";
 import { storyOf } from "@/lib/story";
-import { StoryBody, StoryStats, StoryTimeline } from "./story.tsx";
+import { StoryBody, StoryHero } from "./story.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
@@ -368,7 +368,11 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // Закрытый торг - история вместо живой колонки: все ставки видны в битвах за места.
   const showBids = started && lots.length > 0 && !ended;
   const story = ended ? storyOf(lots, feed) : null;
-  const labelOf = (code: string) => thing.spots.find((spot) => spot.code === code)?.label ?? code;
+  const labelOf = (code: string) => {
+    const label = thing.spots.find((spot) => spot.code === code)?.label ?? code;
+    // У футболки места - номера: «Spot 04», а не голое «04».
+    return /^\d+$/.test(label) ? `Spot ${label}` : label;
+  };
   const logoCount = stuck.reduce((sum, one) => sum + one.count, 0);
 
   return (
@@ -397,9 +401,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             <ShareAuction thingId={thingId} />
           </div>
         </div>
-        {story && closesAt !== null ? (
-          <StoryStats story={story} closedAt={closesAt} />
-        ) : (started ? closesAt : opensAt) !== null && (
+        {!story && (started ? closesAt : opensAt) !== null && (
           <div className="lt-clock">
             <span className="lt-cap">{!started ? "Opens in" : closesAt! > now ? "Ends in" : "Auction ended"}</span>
             <b suppressHydrationWarning>
@@ -416,7 +418,11 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           места и ставка справа - всё на одном экране, без прокрутки вниз к
           истории. На телефоне одна колонка в порядке разметки: вещь, ставка,
           история. */}
-      <div className={showBids ? "lot-body" : "lot-body two"}>
+      {story && closesAt !== null && (
+        <StoryHero story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} />
+      )}
+
+      <div className={story ? "lot-body solo" : showBids ? "lot-body" : "lot-body two"}>
       <div className="lot-center">
       <div className="lot-scene">
         {/* Торг назначен, но ещё не открылся - голограмма: у нашей вещи её
@@ -606,9 +612,6 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       {/* Ставить уже или ещё нельзя - список мест: без него у закрытого торга
           с одним местом колонка стояла бы пустой. */}
       <div className={bumper ? "lot-right bumper" : choosing || !running ? "lot-right choosing" : "lot-right chosen"}>
-      {story && closesAt !== null && (
-        <StoryTimeline openedAt={opensAt} closedAt={closesAt} bids={story.bids} proof={proof} />
-      )}
       {bumper && (
         <>
           <button type="button" className="spot-back bumper-back" onClick={() => setBumper(false)}>
@@ -1042,7 +1045,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       {/* Кто носит вещь, где, когда и срок пруфа - своей панелью под торгом:
           деньги победителя держит программа до пруфа, и этот срок покупатель
           видит прежде, чем ставит. */}
-      {story && <StoryBody thingId={thingId} story={story} labelOf={labelOf} onProof={setProof} />}
+      {story && <StoryBody thingId={thingId} story={story} labelOf={labelOf} proof={proof} onProof={setProof} />}
       <WornAbout thingId={thingId} />
     </section>
   );

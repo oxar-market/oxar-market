@@ -35,15 +35,16 @@ test("итог: собрано по победившим ставкам, про�
   assert.equal(story.bids, 5);
 });
 
-test("подиум - победители мест по сумме, не больше трёх", () => {
+test("победители всех мест по сумме, непроданные - отдельно", () => {
   const story = storyOf(lots, bids);
   assert.deepEqual(
-    story.podium.map((one) => [one.brand, one.amountCents, one.spot]),
+    story.winners.map((one) => [one.brand, one.amountCents, one.spot]),
     [
       ["C", 90000, "hood"],
       ["D", 45000, "door"],
     ],
   );
+  assert.deepEqual(story.unsold, ["roof"]);
 });
 
 test("битва за место: ставки по возрастанию, только где перебивали", () => {
@@ -52,6 +53,11 @@ test("битва за место: ставки по возрастанию, то
   assert.equal(story.battles[0]!.spot, "hood");
   assert.deepEqual(story.battles[0]!.steps.map((one) => one.amountCents), [60000, 70000, 80000, 90000]);
   assert.equal(story.battles[0]!.brands, 3);
+});
+
+test("первая ставка - самая ранняя по времени", () => {
+  assert.equal(storyOf(lots, bids).firstBidAt, "2026-10-26T10:00:00Z");
+  assert.equal(storyOf(lots, []).firstBidAt, null);
 });
 
 test("ставки на непроданное место в итог не идут", () => {

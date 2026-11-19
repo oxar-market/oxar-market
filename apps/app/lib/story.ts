@@ -23,12 +23,17 @@ export type Story = {
   total: number;
   bidders: number;
   bids: number;
-  podium: Winner[];
+  /** Все проданные места, дорогие первыми. */
+  winners: Winner[];
+  /** Места, которые никто не взял. */
+  unsold: string[];
   battles: Battle[];
+  firstBidAt: string | null;
 };
 
 export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
   const winners: Winner[] = [];
+  const unsold: string[] = [];
   const battles: Battle[] = [];
   for (const lot of lots) {
     const mine = bids
@@ -37,6 +42,8 @@ export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
     const top = mine.at(-1);
     if (lot.status === "won" && top) {
       winners.push({ spot: lot.spot_code, brand: top.brand, amountCents: top.amount_cents, mediaUrl: top.media_url });
+    } else {
+      unsold.push(lot.spot_code);
     }
     if (mine.length > 1) {
       battles.push({
@@ -54,7 +61,9 @@ export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
     total: lots.length,
     bidders: new Set(bids.map((one) => one.bidder_wallet)).size,
     bids: bids.length,
-    podium: winners.slice(0, 3),
+    winners,
+    unsold,
     battles,
+    firstBidAt: bids.map((one) => one.created_at).sort()[0] ?? null,
   };
 }

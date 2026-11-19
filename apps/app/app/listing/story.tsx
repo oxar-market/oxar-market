@@ -1,167 +1,167 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
 import type { Story } from "@/lib/story";
 
 /**
- * Закрытый торг - не пустая витрина, а история: сколько собрали, как шли
- * ставки, кто забрал места и чем закончилось. Цифры и шаги считаются из
- * ставок и лотов; этап пруфа отмечен, только когда пруф правда есть.
+ * Закрытый торг - не пустая витрина, а история, рассказанная крупным шрифтом
+ * без карточек: сколько собрали, кто забрал места, где за место боролись и
+ * чем кончилось. Цифры и шаги считаются из ставок и лотов; шаг пруфа
+ * отмечен, только когда пруф правда есть.
  */
 
 const day = (at: number | string) =>
   new Date(at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-/** Цифры итога - справа в шапке, вместо часов. */
-export function StoryStats({ story, closedAt }: { story: Story; closedAt: number }) {
-  const cells: [string, string][] = [
-    ["Raised", formatUsd(story.raisedCents)],
-    ["Spots sold", `${story.sold} of ${story.total}`],
-    ["Bidders", String(story.bidders)],
-    ["Ended", day(closedAt)],
-  ];
-  return (
-    <dl className="st-stats">
-      {cells.map(([label, value]) => (
-        <div key={label}>
-          <dt className="lt-cap">{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** Шаги торга с галочками: что уже было и когда. */
-export function StoryTimeline({
+/** Итог одной фразой и путь торга - сразу под названием. */
+export function StoryHero({
+  story,
   openedAt,
   closedAt,
-  bids,
   proof,
 }: {
+  story: Story;
   openedAt: number | null;
   closedAt: number;
-  bids: number;
   proof: ThingProof | null | undefined;
 }) {
-  const steps: { label: string; note: string; done: boolean }[] = [
-    { label: "Opened", note: openedAt ? day(openedAt) : "", done: true },
-    { label: "Bidding", note: `${bids} ${bids === 1 ? "bid" : "bids"}`, done: bids > 0 },
-    { label: "Closed", note: day(closedAt), done: true },
+  const path: { label: string; when: string; done: boolean }[] = [
+    { label: "Opened", when: openedAt ? day(openedAt) : "", done: true },
+    { label: "First bid", when: story.firstBidAt ? day(story.firstBidAt) : "", done: Boolean(story.firstBidAt) },
+    { label: "Closed", when: day(closedAt), done: true },
     {
       label: "Logos shown",
-      note: proof ? (proof.provedAt ? `Proof ${day(proof.provedAt)}` : "Proof posted") : "No proof yet",
+      when: proof ? (proof.provedAt ? day(proof.provedAt) : "") : "Waiting for proof",
       done: Boolean(proof),
     },
   ];
   return (
-    <div className="st-timeline">
-      <span className="lt-cap">How it went</span>
-      <ol>
-        {steps.map((step) => (
+    <section className="sx-hero">
+      <p className="sx-kicker">
+        Auction closed{openedAt ? ` · ${day(openedAt)} to ${day(closedAt)}` : ` · ${day(closedAt)}`}
+      </p>
+      <p className="sx-big">{formatUsd(story.raisedCents)}</p>
+      <p className="sx-line">
+        raised from <b>{plural(story.bidders, "bidder", "bidders")}</b> across{" "}
+        <b>{plural(story.bids, "bid", "bids")}</b>.{" "}
+        {story.total === 1 ? (
+          story.sold ? "The spot found its brand." : "The spot went unsold."
+        ) : (
+          <>
+            <b>
+              {story.sold} of {story.total}
+            </b>{" "}
+            spots found a brand.
+          </>
+        )}
+      </p>
+      <ol className="sx-path">
+        {path.map((step) => (
           <li key={step.label} className={step.done ? "done" : ""}>
-            <i aria-hidden>{step.done ? "✓" : ""}</i>
+            <i aria-hidden />
             <b>{step.label}</b>
-            <span>{step.note}</span>
+            <span>{step.when}</span>
           </li>
         ))}
       </ol>
-    </div>
+    </section>
   );
 }
 
-/** Подиум, битвы за места и пруф - под торгом, перед «About». */
+/** Кто забрал места, самая жаркая борьба и пруф - под вещью. */
 export function StoryBody({
   thingId,
   story,
   labelOf,
+  proof,
   onProof,
 }: {
   thingId: string;
   story: Story;
   labelOf: (code: string) => string;
+  proof: ThingProof | null | undefined;
   onProof: (proof: ThingProof | null) => void;
 }) {
-  const [proof, setProof] = useState<ThingProof | null>(null);
   useEffect(() => {
-    void loadThingProof(thingId).then((one) => {
-      setProof(one);
-      onProof(one);
-    });
+    void loadThingProof(thingId).then(onProof);
   }, [thingId, onProof]);
 
+  const fight = story.battles[0];
+
   return (
-    <section className="st-body">
-      {/* Один победитель - он и так в итогах справа, подиум из одного места ни к чему. */}
-      {story.podium.length > 1 && (
-        <>
-          <h2>Top spots</h2>
-          <div className="st-podium">
-            {story.podium.map((one, index) => (
-              <article key={one.spot} className="lt-card st-place">
-                <span className={index === 0 ? "st-rank first" : "st-rank"}>#{index + 1}</span>
-                <span className="st-who">
-                  {one.mediaUrl && <img src={one.mediaUrl} alt="" />}
-                  <b>{one.brand}</b>
-                </span>
-                <span className="st-amt">{formatUsd(one.amountCents)}</span>
-                <span className="muted small">{labelOf(one.spot)}</span>
-              </article>
+    <div className="sx-body">
+      <section className="sx-section">
+        <h2>{story.total === 1 ? "Who took the spot" : "Who took the spots"}</h2>
+        <ol className="sx-winners">
+          {story.winners.map((one, index) => (
+            <li key={one.spot}>
+              <span className="sx-n">{String(index + 1).padStart(2, "0")}</span>
+              <span className="sx-logo">{one.mediaUrl && <img src={one.mediaUrl} alt="" />}</span>
+              <span className="sx-who">
+                <b>{one.brand}</b>
+                <span>{labelOf(one.spot)}</span>
+              </span>
+              <span className="sx-amt">{formatUsd(one.amountCents)}</span>
+            </li>
+          ))}
+          {story.unsold.map((code) => (
+            <li key={code} className="off">
+              <span className="sx-n">-</span>
+              <span className="sx-logo" />
+              <span className="sx-who">
+                <b>{labelOf(code)}</b>
+                <span>No brand this time</span>
+              </span>
+              <span className="sx-amt">-</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {fight && (
+        <section className="sx-section">
+          <h2>
+            The fight for the {labelOf(fight.spot)}
+          </h2>
+          <p className="sx-sub">
+            {plural(fight.steps.length, "bid", "bids")} from {plural(fight.brands, "bidder", "bidders")},{" "}
+            {formatUsd(fight.steps[0]!.amountCents)} to {formatUsd(fight.steps.at(-1)!.amountCents)}.
+          </p>
+          <ol className="sx-ladder">
+            {fight.steps.map((step, index) => (
+              <li key={index} className={index === fight.steps.length - 1 ? "won" : ""}>
+                <b>{formatUsd(step.amountCents)}</b>
+                <span>{step.brand}</span>
+              </li>
             ))}
-          </div>
-        </>
+          </ol>
+        </section>
       )}
 
-      {story.battles.length > 0 && (
-        <>
-          <h2>Battles for spots</h2>
-          <div className="st-battles">
-            {story.battles.slice(0, 4).map((battle) => (
-              <article key={battle.spot} className="lt-card st-battle">
-                <header>
-                  <b>{labelOf(battle.spot)}</b>
-                  <span className="muted small">
-                    {battle.steps.length} bids · {battle.brands} {battle.brands === 1 ? "bidder" : "bidders"}
-                  </span>
-                </header>
-                <ol>
-                  {battle.steps.map((step, index) => (
-                    <li key={index} className={index === battle.steps.length - 1 ? "won" : ""}>
-                      <span className="st-step-amt">{formatUsd(step.amountCents)}</span>
-                      <span className="st-step-who">{step.brand}</span>
-                    </li>
-                  ))}
-                </ol>
-              </article>
-            ))}
-          </div>
-        </>
-      )}
-
-      {proof && (proof.photos.length > 0 || proof.links.length > 0) && (
-        <>
+      {proof && (proof.photos.length > 0 || proof.note) && (
+        <section className="sx-section">
           <h2>Proof</h2>
-          <article className="lt-card st-proof">
-            {proof.photos.length > 0 && (
-              <div className="st-proof-photos">
-                {proof.photos.map((url) => (
-                  <img key={url} src={url} alt="" />
-                ))}
-              </div>
-            )}
-            {proof.note && <p>{proof.note}</p>}
-            {proof.links
-              .filter((link) => link.startsWith("https://"))
-              .map((link) => (
-                <a key={link} href={link} target="_blank" rel="noreferrer">
-                  {link.replace(/^https:\/\//, "")}
-                </a>
+          {proof.photos.length > 0 && (
+            <div className="sx-proof">
+              {proof.photos.map((url) => (
+                <img key={url} src={url} alt="" />
               ))}
-          </article>
-        </>
+            </div>
+          )}
+          {proof.note && <p className="sx-sub">{proof.note}</p>}
+          {proof.links
+            .filter((link) => link.startsWith("https://"))
+            .map((link) => (
+              <a key={link} className="sx-link" href={link} target="_blank" rel="noreferrer">
+                {link.replace(/^https:\/\//, "")}
+              </a>
+            ))}
+        </section>
       )}
-    </section>
+    </div>
   );
 }
