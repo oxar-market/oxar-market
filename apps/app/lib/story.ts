@@ -15,7 +15,13 @@ type StoryBid = {
 };
 
 export type Winner = { spot: string; brand: string; amountCents: number; mediaUrl: string };
-export type Battle = { spot: string; steps: { brand: string; amountCents: number; at: string }[]; brands: number };
+/** Все ставки одного места, от большей к меньшей. won - место продано, первая ставка забрала его. */
+export type Round = {
+  spot: string;
+  steps: { brand: string; amountCents: number; at: string }[];
+  brands: number;
+  won: boolean;
+};
 
 export type Story = {
   raisedCents: number;
@@ -27,14 +33,15 @@ export type Story = {
   winners: Winner[];
   /** Места, которые никто не взял. */
   unsold: string[];
-  battles: Battle[];
+  /** Места со ставками - дорогие первыми; там же перебитые. */
+  rounds: Round[];
   firstBidAt: string | null;
 };
 
 export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
   const winners: Winner[] = [];
   const unsold: string[] = [];
-  const battles: Battle[] = [];
+  const rounds: Round[] = [];
   for (const lot of lots) {
     const mine = bids
       .filter((one) => one.lot_id === lot.id)
@@ -45,16 +52,17 @@ export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
     } else {
       unsold.push(lot.spot_code);
     }
-    if (mine.length > 1) {
-      battles.push({
+    if (mine.length > 0) {
+      rounds.push({
         spot: lot.spot_code,
-        steps: mine.map((one) => ({ brand: one.brand, amountCents: one.amount_cents, at: one.created_at })),
+        steps: mine.reverse().map((one) => ({ brand: one.brand, amountCents: one.amount_cents, at: one.created_at })),
         brands: new Set(mine.map((one) => one.bidder_wallet)).size,
+        won: lot.status === "won",
       });
     }
   }
   winners.sort((a, b) => b.amountCents - a.amountCents);
-  battles.sort((a, b) => b.steps.length - a.steps.length);
+  rounds.sort((a, b) => b.steps[0]!.amountCents - a.steps[0]!.amountCents);
   return {
     raisedCents: winners.reduce((sum, one) => sum + one.amountCents, 0),
     sold: winners.length,
@@ -63,7 +71,7 @@ export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
     bids: bids.length,
     winners,
     unsold,
-    battles,
+    rounds,
     firstBidAt: bids.map((one) => one.created_at).sort()[0] ?? null,
   };
 }

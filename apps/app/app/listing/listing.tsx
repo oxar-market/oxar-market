@@ -419,7 +419,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           истории. На телефоне одна колонка в порядке разметки: вещь, ставка,
           история. */}
       {story && closesAt !== null && (
-        <StoryHero story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} />
+        <StoryHero story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} refundedAt={thing.refundedAt} />
       )}
 
       <div className={story ? "lot-body solo" : showBids ? "lot-body" : "lot-body two"}>
@@ -1045,7 +1045,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       {/* Кто носит вещь, где, когда и срок пруфа - своей панелью под торгом:
           деньги победителя держит программа до пруфа, и этот срок покупатель
           видит прежде, чем ставит. */}
-      {story && <StoryBody thingId={thingId} story={story} labelOf={labelOf} proof={proof} onProof={setProof} />}
+      {story && <StoryBody
+          thingId={thingId}
+          story={story}
+          labelOf={labelOf}
+          proof={proof}
+          onProof={setProof}
+          refundedAt={thing.refundedAt}
+        />}
       <WornAbout thingId={thingId} />
     </section>
   );
