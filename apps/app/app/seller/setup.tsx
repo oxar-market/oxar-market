@@ -153,14 +153,6 @@ export function SetUpSpots({
         <div className="sl-card sl-plan" key={thing.spots[index]!.id}>
           <div className="sl-plan-head">
             <h3>{thing.spots[index]!.label}</h3>
-            <div className="sl-kind">
-              <button type="button" className="on">
-                Auction
-              </button>
-              <button type="button" disabled className="soon" data-tip="Coming soon">
-                Rent by day
-              </button>
-            </div>
           </div>
 
           <Money label="Reserve" value={one.reserve} onChange={(reserve) => patch(index, { reserve })} />

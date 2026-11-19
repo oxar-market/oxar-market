@@ -105,6 +105,11 @@ export function SellerHome({
         <span>{things.length}</span>
       </div>
 
+      {/* Новая вещь - главное действие продавца: сверху, а не под всем списком. */}
+      <button type="button" className="sl-btn dark" onClick={onAdd}>
+        Add a thing
+      </button>
+
       {things.length > 0 && (
         <div className="sl-card sl-things">
           {things.map((one) => (
@@ -137,10 +142,6 @@ export function SellerHome({
           ))}
         </div>
       )}
-
-      <button type="button" className="sl-btn dark" onClick={onAdd}>
-        Add a thing
-      </button>
 
       {/* Наши вещи, которые печатаем мы: логотипы победителей - здесь, у
           того, на кого вещь записана, а не в админке. */}
