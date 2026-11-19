@@ -820,22 +820,22 @@ b.ym-num {
   gap: 1rem;
 }
 
-:is(.ym-legacy, .ym-bare, .ym .wins) :is(.role-card, .sl-card, .sl-photo, .sl-qr-card, .sl-waiting, .win-card, .ad-viewer) {
+:is(.ym-legacy, .ym .wins) :is(.role-card, .sl-card, .sl-photo, .sl-qr-card, .sl-waiting, .win-card, .ad-viewer) {
   border: 1px solid #e7e6e1;
   border-radius: 6px;
   background: #fff;
   box-shadow: none;
 }
 
-:is(.ym-legacy, .ym-bare, .ym .wins) :is(input, textarea, select, .sl-input, .sl-field, .sl-line, .addr-box, .sl-qr, .ad-check, .ad-give, .ad-prepare, .ad-reason, .ad-row, .ad-scene) {
+:is(.ym-legacy, .ym .wins) :is(input, textarea, select, .sl-input, .sl-field, .sl-line, .addr-box, .sl-qr, .ad-check, .ad-give, .ad-prepare, .ad-reason, .ad-row, .ad-scene) {
   border-radius: 6px;
 }
 
-:is(.ym-legacy, .ym-bare, .ym .wins) :is(button, a.primary, .primary, .ghost, .sl-btn, .sl-next, .sl-open-camera, .sl-qr-actions, .sl-yesno, .viewer-close, .sl-chip, .sl-kind, .sl-pill, .role-toggle, .theme-row) {
+:is(.ym-legacy, .ym .wins) :is(button, a.primary, .primary, .ghost, .sl-btn, .sl-next, .sl-open-camera, .sl-qr-actions, .sl-yesno, .viewer-close, .sl-chip, .sl-kind, .sl-pill, .role-toggle, .theme-row) {
   border-radius: 4px;
 }
 
-:is(.ym-legacy, .ym-bare, .ym .wins) :is(.primary, .sl-btn.dark) {
+:is(.ym-legacy, .ym .wins) :is(.primary, .sl-btn.dark) {
   background: var(--ink);
   color: #fff;
   font-weight: 600;
@@ -865,8 +865,14 @@ b.ym-num {
   align-self: flex-start;
 }
 
-.ym-bare {
-  margin-top: 1.5rem;
+/* Шаг продавца - во всю ширину: колонка человека и вкладки уходят. */
+.ym.focus .ym-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ym.focus .ym-side,
+.ym.focus .ym-tabs {
+  display: none;
 }
 
 /* Кабинет до входа. */
