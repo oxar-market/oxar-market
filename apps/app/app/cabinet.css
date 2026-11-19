@@ -831,7 +831,7 @@ b.ym-num {
   border-radius: 6px;
 }
 
-:is(.ym-legacy, .ym .wins) :is(button, a.primary, .primary, .ghost, .sl-btn, .sl-next, .sl-open-camera, .sl-qr-actions, .sl-yesno, .viewer-close, .sl-chip, .sl-kind, .sl-pill, .role-toggle, .theme-row) {
+:is(.ym-legacy, .ym .wins) :is(button, a.primary, .primary, .ghost, .sl-btn, .sl-next, .sl-open-camera, .sl-qr-actions, .sl-yesno, .viewer-close, .sl-chip, .sl-pill, .role-toggle, .theme-row) {
   border-radius: 4px;
 }
 

@@ -4856,51 +4856,6 @@ a.sl-pill {
   letter-spacing: -0.02em;
 }
 
-.sl-kind {
-  display: flex;
-  padding: 3px;
-  border-radius: 999px;
-  background: var(--soft);
-}
-
-.sl-kind button {
-  padding: 6px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  font: inherit;
-  font-size: 0.8125rem;
-  color: var(--mut);
-  cursor: pointer;
-}
-
-/* Аренда по дням - видна, но выключена, и на наведение говорит, что будет. */
-.sl-kind button.soon {
-  position: relative;
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.sl-kind button.soon:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 6px);
-  padding: 5px 9px;
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--card);
-  font-size: 0.75rem;
-  white-space: nowrap;
-  opacity: 1;
-}
-
-.sl-kind button.on {
-  background: var(--card);
-  color: var(--ink);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
 .sl-field {
   min-width: 0;
   display: flex;
