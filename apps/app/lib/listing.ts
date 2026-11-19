@@ -52,6 +52,8 @@ export type ListedThing = {
   opensAt: string | null;
   /** id листа стикеров в цепочке; пусто - стикеров на вещи нет. */
   stickerSheet: string | null;
+  /** Деньги победителям вернули мимо программы (фургон). Ставим только мы. */
+  refundedAt: string | null;
 };
 
 type SpotRow = {
@@ -123,7 +125,7 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
   if (!db) return null;
   const { data: thing } = await db
     .from("things")
-    .select(`id, title, tagline, seller, house, prepared, opens_at, sticker_sheet, photos, model_url, hologram_url, thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, seller, house, prepared, opens_at, sticker_sheet, refunded_at, photos, model_url, hologram_url, thing_spots(${SPOT_COLUMNS})`)
     .eq("id", thingId)
     .maybeSingle();
   if (!thing) return null;
@@ -157,27 +159,38 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
     model: (thing.model_url as string) || null,
     hologram: (thing.hologram_url as string | null) || null,
     opensAt: (thing.opens_at as string | null) ?? null,
+    refundedAt: (thing.refunded_at as string | null) ?? null,
     stickerSheet: (thing.sticker_sheet as string | null) ?? null,
   };
 }
 
-/** Пруф вещи - последний: фото или ссылка, что логотипы показаны. Нет - null. */
+/**
+ * Пруф вещи: что логотипы показаны. Фото - из «Results photos» админки, если
+ * они есть: их ставим и меняем мы, и это то, что видит админ. Нет - фото из
+ * пруфа продавца в программе (последнего). Заметка и ссылки - из него же.
+ * Нет ни того, ни другого - null.
+ */
 export type ThingProof = { photos: string[]; links: string[]; note: string | null; provedAt: string | null };
 
 export async function loadThingProof(thingId: string): Promise<ThingProof | null> {
   if (!db) return null;
-  const { data } = await db
-    .from("proofs")
-    .select("photos, links, note, proved_at")
-    .eq("thing_id", thingId)
-    .order("proved_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!data) return null;
+  const [{ data: thing }, { data: proof }] = await Promise.all([
+    db.from("things").select("proof_photos").eq("id", thingId).maybeSingle(),
+    db
+      .from("proofs")
+      .select("photos, links, note, proved_at")
+      .eq("thing_id", thingId)
+      .order("proved_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const ours = (thing?.proof_photos as string[] | null) ?? [];
+  const sellers = (proof?.photos as string[] | null) ?? [];
+  if (!proof && ours.length === 0) return null;
   return {
-    photos: ((data.photos as string[] | null) ?? []).map(photoUrl),
-    links: (data.links as string[] | null) ?? [],
-    note: (data.note as string | null) ?? null,
-    provedAt: (data.proved_at as string | null) ?? null,
+    photos: (ours.length ? ours : sellers).map(photoUrl),
+    links: (proof?.links as string[] | null) ?? [],
+    note: (proof?.note as string | null) ?? null,
+    provedAt: (proof?.proved_at as string | null) ?? null,
   };
 }

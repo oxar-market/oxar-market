@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
 import type { Story } from "@/lib/story";
+import { Media } from "../gallery.tsx";
 
 /**
  * Закрытый торг - не пустая витрина, а история, рассказанная крупным шрифтом
@@ -23,21 +24,26 @@ export function StoryHero({
   openedAt,
   closedAt,
   proof,
+  refundedAt,
 }: {
   story: Story;
   openedAt: number | null;
   closedAt: number;
   proof: ThingProof | null | undefined;
+  /** Деньги вернули мимо программы - последний шаг «Refunded», а не пруф. */
+  refundedAt: string | null;
 }) {
   const path: { label: string; when: string; done: boolean }[] = [
     { label: "Opened", when: openedAt ? day(openedAt) : "", done: true },
     { label: "First bid", when: story.firstBidAt ? day(story.firstBidAt) : "", done: Boolean(story.firstBidAt) },
     { label: "Closed", when: day(closedAt), done: true },
-    {
-      label: "Logos shown",
-      when: proof ? (proof.provedAt ? day(proof.provedAt) : "") : "Waiting for proof",
-      done: Boolean(proof),
-    },
+    refundedAt
+      ? { label: "Refunded", when: day(refundedAt), done: true }
+      : {
+          label: "Logos shown",
+          when: proof ? (proof.provedAt ? day(proof.provedAt) : "") : "Waiting for proof",
+          done: Boolean(proof),
+        },
   ];
   return (
     <section className="sx-hero">
@@ -58,6 +64,7 @@ export function StoryHero({
             spots found a brand.
           </>
         )}
+        {refundedAt && " In the end every winning bid was refunded."}
       </p>
       <ol className="sx-path">
         {path.map((step) => (
@@ -79,18 +86,18 @@ export function StoryBody({
   labelOf,
   proof,
   onProof,
+  refundedAt,
 }: {
   thingId: string;
   story: Story;
   labelOf: (code: string) => string;
   proof: ThingProof | null | undefined;
   onProof: (proof: ThingProof | null) => void;
+  refundedAt: string | null;
 }) {
   useEffect(() => {
     void loadThingProof(thingId).then(onProof);
   }, [thingId, onProof]);
-
-  const fight = story.battles[0];
 
   return (
     <div className="sx-body">
@@ -103,7 +110,10 @@ export function StoryBody({
               <span className="sx-logo">{one.mediaUrl && <img src={one.mediaUrl} alt="" />}</span>
               <span className="sx-who">
                 <b>{one.brand}</b>
-                <span>{labelOf(one.spot)}</span>
+                <span>
+                  {labelOf(one.spot)}
+                  {refundedAt && " · refunded"}
+                </span>
               </span>
               <span className="sx-amt">{formatUsd(one.amountCents)}</span>
             </li>
@@ -122,25 +132,39 @@ export function StoryBody({
         </ol>
       </section>
 
-      {fight && (
+      {/* Все ставки по местам, и перебитые тоже: кто и сколько давал, и что
+          их деньги вернулись. Перебитым программа вернула ставку сразу. */}
+      {story.rounds.length > 0 && (
         <section className="sx-section">
-          <h2>
-            {/* «the Hood», но «Spot 04» - у номера артикль лишний. */}
-            The fight for {labelOf(fight.spot).startsWith("Spot ") ? "" : "the "}
-            {labelOf(fight.spot)}
-          </h2>
+          <h2>Every bid</h2>
           <p className="sx-sub">
-            {plural(fight.steps.length, "bid", "bids")} from {plural(fight.brands, "bidder", "bidders")},{" "}
-            {formatUsd(fight.steps[0]!.amountCents)} to {formatUsd(fight.steps.at(-1)!.amountCents)}.
+            {plural(story.bids, "bid", "bids")} from {plural(story.bidders, "bidder", "bidders")}. An outbid bid went
+            straight back to its wallet.
           </p>
-          <ol className="sx-ladder">
-            {fight.steps.map((step, index) => (
-              <li key={index} className={index === fight.steps.length - 1 ? "won" : ""}>
-                <b>{formatUsd(step.amountCents)}</b>
-                <span>{step.brand}</span>
-              </li>
+          <div className="sx-rounds">
+            {story.rounds.map((round) => (
+              <section key={round.spot} className="sx-round">
+                <header>
+                  <b>{labelOf(round.spot)}</b>
+                  <span>{plural(round.steps.length, "bid", "bids")}</span>
+                </header>
+                <ol>
+                  {round.steps.map((step, index) => {
+                    const won = round.won && index === 0;
+                    return (
+                      <li key={index} className={won ? "won" : ""}>
+                        <span className="sx-r-amt">{formatUsd(step.amountCents)}</span>
+                        <span className="sx-r-who">{step.brand}</span>
+                        <span className="sx-r-tag">
+                          {won ? (refundedAt ? "Won, refunded" : "Won") : round.won ? "Outbid, refunded" : "Refunded"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
             ))}
-          </ol>
+          </div>
         </section>
       )}
 
@@ -150,7 +174,7 @@ export function StoryBody({
           {proof.photos.length > 0 && (
             <div className="sx-proof">
               {proof.photos.map((url) => (
-                <img key={url} src={url} alt="" />
+                <Media key={url} src={url} play />
               ))}
             </div>
           )}

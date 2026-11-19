@@ -10583,48 +10583,77 @@ body:has(.app-v2)::after {
   font-weight: 500;
 }
 
-/* Лесенка ставок: суммы растут слева направо, последняя - победила. */
-.sx-ladder {
+/* Все ставки по местам: место заголовком, под ним ставки от большей к
+   меньшей. Победившая - чернилами, перебитые - приглушённо. */
+.sx-rounds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  gap: 2.5rem 3rem;
+  margin-top: 2rem;
+}
+
+.sx-round header {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem 0;
-  margin: 2rem 0 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.sx-round header b {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.sx-round header span {
+  color: var(--mut);
+  font-size: 0.8125rem;
+}
+
+.sx-round ol {
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.sx-ladder li {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  min-width: 9rem;
-  padding-right: 2.5rem;
-}
-
-.sx-ladder li + li {
-  padding-left: 1.5rem;
-  border-left: 1px solid var(--line);
-}
-
-.sx-ladder b {
+.sx-round li {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--line);
   color: var(--mut);
-  font-size: clamp(1.5rem, 3vw, 2.5rem);
-  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.sx-r-amt {
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em;
+  font-weight: 600;
 }
 
-.sx-ladder span {
-  color: var(--mut);
-  font-size: 0.875rem;
+.sx-r-who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.sx-ladder li.won b {
+.sx-r-tag {
+  font-size: 0.8125rem;
+}
+
+.sx-round li.won {
+  color: var(--ink);
+}
+
+.sx-round li.won .sx-r-amt,
+.sx-round li.won .sx-r-tag {
   color: var(--red);
 }
 
-.sx-ladder li.won span {
-  color: var(--ink);
+.sx-round li.won .sx-r-who {
   font-weight: 600;
 }
 
@@ -10635,7 +10664,8 @@ body:has(.app-v2)::after {
   overflow-x: auto;
 }
 
-.sx-proof img {
+.sx-proof img,
+.sx-proof video {
   height: clamp(16rem, 32vw, 28rem);
   border-radius: 6px;
 }
@@ -10727,13 +10757,8 @@ body:has(.app-v2)::after {
     font-size: 1.0625rem;
   }
 
-  .sx-ladder li {
-    min-width: 7rem;
-    padding-right: 1.25rem;
-  }
-
-  .sx-ladder li + li {
-    padding-left: 1rem;
+  .sx-rounds {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sx-body {
