@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
 import { reachOf, type Story } from "@/lib/story";
+import { mosaic } from "@/lib/mosaic";
 import { Gallery } from "../gallery.tsx";
 
 /**
@@ -243,7 +244,7 @@ export function StoryReach({
 
   return (
     <section className="sx-section sx-chart-block sx-reach">
-      <h2>{counted ? "Who saw it" : "The brands on it"}</h2>
+      <h2>{counted ? "Who saw it" : view.brands.length === 1 ? "The brand on it" : "The brands on it"}</h2>
       {counted ? (
         <>
           <p className="sx-reach-big">
@@ -266,29 +267,76 @@ export function StoryReach({
           </dl>
         </>
       ) : (
-        <p className="sx-sub">What each brand paid. Tap one to see its spot. Reach is being counted.</p>
+        <p className="sx-sub">
+          {view.brands.length > 1 && "The bigger the tile, the more the brand paid. "}Reach is being counted.
+        </p>
       )}
-      <ol className="sx-bars">
-        {view.brands.map((one) => (
-          <li key={one.spot}>
-            <button type="button" className={picked === one.spot ? "on" : ""} onClick={() => onPick(one.spot)}>
-              <span className="sx-logo">{one.mediaUrl && <img src={one.mediaUrl} alt="" />}</span>
-              <span className="sx-bar-body">
-                <span className="sx-bar-head">
-                  <b>{one.brand}</b>
-                  <span>{labelOf(one.spot)}</span>
-                  <em>
-                    {formatUsd(one.amountCents)}
-                    {one.cpmCents !== null && <small> · {formatUsd(one.cpmCents)} / 1k views</small>}
-                  </em>
-                </span>
-                <i style={{ width: `${Math.max(4, (one.amountCents / most) * 100)}%` }} />
+      <BrandMosaic brands={view.brands} labelOf={labelOf} picked={picked} onPick={onPick} />
+    </section>
+  );
+}
+
+/**
+ * Мозаика брендов: плитка на бренд, площадь - его ставка. Наведи или нажми -
+ * плитка выделена, под мозаикой - бренд, место, сумма и цена тысячи
+ * показов, а на вещи - его место.
+ */
+function BrandMosaic({
+  brands,
+  labelOf,
+  picked,
+  onPick,
+}: {
+  brands: { spot: string; brand: string; amountCents: number; mediaUrl: string; cpmCents: number | null }[];
+  labelOf: (code: string) => string;
+  picked: string | null;
+  onPick: (code: string) => void;
+}) {
+  const [hover, setHover] = useState<string | null>(null);
+  const W = 160;
+  const H = 90;
+  const tiles = mosaic(
+    brands.map((one) => one.amountCents),
+    W,
+    H,
+  );
+  const shown = brands.find((one) => one.spot === (hover ?? picked));
+  const pct = (value: number, of: number) => `${(value / of) * 100}%`;
+
+  return (
+    <>
+      <div className={brands.length === 1 ? "sx-mosaic one" : "sx-mosaic"} onMouseLeave={() => setHover(null)}>
+        {brands.map((one, index) => {
+          const tile = tiles[index]!;
+          return (
+            <button
+              type="button"
+              key={one.spot}
+              className={one.spot === (hover ?? picked) ? "sx-tile on" : "sx-tile"}
+              style={{ left: pct(tile.x, W), top: pct(tile.y, H), width: pct(tile.w, W), height: pct(tile.h, H) }}
+              onMouseEnter={() => setHover(one.spot)}
+              onClick={() => onPick(one.spot)}
+              aria-label={`${one.brand}, ${labelOf(one.spot)}, ${formatUsd(one.amountCents)}`}
+            >
+              {one.mediaUrl ? <img src={one.mediaUrl} alt="" /> : <b>{one.brand}</b>}
+              <span className="sx-tile-cap">
+                {one.brand} · {formatUsd(one.amountCents)}
               </span>
             </button>
-          </li>
-        ))}
-      </ol>
-    </section>
+          );
+        })}
+      </div>
+      <p className="sx-mosaic-detail">
+        {shown ? (
+          <>
+            <b>{shown.brand}</b> · {labelOf(shown.spot)} · {formatUsd(shown.amountCents)}
+            {shown.cpmCents !== null && <> · {formatUsd(shown.cpmCents)} per 1,000 views</>}
+          </>
+        ) : (
+          "Tap a logo to see its spot on the thing."
+        )}
+      </p>
+    </>
   );
 }
 
