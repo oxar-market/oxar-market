@@ -137,7 +137,9 @@ export function StorySpots({
           {story.rounds.map((round) => {
             const winner = winnerOf.get(round.spot);
             return (
-              <details key={round.spot} className="sx-spot">
+              // Место одно - его ставки раскрыты сразу: прятать единственную
+              // историю за нажатием незачем.
+              <details key={round.spot} className="sx-spot" open={story.rounds.length === 1 || undefined}>
                 <summary>
                   <span className="sx-logo">{winner?.mediaUrl && <img src={winner.mediaUrl} alt="" />}</span>
                   <span className="sx-who">
@@ -206,6 +208,54 @@ export function StoryProof({
             {link.replace(/^https:\/\//, "")}
           </a>
         ))}
+    </section>
+  );
+}
+
+/**
+ * Как собирались деньги: сумма лидирующих ставок по времени ступенькой, точка
+ * на каждую ставку - красная, если ставка в итоге забрала место. Одна ставка -
+ * одна ступенька, много - живая кривая; подписи - снаружи рисунка, чтобы на
+ * телефоне не мельчали вместе с ним.
+ */
+export function StoryChart({ story, closedAt }: { story: Story; closedAt: number }) {
+  const pot = story.pot;
+  if (pot.length === 0) return null;
+  const W = 800;
+  const H = 180;
+  const PAD = 8;
+  const start = Date.parse(pot[0]!.at);
+  const end = Math.max(closedAt, Date.parse(pot.at(-1)!.at));
+  const span = Math.max(end - start, 1);
+  const top = Math.max(...pot.map((one) => one.cents), 1);
+  const x = (ms: number) => PAD + ((ms - start) / span) * (W - PAD * 2);
+  const y = (cents: number) => H - PAD - (cents / top) * (H - PAD * 2);
+
+  let line = `M ${x(start)} ${y(0)}`;
+  for (const point of pot) line += ` H ${x(Date.parse(point.at))} V ${y(point.cents)}`;
+  line += ` H ${x(end)}`;
+  const area = `${line} V ${y(0)} H ${x(start)} Z`;
+  const days = Math.max(1, Math.round(span / 86_400_000));
+
+  return (
+    <section className="sx-section sx-chart-block">
+      <h2>How the money came in</h2>
+      <p className="sx-sub">
+        {formatUsd(pot.at(-1)!.cents)} in {plural(days, "day", "days")}, {plural(pot.length, "bid", "bids")}.
+      </p>
+      <div className="sx-chart">
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Total bid over time">
+          <path className="sx-chart-area" d={area} />
+          <path className="sx-chart-line" d={line} />
+          {pot.map((point, index) => (
+            <circle key={index} className={point.won ? "won" : ""} cx={x(Date.parse(point.at))} cy={y(point.cents)} r={point.won ? 5 : 3.5} />
+          ))}
+        </svg>
+        <div className="sx-chart-axis">
+          <span>{day(start)}</span>
+          <span>{day(end)}</span>
+        </div>
+      </div>
     </section>
   );
 }

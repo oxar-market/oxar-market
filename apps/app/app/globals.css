@@ -10341,9 +10341,27 @@ body:has(.app-v2)::after {
   grid-row: 1;
 }
 
+/* История справа - боковая панель: стоит на месте, пока слева листают
+   график, пруф и About; длинный список мест или ставок листается внутри. */
 .lot-v2 .lot-body.solo .sx-side {
+  position: sticky;
+  top: 5.5rem;
   grid-column: 2;
   grid-row: 1;
+  max-height: calc(100vh - 7rem);
+}
+
+.lot-v2 .lot-body.solo .sx-side > .sx-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.lot-v2 .lot-body.solo .sx-side .sx-spots,
+.lot-v2 .lot-body.solo .sx-side .sx-all {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .lot-v2 .lot-body.solo .lot-right {
@@ -10353,7 +10371,7 @@ body:has(.app-v2)::after {
 .sx-side {
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 2rem;
   min-width: 0;
 }
 
@@ -10670,6 +10688,51 @@ body:has(.app-v2)::after {
   color: var(--red);
 }
 
+/* График: ступенька суммы, точки ставок; выигравшие - красные. */
+.sx-chart {
+  margin-top: 1.25rem;
+}
+
+.sx-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sx-chart-area {
+  fill: color-mix(in srgb, var(--red) 8%, transparent);
+}
+
+.sx-chart-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.sx-chart circle {
+  fill: var(--bg);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.sx-chart circle.won {
+  fill: var(--red);
+  stroke: var(--red);
+}
+
+.sx-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--mut);
+  font-size: 0.8125rem;
+}
+
 .sx-proof {
   display: flex;
   gap: 0.5rem;
@@ -10764,8 +10827,19 @@ body:has(.app-v2)::after {
   }
 
   .lot-v2 .lot-body.solo .sx-side {
+    position: static;
     order: 2;
     grid-column: auto;
     grid-row: auto;
+    max-height: none;
+  }
+
+  .lot-v2 .lot-body.solo .sx-side .sx-spots,
+  .lot-v2 .lot-body.solo .sx-side .sx-all {
+    max-height: 30rem;
+  }
+
+  .lot-v2 .lot-body.solo .sx-chart-block {
+    order: 3;
   }
 }

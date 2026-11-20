@@ -36,6 +36,8 @@ export type Story = {
   /** Места со ставками - дорогие первыми; там же перебитые. */
   rounds: Round[];
   firstBidAt: string | null;
+  /** Сумма по ходу торга: после каждой ставки - лидирующие ставки всех мест вместе. won - эта ставка в итоге забрала место. */
+  pot: { at: string; cents: number; won: boolean }[];
 };
 
 export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
@@ -73,5 +75,30 @@ export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
     unsold,
     rounds,
     firstBidAt: bids.map((one) => one.created_at).sort()[0] ?? null,
+    pot: potOf(lots, bids),
   };
 }
+
+function potOf(lots: StoryLot[], bids: StoryBid[]): Story["pot"] {
+  // Победившая ставка места - наибольшая (при равных - ранняя), как в итоге.
+  const winning = new Set<string>();
+  for (const lot of lots) {
+    if (lot.status !== "won") continue;
+    const top = bids
+      .filter((one) => one.lot_id === lot.id)
+      .sort((a, b) => b.amount_cents - a.amount_cents || a.created_at.localeCompare(b.created_at))[0];
+    if (top) winning.add(top.id);
+  }
+  const leading = new Map<string, number>();
+  return [...bids]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map((one) => {
+      leading.set(one.lot_id, Math.max(leading.get(one.lot_id) ?? 0, one.amount_cents));
+      return {
+        at: one.created_at,
+        cents: [...leading.values()].reduce((sum, cents) => sum + cents, 0),
+        won: winning.has(one.id),
+      };
+    });
+}
+
