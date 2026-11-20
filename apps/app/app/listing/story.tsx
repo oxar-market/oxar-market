@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
 import { leadersAt, reachOf, type Story } from "@/lib/story";
-import { mosaic } from "@/lib/mosaic";
 import { Gallery } from "../gallery.tsx";
 
 /**
@@ -214,132 +213,40 @@ export function StoryProof({
 }
 
 /**
- * Кто увидел вещь и что бренды получили за деньги: охват крупно, цена тысячи
- * показов, и полоса на бренд - сколько отдал и почём вышла тысяча показов.
- * Нажал на бренд - его место выделено на вещи. Охват - только из статистики
- * постов; пока его нет, остаются полосы.
+ * Кто увидел вещь: охват крупно, цена тысячи показов за весь торг и самая
+ * дешёвая тысяча у бренда. Только цифра из статистики постов - пока охват не
+ * посчитан, блока нет.
  */
-export function StoryReach({
-  story,
-  reach,
-  checked,
-  labelOf,
-  picked,
-  onPick,
-}: {
-  story: Story;
-  reach: number | null;
-  checked: boolean;
-  labelOf: (code: string) => string;
-  picked: string | null;
-  onPick: (code: string) => void;
-}) {
-  if (story.winners.length === 0) return null;
-  // Только цифра из статистики постов: оценку без источника на витрину не
-  // выносим - пока охват не посчитан, остаются полосы брендов.
+export function StoryReach({ story, reach, checked }: { story: Story; reach: number | null; checked: boolean }) {
   const counted = checked ? reach : null;
+  if (!counted || story.winners.length === 0) return null;
   const view = reachOf(story, counted);
-  const most = Math.max(...view.brands.map((one) => one.amountCents), 1);
   const cheapest = Math.min(...view.brands.map((one) => one.cpmCents ?? Infinity));
 
   return (
-    <section className="sx-section sx-chart-block sx-reach">
-      <h2>{counted ? "Who saw it" : view.brands.length === 1 ? "The brand on it" : "The brands on it"}</h2>
-      {counted ? (
-        <>
-          <p className="sx-reach-big">
-            {counted.toLocaleString("en-US")}
-            <span>people saw the logos</span>
-          </p>
-          <dl className="sx-reach-stats">
-            <div>
-              <dt>Per 1,000 views</dt>
-              <dd>{formatUsd(view.cpmCents ?? 0)}</dd>
-            </div>
-            <div>
-              <dt>Brands on it</dt>
-              <dd>{view.brands.length}</dd>
-            </div>
-            <div>
-              <dt>Cheapest spot</dt>
-              <dd>{formatUsd(cheapest)} / 1k</dd>
-            </div>
-          </dl>
-        </>
-      ) : (
-        <p className="sx-sub">
-          {view.brands.length > 1 && "The bigger the tile, the more the brand paid. "}Reach is being counted.
-        </p>
-      )}
-      <BrandMosaic brands={view.brands} labelOf={labelOf} picked={picked} onPick={onPick} />
+    <section className="sx-section sx-reach">
+      <h2>Who saw it</h2>
+      <p className="sx-reach-big">
+        {counted.toLocaleString("en-US")}
+        <span>people saw the logos</span>
+      </p>
+      <dl className="sx-reach-stats">
+        <div>
+          <dt>Per 1,000 views</dt>
+          <dd>{formatUsd(view.cpmCents ?? 0)}</dd>
+        </div>
+        <div>
+          <dt>Brands on it</dt>
+          <dd>{view.brands.length}</dd>
+        </div>
+        <div>
+          <dt>Cheapest spot</dt>
+          <dd>{formatUsd(cheapest)} / 1k</dd>
+        </div>
+      </dl>
     </section>
   );
 }
-
-/**
- * Мозаика брендов: плитка на бренд, площадь - его ставка. Наведи или нажми -
- * плитка выделена, под мозаикой - бренд, место, сумма и цена тысячи
- * показов, а на вещи - его место.
- */
-function BrandMosaic({
-  brands,
-  labelOf,
-  picked,
-  onPick,
-}: {
-  brands: { spot: string; brand: string; amountCents: number; mediaUrl: string; cpmCents: number | null }[];
-  labelOf: (code: string) => string;
-  picked: string | null;
-  onPick: (code: string) => void;
-}) {
-  const [hover, setHover] = useState<string | null>(null);
-  const W = 160;
-  const H = 90;
-  const tiles = mosaic(
-    brands.map((one) => one.amountCents),
-    W,
-    H,
-  );
-  const shown = brands.find((one) => one.spot === (hover ?? picked));
-  const pct = (value: number, of: number) => `${(value / of) * 100}%`;
-
-  return (
-    <>
-      <div className={brands.length === 1 ? "sx-mosaic one" : "sx-mosaic"} onMouseLeave={() => setHover(null)}>
-        {brands.map((one, index) => {
-          const tile = tiles[index]!;
-          return (
-            <button
-              type="button"
-              key={one.spot}
-              className={one.spot === (hover ?? picked) ? "sx-tile on" : "sx-tile"}
-              style={{ left: pct(tile.x, W), top: pct(tile.y, H), width: pct(tile.w, W), height: pct(tile.h, H) }}
-              onMouseEnter={() => setHover(one.spot)}
-              onClick={() => onPick(one.spot)}
-              aria-label={`${one.brand}, ${labelOf(one.spot)}, ${formatUsd(one.amountCents)}`}
-            >
-              {one.mediaUrl ? <img src={one.mediaUrl} alt="" /> : <b>{one.brand}</b>}
-              <span className="sx-tile-cap">
-                {one.brand} · {formatUsd(one.amountCents)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="sx-mosaic-detail">
-        {shown ? (
-          <>
-            <b>{shown.brand}</b> · {labelOf(shown.spot)} · {formatUsd(shown.amountCents)}
-            {shown.cpmCents !== null && <> · {formatUsd(shown.cpmCents)} per 1,000 views</>}
-          </>
-        ) : (
-          "Tap a logo to see its spot on the thing."
-        )}
-      </p>
-    </>
-  );
-}
-
 
 /**
  * Перемотка торга на самой вещи: шаг - ставка. Тянешь ползунок или жмёшь

@@ -646,14 +646,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             spotOf={(lotId) => labelOf(lots.find((one) => one.id === lotId)?.spot_code ?? "")}
             onTime={setReplay}
           />
-          <StoryReach
-            story={story}
-            reach={thing.reach}
-            checked={thing.reachChecked}
-            labelOf={labelOf}
-            picked={picked}
-            onPick={choose}
-          />
+          <StoryReach story={story} reach={thing.reach} checked={thing.reachChecked} />
           <StoryProof thingId={thingId} proof={proof} onProof={setProof} />
           <WornAbout thingId={thingId} />
         </>
