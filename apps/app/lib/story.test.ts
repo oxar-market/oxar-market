@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { storyOf } from "./story.ts";
+import { reachOf, storyOf } from "./story.ts";
 
 const bid = (id: string, lot_id: string, amount_cents: number, brand: string, wallet: string, at: string) => ({
   id,
@@ -74,20 +74,16 @@ test("ставки на непроданное место в итог не ид�
   assert.equal(story.bidders, 5);
 });
 
-test("сумма по ходу торга: после каждой ставки - сумма лидирующих ставок всех мест", () => {
-  const story = storyOf(lots, bids);
-  assert.deepEqual(
-    story.pot.map((one) => one.cents),
-    // h1 600, d1 +450, h2 700 (замена 600), h3 800, h4 900
-    [60000, 105000, 115000, 125000, 135000],
-  );
-  assert.deepEqual(
-    story.pot.map((one) => one.won),
-    [false, true, false, false, true],
-  );
+test("цена за тысячу показов: сумма к охвату, по каждому бренду отдельно", () => {
+  const view = reachOf(storyOf(lots, bids), 50000);
+  // Всего $1,350 на 50 000 показов - $27 за тысячу; C отдал $900 - $18, D $450 - $9.
+  assert.equal(view.cpmCents, 2700);
+  assert.deepEqual(view.brands.map((one) => [one.brand, one.cpmCents]), [["C", 1800], ["D", 900]]);
 });
 
-test("без ставок - пустой ход", () => {
-  assert.deepEqual(storyOf(lots, []).pot, []);
+test("охвата нет - цены за показы нет, бренды остаются", () => {
+  const view = reachOf(storyOf(lots, bids), null);
+  assert.equal(view.cpmCents, null);
+  assert.deepEqual(view.brands.map((one) => one.cpmCents), [null, null]);
 });
 

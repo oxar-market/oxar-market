@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
-import type { Story } from "@/lib/story";
+import { reachOf, type Story } from "@/lib/story";
 import { Gallery } from "../gallery.tsx";
 
 /**
@@ -213,49 +213,82 @@ export function StoryProof({
 }
 
 /**
- * Как собирались деньги: сумма лидирующих ставок по времени ступенькой, точка
- * на каждую ставку - красная, если ставка в итоге забрала место. Одна ставка -
- * одна ступенька, много - живая кривая; подписи - снаружи рисунка, чтобы на
- * телефоне не мельчали вместе с ним.
+ * Кто увидел вещь и что бренды получили за деньги: охват крупно, цена тысячи
+ * показов, и полоса на бренд - сколько отдал и почём вышла тысяча показов.
+ * Нажал на бренд - его место выделено на вещи. Охват - только из статистики
+ * постов; пока его нет, остаются полосы.
  */
-export function StoryChart({ story, closedAt }: { story: Story; closedAt: number }) {
-  const pot = story.pot;
-  if (pot.length === 0) return null;
-  const W = 800;
-  const H = 180;
-  const PAD = 8;
-  const start = Date.parse(pot[0]!.at);
-  const end = Math.max(closedAt, Date.parse(pot.at(-1)!.at));
-  const span = Math.max(end - start, 1);
-  const top = Math.max(...pot.map((one) => one.cents), 1);
-  const x = (ms: number) => PAD + ((ms - start) / span) * (W - PAD * 2);
-  const y = (cents: number) => H - PAD - (cents / top) * (H - PAD * 2);
-
-  let line = `M ${x(start)} ${y(0)}`;
-  for (const point of pot) line += ` H ${x(Date.parse(point.at))} V ${y(point.cents)}`;
-  line += ` H ${x(end)}`;
-  const area = `${line} V ${y(0)} H ${x(start)} Z`;
-  const days = Math.max(1, Math.round(span / 86_400_000));
+export function StoryReach({
+  story,
+  reach,
+  checked,
+  labelOf,
+  picked,
+  onPick,
+}: {
+  story: Story;
+  reach: number | null;
+  checked: boolean;
+  labelOf: (code: string) => string;
+  picked: string | null;
+  onPick: (code: string) => void;
+}) {
+  if (story.winners.length === 0) return null;
+  // Только цифра из статистики постов: оценку без источника на витрину не
+  // выносим - пока охват не посчитан, остаются полосы брендов.
+  const counted = checked ? reach : null;
+  const view = reachOf(story, counted);
+  const most = Math.max(...view.brands.map((one) => one.amountCents), 1);
+  const cheapest = Math.min(...view.brands.map((one) => one.cpmCents ?? Infinity));
 
   return (
-    <section className="sx-section sx-chart-block">
-      <h2>How the money came in</h2>
-      <p className="sx-sub">
-        {formatUsd(pot.at(-1)!.cents)} in {plural(days, "day", "days")}, {plural(pot.length, "bid", "bids")}.
-      </p>
-      <div className="sx-chart">
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Total bid over time">
-          <path className="sx-chart-area" d={area} />
-          <path className="sx-chart-line" d={line} />
-          {pot.map((point, index) => (
-            <circle key={index} className={point.won ? "won" : ""} cx={x(Date.parse(point.at))} cy={y(point.cents)} r={point.won ? 5 : 3.5} />
-          ))}
-        </svg>
-        <div className="sx-chart-axis">
-          <span>{day(start)}</span>
-          <span>{day(end)}</span>
-        </div>
-      </div>
+    <section className="sx-section sx-chart-block sx-reach">
+      <h2>{counted ? "Who saw it" : "The brands on it"}</h2>
+      {counted ? (
+        <>
+          <p className="sx-reach-big">
+            {counted.toLocaleString("en-US")}
+            <span>people saw the logos</span>
+          </p>
+          <dl className="sx-reach-stats">
+            <div>
+              <dt>Per 1,000 views</dt>
+              <dd>{formatUsd(view.cpmCents ?? 0)}</dd>
+            </div>
+            <div>
+              <dt>Brands on it</dt>
+              <dd>{view.brands.length}</dd>
+            </div>
+            <div>
+              <dt>Cheapest spot</dt>
+              <dd>{formatUsd(cheapest)} / 1k</dd>
+            </div>
+          </dl>
+        </>
+      ) : (
+        <p className="sx-sub">What each brand paid. Tap one to see its spot. Reach is being counted.</p>
+      )}
+      <ol className="sx-bars">
+        {view.brands.map((one) => (
+          <li key={one.spot}>
+            <button type="button" className={picked === one.spot ? "on" : ""} onClick={() => onPick(one.spot)}>
+              <span className="sx-logo">{one.mediaUrl && <img src={one.mediaUrl} alt="" />}</span>
+              <span className="sx-bar-body">
+                <span className="sx-bar-head">
+                  <b>{one.brand}</b>
+                  <span>{labelOf(one.spot)}</span>
+                  <em>
+                    {formatUsd(one.amountCents)}
+                    {one.cpmCents !== null && <small> · {formatUsd(one.cpmCents)} / 1k views</small>}
+                  </em>
+                </span>
+                <i style={{ width: `${Math.max(4, (one.amountCents / most) * 100)}%` }} />
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
+

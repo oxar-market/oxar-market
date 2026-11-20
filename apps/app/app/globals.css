@@ -10688,49 +10688,148 @@ body:has(.app-v2)::after {
   color: var(--red);
 }
 
-/* График: ступенька суммы, точки ставок; выигравшие - красные. */
-.sx-chart {
-  margin-top: 1.25rem;
-}
-
-.sx-chart svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
-.sx-chart-area {
-  fill: color-mix(in srgb, var(--red) 8%, transparent);
-}
-
-.sx-chart-line {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-}
-
-.sx-chart circle {
-  fill: var(--bg);
-  stroke: var(--ink);
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-}
-
-.sx-chart circle.won {
-  fill: var(--red);
-  stroke: var(--red);
-}
-
-.sx-chart-axis {
+/* Охват: сколько людей увидели вещь и почём бренды получили тысячу показов.
+   Полоса на бренд - доля его ставки от самой большой; нажал - место на вещи. */
+.sx-reach-big {
   display: flex;
-  justify-content: space-between;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin: 0.5rem 0 0;
+  font-size: clamp(2.5rem, 4.5vw, 3.75rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.sx-reach-big span {
+  color: var(--mut);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.sx-reach-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 1.5rem 0 0;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.sx-reach-stats div {
+  padding: 0.875rem 0;
+}
+
+.sx-reach-stats div + div {
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--line);
+}
+
+.sx-reach-stats dt {
+  color: var(--mut);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sx-reach-stats dd {
+  margin: 0.375rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.sx-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sx-bars button {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sx-bars button:hover,
+.sx-bars button.on {
+  background: var(--soft);
+}
+
+.sx-bar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.sx-bar-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 0.9375rem;
+}
+
+.sx-bar-head b {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sx-bar-head span {
+  flex: none;
   color: var(--mut);
   font-size: 0.8125rem;
+}
+
+.sx-bar-head em {
+  flex: none;
+  margin-left: auto;
+  font-style: normal;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.sx-bar-head small {
+  color: var(--mut);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.sx-bar-body i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ink);
+}
+
+.sx-bars button.on .sx-bar-body i {
+  background: var(--red);
+}
+
+@media (max-width: 56rem) {
+  .sx-bar-head span {
+    display: none;
+  }
 }
 
 .sx-proof {

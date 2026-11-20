@@ -58,6 +58,9 @@ export type AdminThing = {
    * покупателя: тот шлёт продавец из кабинета, и деньги отпускает он.
    */
   proof: string[];
+  /** Охват постов о торге; reachChecked - внесён из статистики, а не оценка. */
+  reach: number | null;
+  reachChecked: boolean;
   /** Кто носит, где, когда и в чём особенность - как написал продавец. Пусто - не написано. */
   worn: { by: string; where: string; when: string; about: string };
 };
@@ -76,7 +79,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, permit_sale, prepared, seller_wallet, sticker_sheet, opens_at, proof_photos, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, permit_sale, prepared, seller_wallet, sticker_sheet, opens_at, proof_photos, post_reach, post_reach_checked_at, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -125,6 +128,8 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
       .filter((lot) => lot.status === "open")
       .map((lot) => lot.id),
     proof: (row.proof_photos as string[] | null) ?? [],
+    reach: (row.post_reach as number | null) ?? null,
+    reachChecked: row.post_reach_checked_at !== null,
     worn: {
       by: (row.worn_by as string | null) ?? "",
       where: (row.worn_where as string | null) ?? "",
@@ -149,6 +154,8 @@ export async function updateThing(
     worn_where: string | null;
     worn_when: string | null;
     worn_about: string | null;
+    post_reach: number | null;
+    post_reach_checked_at: string | null;
   }>,
 ): Promise<boolean> {
   if (!db) return false;
