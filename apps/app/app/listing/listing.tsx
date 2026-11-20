@@ -5,8 +5,8 @@ import { formatUsd, hasOpened, isCreativeUrl, isOpen, minBidCents, originalUrl, 
 import { ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
 import { loadBids, loadFeed, loadMyBids, loadTopBids, myBrands, type Bid, type MyBid } from "@/lib/auction";
 import { loadListedThing, type ListedThing, type ThingProof } from "@/lib/listing";
-import { storyOf } from "@/lib/story";
-import { StoryHero, StoryProof, StoryReach, StorySpots } from "./story.tsx";
+import { leadersAt, storyOf } from "@/lib/story";
+import { StoryHero, StoryProof, StoryReach, StoryReplay, StorySpots } from "./story.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
@@ -53,6 +53,12 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // Общая лента: все ставки на все места, чтобы было видно, где идёт торг,
   // а не только историю выбранного места.
   const [feed, setFeed] = useState<Bid[]>([]);
+  // Перемотка закрытого торга: момент, на который на вещи - тогдашние лидеры.
+  // null - итог, как торг закрылся.
+  const [replay, setReplay] = useState<number | null>(null);
+  // Загруженные логотипы: при перемотке они меняются часто, и без кэша
+  // каждый шаг грузил бы картинку заново и мигал.
+  const images = useRef(new Map<string, HTMLImageElement>());
   const [feedOf, setFeedOf] = useState<"all" | "spot" | "logos">("all");
   const [photo, setPhoto] = useState(0);
   // Какой ракурс вещи сейчас перед зрителем: для полоски ракурсов и кнопки
@@ -146,10 +152,24 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   function dress(): Promise<void> {
     if (!thing) return Promise.resolve();
     const jobs: Promise<void>[] = [];
+    const then = replay === null ? null : leadersAt(feed, new Date(replay).toISOString());
     for (const spot of thing.spots) {
       const one = lotOf(spot.code);
-      const url = art[spot.code]?.url ?? (one ? tops[one.id]?.media_url : undefined);
-      if (!url) continue;
+      const url = then
+        ? one
+          ? then[one.id]?.media_url
+          : undefined
+        : (art[spot.code]?.url ?? (one ? tops[one.id]?.media_url : undefined));
+      if (!url) {
+        // В перемотке место без лидера на тот момент - пустое.
+        if (then) stage.current?.show(spot.code, null);
+        continue;
+      }
+      const ready = images.current.get(url);
+      if (ready) {
+        stage.current?.show(spot.code, ready);
+        continue;
+      }
       jobs.push(
         new Promise((done) => {
           const image = new Image();
@@ -158,6 +178,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           // загруженное фото на вещи не появлялось.
           if (!url.startsWith("blob:")) image.crossOrigin = "anonymous";
           image.onload = () => {
+            images.current.set(url, image);
             stage.current?.show(spot.code, image);
             done();
           };
@@ -168,6 +189,19 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
     }
     return Promise.all(jobs).then(() => undefined);
   }
+  // Логотипы всех ставок - заранее в кэш: перемотка тогда меняет их на вещи
+  // без задержки и без поздних картинок поверх новых.
+  useEffect(() => {
+    for (const bid of feed) {
+      const url = bid.media_url;
+      if (!url || images.current.has(url)) continue;
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => images.current.set(url, image);
+      image.src = url;
+    }
+  }, [feed]);
+
   // Фото-режим - снимки, переснятые со сцены с логотипами на вещи: прежде
   // логотип ложился плоской картинкой по углам места поверх голого снимка,
   // и на изогнутой двери вана разъезжался и вылезал за кузов.
@@ -181,7 +215,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tops, art, look, stuck, views]);
+  }, [tops, art, look, stuck, views, replay]);
 
   // Стикеры - на вещь, когда сцена собралась (тогда приходят и ракурсы).
   // Каждый стикер покупки - отдельная наклейка: купил три - три на бампере.
@@ -607,6 +641,11 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           стояла пустой рядом с длинной историей справа. */}
       {story && closesAt !== null && (
         <>
+          <StoryReplay
+            bids={feed}
+            spotOf={(lotId) => labelOf(lots.find((one) => one.id === lotId)?.spot_code ?? "")}
+            onTime={setReplay}
+          />
           <StoryReach
             story={story}
             reach={thing.reach}

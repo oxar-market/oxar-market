@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
-import { reachOf, type Story } from "@/lib/story";
+import { leadersAt, reachOf, type Story } from "@/lib/story";
 import { mosaic } from "@/lib/mosaic";
 import { Gallery } from "../gallery.tsx";
 
@@ -340,3 +340,110 @@ function BrandMosaic({
   );
 }
 
+
+/**
+ * Перемотка торга на самой вещи: шаг - ставка. Тянешь ползунок или жмёшь
+ * play - на вещи логотипы тогдашних лидеров, сверху сумма на тот момент и
+ * кто что взял последней ставкой. Шаги идут по ставкам, а не по часам:
+ * ставки сбиваются в кучи, и по часам ползунок полз бы по пустоте.
+ */
+export function StoryReplay({
+  bids,
+  spotOf,
+  onTime,
+}: {
+  bids: { id: string; lot_id: string; amount_cents: number; created_at: string; brand: string }[];
+  spotOf: (lotId: string) => string;
+  onTime: (at: number | null) => void;
+}) {
+  const steps = [...bids].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+  const last = steps.length;
+  const [at, setAt] = useState(last);
+  const [playing, setPlaying] = useState(false);
+
+  // Шаг 0 - до первой ставки, шаг k - после k-й, последний - итог.
+  const go = (k: number) => {
+    setAt(k);
+    onTime(k >= last ? null : k === 0 ? Date.parse(steps[0]!.created_at) - 1 : Date.parse(steps[k - 1]!.created_at));
+  };
+
+  useEffect(() => {
+    if (!playing) return;
+    if (at >= last) {
+      setPlaying(false);
+      return;
+    }
+    const tick = setTimeout(() => go(at + 1), steps.length > 20 ? 450 : 800);
+    return () => clearTimeout(tick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, at, last]);
+
+  // Уходим со страницы - вещь возвращается к итогу.
+  useEffect(() => () => onTime(null), [onTime]);
+
+  if (last === 0) return null;
+  const moment = at === 0 ? null : steps[at - 1]!;
+  const leading = leadersAt(steps, moment ? moment.created_at : new Date(0).toISOString());
+  const total = Object.values(leading).reduce((sum, one) => sum + one.amount_cents, 0);
+  const when = (iso: string) =>
+    new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  return (
+    <section className="sx-section sx-replay">
+      <header className="sx-replay-head">
+        <h2>Replay the auction</h2>
+        <button
+          type="button"
+          className="sx-play"
+          onClick={() => {
+            if (playing) return setPlaying(false);
+            if (at >= last) go(0);
+            setPlaying(true);
+          }}
+        >
+          {playing ? "Pause" : at >= last ? "Play from the start" : "Play"}
+        </button>
+      </header>
+
+      <p className="sx-replay-now">
+        <b>{formatUsd(total)}</b>
+        <span>{moment ? `on the table · ${when(moment.created_at)}` : "No bids yet"}</span>
+      </p>
+
+      <div className="sx-track">
+        {steps.map((one, index) => (
+          <i
+            key={one.id}
+            className={index < at ? "past" : ""}
+            style={{ left: `${((index + 1) / last) * 100}%` }}
+            title={`${one.brand} · ${spotOf(one.lot_id)} · ${formatUsd(one.amount_cents)}`}
+          />
+        ))}
+        <input
+          type="range"
+          min={0}
+          max={last}
+          step={1}
+          value={at}
+          aria-label="Replay the auction bid by bid"
+          onChange={(event) => {
+            setPlaying(false);
+            go(Number(event.target.value));
+          }}
+        />
+      </div>
+
+      <p className="sx-replay-last">
+        {moment ? (
+          <>
+            <b>{moment.brand}</b> took the lead on {spotOf(moment.lot_id).startsWith("Spot ") ? "" : "the "}
+            {spotOf(moment.lot_id)} with {formatUsd(moment.amount_cents)}
+            {at >= last && ". The last bid."}
+          </>
+        ) : (
+          "The thing before the first bid."
+        )}
+      </p>
+    </section>
+  );
+}
