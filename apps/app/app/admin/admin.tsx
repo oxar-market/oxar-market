@@ -269,6 +269,7 @@ function AdminThingView({
   onReviewed: () => void;
 }) {
   const [title, setTitle] = useState(thing.title);
+  const [reach, setReach] = useState(thing.reach && thing.reachChecked ? String(thing.reach) : "");
   const [tagline, setTagline] = useState(thing.tagline ?? "");
   const [busy, setBusy] = useState(false);
   // Видео грузится десятки секунд: кнопка говорит, что идёт загрузка.
@@ -646,6 +647,42 @@ function AdminThingView({
       <div className="sl-card ad-card">
         <h3>Bid photos</h3>
         <BidPhotos thingId={thing.id} title={thing.title} />
+      </div>
+
+      {/* Охват - сколько людей увидели наши посты о торге: показы постов в X
+          и просмотры эфиров. Сохранили - страница торга показывает «Who saw
+          it» и цену тысячи показов; пока не внесён, охвата там нет. */}
+      <div className="sl-card ad-card">
+        <h3>Reach</h3>
+        <p className="muted">
+          Views of our posts about this auction: impressions from X analytics plus stream views. Shown on the
+          auction page with the cost per 1,000 views.
+        </p>
+        <label className="sl-field">
+          People who saw it
+          <span className="sl-input soft">
+            <input
+              inputMode="numeric"
+              value={reach}
+              placeholder={thing.reach && !thing.reachChecked ? `${thing.reach} (test estimate)` : "e.g. 12400"}
+              onChange={(event) => setReach(event.target.value.replace(/[^0-9]/g, ""))}
+            />
+          </span>
+        </label>
+        <button
+          type="button"
+          className="sl-btn light"
+          disabled={busy || !reach || (thing.reachChecked && Number(reach) === thing.reach)}
+          onClick={() =>
+            run(
+              () =>
+                updateThing(thing.id, { post_reach: Number(reach), post_reach_checked_at: new Date().toISOString() }),
+              "Could not save the reach.",
+            )
+          }
+        >
+          Save reach
+        </button>
       </div>
 
       {/* Фото итогов: вещь в деле для страницы итогов. Пока их нет, итоги

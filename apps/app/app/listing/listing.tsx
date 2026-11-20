@@ -6,7 +6,7 @@ import { ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
 import { loadBids, loadFeed, loadMyBids, loadTopBids, myBrands, type Bid, type MyBid } from "@/lib/auction";
 import { loadListedThing, type ListedThing, type ThingProof } from "@/lib/listing";
 import { storyOf } from "@/lib/story";
-import { StoryChart, StoryHero, StoryProof, StorySpots } from "./story.tsx";
+import { StoryHero, StoryProof, StoryReach, StorySpots } from "./story.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
@@ -607,7 +607,14 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           стояла пустой рядом с длинной историей справа. */}
       {story && closesAt !== null && (
         <>
-          <StoryChart story={story} closedAt={closesAt} />
+          <StoryReach
+            story={story}
+            reach={thing.reach}
+            checked={thing.reachChecked}
+            labelOf={labelOf}
+            picked={picked}
+            onPick={choose}
+          />
           <StoryProof thingId={thingId} proof={proof} onProof={setProof} />
           <WornAbout thingId={thingId} />
         </>

@@ -54,6 +54,9 @@ export type ListedThing = {
   stickerSheet: string | null;
   /** Деньги победителям вернули мимо программы (фургон). Ставим только мы. */
   refundedAt: string | null;
+  /** Сколько людей увидели вещь: охват наших постов о торге. reachChecked - цифра из статистики, иначе оценка. */
+  reach: number | null;
+  reachChecked: boolean;
 };
 
 type SpotRow = {
@@ -125,7 +128,7 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
   if (!db) return null;
   const { data: thing } = await db
     .from("things")
-    .select(`id, title, tagline, seller, house, prepared, opens_at, sticker_sheet, refunded_at, photos, model_url, hologram_url, thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, title, tagline, seller, house, prepared, opens_at, sticker_sheet, refunded_at, post_reach, post_reach_checked_at, photos, model_url, hologram_url, thing_spots(${SPOT_COLUMNS})`)
     .eq("id", thingId)
     .maybeSingle();
   if (!thing) return null;
@@ -160,6 +163,8 @@ export async function loadListedThing(thingId: string): Promise<ListedThing | nu
     hologram: (thing.hologram_url as string | null) || null,
     opensAt: (thing.opens_at as string | null) ?? null,
     refundedAt: (thing.refunded_at as string | null) ?? null,
+    reach: (thing.post_reach as number | null) ?? null,
+    reachChecked: thing.post_reach_checked_at !== null,
     stickerSheet: (thing.sticker_sheet as string | null) ?? null,
   };
 }
