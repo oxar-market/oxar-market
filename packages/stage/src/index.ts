@@ -5,7 +5,7 @@
  * с приложением молча, как расходится любое задублированное правило.
  * React и three живут здесь, данных и сети здесь нет.
  */
-export { ThingStage, type Stage, type Views } from "./stage.tsx";
+export { ThingStage, type Anchor, type Stage, type Views } from "./stage.tsx";
 export {
   DECAL_DEPTH,
   FRAME_PAD,

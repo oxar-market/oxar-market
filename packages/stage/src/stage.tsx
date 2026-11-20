@@ -37,6 +37,9 @@ export type Views = {
   marked?: Record<string, string>;
 };
 
+/** Место на экране сцены: центр в пикселях и насколько оно смотрит на зрителя. */
+export type Anchor = { code: string; x: number; y: number; facing: number };
+
 export type Stage = {
   /** Довернуть вещь к азимуту. Зовут ряд ракурсов и выбор места из списка. */
   face(azimuth: number): void;
@@ -90,6 +93,7 @@ export function ThingStage({
   onReady,
   shape = SHIRT,
   onSurface,
+  onAnchors,
 }: {
   /** Код выбранного места: оно горит на вещи постоянно. */
   picked: string | null;
@@ -111,6 +115,14 @@ export function ThingStage({
    * подбором чисел.
    */
   onSurface?: (at: { height: number; azimuth: number }) => void;
+  /**
+   * Где места сейчас на экране: центр каждого в пикселях сцены и насколько
+   * место смотрит на зрителя (facing: 1 - прямо, 0 и меньше - отвернулось).
+   * Зовётся, только когда камера сдвинулась или сцена сменила размер. Нужно
+   * выноскам закрытого торга: линия идёт к месту и прячется, когда место
+   * ушло за вещь.
+   */
+  onAnchors?: (anchors: Anchor[]) => void;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
@@ -127,6 +139,8 @@ export function ThingStage({
   pick.current = onPick;
   const ready = useRef(onReady);
   ready.current = onReady;
+  const anchored = useRef(onAnchors);
+  anchored.current = onAnchors;
   const surface = useRef(onSurface);
   surface.current = onSurface;
   const pickedNow = useRef(picked);
@@ -1296,7 +1310,32 @@ export function ThingStage({
           }
           controls.update();
           renderer.render(scene, camera);
+          if (anchored.current) {
+            const width = host.clientWidth;
+            const height = host.clientHeight;
+            const key = `${camera.position.toArray().map((n) => n.toFixed(4))}|${width}x${height}`;
+            if (key !== anchorKey) {
+              anchorKey = key;
+              anchored.current(
+                frames.map((one) => {
+                  const center = one.corners
+                    .reduce((sum, corner) => sum.add(corner), new THREE.Vector3())
+                    .multiplyScalar(1 / one.corners.length);
+                  const seen = center.clone().project(camera);
+                  return {
+                    code: one.code,
+                    x: ((seen.x + 1) / 2) * width,
+                    y: ((1 - seen.y) / 2) * height,
+                    facing: one.normal.dot(camera.position.clone().sub(center).normalize()),
+                  };
+                }),
+              );
+            }
+          }
         };
+        // Последнее положение камеры, для которого места уже отданы наружу:
+        // не двигалась - и звать некого.
+        let anchorKey = "";
         tick();
         setState("ready");
         ready.current?.(views);
