@@ -53,6 +53,8 @@ test("ставки по местам: все места со ставками, �
   assert.deepEqual(story.rounds[0]!.steps.map((one) => one.amountCents), [90000, 80000, 70000, 60000]);
   assert.equal(story.rounds[0]!.won, true);
   assert.equal(story.rounds[0]!.brands, 3);
+  // У каждой ставки свой логотип - таблица всех ставок показывает его.
+  assert.equal(story.rounds[0]!.steps[0]!.mediaUrl, "https://x/h4.png");
 });
 
 test("место без победителя - ставки есть, но won ложно", () => {

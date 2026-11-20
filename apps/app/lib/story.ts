@@ -18,7 +18,7 @@ export type Winner = { spot: string; brand: string; amountCents: number; mediaUr
 /** Все ставки одного места, от большей к меньшей. won - место продано, первая ставка забрала его. */
 export type Round = {
   spot: string;
-  steps: { brand: string; amountCents: number; at: string }[];
+  steps: { brand: string; amountCents: number; at: string; mediaUrl: string }[];
   brands: number;
   won: boolean;
 };
@@ -55,7 +55,9 @@ export function storyOf(lots: StoryLot[], bids: StoryBid[]): Story {
     if (mine.length > 0) {
       rounds.push({
         spot: lot.spot_code,
-        steps: mine.reverse().map((one) => ({ brand: one.brand, amountCents: one.amount_cents, at: one.created_at })),
+        steps: mine
+          .reverse()
+          .map((one) => ({ brand: one.brand, amountCents: one.amount_cents, at: one.created_at, mediaUrl: one.media_url })),
         brands: new Set(mine.map((one) => one.bidder_wallet)).size,
         won: lot.status === "won",
       });

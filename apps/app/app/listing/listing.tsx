@@ -6,7 +6,7 @@ import { ThingStage, type Anchor, type Corners, type Stage, type Views } from "@
 import { loadBids, loadFeed, loadMyBids, loadTopBids, myBrands, type Bid, type MyBid } from "@/lib/auction";
 import { loadListedThing, type ListedThing, type ThingProof } from "@/lib/listing";
 import { storyOf } from "@/lib/story";
-import { StoryCallouts, StoryHero, StoryProof, StoryReach, StorySpots } from "./story.tsx";
+import { StoryBids, StoryCallouts, StoryPath, StoryPodium, StoryProof, StoryReach, StoryTotal } from "./story.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
@@ -425,6 +425,9 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
             <ShareAuction thingId={thingId} />
           </div>
         </div>
+        {story && closesAt !== null && (
+          <StoryTotal story={story} openedAt={opensAt} closedAt={closesAt} refundedAt={thing.refundedAt} />
+        )}
         {!story && (started ? closesAt : opensAt) !== null && (
           <div className="lt-clock">
             <span className="lt-cap">{!started ? "Opens in" : closesAt! > now ? "Ends in" : "Auction ended"}</span>
@@ -478,6 +481,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   void dress();
                 }}
                 onAnchors={story ? (anchors) => anchorSink.current?.(anchors) : undefined}
+                pageScroll={Boolean(story)}
               />
             </div>
             {look === "shot" && views.shots[photo] && (
@@ -1076,16 +1080,18 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       {/* Кто носит вещь, где, когда и срок пруфа - своей панелью под торгом:
           деньги победителя держит программа до пруфа, и этот срок покупатель
           видит прежде, чем ставит. */}
-      {/* Закрытый торг: под вещью с выносками - одна полоса итога (сумма,
-          путь, пруф), за ней все ставки и «About». */}
+      {/* Закрытый торг: сумма уже в шапке. Под вещью с выносками -
+          пьедестал из трёх самых дорогих мест, все ставки, путь торга с
+          пруфом, за ними «About». */}
       {story && closesAt !== null && (
         <div className="sx-under">
+          <StoryPodium story={story} labelOf={labelOf} />
+          <StoryBids story={story} labelOf={labelOf} refundedAt={thing.refundedAt} />
           <div className="sx-band">
-            <StoryHero story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} refundedAt={thing.refundedAt} />
+            <StoryPath story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} refundedAt={thing.refundedAt} />
             <StoryProof thingId={thingId} proof={proof} onProof={setProof} />
           </div>
           <StoryReach story={story} reach={thing.reach} checked={thing.reachChecked} />
-          <StorySpots story={story} labelOf={labelOf} refundedAt={thing.refundedAt} />
         </div>
       )}
       <WornAbout thingId={thingId} />

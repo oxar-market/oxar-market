@@ -20,8 +20,45 @@ const day = (at: number | string) =>
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** Итог одной фразой и путь торга - сразу под названием. */
-export function StoryHero({
+/** Итог одной фразой - в шапке, рядом с названием: это первое, что видно. */
+export function StoryTotal({
+  story,
+  openedAt,
+  closedAt,
+  refundedAt,
+}: {
+  story: Story;
+  openedAt: number | null;
+  closedAt: number;
+  refundedAt: string | null;
+}) {
+  return (
+    <section className="sx-hero">
+      <p className="sx-kicker">
+        Auction closed{openedAt ? ` · ${day(openedAt)} to ${day(closedAt)}` : ` · ${day(closedAt)}`}
+      </p>
+      <p className="sx-big">{formatUsd(story.raisedCents)}</p>
+      <p className="sx-line">
+        raised from <b>{plural(story.bidders, "bidder", "bidders")}</b> across{" "}
+        <b>{plural(story.bids, "bid", "bids")}</b>.{" "}
+        {story.total === 1 ? (
+          story.sold ? "The spot found its brand." : "The spot went unsold."
+        ) : (
+          <>
+            <b>
+              {story.sold} of {story.total}
+            </b>{" "}
+            spots found a brand.
+          </>
+        )}
+        {refundedAt && " In the end every winning bid was refunded."}
+      </p>
+    </section>
+  );
+}
+
+/** Путь торга: открылся, первая ставка, закрылся, логотипы на вещи. */
+export function StoryPath({
   story,
   openedAt,
   closedAt,
@@ -48,26 +85,8 @@ export function StoryHero({
         },
   ];
   return (
-    <section className="sx-hero">
-      <p className="sx-kicker">
-        Auction closed{openedAt ? ` · ${day(openedAt)} to ${day(closedAt)}` : ` · ${day(closedAt)}`}
-      </p>
-      <p className="sx-big">{formatUsd(story.raisedCents)}</p>
-      <p className="sx-line">
-        raised from <b>{plural(story.bidders, "bidder", "bidders")}</b> across{" "}
-        <b>{plural(story.bids, "bid", "bids")}</b>.{" "}
-        {story.total === 1 ? (
-          story.sold ? "The spot found its brand." : "The spot went unsold."
-        ) : (
-          <>
-            <b>
-              {story.sold} of {story.total}
-            </b>{" "}
-            spots found a brand.
-          </>
-        )}
-        {refundedAt && " In the end every winning bid was refunded."}
-      </p>
+    <section className="sx-section">
+      <h2>How it went</h2>
       <ol className="sx-path">
         {path.map((step) => (
           <li key={step.label} className={step.done ? "done" : ""}>
@@ -82,11 +101,42 @@ export function StoryHero({
 }
 
 /**
- * Места одной таблицей. Два режима: «Winners» - строка на место, победитель
- * и цена, нажал - раскрываются все ставки на это место; «All bids» - все
- * ставки торга по времени, перебитые тоже.
+ * Пьедестал: три самые дорогие победившие ставки. Первое место - в центре и
+ * выше, второе слева, третье справа.
  */
-export function StorySpots({
+export function StoryPodium({ story, labelOf }: { story: Story; labelOf: (code: string) => string }) {
+  const top = story.winners.slice(0, 3).map((one, index) => ({ ...one, place: index + 1 }));
+  // Порядок на пьедестале: 2, 1, 3.
+  const stand = [top[1], top[0], top[2]].filter((one) => one !== undefined);
+  if (stand.length === 0) return null;
+  return (
+    <section className="sx-section sx-podium-block">
+      <h2>{story.total === 1 ? "The winner" : "Top bids"}</h2>
+      <ol className="sx-podium">
+        {stand.map((one) => (
+          <li key={one.spot} className={`p${one.place}`}>
+            <span className="sx-pd-logo">{one.mediaUrl && <img src={one.mediaUrl} alt="" />}</span>
+            <b className="sx-pd-brand">{one.brand}</b>
+            <span className="sx-pd-amt">{formatUsd(one.amountCents)}</span>
+            <span className="sx-pd-spot">{labelOf(one.spot)}</span>
+            <span className="sx-pd-step" aria-label={`Place ${one.place}`}>
+              {one.place}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/** Сколько строк таблицы ставок видно до «Show all». */
+const FOLD = 8;
+
+/**
+ * Все ставки торга одной таблицей, от большей к меньшей: победившие и
+ * перебитые, у каждой - логотип, место, день и чем кончилась.
+ */
+export function StoryBids({
   story,
   labelOf,
   refundedAt,
@@ -95,89 +145,41 @@ export function StorySpots({
   labelOf: (code: string) => string;
   refundedAt: string | null;
 }) {
-  const [all, setAll] = useState(false);
-  const winnerOf = new Map(story.winners.map((one) => [one.spot, one]));
-  const bidOn = new Set(story.rounds.map((one) => one.spot));
   const tag = (won: boolean, sold: boolean) =>
     won ? (refundedAt ? "Won, refunded" : "Won") : sold ? "Outbid, refunded" : "Refunded";
-  // Все ставки по времени, новые сверху: у каждой - место и чем кончилась.
-  const timeline = story.rounds
+  const bids = story.rounds
     .flatMap((round) => round.steps.map((step, index) => ({ ...step, spot: round.spot, won: round.won && index === 0, sold: round.won })))
-    .sort((a, b) => b.at.localeCompare(a.at));
+    .sort((a, b) => b.amountCents - a.amountCents || a.at.localeCompare(b.at));
+  // Длинный торг - сначала верх таблицы, остальное по кнопке.
+  const [open, setOpen] = useState(false);
+  if (bids.length === 0) return null;
+  const shown = open ? bids : bids.slice(0, FOLD);
 
   return (
     <section className="sx-section">
-      <header className="sx-spots-head">
-        <h2>{all ? "Every bid" : story.total === 1 ? "The spot" : "The spots"}</h2>
-        <div className="sx-toggle" role="group" aria-label="Show">
-          <button type="button" className={all ? "" : "on"} aria-pressed={!all} onClick={() => setAll(false)}>
-            Winners
-          </button>
-          <button type="button" className={all ? "on" : ""} aria-pressed={all} onClick={() => setAll(true)}>
-            All bids <span>{story.bids}</span>
-          </button>
-        </div>
-      </header>
-
-      {all ? (
-        <ol className="sx-all">
-          {timeline.map((step, index) => (
-            <li key={index} className={step.won ? "won" : ""}>
-              <span className="sx-r-amt">{formatUsd(step.amountCents)}</span>
-              <span className="sx-who">
-                <b>{step.brand}</b>
-                <span>
-                  {labelOf(step.spot)} · {day(step.at)}
-                </span>
+      <h2>
+        Every bid <span className="sx-count">{bids.length}</span>
+      </h2>
+      <ol className="sx-all">
+        {shown.map((step, index) => (
+          <li key={index} className={step.won ? "won" : ""}>
+            <span className="sx-rank">{index + 1}</span>
+            <span className="sx-logo">{step.mediaUrl && <img src={step.mediaUrl} alt="" />}</span>
+            <span className="sx-who">
+              <b>{step.brand}</b>
+              <span>
+                {labelOf(step.spot)} · {day(step.at)}
               </span>
-              <span className="sx-r-tag">{tag(step.won, step.sold)}</span>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <div className="sx-spots">
-          {story.rounds.map((round) => {
-            const winner = winnerOf.get(round.spot);
-            return (
-              // Место одно - его ставки раскрыты сразу: прятать единственную
-              // историю за нажатием незачем.
-              <details key={round.spot} className="sx-spot" open={story.rounds.length === 1 || undefined}>
-                <summary>
-                  <span className="sx-logo">{winner?.mediaUrl && <img src={winner.mediaUrl} alt="" />}</span>
-                  <span className="sx-who">
-                    <b>{winner?.brand ?? "No winner"}</b>
-                    <span>
-                      {labelOf(round.spot)} · {plural(round.steps.length, "bid", "bids")}
-                      {refundedAt && winner && " · refunded"}
-                    </span>
-                  </span>
-                  <span className="sx-amt">{winner ? formatUsd(winner.amountCents) : "-"}</span>
-                </summary>
-                <ol>
-                  {round.steps.map((step, index) => (
-                    <li key={index} className={round.won && index === 0 ? "won" : ""}>
-                      <span className="sx-r-amt">{formatUsd(step.amountCents)}</span>
-                      <span className="sx-r-who">{step.brand}</span>
-                      <span className="sx-r-tag">{tag(round.won && index === 0, round.won)}</span>
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            );
-          })}
-          {story.unsold
-            .filter((code) => !bidOn.has(code))
-            .map((code) => (
-              <div key={code} className="sx-spot off">
-                <span className="sx-logo" />
-                <span className="sx-who">
-                  <b>{labelOf(code)}</b>
-                  <span>No bids</span>
-                </span>
-                <span className="sx-amt">-</span>
-              </div>
-            ))}
-        </div>
+            </span>
+            <span className="sx-r-tag">{tag(step.won, step.sold)}</span>
+            <span className="sx-r-amt">{formatUsd(step.amountCents)}</span>
+          </li>
+        ))}
+      </ol>
+      {!open && bids.length > FOLD && (
+        <button type="button" className="sx-more" onClick={() => setOpen(true)}>
+          Show all {bids.length} bids
+        </button>
       )}
     </section>
   );
@@ -283,6 +285,11 @@ export function StoryCallouts({
   const lines = useRef(new Map<string, SVGLineElement>());
   const dots = useRef(new Map<string, HTMLElement>());
   const last = useRef<Anchor[] | null>(null);
+  // Линия одна: к месту карточки под мышью, а без неё - к выбранному. Все
+  // линии сразу перечёркивали вещь.
+  const hovered = useRef<string | null>(null);
+  const chosen = useRef(picked);
+  chosen.current = picked;
   // Сторона и порядок карточек - по тому, где места на экране: карточка
   // встаёт с той стороны вещи, где её место, сверху вниз как места. Пока
   // вещь крутят, карточки стоят; остановилась - перестраиваются под ракурс.
@@ -319,6 +326,7 @@ export function StoryCallouts({
     const o = root.getBoundingClientRect();
     const c = canvas.getBoundingClientRect();
     const at = new Map(anchors.map((one) => [one.code, one]));
+    const active = hovered.current ?? chosen.current;
     for (const one of winners) {
       const spot = at.get(one.spot);
       const card = cards.current.get(one.spot);
@@ -336,9 +344,10 @@ export function StoryCallouts({
       line.setAttribute("y1", String(cy));
       line.setAttribute("x2", String(px));
       line.setAttribute("y2", String(py));
-      line.style.opacity = seen ? "1" : "0";
+      line.style.opacity = seen && one.spot === active ? "1" : "0";
       dot.style.transform = `translate(${px}px, ${py}px)`;
       dot.style.opacity = seen ? "1" : "0";
+      dot.classList.toggle("on", one.spot === active);
       card.classList.toggle("away", !seen);
     }
   };
@@ -390,6 +399,14 @@ export function StoryCallouts({
           else cards.current.delete(code);
         }}
         onClick={() => onPick(code)}
+        onMouseEnter={() => {
+          hovered.current = code;
+          draw();
+        }}
+        onMouseLeave={() => {
+          hovered.current = null;
+          draw();
+        }}
       >
         <span className="sx-co-logo">{one.mediaUrl && <img src={one.mediaUrl} alt="" />}</span>
         <span className="sx-co-text">
@@ -421,7 +438,6 @@ export function StoryCallouts({
         {winners.map((one) => (
           <line
             key={one.spot}
-            className={picked === one.spot ? "on" : ""}
             ref={(el) => {
               if (el) lines.current.set(one.spot, el);
               else lines.current.delete(one.spot);
@@ -432,7 +448,7 @@ export function StoryCallouts({
       {winners.map((one) => (
         <i
           key={one.spot}
-          className={picked === one.spot ? "sx-co-dot on" : "sx-co-dot"}
+          className="sx-co-dot"
           ref={(el) => {
             if (el) dots.current.set(one.spot, el);
             else dots.current.delete(one.spot);
