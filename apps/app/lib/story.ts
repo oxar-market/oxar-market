@@ -89,3 +89,24 @@ export function reachOf(story: Story, reach: number | null) {
   };
 }
 
+
+/**
+ * Кто вёл каждое место в момент at: наибольшая ставка, сделанная к этому
+ * времени (при равных - ранняя). Для перемотки торга на вещи.
+ */
+export function leadersAt<T extends { id: string; lot_id: string; amount_cents: number; created_at: string }>(
+  bids: T[],
+  at: string,
+): Record<string, T> {
+  const out: Record<string, T> = {};
+  // Время сравниваем числом: в базе «+00:00», у ползунка «Z» - строкой разошлось бы.
+  const limit = Date.parse(at);
+  for (const one of bids) {
+    if (Date.parse(one.created_at) > limit) continue;
+    const was = out[one.lot_id];
+    if (!was || one.amount_cents > was.amount_cents || (one.amount_cents === was.amount_cents && one.created_at < was.created_at)) {
+      out[one.lot_id] = one;
+    }
+  }
+  return out;
+}

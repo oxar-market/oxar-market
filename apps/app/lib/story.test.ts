@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { reachOf, storyOf } from "./story.ts";
+import { leadersAt, reachOf, storyOf } from "./story.ts";
 
 const bid = (id: string, lot_id: string, amount_cents: number, brand: string, wallet: string, at: string) => ({
   id,
@@ -85,5 +85,13 @@ test("охвата нет - цены за показы нет, бренды ос
   const view = reachOf(storyOf(lots, bids), null);
   assert.equal(view.cpmCents, null);
   assert.deepEqual(view.brands.map((one) => one.cpmCents), [null, null]);
+});
+
+test("лидеры на момент: по месту - наибольшая ставка, сделанная к этому времени", () => {
+  const at = leadersAt(bids, "2026-10-27T12:00:00Z");
+  assert.equal(at["hood"]?.id, "h2");
+  assert.equal(at["door"]?.id, "d1");
+  assert.equal(leadersAt(bids, "2026-10-26T09:00:00Z")["hood"], undefined);
+  assert.equal(leadersAt(bids, "2026-12-01T00:00:00Z")["hood"]?.id, "h4");
 });
 
