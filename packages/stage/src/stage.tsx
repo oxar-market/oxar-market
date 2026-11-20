@@ -94,6 +94,7 @@ export function ThingStage({
   shape = SHIRT,
   onSurface,
   onAnchors,
+  pageScroll = false,
 }: {
   /** Код выбранного места: оно горит на вещи постоянно. */
   picked: string | null;
@@ -123,6 +124,12 @@ export function ThingStage({
    * ушло за вещь.
    */
   onAnchors?: (anchors: Anchor[]) => void;
+  /**
+   * Колесо мыши листает страницу, а не приближает вещь: приближение - щипком
+   * трекпада или с Ctrl/Cmd. Там, где сцена - часть длинной страницы и её
+   * нельзя обойти, иначе страница застревает на вещи.
+   */
+  pageScroll?: boolean;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
@@ -141,6 +148,8 @@ export function ThingStage({
   ready.current = onReady;
   const anchored = useRef(onAnchors);
   anchored.current = onAnchors;
+  const scrolls = useRef(pageScroll);
+  scrolls.current = pageScroll;
   const surface = useRef(onSurface);
   surface.current = onSurface;
   const pickedNow = useRef(picked);
@@ -892,6 +901,17 @@ export function ThingStage({
         renderer.domElement.addEventListener("pointermove", onMove);
         renderer.domElement.addEventListener("pointerdown", onDown);
         renderer.domElement.addEventListener("pointerup", onUp);
+        // Ловим колесо раньше OrbitControls (на перехвате у родителя): без
+        // модификатора приближение на это событие выключено, и контролы его
+        // не трогают - страница листается. Щипок трекпада приходит с ctrlKey.
+        const onWheel = (event: WheelEvent) => {
+          if (!scrolls.current) return;
+          controls.enableZoom = event.ctrlKey || event.metaKey;
+          window.setTimeout(() => {
+            controls.enableZoom = true;
+          });
+        };
+        host.addEventListener("wheel", onWheel, { capture: true });
 
         // Довороты доедаются в цикле кадров долей за кадр - это то же
         // затухание, что у самих контролов, поэтому вещь не дёргается.
@@ -1350,6 +1370,7 @@ export function ThingStage({
           renderer.domElement.removeEventListener("pointermove", onMove);
           renderer.domElement.removeEventListener("pointerdown", onDown);
           renderer.domElement.removeEventListener("pointerup", onUp);
+          host.removeEventListener("wheel", onWheel, { capture: true });
           controls.dispose();
           renderer.dispose();
           pmrem.dispose();
