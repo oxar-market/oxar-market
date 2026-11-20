@@ -10318,61 +10318,302 @@ body:has(.app-v2)::after {
   }
 }
 
-/* Закрытый торг - история рядом с вещью: слева вещь (стоит на месте при
-   прокрутке), справа сумма, путь торга, места и пруф. Без карточек и рамок -
-   только волосяные линии. */
+/* Закрытый торг - вещь во всю ширину с выносками победителей по бокам,
+   под ней итог, ставки и «About». Без карточек и рамок - только волосяные
+   линии. */
 .lot-v2 .lot-body.solo {
-  --scene-h: min(68vh, 40rem);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 30rem);
-  gap: 3rem;
-  align-items: start;
+  --scene-h: clamp(32rem, calc(100vh - 12rem), 46rem);
+  display: block;
   padding: 0;
   background: none;
 }
 
-/* Слева вещь, под ней пруф и «About» - колонка не стоит пустой рядом с
-   длинной историей справа. */
 .lot-v2 .lot-body.solo .lot-center {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-  grid-column: 1;
-  grid-row: 1;
+  min-width: 0;
 }
 
-/* История справа - боковая панель: стоит на месте, пока слева листают
-   график, пруф и About; длинный список мест или ставок листается внутри. */
-.lot-v2 .lot-body.solo .sx-side {
-  position: sticky;
-  top: 5.5rem;
-  grid-column: 2;
-  grid-row: 1;
-  max-height: calc(100vh - 7rem);
+.lot-v2 .lot-body.solo .lot-scene {
+  height: var(--scene-h);
 }
 
-.lot-v2 .lot-body.solo .sx-side > .sx-section {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+.lot-v2 .lot-body.solo .lot-scene > .look,
+.lot-v2 .lot-body.solo .stage {
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
 }
 
-.lot-v2 .lot-body.solo .sx-side .sx-spots,
-.lot-v2 .lot-body.solo .sx-side .sx-all {
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+/* Вещь - между колонками выносок, а не под ними. */
+.lot-v2 .lot-body.solo .lot-scene > .look {
+  margin: 0 17.5rem;
 }
 
 .lot-v2 .lot-body.solo .lot-right {
   display: none;
 }
 
-.sx-side {
+/* Выноски: слой поверх сцены. Сам слой мышь пропускает - вещь крутится как
+   раньше, ловят только карточки. */
+.sx-callouts {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.sx-co-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Белая кайма - чтобы линию было видно и на тёмной вещи. */
+.sx-co-lines line {
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-opacity: 0.6;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.9));
+  transition: opacity 0.25s ease, stroke-opacity 0.2s ease;
+}
+
+.sx-co-lines line.on {
+  stroke: var(--red);
+  stroke-opacity: 1;
+}
+
+/* Точка на самом месте: красная, с мягким ореолом. */
+.sx-co-dot {
+  position: absolute;
+  top: -0.3125rem;
+  left: -0.3125rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgba(224, 56, 28, 0.18);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.sx-co-dot.on {
+  box-shadow: 0 0 0 7px rgba(224, 56, 28, 0.22);
+}
+
+.sx-co-cols {
+  display: contents;
+}
+
+.sx-co-col {
+  position: absolute;
+  top: 4rem;
+  bottom: 4rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 15rem;
+}
+
+.sx-co-col.left {
+  left: 1.25rem;
+}
+
+.sx-co-col.right {
+  right: 1.25rem;
+}
+
+/* Карточка победителя: логотип, бренд, место, цена. Место ушло за вещь -
+   карточка бледнеет, линия гаснет. */
+.sx-co {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem 0.625rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity 0.25s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.sx-co:hover {
+  border-color: var(--ink);
+}
+
+.sx-co.on {
+  border-color: var(--red);
+}
+
+.sx-co.away {
+  opacity: 0.45;
+}
+
+.sx-co-logo {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--soft);
+}
+
+.sx-co-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sx-co-text {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+
+.sx-co-text b {
+  overflow: hidden;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sx-co-text span {
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sx-co em {
+  font-size: 0.9375rem;
+  font-style: normal;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Наведи - все ставки на место, к вещи от карточки. */
+.sx-co-pop {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 18rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: 0 12px 32px rgba(15, 18, 25, 0.12);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease, visibility 0.15s;
+}
+
+.sx-co-col.left .sx-co-pop {
+  left: calc(100% + 0.5rem);
+}
+
+.sx-co-col.right .sx-co-pop {
+  right: calc(100% + 0.5rem);
+}
+
+.sx-co:hover .sx-co-pop {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sx-co-pop > span {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 4.5rem;
+  gap: 0.75rem;
+  color: var(--mut);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.sx-co-pop > span i {
+  overflow: hidden;
+  font-style: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sx-co-pop > span b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.sx-co-pop > span small {
+  font-size: inherit;
+  text-align: right;
+}
+
+.sx-co-pop > span.won {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.sx-co-pop > span.won b,
+.sx-co-pop > span.won small {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* Под вещью - итог одной полосой: сумма и путь торга слева, пруф справа. */
+.sx-under {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  margin-top: 2.5rem;
+}
+
+.sx-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+}
+
+/* Путь торга в полосе - слева направо. */
+.sx-band .sx-path {
+  display: flex;
+}
+
+.sx-band .sx-path li {
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  padding: 1.375rem 1rem 0 0;
+}
+
+.sx-band .sx-path li::before {
+  top: 0.3125rem;
+  right: 0;
+  bottom: auto;
+  left: 0.75rem;
+  width: auto;
+  height: 1px;
+}
+
+.sx-band .sx-path i {
+  top: 0;
 }
 
 .sx-kicker {
@@ -10688,140 +10929,6 @@ body:has(.app-v2)::after {
   color: var(--red);
 }
 
-/* Перемотка торга: ползунок по ставкам, риска на каждую ставку; пройденные
-   риски - чернилами. Сумма на тот момент - крупно. */
-.sx-replay-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.sx-replay-head h2 {
-  margin: 0;
-  font-size: 1.375rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
-.sx-play {
-  padding: 0.5rem 0.875rem;
-  border: 0;
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--card);
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.sx-replay-now {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 0.75rem;
-  margin: 1rem 0 0;
-}
-
-.sx-replay-now b {
-  font-size: clamp(2rem, 3.5vw, 2.75rem);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.045em;
-  line-height: 1;
-}
-
-.sx-replay-now span {
-  color: var(--mut);
-  font-size: 0.9375rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.sx-track {
-  position: relative;
-  height: 2.5rem;
-  margin-top: 1rem;
-}
-
-/* Линия трека - под рисками. */
-.sx-track::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--line);
-}
-
-.sx-track i {
-  position: absolute;
-  top: 50%;
-  width: 2px;
-  height: 0.875rem;
-  margin: -0.4375rem 0 0 -1px;
-  background: var(--line);
-  pointer-events: none;
-}
-
-.sx-track i.past {
-  background: var(--ink);
-}
-
-.lot-v2 .sx-track input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  outline: none;
-  box-shadow: none;
-  background: transparent;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.lot-v2 .sx-track input::-webkit-slider-runnable-track {
-  height: 100%;
-  background: transparent;
-}
-
-.lot-v2 .sx-track input::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 1.125rem;
-  height: 1.125rem;
-  margin-top: calc(1.25rem - 0.5625rem);
-  border: 3px solid var(--card);
-  border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-.lot-v2 .sx-track input::-moz-range-thumb {
-  width: 1rem;
-  height: 1rem;
-  border: 3px solid var(--card);
-  border-radius: 50%;
-  background: var(--red);
-}
-
-.sx-replay-last {
-  min-height: 1.5em;
-  margin: 0.5rem 0 0;
-  color: var(--mut);
-  font-size: 0.9375rem;
-}
-
-.sx-replay-last b {
-  color: var(--ink);
-  font-weight: 600;
-}
-
 /* Охват: сколько людей увидели вещь и почём бренды получили тысячу показов.
    Полоса на бренд - доля его ставки от самой большой; нажал - место на вещи. */
 .sx-reach-big {
@@ -10911,17 +11018,17 @@ body:has(.app-v2)::after {
 
 /* «About» у закрытого торга - в том же свободном виде: без подложки и
    рамок, разделы на волосяных линиях. */
-.lot-v2:has(.sx-side) .lt-about {
+.lot-v2:has(.sx-under) .lt-about {
   margin-top: 0;
 }
 
-.lot-v2:has(.sx-side) .lt-about > h2 {
+.lot-v2:has(.sx-under) .lt-about > h2 {
   margin-bottom: 1.25rem;
   font-size: 1.375rem;
   letter-spacing: -0.03em;
 }
 
-.lot-v2:has(.sx-side) .lt-about-grid {
+.lot-v2:has(.sx-under) .lt-about-grid {
   gap: 0 3rem;
   padding: 0;
   border-top: 1px solid var(--ink);
@@ -10929,62 +11036,111 @@ body:has(.app-v2)::after {
   background: none;
 }
 
-.lot-v2:has(.sx-side) .lt-card {
+.lot-v2:has(.sx-under) .lt-card {
   border: 0;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
   background: none;
 }
 
-.lot-v2:has(.sx-side) .lt-story,
-.lot-v2:has(.sx-side) .lt-route {
+.lot-v2:has(.sx-under) .lt-story,
+.lot-v2:has(.sx-under) .lt-route {
   padding-right: 0;
   padding-left: 0;
 }
 
-.lot-v2:has(.sx-side) .lt-facts {
+.lot-v2:has(.sx-under) .lt-facts {
   padding: 0;
 }
 
-@media (max-width: 56rem) {
-  /* На телефоне - сверху вниз: вещь, потом история. */
-  .lot-v2 .lot-body.solo {
-    --scene-h: 24rem;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2rem;
+@media (max-width: 72rem) {
+  .lot-v2 .lot-body.solo .lot-scene > .look {
+    margin: 0 14.5rem;
   }
 
-  .lot-v2 .lot-body.solo .lot-center {
+  .sx-co-col {
+    width: 12.5rem;
+  }
+
+  .sx-co {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+  }
+
+  .sx-co-logo {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+@media (max-width: 56rem) {
+  /* На телефоне выноски - лентой внизу сцены, над ракурсами. История -
+     под вещью в столбик. */
+  .lot-v2 .lot-body.solo {
+    --scene-h: 26rem;
+  }
+
+  .lot-v2 .lot-body.solo .lot-scene > .look {
+    margin: 0;
+    height: calc(100% - 7.5rem);
+  }
+
+  /* Линии на узком экране тянулись бы через всю сцену - остаются точки. */
+  .sx-co-lines {
+    display: none;
+  }
+
+  .sx-co-col {
     display: contents;
   }
 
-  .lot-v2 .lot-body.solo .lot-scene {
-    order: 1;
+  .sx-co-cols {
+    position: absolute;
+    right: 0;
+    bottom: 3.75rem;
+    left: 0;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    pointer-events: auto;
   }
 
-  .lot-v2 .lot-body.solo .sx-proof-block {
-    order: 3;
+  .sx-co {
+    flex: none;
+    grid-template-columns: 2rem auto;
+    gap: 0.5rem;
+    padding: 0.375rem 0.625rem 0.375rem 0.375rem;
   }
 
-  .lot-v2 .lot-body.solo .lt-about {
-    order: 4;
+  .sx-co-logo {
+    grid-row: 1 / span 2;
+    width: 2rem;
+    height: 2rem;
   }
 
-  .lot-v2 .lot-body.solo .sx-side {
-    position: static;
-    order: 2;
-    grid-column: auto;
-    grid-row: auto;
-    max-height: none;
+  .sx-co-text span,
+  .sx-co-pop {
+    display: none;
   }
 
-  .lot-v2 .lot-body.solo .sx-side .sx-spots,
-  .lot-v2 .lot-body.solo .sx-side .sx-all {
-    max-height: 30rem;
+  .sx-co em {
+    grid-column: 2;
+    font-size: 0.8125rem;
   }
 
-  .lot-v2 .lot-body.solo .sx-replay,
-  .lot-v2 .lot-body.solo .sx-reach {
-    order: 3;
+  .sx-co-text {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .sx-co-text b {
+    max-width: 7rem;
+    font-size: 0.8125rem;
+  }
+
+  .sx-band {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
   }
 }

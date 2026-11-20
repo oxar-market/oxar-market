@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { flushSync } from "react-dom";
+import type { Anchor } from "@oxar/stage";
 import { formatUsd } from "@oxar/core";
 import { loadThingProof, type ThingProof } from "@/lib/listing";
-import { leadersAt, reachOf, type Story } from "@/lib/story";
+import { reachOf, type Story } from "@/lib/story";
 import { Gallery } from "../gallery.tsx";
 
 /**
@@ -249,111 +251,201 @@ export function StoryReach({ story, reach, checked }: { story: Story; reach: num
 }
 
 /**
- * Перемотка торга на самой вещи: шаг - ставка. Тянешь ползунок или жмёшь
- * play - на вещи логотипы тогдашних лидеров, сверху сумма на тот момент и
- * кто что взял последней ставкой. Шаги идут по ставкам, а не по часам:
- * ставки сбиваются в кучи, и по часам ползунок полз бы по пустоте.
+ * Выноски на вещи: карточка победителя на каждое проданное место, слева и
+ * справа от вещи, и тонкая линия от карточки к самому месту. Сцена отдаёт,
+ * где места на экране, - линии едут за местами, пока вещь крутят, а место,
+ * ушедшее за вещь, гасит свою линию и бледнеет карточкой. Наведи - все
+ * ставки на место; нажми - вещь доворачивается к нему.
+ *
+ * Линии и точки двигаются напрямую в DOM, без перерисовки React: камера
+ * шлёт места на каждом кадре, пока вещь крутится.
  */
-export function StoryReplay({
-  bids,
-  spotOf,
-  onTime,
-}: {
-  bids: { id: string; lot_id: string; amount_cents: number; created_at: string; brand: string }[];
-  spotOf: (lotId: string) => string;
-  onTime: (at: number | null) => void;
-}) {
-  const steps = [...bids].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
-  const last = steps.length;
-  // null - итог. Ставки приходят после первой отрисовки, и число шагов на
-  // старте было нулём: ползунок застревал в начале, хотя вещь - в итоге.
-  const [chosen, setAt] = useState<number | null>(null);
-  const at = chosen ?? last;
-  const [playing, setPlaying] = useState(false);
+/** Место видно, если смотрит на камеру хотя бы так - иначе оно за вещью. */
+const SEEN = 0.12;
 
-  // Шаг 0 - до первой ставки, шаг k - после k-й, последний - итог.
-  const go = (k: number) => {
-    setAt(k);
-    onTime(k >= last ? null : k === 0 ? Date.parse(steps[0]!.created_at) - 1 : Date.parse(steps[k - 1]!.created_at));
+export function StoryCallouts({
+  story,
+  labelOf,
+  picked,
+  onPick,
+  sink,
+  refundedAt,
+}: {
+  story: Story;
+  labelOf: (code: string) => string;
+  picked: string | null;
+  onPick: (code: string) => void;
+  sink: RefObject<((anchors: Anchor[]) => void) | null>;
+  refundedAt: string | null;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const cards = useRef(new Map<string, HTMLElement>());
+  const lines = useRef(new Map<string, SVGLineElement>());
+  const dots = useRef(new Map<string, HTMLElement>());
+  const last = useRef<Anchor[] | null>(null);
+  // Сторона и порядок карточек - по тому, где места на экране: карточка
+  // встаёт с той стороны вещи, где её место, сверху вниз как места. Пока
+  // вещь крутят, карточки стоят; остановилась - перестраиваются под ракурс.
+  const [layout, setLayout] = useState<{ left: string[]; right: string[] } | null>(null);
+  const placed = useRef(layout);
+  placed.current = layout;
+  const settle = useRef<number | undefined>(undefined);
+  const rounds = new Map(story.rounds.map((one) => [one.spot, one]));
+  const winners = story.winners;
+
+  const arrange = (anchors: Anchor[]) => {
+    const canvas = box.current?.parentElement?.querySelector("canvas");
+    const middle = (canvas?.clientWidth ?? 0) / 2;
+    const spots = winners
+      .map((one) => anchors.find((a) => a.code === one.spot))
+      .filter((one) => one !== undefined)
+      .sort((a, b) => a.x - b.x);
+    // Колонки не перекашиваем: с каждой стороны хотя бы треть карточек, а
+    // лишние уходят с той стороны, что ближе к середине.
+    const n = spots.length;
+    const least = n <= 1 ? 0 : Math.max(1, Math.floor(n / 2) - 1);
+    const k = Math.min(Math.max(spots.filter((one) => one.x < middle).length, least), n - least);
+    // В колонке сначала видимые места сверху вниз, ушедшие за вещь - под ними.
+    const byY = (list: Anchor[]) =>
+      list.sort((a, b) => Number(a.facing <= SEEN) - Number(b.facing <= SEEN) || a.y - b.y).map((one) => one.code);
+    return { left: byY(spots.slice(0, k)), right: byY(spots.slice(k)) };
+  };
+
+  const draw = () => {
+    const anchors = last.current;
+    const root = box.current;
+    const canvas = root?.parentElement?.querySelector("canvas");
+    if (!anchors || !root || !canvas) return;
+    const o = root.getBoundingClientRect();
+    const c = canvas.getBoundingClientRect();
+    const at = new Map(anchors.map((one) => [one.code, one]));
+    for (const one of winners) {
+      const spot = at.get(one.spot);
+      const card = cards.current.get(one.spot);
+      const line = lines.current.get(one.spot);
+      const dot = dots.current.get(one.spot);
+      if (!spot || !card || !line || !dot) continue;
+      const px = c.left - o.left + spot.x;
+      const py = c.top - o.top + spot.y;
+      const r = card.getBoundingClientRect();
+      const fromLeft = r.left + r.width / 2 < px + o.left;
+      const cx = (fromLeft ? r.right : r.left) - o.left;
+      const cy = r.top - o.top + r.height / 2;
+      const seen = spot.facing > SEEN;
+      line.setAttribute("x1", String(cx));
+      line.setAttribute("y1", String(cy));
+      line.setAttribute("x2", String(px));
+      line.setAttribute("y2", String(py));
+      line.style.opacity = seen ? "1" : "0";
+      dot.style.transform = `translate(${px}px, ${py}px)`;
+      dot.style.opacity = seen ? "1" : "0";
+      card.classList.toggle("away", !seen);
+    }
   };
 
   useEffect(() => {
-    if (!playing) return;
-    if (at >= last) {
-      setPlaying(false);
-      return;
-    }
-    const tick = setTimeout(() => go(at + 1), steps.length > 20 ? 450 : 800);
-    return () => clearTimeout(tick);
+    sink.current = (anchors) => {
+      last.current = anchors;
+      if (!placed.current) {
+        setLayout(arrange(anchors));
+        return;
+      }
+      draw();
+      window.clearTimeout(settle.current);
+      settle.current = window.setTimeout(() => {
+        const next = arrange(anchors);
+        const now = placed.current;
+        if (now && next.left.join() === now.left.join() && next.right.join() === now.right.join()) return;
+        // Карточки переезжают плавно, где браузер это умеет.
+        if (document.startViewTransition) document.startViewTransition(() => flushSync(() => setLayout(next)));
+        else setLayout(next);
+      }, 350);
+    };
+    return () => {
+      sink.current = null;
+      window.clearTimeout(settle.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, at, last]);
+  }, [winners.length]);
 
-  // Уходим со страницы - вещь возвращается к итогу.
-  useEffect(() => () => onTime(null), [onTime]);
+  // Карточки встали - дорисовать линии к последним известным местам.
+  useLayoutEffect(() => {
+    draw();
+    const redraw = () => draw();
+    window.addEventListener("resize", redraw);
+    return () => window.removeEventListener("resize", redraw);
+  });
 
-  if (last === 0) return null;
-  const moment = at === 0 ? null : steps[at - 1]!;
-  const leading = leadersAt(steps, moment ? moment.created_at : new Date(0).toISOString());
-  const total = Object.values(leading).reduce((sum, one) => sum + one.amount_cents, 0);
-  const when = (iso: string) =>
-    new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const card = (code: string) => {
+    const one = winners.find((w) => w.spot === code)!;
+    const round = rounds.get(code);
+    return (
+      <button
+        type="button"
+        key={code}
+        className={picked === code ? "sx-co on" : "sx-co"}
+        style={{ viewTransitionName: `sx-co-${winners.indexOf(one)}` }}
+        ref={(el) => {
+          if (el) cards.current.set(code, el);
+          else cards.current.delete(code);
+        }}
+        onClick={() => onPick(code)}
+      >
+        <span className="sx-co-logo">{one.mediaUrl && <img src={one.mediaUrl} alt="" />}</span>
+        <span className="sx-co-text">
+          <b>{one.brand}</b>
+          <span>
+            {labelOf(code)}
+            {round && ` · ${plural(round.steps.length, "bid", "bids")}`}
+          </span>
+        </span>
+        <em>{formatUsd(one.amountCents)}</em>
+        {round && round.steps.length > 1 && (
+          <span className="sx-co-pop" role="tooltip">
+            {round.steps.map((step, index) => (
+              <span key={index} className={index === 0 ? "won" : ""}>
+                <i>{step.brand}</i>
+                <b>{formatUsd(step.amountCents)}</b>
+                <small>{index === 0 ? (refundedAt ? "refunded" : "won") : "outbid"}</small>
+              </span>
+            ))}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
-    <section className="sx-section sx-replay">
-      <header className="sx-replay-head">
-        <h2>Replay the auction</h2>
-        <button
-          type="button"
-          className="sx-play"
-          onClick={() => {
-            if (playing) return setPlaying(false);
-            if (at >= last) go(0);
-            setPlaying(true);
-          }}
-        >
-          {playing ? "Pause" : at >= last ? "Play from the start" : "Play"}
-        </button>
-      </header>
-
-      <p className="sx-replay-now">
-        <b>{formatUsd(total)}</b>
-        <span>{moment ? `on the table · ${when(moment.created_at)}` : "No bids yet"}</span>
-      </p>
-
-      <div className="sx-track">
-        {steps.map((one, index) => (
-          <i
-            key={one.id}
-            className={index < at ? "past" : ""}
-            style={{ left: `${((index + 1) / last) * 100}%` }}
-            title={`${one.brand} · ${spotOf(one.lot_id)} · ${formatUsd(one.amount_cents)}`}
+    <div className="sx-callouts" ref={box}>
+      <svg className="sx-co-lines" aria-hidden>
+        {winners.map((one) => (
+          <line
+            key={one.spot}
+            className={picked === one.spot ? "on" : ""}
+            ref={(el) => {
+              if (el) lines.current.set(one.spot, el);
+              else lines.current.delete(one.spot);
+            }}
           />
         ))}
-        <input
-          type="range"
-          min={0}
-          max={last}
-          step={1}
-          value={at}
-          aria-label="Replay the auction bid by bid"
-          onChange={(event) => {
-            setPlaying(false);
-            go(Number(event.target.value));
+      </svg>
+      {winners.map((one) => (
+        <i
+          key={one.spot}
+          className={picked === one.spot ? "sx-co-dot on" : "sx-co-dot"}
+          ref={(el) => {
+            if (el) dots.current.set(one.spot, el);
+            else dots.current.delete(one.spot);
           }}
         />
-      </div>
-
-      <p className="sx-replay-last">
-        {moment ? (
-          <>
-            <b>{moment.brand}</b> took the lead on {spotOf(moment.lot_id).startsWith("Spot ") ? "" : "the "}
-            {spotOf(moment.lot_id)} with {formatUsd(moment.amount_cents)}
-            {at >= last && ". The last bid."}
-          </>
-        ) : (
-          "The thing before the first bid."
-        )}
-      </p>
-    </section>
+      ))}
+      {layout && (
+        <div className="sx-co-cols">
+          <div className="sx-co-col left">{layout.left.map(card)}</div>
+          <div className="sx-co-col right">{layout.right.map(card)}</div>
+        </div>
+      )}
+    </div>
   );
 }
+

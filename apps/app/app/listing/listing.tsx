@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatUsd, hasOpened, isCreativeUrl, isOpen, minBidCents, originalUrl, shortWallet } from "@oxar/core";
-import { ThingStage, type Corners, type Stage, type Views } from "@oxar/stage";
+import { ThingStage, type Anchor, type Corners, type Stage, type Views } from "@oxar/stage";
 import { loadBids, loadFeed, loadMyBids, loadTopBids, myBrands, type Bid, type MyBid } from "@/lib/auction";
 import { loadListedThing, type ListedThing, type ThingProof } from "@/lib/listing";
-import { leadersAt, storyOf } from "@/lib/story";
-import { StoryHero, StoryProof, StoryReach, StoryReplay, StorySpots } from "./story.tsx";
+import { storyOf } from "@/lib/story";
+import { StoryCallouts, StoryHero, StoryProof, StoryReach, StorySpots } from "./story.tsx";
 import { SellerLine } from "../reviews.tsx";
 import { SoonHologram } from "../soon.tsx";
 import { SpotInside, spotBox } from "../seller/parts.tsx";
@@ -53,9 +53,8 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   // Общая лента: все ставки на все места, чтобы было видно, где идёт торг,
   // а не только историю выбранного места.
   const [feed, setFeed] = useState<Bid[]>([]);
-  // Перемотка закрытого торга: момент, на который на вещи - тогдашние лидеры.
-  // null - итог, как торг закрылся.
-  const [replay, setReplay] = useState<number | null>(null);
+  // Выноски закрытого торга: сцена отдаёт, где места на экране, - сюда.
+  const anchorSink = useRef<((anchors: Anchor[]) => void) | null>(null);
   // Загруженные логотипы: при перемотке они меняются часто, и без кэша
   // каждый шаг грузил бы картинку заново и мигал.
   const images = useRef(new Map<string, HTMLImageElement>());
@@ -152,19 +151,10 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
   function dress(): Promise<void> {
     if (!thing) return Promise.resolve();
     const jobs: Promise<void>[] = [];
-    const then = replay === null ? null : leadersAt(feed, new Date(replay).toISOString());
     for (const spot of thing.spots) {
       const one = lotOf(spot.code);
-      const url = then
-        ? one
-          ? then[one.id]?.media_url
-          : undefined
-        : (art[spot.code]?.url ?? (one ? tops[one.id]?.media_url : undefined));
-      if (!url) {
-        // В перемотке место без лидера на тот момент - пустое.
-        if (then) stage.current?.show(spot.code, null);
-        continue;
-      }
+      const url = art[spot.code]?.url ?? (one ? tops[one.id]?.media_url : undefined);
+      if (!url) continue;
       const ready = images.current.get(url);
       if (ready) {
         stage.current?.show(spot.code, ready);
@@ -215,7 +205,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tops, art, look, stuck, views, replay]);
+  }, [tops, art, look, stuck, views]);
 
   // Стикеры - на вещь, когда сцена собралась (тогда приходят и ракурсы).
   // Каждый стикер покупки - отдельная наклейка: купил три - три на бампере.
@@ -455,6 +445,16 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
       <div className={story ? "lot-body solo" : showBids ? "lot-body" : "lot-body two"}>
       <div className="lot-center">
       <div className="lot-scene">
+        {story && !ghost && look === "live" && (
+          <StoryCallouts
+            story={story}
+            labelOf={labelOf}
+            picked={picked}
+            onPick={choose}
+            sink={anchorSink}
+            refundedAt={thing.refundedAt}
+          />
+        )}
         {/* Торг назначен, но ещё не открылся - голограмма: у нашей вещи её
             модель, у вещи продавца знак вопроса. Подложка светлая, как на
             экране между торгами: тёмный прямоугольник на светлой странице
@@ -477,6 +477,7 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
                   setViews(ready);
                   void dress();
                 }}
+                onAnchors={story ? (anchors) => anchorSink.current?.(anchors) : undefined}
               />
             </div>
             {look === "shot" && views.shots[photo] && (
@@ -637,20 +638,6 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
         </div>
       )}
 
-      {/* Закрытый торг: под вещью - пруф и «About», чтобы колонка слева не
-          стояла пустой рядом с длинной историей справа. */}
-      {story && closesAt !== null && (
-        <>
-          <StoryReplay
-            bids={feed}
-            spotOf={(lotId) => labelOf(lots.find((one) => one.id === lotId)?.spot_code ?? "")}
-            onTime={setReplay}
-          />
-          <StoryReach story={story} reach={thing.reach} checked={thing.reachChecked} />
-          <StoryProof thingId={thingId} proof={proof} onProof={setProof} />
-          <WornAbout thingId={thingId} />
-        </>
-      )}
       </div>
 
       {/* Ставить уже или ещё нельзя - список мест: без него у закрытого торга
@@ -1084,19 +1071,24 @@ export function ListingAuction({ thingId, onBack }: { thingId: string; onBack: (
           </div>
         </div>
       )}
-      {/* Закрытый торг: справа от вещи - история вместо колонки мест. */}
-      {story && closesAt !== null && (
-        <div className="sx-side">
-          <StoryHero story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} refundedAt={thing.refundedAt} />
-          <StorySpots story={story} labelOf={labelOf} refundedAt={thing.refundedAt} />
-        </div>
-      )}
       </div>
 
       {/* Кто носит вещь, где, когда и срок пруфа - своей панелью под торгом:
           деньги победителя держит программа до пруфа, и этот срок покупатель
           видит прежде, чем ставит. */}
-      {!story && <WornAbout thingId={thingId} />}
+      {/* Закрытый торг: под вещью с выносками - одна полоса итога (сумма,
+          путь, пруф), за ней все ставки и «About». */}
+      {story && closesAt !== null && (
+        <div className="sx-under">
+          <div className="sx-band">
+            <StoryHero story={story} openedAt={opensAt} closedAt={closesAt} proof={proof} refundedAt={thing.refundedAt} />
+            <StoryProof thingId={thingId} proof={proof} onProof={setProof} />
+          </div>
+          <StoryReach story={story} reach={thing.reach} checked={thing.reachChecked} />
+          <StorySpots story={story} labelOf={labelOf} refundedAt={thing.refundedAt} />
+        </div>
+      )}
+      <WornAbout thingId={thingId} />
     </section>
   );
 }
