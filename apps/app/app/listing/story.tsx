@@ -265,7 +265,10 @@ export function StoryReplay({
 }) {
   const steps = [...bids].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
   const last = steps.length;
-  const [at, setAt] = useState(last);
+  // null - итог. Ставки приходят после первой отрисовки, и число шагов на
+  // старте было нулём: ползунок застревал в начале, хотя вещь - в итоге.
+  const [chosen, setAt] = useState<number | null>(null);
+  const at = chosen ?? last;
   const [playing, setPlaying] = useState(false);
 
   // Шаг 0 - до первой ставки, шаг k - после k-й, последний - итог.
