@@ -10877,108 +10877,6 @@ body:has(.app-v2)::after {
   letter-spacing: -0.03em;
 }
 
-/* Мозаика брендов: плитка на бренд, площадь - доля ставки. Плитки делят
-   прямоугольник без зазоров; волосяные линии - тенью внутрь, чтобы не съесть
-   площадь. Подпись на плитке - только если ей хватает места. */
-.sx-mosaic {
-  position: relative;
-  margin-top: 1.25rem;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border-radius: 10px;
-  background: var(--soft);
-}
-
-/* Бренд один - плитка во всю ширину ниже: огромный логотип был бы криком. */
-.sx-mosaic.one {
-  aspect-ratio: 3 / 1;
-}
-
-.sx-tile {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: var(--card);
-  box-shadow: inset 0 0 0 1px var(--line);
-  cursor: pointer;
-  container-type: size;
-  transition: box-shadow 0.15s ease;
-}
-
-.sx-tile img {
-  max-width: 62%;
-  max-height: 56%;
-  object-fit: contain;
-  /* Белый логотип на светлой плитке пропадал - тонкий контур его держит. */
-  filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.45)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12));
-}
-
-.sx-tile b {
-  padding: 0 0.5rem;
-  font-size: 0.875rem;
-  text-align: center;
-}
-
-.sx-tile-cap {
-  position: absolute;
-  bottom: 0.5rem;
-  left: 0.625rem;
-  right: 0.625rem;
-  overflow: hidden;
-  color: var(--mut);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@container (max-width: 7rem) {
-  .sx-tile-cap {
-    display: none;
-  }
-}
-
-@container (max-height: 5rem) {
-  .sx-tile-cap {
-    display: none;
-  }
-}
-
-.sx-tile:hover,
-.sx-tile.on {
-  z-index: 1;
-  box-shadow: inset 0 0 0 2px var(--red);
-}
-
-.sx-tile.on .sx-tile-cap {
-  color: var(--red);
-}
-
-.sx-mosaic-detail {
-  min-height: 1.5em;
-  margin: 0.75rem 0 0;
-  color: var(--mut);
-  font-size: 0.9375rem;
-}
-
-.sx-mosaic-detail b {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-@media (max-width: 56rem) {
-  .sx-mosaic {
-    aspect-ratio: 4 / 3;
-  }
-
-  .sx-mosaic.one {
-    aspect-ratio: 2 / 1;
-  }
-}
-
 .sx-proof {
   display: flex;
   gap: 0.5rem;
@@ -11085,7 +10983,8 @@ body:has(.app-v2)::after {
     max-height: 30rem;
   }
 
-  .lot-v2 .lot-body.solo .sx-chart-block {
+  .lot-v2 .lot-body.solo .sx-replay,
+  .lot-v2 .lot-body.solo .sx-reach {
     order: 3;
   }
 }
