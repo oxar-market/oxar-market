@@ -1,6 +1,5 @@
-import "../_site/site.css";
-import { Landing } from "../_site/landing.tsx";
+import { Home } from "../_site/home.tsx";
 
 export default function Page() {
-  return <Landing />;
+  return <Home />;
 }

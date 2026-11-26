@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./stage.css": "./src/stage.css"
+    "./stage.css": "./src/stage.css",
+    "./globe.css": "./src/globe.css"
   },
   "scripts": {
     "test": "node --test --experimental-strip-types src/*.test.ts",

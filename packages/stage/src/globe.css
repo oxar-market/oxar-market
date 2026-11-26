@@ -1,0 +1,170 @@
+/* Витрина главной (globe.tsx). Шрифт берётся со страницы. */
+
+.globe {
+  --globe-mute: #8d8a84;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+body.globe-hand .globe {
+  cursor: pointer;
+}
+body.globe-drag .globe {
+  cursor: grabbing;
+}
+
+.globe-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.globe-field {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+.globe:not(.globe-grid) .globe-field {
+  pointer-events: none;
+}
+
+.globe-tile {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--t);
+  opacity: 0;
+  will-change: transform;
+  color: inherit;
+  text-decoration: none;
+  -webkit-user-drag: none;
+}
+.globe-lab {
+  position: absolute;
+  left: 0;
+  min-width: 100%;
+  bottom: 100%;
+  padding-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+/* Название целиком: в базе они длиннее плитки («Breakpoint Roadtrip»), а многоточие их резало. */
+.globe-lab b {
+  font-weight: 400;
+}
+.globe-live {
+  font-style: normal;
+  color: #d9472b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.globe-box {
+  display: block;
+  width: var(--t);
+  height: var(--t);
+}
+/* Свободное место: та же точечная поверхность, что у глобуса - ещё не занято. */
+.globe-free .globe-box {
+  background-image: radial-gradient(circle, #c8c4bc 1px, transparent 1.3px);
+  background-size: 9px 9px;
+  background-position: center;
+  transition: filter 0.4s;
+}
+.globe-free:hover .globe-box {
+  filter: brightness(0.72);
+}
+
+.globe-intro {
+  position: fixed;
+  left: 50%;
+  bottom: 7vh;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: min(760px, 90vw);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.globe-hint {
+  position: fixed;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  opacity: 0;
+  color: var(--globe-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.globe-hint i {
+  display: block;
+  width: 1px;
+  height: 26px;
+  background: linear-gradient(var(--globe-mute) 50%, transparent 0) 0 0 / 1px 10px;
+  animation: globe-drip 1.2s linear infinite;
+}
+@keyframes globe-drip {
+  to {
+    background-position: 0 10px;
+  }
+}
+
+.globe-caption {
+  position: fixed;
+  left: 26px;
+  bottom: 22px;
+  z-index: 30;
+  background: rgba(250, 250, 249, 0.88);
+  padding: 2px 4px;
+  margin: -2px -4px;
+  pointer-events: none;
+}
+.globe-caption:empty {
+  display: none;
+}
+
+.globe-fx {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 40;
+  pointer-events: none;
+}
+.globe-count {
+  position: fixed;
+  left: 50%;
+  top: calc(50% + min(11vh, 90px) + 26px);
+  transform: translateX(-50%);
+  z-index: 41;
+  color: var(--globe-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: opacity 0.4s;
+}
+.globe-landing .globe-count,
+.globe:not(.globe-loading) .globe-count {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .globe-hint i {
+    animation: none;
+  }
+}
