@@ -50,7 +50,7 @@ body.globe-drag .globe {
 .globe-lab {
   position: absolute;
   left: 0;
-  right: 0;
+  min-width: 100%;
   bottom: 100%;
   padding-bottom: 6px;
   display: flex;
@@ -58,10 +58,9 @@ body.globe-drag .globe {
   gap: 8px;
   white-space: nowrap;
 }
+/* Название целиком: в базе они длиннее плитки («Breakpoint Roadtrip»), а многоточие их резало. */
 .globe-lab b {
   font-weight: 400;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .globe-live {
   font-style: normal;
