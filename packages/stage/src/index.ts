@@ -24,3 +24,4 @@ export { fitInside } from "./fit.ts";
 export { applyQuad, quadTransform, type Corners } from "./quad.ts";
 export { acesFilmic, develop, toSrgb } from "./tone.ts";
 export { houseShape, isShirt } from "./house.ts";
+export { Globe, type GlobeThing } from "./globe.tsx";

@@ -140,6 +140,18 @@ export async function load(): Promise<Data | null> {
   };
 }
 
+/**
+ * Своя копия картинки победителя закрытого торга - в /site/won, имя из
+ * адреса в хранилище. Главная грузит логотипы на каждом заходе, и тянуть их
+ * из Supabase значит тратить его трафик: 31 октября лимит Free съели именно
+ * логотипы. Закрытый торг не меняется, поэтому копию можно положить рядом с
+ * сайтом. Не из хранилища (свой путь вроде /cases/...) - копии нет.
+ */
+export function localCopy(url: string): string | null {
+  const found = url.match(/\/storage\/v1\/object\/public\/creatives\/(.+)$/);
+  return found ? `/site/won/${found[1]!.replaceAll("/", "-")}` : null;
+}
+
 export function usd(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(cents / 100);
 }
