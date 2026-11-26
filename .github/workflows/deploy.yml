@@ -127,7 +127,7 @@ jobs:
       - name: Проверить, что ключи доехали в сборку
         run: |
           test -f apps/app/out/app.html || { echo "нет приложения на /app"; exit 1; }
-          grep -q "v2-top" apps/app/out/index.html || { echo "корень oxar.app - не лендинг"; exit 1; }
+          grep -q "home-top" apps/app/out/index.html || { echo "корень oxar.app - не лендинг"; exit 1; }
           grep -rq "${{ secrets.NEXT_PUBLIC_PRIVY_APP_ID }}" apps/app/out/_next/static \
             || { echo "в сборке приложения нет app id Privy"; exit 1; }
 
