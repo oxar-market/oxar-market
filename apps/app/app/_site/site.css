@@ -230,13 +230,6 @@
   opacity: 0.88;
 }
 
-.v2-grip {
-  width: 12px;
-  height: 12px;
-  fill: currentColor;
-  opacity: 0.8;
-}
-
 /* Первый экран: светлая подложка, текст слева, кадр героя справа. */
 .v2-hero {
   display: grid;
@@ -320,8 +313,7 @@
 }
 
 .v2-feature-top,
-.v2-feature-title,
-.v2-feature-foot {
+.v2-feature-title {
   position: relative;
   z-index: 1;
 }
@@ -391,52 +383,6 @@
   font-size: 1.25rem;
   font-weight: 600;
   opacity: 0.85;
-}
-
-.v2-feature-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.v2-feature-foot > span:first-child {
-  opacity: 0.8;
-}
-
-/* Бегущая строка: логотипы брендов, которые ставили. */
-.v2-strip {
-  grid-column: 1 / -1;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-}
-
-.v2-strip-track {
-  display: flex;
-  align-items: center;
-  gap: 3.5rem;
-  width: max-content;
-  animation: v2-run 40s linear infinite;
-}
-
-/* Логотипы в один цвет: у брендов свои цвета и фоны, вместе они спорили бы. */
-.v2-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.375rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--ink);
-  opacity: 0.55;
-  white-space: nowrap;
-}
-
-.v2-brand img {
-  width: auto;
-  filter: brightness(0);
 }
 
 @keyframes v2-run {
@@ -628,86 +574,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.v2-more {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 1.25rem;
-  padding: 1rem;
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--ink);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.15s;
-}
-
-.v2-more:hover {
-  background: var(--line);
-}
-
-/* Цифры - сразу под первым экраном. */
-.v2-numbers {
-  padding: 1rem 0 0;
-}
-
-.v2-numbers dl {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
-  margin: 0;
-}
-
-.v2-numbers div {
-  padding: 1.75rem 1.5rem;
-  border-radius: 8px;
-  background: var(--panel);
-}
-
-.v2-numbers dd {
-  margin: 0;
-  font-size: 3rem;
-  font-weight: 600;
-  letter-spacing: -0.04em;
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-numbers dt {
-  margin-top: 0.25rem;
-  font-size: 0.9375rem;
-  color: var(--mut);
-}
-
-/* Полоса для продавцов */
-.v2-band {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-  margin: 4rem 0 0;
-  padding: 3rem;
-  border-radius: 10px;
-  background: var(--panel);
-}
-
-.v2-band h2 {
-  font-size: 2.25rem;
-}
-
-.v2-band p {
-  margin: 0.75rem 0 0;
-  max-width: 34rem;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: var(--mut);
-}
-
-.v2-band .v2-btn {
-  min-width: 14rem;
-}
-
 .v2-foot {
   display: flex;
   justify-content: space-between;
@@ -750,12 +616,6 @@
   width: 0.9375rem;
   height: 0.9375rem;
   fill: currentColor;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .v2-strip-track {
-    animation: none;
-  }
 }
 
 @media (max-width: 56rem) {
@@ -808,25 +668,6 @@
   .v2-facts dd {
     font-size: 0.875rem;
     white-space: nowrap;
-  }
-
-  .v2-numbers dl {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  /* Две плитки в ряд на телефоне: «$13,749+» в 2.25rem вылезал за край. */
-  .v2-numbers div {
-    padding: 1.25rem 1rem;
-  }
-
-  .v2-numbers dd {
-    font-size: 1.75rem;
-  }
-
-  .v2-band {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 2rem 1.5rem;
   }
 }
 
@@ -1110,76 +951,8 @@ a.v2-card:hover .v2-show-word {
   }
 }
 
-/* Как это работает - схемой: шаги на точечной сетке, между ними стрелки. */
-.v2-head-sub {
-  margin: 0;
-  max-width: 22rem;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: var(--mut);
-}
-
-.v2-flow {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  column-gap: 5rem;
-  row-gap: 4rem;
-  padding: 3.5rem 3rem;
-  border-radius: 10px;
-  background:
-    radial-gradient(circle, rgba(22, 24, 29, 0.13) 1px, transparent 1.4px) 0 0 / 18px 18px,
-    var(--panel);
-}
-
-/* Змейка: первый ряд слева направо, второй - справа налево. */
-.v2-node.n1 { grid-area: 1 / 1; }
-.v2-node.n2 { grid-area: 1 / 2; margin-top: 7rem; }
-.v2-node.n3 { grid-area: 1 / 3; }
-.v2-node.n4 { grid-area: 2 / 3; }
-.v2-node.n5 { grid-area: 2 / 2; margin-top: 3rem; }
-.v2-node.n6 { grid-area: 2 / 1; }
-
-.v2-wires {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.v2-wires path {
-  fill: none;
-  stroke: var(--red);
-  stroke-width: 1.5;
-  stroke-dasharray: 6 6;
-  animation: v2-flow 1.2s linear infinite;
-}
-
-.v2-wires marker path {
-  fill: none;
-  stroke: var(--red);
-  stroke-width: 1.5;
-  stroke-dasharray: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  animation: none;
-}
-
 @keyframes v2-flow {
   to { stroke-dashoffset: -12; }
-}
-
-.v2-node {
-  position: relative;
-  z-index: 1;
-  align-self: start;
-  padding: 1.125rem;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 32px -12px rgba(0, 0, 0, 0.14);
-  color: #16181d;
 }
 
 .v2-node-at {
@@ -1198,278 +971,7 @@ a.v2-card:hover .v2-show-word {
   font-variant-numeric: tabular-nums;
 }
 
-.v2-node h3 {
-  margin: 0 0 0.875rem;
-  font-size: 1rem;
-  letter-spacing: -0.01em;
-}
-
-.v2-node-ui {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  padding: 0.75rem;
-  border-radius: 6px;
-  background: #f4f4f1;
-  font-size: 0.8125rem;
-}
-
-/* Подпись - у левого края: по центру её перечёркивала стрелка вниз. */
-.v2-node-tag {
-  position: absolute;
-  left: 1.125rem;
-  bottom: -1.75rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
-  color: var(--mut);
-}
-
-.v2-ui-list,
-.v2-ui-board {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.v2-ui-list li,
-.v2-ui-board li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.625rem;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: #fff;
-  font-weight: 600;
-}
-
-.v2-ui-list li.on,
-.v2-ui-board li.on {
-  border-color: var(--red);
-}
-
-.v2-ui-list i,
-.v2-ui-board i {
-  display: grid;
-  place-items: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 50%;
-  background: #16181d;
-  color: #fff;
-  font-size: 0.625rem;
-  font-style: normal;
-}
-
-.v2-ui-board i {
-  background: #d9d8d2;
-  color: #16181d;
-}
-
-.v2-ui-board li.on i {
-  background: var(--red);
-  color: #fff;
-}
-
-.v2-ui-list em,
-.v2-ui-board em {
-  margin-left: auto;
-  font-style: normal;
-  font-weight: 500;
-  color: var(--mut);
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-ui-list li.on em,
-.v2-ui-board li.on em {
-  color: var(--red);
-  font-weight: 600;
-}
-
-.v2-ui-bid {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.375rem 0.375rem 0.375rem 0.75rem;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 1.125rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-ui-bid b {
-  padding: 0.375rem 0.875rem;
-  border-radius: 4px;
-  background: #16181d;
-  color: #fff;
-  font-size: 0.8125rem;
-}
-
-.v2-ui-held {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.v2-ui-held svg {
-  flex: none;
-  width: 2.25rem;
-  height: 2.25rem;
-  padding: 0.5rem;
-  border-radius: 6px;
-  background: rgba(224, 56, 28, 0.1);
-  fill: none;
-  stroke: var(--red);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-}
-
-.v2-ui-held b {
-  display: block;
-  font-size: 1.25rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-ui-held span {
-  color: var(--mut);
-}
-
-.v2-ui-note {
-  margin: 0;
-  color: var(--mut);
-  line-height: 1.4;
-}
-
-.v2-ui-logo {
-  position: relative;
-  display: grid;
-  place-items: center;
-  height: 4.5rem;
-  border-radius: 6px;
-  background: #fff;
-  color: var(--red);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.v2-ui-logo .v2-c {
-  width: 1rem;
-  height: 1rem;
-  margin: 0.625rem;
-  color: var(--red);
-}
-
-.v2-ui-pills {
-  display: flex;
-  gap: 0.375rem;
-}
-
-.v2-ui-pills span {
-  padding: 0.25rem 0.625rem;
-  border-radius: 4px;
-  background: #fff;
-  border: 1px solid #e3e2dc;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.v2-ui-pills span.ok {
-  border-color: transparent;
-  background: rgba(46, 204, 113, 0.16);
-  color: #1d8a4c;
-}
-
-.v2-ui-photo {
-  position: relative;
-  overflow: hidden;
-  border-radius: 6px;
-}
-
-.v2-ui-photo img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  object-position: 70% 50%;
-}
-
-.v2-ui-photo span {
-  position: absolute;
-  left: 0.5rem;
-  bottom: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(6px);
-  color: #fff;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-ui-pay {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin: 0;
-}
-
-.v2-ui-pay div {
-  display: flex;
-  justify-content: space-between;
-}
-
-.v2-ui-pay dt {
-  color: var(--mut);
-}
-
-.v2-ui-pay dd {
-  margin: 0;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.v2-ui-pay div:last-child {
-  padding-top: 0.375rem;
-  border-top: 1px solid #e3e2dc;
-}
-
-.v2-ui-pay div:last-child dd {
-  color: #1d8a4c;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .v2-wires path {
-    animation: none;
-  }
-}
-
 /* На узком экране шаги идут столбиком, стрелки - сверху вниз. */
-@media (max-width: 56rem) {
-  .v2-flow {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 3.5rem;
-    padding: 2.5rem 1.25rem 3rem 1.75rem;
-  }
-
-  .v2-node.n1,
-  .v2-node.n2,
-  .v2-node.n3,
-  .v2-node.n4,
-  .v2-node.n5,
-  .v2-node.n6 {
-    grid-area: auto;
-    margin-top: 0;
-  }
-}
 
 /* Страница продавца: вопросы и форма заявки в одежде сайта. */
 .v2-sell-terms {

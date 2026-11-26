@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Globe, SHIRT, houseShape, isShirt, type GlobeThing } from "@oxar/stage";
 import "@oxar/stage/globe.css";
 import "./home.css";
-import { APP_URL, load, localCopy, usd, type Auction } from "./data.ts";
+import { APP_URL, load, loadPilots, localCopy, usd, type Auction, type Pilot } from "./data.ts";
 import { avatar, readMe, type Me } from "./me.ts";
 import { mono } from "./mono.ts";
 
@@ -32,6 +32,22 @@ function thingOf(one: Auction): GlobeThing {
     model: shape?.model ?? one.model ?? SHIRT.model,
     shape,
     logos,
+  };
+}
+
+/** Пилот - вещь без торга: логотипы партнёров стоят на своих местах, пометка «Pilot». */
+function pilotOf(one: Pilot): GlobeThing {
+  const shape = houseShape(one.model) ?? (isShirt(one.model) ? SHIRT : undefined);
+  return {
+    id: one.id,
+    href: `${APP_URL}?thing=${one.id}`,
+    title: one.title,
+    caption: [one.title, "Pilot", one.owner].join(" · "),
+    live: false,
+    tag: "Pilot",
+    model: shape?.model ?? one.model ?? SHIRT.model,
+    shape,
+    logos: Object.fromEntries(Object.entries(one.placed).map(([code, placed]) => [code, [placed.url]])),
   };
 }
 
@@ -69,7 +85,10 @@ export function Home() {
 
   useEffect(() => {
     setMe(readMe());
-    void load().then((data) => setThings((data?.auctions ?? []).map(thingOf)));
+    // Сначала торги, пилоты - после: они не торг, а прогон идеи.
+    void Promise.all([load(), loadPilots()]).then(([data, pilots]) =>
+      setThings([...(data?.auctions ?? []).map(thingOf), ...pilots.map(pilotOf)]),
+    );
   }, []);
 
   return (

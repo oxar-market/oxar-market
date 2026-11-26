@@ -31,6 +31,8 @@ export type GlobeThing = {
   /** Строка внизу слева, когда курсор на вещи. */
   caption: string;
   live: boolean;
+  /** Пометка рядом с названием, когда это не торг: «Pilot» - прогон идеи без ставок. */
+  tag?: string;
   /** Модель: у наших вещей - из формы, у прочих - своя. */
   model: string;
   shape?: Shape;
@@ -702,6 +704,7 @@ export function Globe({
                 <span>{String(at + 1).padStart(2, "0")}.</span>
                 <b>{thing.title}</b>
                 {thing.live && <i className="globe-live">Live</i>}
+                {thing.tag && <i className="globe-tag">{thing.tag}</i>}
               </span>
               <span className="globe-box" />
             </a>
