@@ -34,8 +34,6 @@ export type Auction = {
   model: string | null;
   /** Код места - кто его выиграл и за сколько. */
   won: Record<string, { url: string; brand: string; cents: number }>;
-  /** Деньги вернули победителям мимо программы: вещь не вышла. */
-  refunded: boolean;
 };
 
 export type Data = {
@@ -113,7 +111,6 @@ export async function load(): Promise<Data | null> {
       closedAt: Math.max(...shown.map((lot) => Date.parse(lot.closes_at))),
       model: thing.model_url,
       won: winners,
-      refunded: thing.refunded_at !== null,
     });
   }
   auctions.sort((a, b) => (a.status === "live" ? -1 : 0) - (b.status === "live" ? -1 : 0) || b.closedAt - a.closedAt);
