@@ -43,33 +43,33 @@ export function Notifications() {
     if (!(await saveNotifySetting(column, next))) setSettings(settings);
   }
 
+  // Строки и переключатели - в материале кабинета (you.css): одна строка
+  // почты, под ней тумблеры, без своей рамки и заголовка.
   return (
-    <div className="role-card">
-      <span className="wallet-title">Notifications</span>
-
-      {email ? (
-        <div className="addr-box">
-          <span>{email}</span>
-          <button type="button" className="ghost small" onClick={updateEmail}>
-            Change
-          </button>
-        </div>
-      ) : (
-        <>
-          <p className="role-note">
-            Add an email so you hear about outbids, wins and the 72-hour proof check even when this
-            tab is closed. Use one you don&apos;t already sign in to OXAR with.
-          </p>
-          {linkProblem && <p className="bad">{linkProblem}</p>}
-          <button type="button" className="ghost small" onClick={linkEmail}>
-            Add email
-          </button>
-        </>
+    <div>
+      <div className="yo-kv">
+        <span className="yo-mute">Email</span>
+        {email ? <span className="yo-cut">{email}</span> : <span className="yo-mute">Not added</span>}
+        <button type="button" className="yo-link yo-up" onClick={email ? updateEmail : linkEmail}>
+          {email ? "Change" : "Add"}
+        </button>
+      </div>
+      {!email && (
+        <p className="yo-mute yo-note">
+          So you hear about outbids, wins and the 72-hour proof check when this tab is closed. Use one you don&apos;t
+          already sign in to OXAR with.
+        </p>
       )}
+      {linkProblem && <p className="yo-bad">{linkProblem}</p>}
 
       {email && settings && (
         <>
-          <OnOff label="Email me" on={settings.emailOn} onFlip={() => flip("email_on", "emailOn")} />
+          <OnOff
+            label="Email me"
+            hint="Wins, proof checks and outbids"
+            on={settings.emailOn}
+            onFlip={() => flip("email_on", "emailOn")}
+          />
           {settings.emailOn && (
             <OnOff
               label="Email when outbid"
@@ -83,36 +83,37 @@ export function Notifications() {
       {push !== "unsupported" && (
         <OnOff
           label="Push on this device"
+          hint={push === "denied" ? "Blocked for this site in the browser settings" : undefined}
           on={push === "on"}
           disabled={push === "denied"}
           onFlip={() => void (push === "on" ? disablePush() : enablePush()).then(setPush)}
         />
       )}
-      {push === "denied" && (
-        <p className="role-note">Notifications are blocked for this site in the browser settings.</p>
-      )}
     </div>
   );
 }
 
-function OnOff({ label, on, disabled, onFlip }: { label: string; on: boolean; disabled?: boolean; onFlip: () => void }) {
+function OnOff({
+  label,
+  hint,
+  on,
+  disabled,
+  onFlip,
+}: {
+  label: string;
+  hint?: string;
+  on: boolean;
+  disabled?: boolean;
+  onFlip: () => void;
+}) {
   return (
-    <div className="theme-row">
-      <span className="muted">{label}</span>
-      <div className="role-toggle slim">
-        {([true, false] as const).map((one) => (
-          <button
-            key={String(one)}
-            type="button"
-            className={on === one ? "role-tab on" : "role-tab"}
-            disabled={disabled}
-            onClick={() => on !== one && onFlip()}
-          >
-            {one ? "On" : "Off"}
-          </button>
-        ))}
-      </div>
-    </div>
+    <button type="button" role="switch" aria-checked={on} className="yo-toggle" disabled={disabled} onClick={onFlip}>
+      <span>
+        {label}
+        {hint && <small>{hint}</small>}
+      </span>
+      <span className="yo-sw" />
+    </button>
   );
 }
 

@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { NAME_MAX, BRAND_MAX, HANDLE_MAX, cleanProfile } from "@oxar/core";
-import { faceUrl, saveProfile, uploadFace, type Profile } from "@/lib/profile";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
- * Окна кабинета: «поделиться охватом» - карточка пропуска картинкой и в X, и
- * «профиль» - имя, аватар, бренд, логотип и X. Кошелёк здесь не меняется: он
- * и есть аккаунт, поэтому показан только для чтения. Почта для писем - в
- * Settings: её подтверждает Privy, а не это окно.
+ * Окно кабинета: «поделиться охватом» - карточка пропуска картинкой и в X.
+ * Профиль правится на месте, во вкладке Settings (you.tsx).
  */
 
 function Modal({ title, sub, onClose, children }: { title: string; sub?: string; onClose: () => void; children: ReactNode }) {
@@ -204,120 +200,6 @@ export function ShareModal({ data, children, onClose }: { data: ShareData; child
           Share on X
         </a>
       </div>
-    </Modal>
-  );
-}
-
-/** Профиль: картинки грузятся сразу при выборе, сохраняется всё по кнопке. */
-export function EditModal({
-  profile,
-  wallet,
-  avatarStyle,
-  onSaved,
-  onClose,
-}: {
-  profile: Profile;
-  wallet: string;
-  avatarStyle: CSSProperties;
-  onSaved: (next: Profile) => void;
-  onClose: () => void;
-}) {
-  const [name, setName] = useState(profile.display_name ?? "");
-  const [brand, setBrand] = useState(profile.brand ?? "");
-  const [x, setX] = useState(profile.x_handle ? `@${profile.x_handle}` : "");
-  const [avatar, setAvatar] = useState(profile.avatar_path);
-  const [logo, setLogo] = useState(profile.logo_path);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  async function pick(list: FileList | null, kind: "avatar" | "logo") {
-    const file = list?.[0];
-    if (!file) return;
-    setError("");
-    setBusy(true);
-    const result = await uploadFace(file, kind);
-    setBusy(false);
-    if ("error" in result) return setError(result.error);
-    if (kind === "avatar") setAvatar(result.path);
-    else setLogo(result.path);
-  }
-
-  async function save() {
-    const clean = cleanProfile({ name, brand, x });
-    if (!clean.ok) return setError(clean.error);
-    const next: Profile = { ...clean.value, avatar_path: avatar, logo_path: logo };
-    setBusy(true);
-    const failed = await saveProfile(next);
-    setBusy(false);
-    if (failed) return setError(failed);
-    onSaved(next);
-    onClose();
-  }
-
-  return (
-    <Modal title="Edit profile" sub="How you show up on OXAR" onClose={onClose}>
-      <form
-        className="ym-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <div className="ym-form-media">
-          <label className="ym-upload">
-            <span className="ym-upload-pic" style={avatar ? undefined : avatarStyle}>
-              {avatar && <img src={faceUrl(avatar) ?? ""} alt="" />}
-            </span>
-            <span>
-              <b>Profile picture</b>
-              <em>Square, PNG, JPG or WebP</em>
-            </span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => void pick(event.target.files, "avatar")} />
-          </label>
-          <label className="ym-upload">
-            <span className="ym-upload-pic logo">{logo ? <img src={faceUrl(logo) ?? ""} alt="" /> : "Logo"}</span>
-            <span>
-              <b>Brand logo</b>
-              <em>PNG, JPG or WebP, up to 2 MB</em>
-            </span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => void pick(event.target.files, "logo")} />
-          </label>
-        </div>
-
-        <label className="ym-field">
-          <span>Display name</span>
-          <input value={name} maxLength={NAME_MAX} onChange={(event) => setName(event.target.value)} placeholder="Shown instead of your wallet" />
-        </label>
-        <div className="ym-form-two">
-          <label className="ym-field">
-            <span>Brand name</span>
-            <input value={brand} maxLength={BRAND_MAX} onChange={(event) => setBrand(event.target.value)} placeholder="Shown next to your name" />
-          </label>
-          <label className="ym-field">
-            <span>X account</span>
-            <input value={x} maxLength={HANDLE_MAX + 1} onChange={(event) => setX(event.target.value)} placeholder="@handle" />
-          </label>
-        </div>
-
-        <div className="ym-field">
-          <span>Wallet</span>
-          <div className="ym-readonly">
-            <code>{wallet}</code>
-            <em>Your wallet is your account</em>
-          </div>
-        </div>
-
-        {error && <p className="ym-form-error">{error}</p>}
-
-        <div className="ym-modal-go two">
-          <button type="button" className="ym-mbtn light" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="ym-mbtn dark" disabled={busy}>
-            {busy ? "Saving…" : "Save changes"}
-          </button>
-        </div>
-      </form>
     </Modal>
   );
 }
