@@ -1,3 +1,5 @@
+import type { BoardBid, BoardLot } from "@oxar/core";
+
 /**
  * Торги: главная, страница всех торгов и страница продавца читают одно и то же.
  */
@@ -176,6 +178,79 @@ export async function loadPilots(): Promise<Pilot[]> {
       placed: Object.fromEntries(mine.map((one) => [one.code, { url: one.media_url, brand: one.brand }])),
     }];
   });
+}
+
+/** Ставка на странице торга: кто, сколько, когда, на какое место. */
+export type Bid = { code: string; brand: string; cents: number; at: number; url: string; wallet: string };
+
+/**
+ * Один торг для его страницы: вещь, все ставки по местам, охват. Пилот -
+ * без ставок, места и бренды из placements. Идущий торг на этой странице не
+ * показываем: ставки делаются в приложении, туда и отправляем.
+ */
+export type AuctionPage = {
+  id: string;
+  slug: string;
+  title: string;
+  owner: string;
+  where: string | null;
+  model: string | null;
+  status: "sold" | "live" | "pilot";
+  closedAt: number | null;
+  /** Ярлыки мест из базы - на случай, если у вещи нет своей разметки в коде. */
+  labels: Record<string, string>;
+  bids: Bid[];
+  placed: Record<string, { url: string; brand: string }>;
+  reach: { people: number; estimated: boolean } | null;
+  /** Те же лоты и ставки - для rankBidders из core: кто ставил и что взял. */
+  board: { lots: BoardLot[]; bids: BoardBid[] };
+};
+
+export async function loadAuction(id: string): Promise<AuctionPage | null> {
+  const [things, lots, placed] = await Promise.all([
+    rest<{ id: string; slug: string; title: string; worn_where: string | null; model_url: string | null; post_reach: number | null; post_reach_checked_at: string | null }[]>(
+      `things?id=eq.${encodeURIComponent(id)}&active=eq.true&hidden=eq.false&select=id,slug,title,worn_where,model_url,post_reach,post_reach_checked_at`,
+    ),
+    rest<{ id: string; status: string; closes_at: string; rehearsal: boolean; thing_spots: { code: string; label: string } | null }[]>(
+      `lots?thing_id=eq.${encodeURIComponent(id)}&rehearsal=eq.false&select=id,status,closes_at,rehearsal,thing_spots:spot_id(code,label)`,
+    ),
+    rest<{ code: string; brand: string; media_url: string }[]>(
+      `placements?thing_id=eq.${encodeURIComponent(id)}&select=code,brand,media_url&order=sort`,
+    ),
+  ]);
+  const thing = things?.[0];
+  if (!thing || !lots || !placed) return null;
+  const live = lots.some((lot) => lot.status === "open" && Date.parse(lot.closes_at) > Date.now());
+  const ids = lots.map((lot) => lot.id);
+  const raw = ids.length
+    ? await rest<{ lot_id: string; amount_cents: number; brand: string | null; created_at: string; media_url: string; bidder_wallet: string }[]>(
+        `lot_bids?lot_id=in.(${ids.join(",")})&select=lot_id,amount_cents,brand,created_at,media_url,bidder_wallet&order=created_at`,
+      )
+    : [];
+  if (!raw) return null;
+  const codeOf = new Map(lots.map((lot) => [lot.id, lot.thing_spots?.code ?? ""]));
+  const labels: Record<string, string> = {};
+  for (const lot of lots) if (lot.thing_spots) labels[lot.thing_spots.code] = lot.thing_spots.label;
+  return {
+    id: thing.id,
+    slug: thing.slug,
+    title: thing.title,
+    owner: OWNERS[thing.slug] ?? thing.title,
+    where: thing.worn_where,
+    model: thing.model_url,
+    status: live ? "live" : lots.length ? "sold" : "pilot",
+    closedAt: lots.length ? Math.max(...lots.map((lot) => Date.parse(lot.closes_at))) : null,
+    labels,
+    bids: raw
+      .filter((bid) => codeOf.get(bid.lot_id))
+      .map((bid) => ({ code: codeOf.get(bid.lot_id)!, brand: bid.brand ?? "", cents: bid.amount_cents, at: Date.parse(bid.created_at), url: bid.media_url, wallet: bid.bidder_wallet })),
+    placed: Object.fromEntries(placed.map((one) => [one.code, { url: one.media_url, brand: one.brand }])),
+    reach: thing.post_reach ? { people: thing.post_reach, estimated: !thing.post_reach_checked_at } : null,
+    board: {
+      lots: lots.map((lot) => ({ id: lot.id, status: lot.status, rehearsal: lot.rehearsal, thing_id: thing.id })),
+      bids: raw.map((bid) => ({ lot_id: bid.lot_id, amount_cents: bid.amount_cents, bidder_wallet: bid.bidder_wallet, brand: bid.brand, created_at: bid.created_at })),
+    },
+  };
 }
 
 /**

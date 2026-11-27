@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rankBidders } from "./board.ts";
+import { rankBidders, topBids } from "./board.ts";
 
 const lots = [
   { id: "L1", status: "won", rehearsal: false, thing_id: "van" },
@@ -57,4 +57,26 @@ test("бренды без повторов и без пустых, вещи по
   assert.deepEqual(a!.joined, ["van"]);
   assert.equal(a!.bids, 3);
   assert.equal(a!.since, Date.parse("2026-09-30"));
+});
+
+test("старшая ставка места - наибольшая сумма, а не последняя по времени", () => {
+  const top = topBids([
+    bid("L1", 40000, "B", "2026-10-03"),
+    bid("L1", 50000, "A", "2026-10-02"),
+    bid("L2", 30000, "B", "2026-10-01"),
+  ]);
+  assert.equal(top.get("L1")!.bidder_wallet, "A");
+  assert.equal(top.get("L2")!.amount_cents, 30000);
+  assert.equal(top.size, 2);
+});
+
+test("у участника видна его старшая ставка, даже если её перебили", () => {
+  const [a, b] = rankBidders(lots, [
+    bid("L1", 50000, "A", "2026-10-02"),
+    bid("L1", 45000, "B", "2026-10-01"),
+    bid("L2", 30000, "B", "2026-10-03"),
+  ]);
+  assert.equal(a!.bestCents, 50000);
+  // Выиграл L2 за 300, но его старшая ставка - перебитые 450 на L1.
+  assert.equal(b!.bestCents, 45000);
 });

@@ -1,0 +1,229 @@
+/* Страница торга (auction.tsx): вещь слева, таблица итогов справа. */
+
+.auc {
+  --ink: #111;
+  --mute: #8d8a84;
+  --line: #e8e6e1;
+  min-height: 100vh;
+  background: #fafaf9;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.auc a,
+.auc button {
+  color: inherit;
+  text-decoration: none;
+}
+.auc .home-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 26px;
+  z-index: 50;
+  visibility: visible;
+  background: rgba(250, 250, 249, 0.92);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.auc-mute {
+  color: var(--mute);
+}
+.auc-empty {
+  padding: 140px 26px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auc-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 5vw;
+  padding: 90px 26px 120px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.auc-view {
+  position: sticky;
+  top: 70px;
+  align-self: start;
+  height: calc(100vh - 110px);
+  min-height: 420px;
+}
+.thing-view {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: pan-y;
+}
+.thing-view:active {
+  cursor: grabbing;
+}
+.auc-hint {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  color: var(--mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auc-info {
+  padding-top: 20px;
+}
+.auc-back {
+  display: inline-block;
+  margin-bottom: 22px;
+  color: var(--mute) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auc h1 {
+  font: inherit;
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1.2;
+  font-weight: 400;
+  margin: 0 0 6px;
+}
+.auc-meta {
+  margin: 26px 0 40px;
+}
+.auc-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.auc-meta div:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.auc-meta dt {
+  color: var(--mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auc-meta dd {
+  margin: 0;
+  text-align: right;
+}
+
+.auc-label,
+.auc-tabs {
+  margin: 0 0 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mute);
+}
+.auc-tabs {
+  display: flex;
+  gap: 14px;
+}
+.auc-tabs button {
+  all: unset;
+  cursor: pointer;
+}
+.auc-tabs button[aria-selected="true"] {
+  color: var(--ink);
+}
+.auc-tabs button[aria-selected="true"] span {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.auc-spot {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.auc-spots > div:last-child .auc-spot {
+  border-bottom: 1px solid var(--line);
+}
+.auc-spot img,
+.auc-blank {
+  width: 72px;
+  height: 72px;
+  display: block;
+  object-fit: contain;
+}
+.auc-blank {
+  background-image: radial-gradient(circle, #c8c4bc 1px, transparent 1.3px);
+  background-size: 8px 8px;
+}
+.auc-spot b {
+  font-weight: 400;
+  display: block;
+}
+.auc-spot:hover b {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.auc-unsold {
+  color: var(--mute);
+}
+.auc-hist {
+  padding: 2px 0 14px 88px;
+}
+.auc-hist div {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 14px;
+  padding: 3px 0;
+}
+.auc-out {
+  color: var(--mute);
+}
+
+.auc-who > div {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  gap: 14px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+  align-items: center;
+}
+.auc-who > div:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.auc-who small {
+  display: block;
+  color: var(--mute);
+  font-size: 12px;
+}
+
+@media (max-width: 800px) {
+  .auc .home-top {
+    padding: 18px;
+  }
+  .auc-main {
+    grid-template-columns: 1fr;
+    padding-top: 70px;
+  }
+  .auc-view {
+    position: relative;
+    top: 0;
+    height: 56vh;
+  }
+  .auc-hist {
+    padding-left: 0;
+  }
+  .auc-who > div {
+    grid-template-columns: 28px 1fr auto;
+    row-gap: 2px;
+  }
+  .auc-who > div > span:nth-child(2) {
+    grid-column: 2 / 4;
+  }
+  .auc-who > div > span:nth-child(3) {
+    grid-column: 2;
+  }
+}

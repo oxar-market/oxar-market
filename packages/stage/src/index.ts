@@ -25,3 +25,5 @@ export { applyQuad, quadTransform, type Corners } from "./quad.ts";
 export { acesFilmic, develop, toSrgb } from "./tone.ts";
 export { houseShape, isShirt } from "./house.ts";
 export { Globe, type GlobeThing } from "./globe.tsx";
+export { ThingView } from "./thing-view.tsx";
+export type { SpotAnchor } from "./dress.ts";
