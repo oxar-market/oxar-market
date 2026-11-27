@@ -11,8 +11,12 @@ type Three = typeof import("three");
  * медленно вращается, её можно крутить. Для страницы торга.
  *
  * focus - код места: вещь доворачивается к нему. onShots - кадры мест на
- * прозрачном фоне, камера прямо на место; снимаются один раз после сборки,
+ * прозрачном фоне, камера прямо на место; снимаются после каждой сборки,
  * для списка мест рядом.
+ *
+ * onHover и onPick - места на самой вещи: под курсором - какое место (и где
+ * курсор внутри холста), нажатие - выбрать его. Потянул - это поворот, а не
+ * нажатие. Сменились логотипы - вещь собирается заново, но ракурс остаётся.
  */
 export function ThingView({
   model,
@@ -21,6 +25,8 @@ export function ThingView({
   focus,
   onShots,
   onReady,
+  onHover,
+  onPick,
 }: {
   model: string;
   shape: Shape | undefined;
@@ -28,9 +34,19 @@ export function ThingView({
   focus?: { code: string; at: number } | null;
   onShots?: (shots: Record<string, string>) => void;
   onReady?: () => void;
+  onHover?: (spot: { code: string; x: number; y: number } | null) => void;
+  onPick?: (code: string) => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const turnTo = useRef<((code: string) => void) | null>(null);
+  // Ракурс - вне сборки: новые логотипы пересобирают вещь, а взгляд остаётся.
+  const look = useRef<{ yaw: number; pitch: number } | null>(null);
+  const focusNow = useRef(focus);
+  focusNow.current = focus;
+  const hoverNow = useRef(onHover);
+  hoverNow.current = onHover;
+  const pickNow = useRef(onPick);
+  pickNow.current = onPick;
 
   useEffect(() => {
     if (focus) turnTo.current?.(focus.code);
@@ -126,8 +142,8 @@ export function ThingView({
 
       const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 50);
       const [vx, vy, vz] = dressed.view;
-      let yaw = Math.atan2(vx, vz);
-      let pitch = Math.asin(vy);
+      look.current ??= { yaw: Math.atan2(vx, vz), pitch: Math.asin(vy) };
+      let { yaw, pitch } = look.current;
       let spin = 0;
       let target: { yaw: number; pitch: number } | null = null;
       turnTo.current = (code) => {
@@ -135,6 +151,30 @@ export function ThingView({
         if (!one) return;
         const [nx, ny, nz] = one.normal;
         target = { yaw: Math.atan2(nx, nz), pitch: one.top ? 1.1 : Math.max(-0.1, Math.min(1.1, Math.asin(Math.max(-1, Math.min(1, ny))) * 0.8 + 0.15)) };
+      };
+      if (focusNow.current) turnTo.current(focusNow.current.code);
+
+      // Какое место под точкой холста: луч в вещь, ближайшая к попаданию точка
+      // места - если она в пределах самого места.
+      const ray = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const probe = new THREE.Vector3();
+      const spotAt = (event: PointerEvent): string | null => {
+        const r = el.getBoundingClientRect();
+        pointer.set(((event.clientX - r.left) / r.width) * 2 - 1, -((event.clientY - r.top) / r.height) * 2 + 1);
+        ray.setFromCamera(pointer, camera);
+        const hit = ray.intersectObject(dressed.root, true)[0];
+        if (!hit) return null;
+        let best: string | null = null;
+        let gap = Infinity;
+        for (const [code, one] of Object.entries(dressed.spots)) {
+          const d = probe.set(...one.point).distanceTo(hit.point);
+          if (d < gap && d < one.size * 0.9) {
+            gap = d;
+            best = code;
+          }
+        }
+        return best;
       };
 
       const resize = () => {
@@ -148,23 +188,45 @@ export function ThingView({
       watch.observe(el);
 
       let drag: { x: number; y: number } | null = null;
+      let moved = 0;
       const down = (event: PointerEvent) => {
         drag = { x: event.clientX, y: event.clientY };
+        moved = 0;
         target = null;
         el.setPointerCapture(event.pointerId);
       };
       const move = (event: PointerEvent) => {
-        if (!drag) return;
+        if (!drag) {
+          if (!hoverNow.current) return;
+          const code = spotAt(event);
+          const r = el.getBoundingClientRect();
+          el.style.cursor = code ? "pointer" : "";
+          hoverNow.current(code ? { code, x: event.clientX - r.left, y: event.clientY - r.top } : null);
+          return;
+        }
+        moved += Math.abs(event.clientX - drag.x) + Math.abs(event.clientY - drag.y);
         spin = -(event.clientX - drag.x) * 0.008;
         yaw += spin;
         pitch = Math.max(-0.2, Math.min(1.2, pitch + (event.clientY - drag.y) * 0.006));
         drag = { x: event.clientX, y: event.clientY };
       };
-      const up = () => (drag = null);
+      const up = (event: PointerEvent) => {
+        // Нажатие, а не поворот: выбрать место под пальцем.
+        if (drag && moved < 6 && event.type === "pointerup") {
+          const code = spotAt(event);
+          if (code) pickNow.current?.(code);
+        }
+        drag = null;
+      };
+      const leave = () => {
+        el.style.cursor = "";
+        hoverNow.current?.(null);
+      };
       el.addEventListener("pointerdown", down);
       el.addEventListener("pointermove", move);
       el.addEventListener("pointerup", up);
       el.addEventListener("pointercancel", up);
+      el.addEventListener("pointerleave", leave);
 
       // Описанная сфера вещи - радиус 1: камера отходит так, чтобы она влезла с запасом.
       const dist = 1.15 / tan;
@@ -182,6 +244,7 @@ export function ThingView({
           yaw += spin + dt * 0.12;
           spin *= Math.pow(0.05, dt);
         }
+        look.current = { yaw, pitch };
         camera.position.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(dist);
         camera.lookAt(0, 0, 0);
         renderer.render(scene, camera);
@@ -197,6 +260,7 @@ export function ThingView({
         el.removeEventListener("pointermove", move);
         el.removeEventListener("pointerup", up);
         el.removeEventListener("pointercancel", up);
+        el.removeEventListener("pointerleave", leave);
         turnTo.current = null;
         pmrem.dispose();
         renderer.dispose();

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Globe, SHIRT, houseShape, isShirt, type GlobeThing } from "@oxar/stage";
 import "@oxar/stage/globe.css";
 import "./home.css";
-import { APP_URL, load, loadPilots, localCopy, usd, type Auction, type Pilot } from "./data.ts";
+import { load, loadPilots, localCopy, usd, type Auction, type Pilot } from "./data.ts";
 import { Header } from "./header.tsx";
 import { mono } from "./mono.ts";
 
@@ -23,8 +23,8 @@ function thingOf(one: Auction): GlobeThing {
   const live = one.status === "live";
   return {
     id: one.id,
-    // Идущий - в приложение, там ставки; закрытый - на страницу итогов.
-    href: live ? `${APP_URL}?thing=${one.id}` : `/auction?thing=${one.id}`,
+    // И идущий, и закрытый - на страницу торга: ставки теперь там же.
+    href: `/auction?thing=${one.id}`,
     title: one.title,
     caption: [one.title, live ? "Live" : usd(one.raisedCents), one.owner].join(" · "),
     live,

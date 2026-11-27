@@ -44,7 +44,8 @@ function image(urls: string[]): Promise<HTMLImageElement | null> {
       if (at >= urls.length) return done(null);
       const img = new Image();
       // Без CORS чужая картинка «пачкает» холст, и WebGL отказывается брать её в текстуру.
-      img.crossOrigin = "anonymous";
+      // Своя примерка - blob-ссылка: Safari на iPhone с crossOrigin её не грузит.
+      if (!urls[at]!.startsWith("blob:")) img.crossOrigin = "anonymous";
       img.onload = () => done(img);
       img.onerror = () => next(at + 1);
       img.src = urls[at]!;

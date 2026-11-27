@@ -1,0 +1,262 @@
+/* Идущий торг (live.tsx): раскладка страницы торга, плюс часы, выбор места и ставка. */
+
+.auc-hint b {
+  font-weight: 400;
+  color: var(--ink);
+}
+.auc-tag {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--ink);
+  color: #fff;
+  padding: 6px 10px;
+  white-space: nowrap;
+  transform: translate(14px, 14px);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auc-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+.auc-live-tag {
+  color: #d9472b;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auc-live-tag i,
+.auc-pick i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d9472b;
+  margin-right: 8px;
+  vertical-align: 1px;
+  animation: auc-pulse 1.6s ease-in-out infinite;
+}
+@keyframes auc-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.auc-clock {
+  margin: 24px 0 4px;
+  font-size: clamp(32px, 3.4vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.auc-days {
+  color: var(--mute);
+}
+.auc-pick {
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auc-yours b,
+.auc-me {
+  color: #d9472b;
+}
+.auc-row.on b {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.auc-bid {
+  padding: 2px 0 22px 88px;
+}
+.auc-note {
+  margin: 10px 0 0;
+}
+.auc-rules {
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--mute);
+}
+.auc-rules li {
+  padding: 3px 0;
+}
+.auc-rules li::before {
+  content: "- ";
+}
+.auc-banner {
+  grid-column: 1 / -1;
+  color: #d9472b;
+  margin: 0;
+}
+.auc-toast {
+  position: fixed;
+  left: 26px;
+  bottom: 22px;
+  z-index: 70;
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 14px;
+  margin: 0;
+}
+
+/* Свои логотипы и загрузка - над полем ставки. */
+.auc-art {
+  order: -1;
+}
+.auc-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.auc-chips button {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  border: 1px solid transparent;
+  padding: 2px;
+}
+.auc-chips button.on {
+  border-color: var(--ink);
+}
+.auc-chips img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: #c9c6be;
+  padding: 4px;
+  box-sizing: border-box;
+  display: block;
+}
+.auc-upload {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+  cursor: pointer;
+}
+.auc-upload span:last-child {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auc-art p {
+  margin: 8px 0 0;
+}
+/* Без входа примерка стоит над кнопкой входа, а не внутри формы. */
+.auc-bid > .auc-art {
+  margin-bottom: 14px;
+}
+
+/* Форма ставки из приложения: логика та же, оформление - под страницу. */
+.auc-bid .bidding {
+  margin: 0;
+}
+.auc-bid .bid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+}
+.auc-bid .bid-head,
+.auc-bid .bumps,
+.auc-bid .bid-note,
+.auc-bid .bid-cap,
+.auc-bid #bid-hint {
+  display: none;
+}
+.auc-bid .bid-brand {
+  order: 1;
+}
+.auc-bid .bid-amount {
+  order: 2;
+}
+.auc-bid .bad {
+  order: 3;
+  color: #d9472b;
+  margin: 0;
+}
+.auc-bid .bid-go {
+  order: 4;
+}
+.auc-bid .bal-row,
+.auc-bid .bid-balance {
+  order: 5;
+  display: flex;
+  justify-content: space-between;
+  color: var(--mute);
+}
+.auc-bid .bid-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 0 14px;
+  background: none;
+}
+.auc-bid .bid-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  padding: 12px 0;
+}
+.auc-bid .bid-sign,
+.auc-bid .bid-unit {
+  color: var(--mute);
+}
+.auc-bid .bid-brand input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  font: inherit;
+  padding: 8px 0;
+  outline: 0;
+}
+.auc-bid .bid-go,
+.auc-bid .bidding > .primary {
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  padding: 13px 18px;
+  cursor: pointer;
+  width: 100%;
+}
+.auc-bid .bid-go.waiting {
+  background: #5b5853;
+}
+.auc-bid .bidding > .muted {
+  color: var(--mute);
+  margin: 10px 0 0;
+}
+
+@media (max-width: 800px) {
+  .auc-bid {
+    padding-left: 0;
+  }
+}
