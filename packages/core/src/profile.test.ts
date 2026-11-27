@@ -53,6 +53,16 @@ test("ничего не выиграл - ноль и пусто", () => {
   assert.deepEqual(passReach([], {}), { total: 0, lines: [], estimated: false });
 });
 
+test("вещь, деньги за которую вернули, в охват пропуска не идёт: логотип никуда не ездил", () => {
+  const pass = passReach(["van", "tie"], {
+    van: { reach: 50000, checked: false, refunded: true },
+    tie: { reach: 18000, checked: true },
+  });
+  assert.equal(pass.total, 18000);
+  assert.deepEqual(pass.lines.map((one) => one.thingId), ["tie"]);
+  assert.equal(pass.estimated, false);
+});
+
 test("имя не притворяется кошельком: ни адресом, ни коротким видом", () => {
   assert.equal(cleanProfile({ name: "7MvL..8LgV", brand: "", x: "" }).ok, false);
   assert.equal(cleanProfile({ name: "7MvL…8LgV", brand: "", x: "" }).ok, false);

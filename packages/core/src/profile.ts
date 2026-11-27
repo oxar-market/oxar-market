@@ -37,13 +37,16 @@ export function cleanProfile(input: ProfileInput): { ok: true; value: ProfileRow
   return { ok: true, value: { display_name: name || null, brand, x_handle: x } };
 }
 
-/** Охват вещи: сколько людей увидели посты о ней; checked - посчитано, а не оценка. */
-export type ThingReach = { reach: number | null; checked: boolean };
+/**
+ * Охват вещи: сколько людей увидели посты о ней; checked - посчитано, а не
+ * оценка; refunded - деньги за вещь вернули, логотип никуда не ездил.
+ */
+export type ThingReach = { reach: number | null; checked: boolean; refunded?: boolean };
 
 /**
  * Охват пропуска - сумма охватов вещей, где стоял логотип человека, каждая
  * вещь один раз. Вещь без цифры не считается. Если хоть одна цифра - оценка,
- * оценка и сумма.
+ * оценка и сумма. Вещь, деньги за которую вернули, не считается: её не видели.
  */
 export function passReach(
   won: string[],
@@ -51,7 +54,7 @@ export function passReach(
 ): { total: number; lines: { thingId: string; reach: number }[]; estimated: boolean } {
   const lines = [...new Set(won)]
     .map((thingId) => ({ thingId, known: reach[thingId] }))
-    .filter((one) => one.known && one.known.reach != null && one.known.reach > 0)
+    .filter((one) => one.known && !one.known.refunded && one.known.reach != null && one.known.reach > 0)
     .map((one) => ({ thingId: one.thingId, reach: one.known!.reach!, checked: one.known!.checked }))
     .sort((a, b) => b.reach - a.reach);
   return {

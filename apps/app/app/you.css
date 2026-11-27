@@ -1,0 +1,366 @@
+/* Кабинет: слева пропуск на лентах, справа человек, таблица и вкладки.
+   Моноширинный, строками через тонкие линии, как каталог. */
+
+.yo {
+  --yo-ink: #111;
+  --yo-mute: #8d8a84;
+  --yo-line: #e8e6e1;
+  --yo-red: #d9472b;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 5vw;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-bottom: 140px;
+  color: var(--yo-ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Свои кнопки - текстом; кнопки продаж, уведомлений и админки со своим видом не трогаем. */
+.yo :is(button.yo-link, .yo-tabs button) {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+/* Заголовок сайта крупный и жирный, с серой второй частью - здесь имя ровное. */
+.yo .yo-name,
+.yo .yo-name span {
+  color: var(--yo-ink);
+  font-weight: 400;
+}
+
+.yo-left {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 640px;
+  padding-bottom: 22px;
+}
+
+.yo-under,
+.yo-tabs,
+.yo-t dt,
+.yo-settings h3,
+.yo-steps {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.yo-under {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.yo-mute,
+.yo-t dt,
+.yo-row .yo-st em,
+.yo-who small {
+  color: var(--yo-mute);
+}
+
+.yo-link {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.yo-right {
+  padding-top: 110px;
+}
+
+.yo-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.yo-name span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yo-sub {
+  margin: 4px 0 0;
+}
+
+.yo-t {
+  margin: 0;
+}
+
+.yo-t div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-top: 1px solid var(--yo-line);
+}
+
+.yo-t div:last-child {
+  border-bottom: 1px solid var(--yo-line);
+}
+
+.yo-t dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  text-align: right;
+}
+
+.yo-meta {
+  margin: 26px 0 0;
+}
+
+.yo-head {
+  margin-bottom: 36px;
+}
+
+.yo-act {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 12px 0;
+  border-top: 1px solid var(--yo-red);
+  border-bottom: 1px solid var(--yo-red);
+  color: var(--yo-red);
+}
+
+.yo-act button {
+  flex: none;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.yo-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 14px;
+}
+
+.yo-tabs button {
+  color: var(--yo-mute);
+}
+
+.yo-tabs button.on {
+  color: var(--yo-ink);
+}
+
+.yo-tabs button.on span {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.yo .yo-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid var(--yo-line);
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+
+.yo-list > :last-child.yo-row,
+.yo-list > .yo-win:last-child {
+  border-bottom: 1px solid var(--yo-line);
+}
+
+.yo-row > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.yo-row b {
+  font-weight: 400;
+}
+
+.yo-thumb {
+  display: block;
+  width: 56px;
+  height: 56px;
+  padding: 3px;
+  background: #c9c6be;
+}
+
+.yo-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.yo-st {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.yo-row .yo-st em {
+  display: block;
+  font-style: normal;
+}
+
+.yo-row .yo-st em.red {
+  color: var(--yo-red);
+}
+
+.yo-more {
+  padding: 4px 0 18px 70px;
+}
+
+.yo-more p {
+  margin: 0;
+}
+
+.yo-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+
+.yo-steps span {
+  padding-top: 6px;
+  border-top: 2px solid #e2dfd8;
+  color: var(--yo-mute);
+}
+
+.yo-steps span.done {
+  border-color: var(--yo-ink);
+  color: var(--yo-ink);
+}
+
+.yo-steps span.off {
+  border-color: var(--yo-red);
+  color: var(--yo-red);
+}
+
+.yo-empty {
+  padding: 10px 0;
+  border-top: 1px solid var(--yo-line);
+  border-bottom: 1px solid var(--yo-line);
+}
+
+.yo-board > div {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+  gap: 14px;
+  padding: 9px 0;
+  border-top: 1px solid var(--yo-line);
+}
+
+.yo-board > div:last-child {
+  border-bottom: 1px solid var(--yo-line);
+}
+
+.yo-board .me,
+.yo-board .me .yo-mute,
+.yo-board .me small {
+  color: var(--yo-red);
+}
+
+.yo-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.yo-who small {
+  overflow: hidden;
+  font-size: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yo-foot {
+  margin-top: 12px;
+}
+
+.yo-settings h3 {
+  margin: 30px 0 10px;
+  color: var(--yo-mute);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.yo-settings h3:first-child {
+  margin-top: 4px;
+}
+
+.yo-note,
+.yo-bad {
+  margin: 8px 0 0;
+}
+
+.yo-bad {
+  color: var(--yo-red);
+}
+
+.yo-acts {
+  display: flex;
+  gap: 20px;
+  margin: 10px 0 0;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Шаг продавца - во всю ширину: пропуск, шапка и вкладки уходят. */
+.yo.focus {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.yo.focus .yo-left,
+.yo.focus .yo-head,
+.yo.focus .yo-tabs {
+  display: none;
+}
+
+.yo.focus .yo-right {
+  padding-top: 24px;
+}
+
+/* У уведомлений свой крупный заголовок; здесь его заменяет подпись раздела. */
+.yo-settings .role-card > .wallet-title {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .yo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .yo-left {
+    position: relative;
+    height: 620px;
+    min-height: 0;
+  }
+
+  .yo-right {
+    padding-top: 10px;
+  }
+
+  .yo-more {
+    padding-left: 0;
+  }
+}

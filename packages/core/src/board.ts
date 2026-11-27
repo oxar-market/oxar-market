@@ -5,7 +5,8 @@
  * рейтинг они не идут.
  */
 
-export type BoardLot = { id: string; status: string; rehearsal: boolean; thing_id: string };
+/** refunded - деньги за вещь вернули мимо программы (вещь не поехала): место не оплачено. */
+export type BoardLot = { id: string; status: string; rehearsal: boolean; thing_id: string; refunded?: boolean };
 export type BoardBid = { lot_id: string; amount_cents: number; bidder_wallet: string; brand: string | null; created_at: string };
 
 export type Bidder = {
@@ -64,7 +65,7 @@ export function rankBidders(lots: BoardLot[], bids: BoardBid[]): Bidder[] {
       one.leads += 1;
       one.leadCents += bid.amount_cents;
     }
-    if (top.get(bid.lot_id) === bid && lot.status === "won") {
+    if (top.get(bid.lot_id) === bid && lot.status === "won" && !lot.refunded) {
       one.spots += 1;
       one.paidCents += bid.amount_cents;
       if (!one.won.includes(lot.thing_id)) one.won.push(lot.thing_id);
@@ -73,4 +74,30 @@ export function rankBidders(lots: BoardLot[], bids: BoardBid[]): Bidder[] {
     }
   }
   return [...out.values()].sort((a, b) => b.paidCents - a.paidCents || b.spots - a.spots || a.since - b.since);
+}
+
+/**
+ * Что стало с каждой своей ставкой - для истории в кабинете. Ставка не самая
+ * большая своя на этом месте - её поднял сам. Самая большая и стоит сверху:
+ * торг идёт - веду; выиграл - выиграл; вещь не поехала или место не
+ * состоялось - деньги вернули. Самая большая, но сверху чужая - перебили.
+ */
+export type MyBidState = "leading" | "won" | "refunded" | "raised" | "outbid";
+export type MyLot = { open: boolean; status: string; refunded: boolean; topWallet: string | null };
+
+export function myBidStates(
+  mine: { lot_id: string; amount_cents: number }[],
+  lots: Record<string, MyLot | undefined>,
+  wallet: string,
+): MyBidState[] {
+  const best = new Map<string, number>();
+  for (const bid of mine) best.set(bid.lot_id, Math.max(best.get(bid.lot_id) ?? 0, bid.amount_cents));
+  return mine.map((bid) => {
+    if (bid.amount_cents < best.get(bid.lot_id)!) return "raised";
+    const lot = lots[bid.lot_id];
+    if (!lot || lot.topWallet !== wallet) return "outbid";
+    if (lot.open) return "leading";
+    if (lot.refunded || lot.status !== "won") return "refunded";
+    return "won";
+  });
 }

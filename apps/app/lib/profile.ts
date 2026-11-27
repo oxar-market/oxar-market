@@ -1,4 +1,5 @@
-import type { ProfileRow, ThingReach } from "@oxar/core";
+import { isOpen, myBidStates, type MyBidState, type ProfileRow, type ThingReach } from "@oxar/core";
+import { loadTopBids } from "./auction.ts";
 import { db } from "./session.ts";
 
 /**
@@ -25,9 +26,11 @@ export type Reach = ThingReach & { title: string };
 
 export async function loadReach(): Promise<Record<string, Reach>> {
   if (!db) return {};
-  const { data } = await db.from("things").select("id, title, post_reach, post_reach_checked_at").not("post_reach", "is", null);
+  const { data } = await db.from("things").select("id, title, post_reach, post_reach_checked_at, refunded_at").not("post_reach", "is", null);
   const out: Record<string, Reach> = {};
-  for (const one of data ?? []) out[one.id] = { reach: one.post_reach, checked: one.post_reach_checked_at !== null, title: one.title };
+  for (const one of data ?? []) {
+    out[one.id] = { reach: one.post_reach, checked: one.post_reach_checked_at !== null, refunded: one.refunded_at !== null, title: one.title };
+  }
   return out;
 }
 
@@ -76,4 +79,70 @@ export async function uploadFace(file: File, kind: "avatar" | "logo"): Promise<{
   const path = `${auth.user.id}/${kind}-${Date.now()}.${ext}`;
   const { error } = await db.storage.from("faces").upload(path, file, { contentType: file.type });
   return error ? { error: "Could not upload. Try again." } : { path };
+}
+
+/** Одна ставка кошелька в истории кабинета: с картинкой, местом и тем, чем она кончилась. */
+export type MyBidRow = {
+  lotId: string;
+  thingId: string;
+  thing: string;
+  spot: string;
+  cents: number;
+  at: string;
+  mediaUrl: string;
+  state: MyBidState;
+  /** Деньги за вещь вернули мимо программы (вещь не поехала): когда. */
+  refundedAt: string | null;
+};
+
+/** Все ставки кошелька, свежие первыми. Прогоны - мимо. */
+export async function loadMyHistory(wallet: string): Promise<MyBidRow[]> {
+  if (!db) return [];
+  const { data } = await db
+    .from("lot_bids")
+    .select(
+      "amount_cents, created_at, media_url, lot_id, lots!inner(status, closes_at, rehearsal, thing_spots(label), things:thing_id(id, title, refunded_at))",
+    )
+    .eq("bidder_wallet", wallet)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  type Lot = {
+    status: string;
+    closes_at: string;
+    rehearsal: boolean;
+    thing_spots: { label?: string } | null;
+    things: { id?: string; title?: string; refunded_at?: string | null } | null;
+  };
+  const rows = (data ?? []).filter((row) => !(row.lots as unknown as Lot).rehearsal);
+  const tops = await loadTopBids([...new Set(rows.map((row) => row.lot_id))]);
+  const now = Date.now();
+  const lots = Object.fromEntries(
+    rows.map((row) => {
+      const lot = row.lots as unknown as Lot;
+      return [
+        row.lot_id,
+        {
+          open: lot.status === "open" && isOpen(Date.parse(lot.closes_at), now),
+          status: lot.status,
+          refunded: !!lot.things?.refunded_at,
+          topWallet: tops[row.lot_id]?.bidder_wallet ?? null,
+        },
+      ];
+    }),
+  );
+  const states = myBidStates(rows, lots, wallet);
+  return rows.map((row, at) => {
+    const lot = row.lots as unknown as Lot;
+    return {
+      lotId: row.lot_id,
+      thingId: lot.things?.id ?? "",
+      thing: lot.things?.title ?? "",
+      spot: lot.thing_spots?.label ?? "?",
+      cents: row.amount_cents,
+      at: row.created_at,
+      mediaUrl: row.media_url,
+      state: states[at]!,
+      refundedAt: lot.things?.refunded_at ?? null,
+    };
+  });
 }
