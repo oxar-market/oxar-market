@@ -72,23 +72,77 @@
   font-weight: 600;
 }
 
-/* Кабинет до входа. */
+/* Кабинет до входа: пустой пропуск слева, зачем входить справа. */
 .ym-guest {
-  max-width: 34rem;
-  margin: 4rem auto 6rem;
-  text-align: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 5vw;
+  align-items: center;
+  min-height: calc(100vh - 90px);
+  color: #111;
+  font-size: 13px;
+  line-height: 1.45;
 }
-
+.ym-guest-pass {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: min(100vh - 90px, 760px);
+  min-height: 560px;
+}
 .ym-guest h1 {
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.05;
+  font: inherit;
+  font-size: clamp(20px, 2vw, 28px);
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.ym-guest p {
+  margin: 12px 0 22px;
+  color: #8d8a84;
+  max-width: 440px;
+}
+.ym-guest ul {
+  list-style: none;
+  margin: 0 0 28px;
+  padding: 0;
+  max-width: 440px;
+}
+.ym-guest li {
+  padding: 9px 0;
+  border-top: 1px solid #e8e6e1;
+}
+.ym-guest li:last-child {
+  border-bottom: 1px solid #e8e6e1;
+}
+.ym-guest-go {
+  display: inline-block;
+  padding: 12px 20px;
+  border: 0;
+  background: #111;
+  color: #fafaf9;
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.ym-guest-note {
+  display: block;
+  margin-top: 12px;
+  color: #8d8a84;
 }
 
-.ym-guest p {
-  margin: 1rem 0 1.5rem;
-  color: var(--mut);
-  font-size: 1rem;
-  line-height: 1.5;
+@media (max-width: 860px) {
+  .ym-guest {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    min-height: 0;
+    padding-bottom: 60px;
+  }
+  .ym-guest-pass {
+    height: 540px;
+    min-height: 0;
+  }
 }
 
 /* Админка: что ждёт решения - наверху, одним списком. */

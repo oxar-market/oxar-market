@@ -10,6 +10,8 @@ import { isShirt } from "@/lib/shape";
 import { faceUrl, loadMyProfile } from "@/lib/profile";
 import { avatarLetter } from "@oxar/core";
 import { Top, type Account } from "../../_site/landing.tsx";
+import { mono } from "../../_site/mono.ts";
+import { ReachPass } from "../../pass.tsx";
 import { readMe, saveMe, type Me } from "../../_site/me.ts";
 import { You } from "../../you";
 import { PhoneCapture } from "../../seller/flow.tsx";
@@ -164,15 +166,37 @@ export default function Home() {
   );
 }
 
-/** Кабинет до входа: зачем входить и кнопка. */
+/**
+ * Кабинет до входа: тот же пропуск на лентах, что после, только пустой -
+ * видно, что получишь. Справа зачем входить и кнопка.
+ */
 function Guest({ onSignIn }: { onSignIn: () => void }) {
   return (
-    <section className="ym-guest">
-      <h1>Your logo, on real things.</h1>
-      <p>Sign in to bid, see where your logo went and what comes back when someone outbids you.</p>
-      <button type="button" className="v2-btn dark" onClick={onSignIn}>
-        Sign in
-      </button>
+    <section className={`ym-guest ${mono.className}`}>
+      <div className="ym-guest-pass">
+        <ReachPass
+          holder="Your name here"
+          reach={0}
+          estimated={false}
+          lines={[]}
+          picture={null}
+          avatar={{ background: "#e2dfd8" }}
+          letter="?"
+        />
+      </div>
+      <div className="ym-guest-text">
+        <h1>Your logo, on real things.</h1>
+        <p>Sign in to bid, see where your logo went and what comes back when someone outbids you.</p>
+        <ul>
+          <li>Your bids and wins, with the photo of your logo</li>
+          <li>Your reach pass: how many people saw it</li>
+          <li>Outbid money back in your wallet, right away</li>
+        </ul>
+        <button type="button" className="ym-guest-go" onClick={onSignIn}>
+          [ Sign in ]
+        </button>
+        <span className="ym-guest-note">With a wallet or an email. No wallet yet? Signing in makes one.</span>
+      </div>
     </section>
   );
 }
