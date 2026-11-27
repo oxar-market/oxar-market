@@ -182,6 +182,11 @@ function Guest({ onSignIn }: { onSignIn: () => void }) {
           picture={null}
           avatar={{ background: "#e2dfd8" }}
           letter="?"
+          action={
+            <button type="button" className="ym-guest-go" onClick={onSignIn}>
+              [ Sign in ]
+            </button>
+          }
         />
       </div>
       <div className="ym-guest-text">
@@ -192,9 +197,6 @@ function Guest({ onSignIn }: { onSignIn: () => void }) {
           <li>Your reach pass: how many people saw it</li>
           <li>Outbid money back in your wallet, right away</li>
         </ul>
-        <button type="button" className="ym-guest-go" onClick={onSignIn}>
-          [ Sign in ]
-        </button>
         <span className="ym-guest-note">With a wallet or an email. No wallet yet? Signing in makes one.</span>
       </div>
     </section>
