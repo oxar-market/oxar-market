@@ -124,8 +124,7 @@ h1 {
 }
 
 /* Кнопка-ссылка внутри строки ошибки: «повторить» тем же цветом и шрифтом. */
-.bad .link,
-.ad-sets .link {
+.bad .link {
   border: 0;
   padding: 0;
   background: none;
@@ -133,10 +132,6 @@ h1 {
   color: inherit;
   text-decoration: underline;
   cursor: pointer;
-}
-
-.ad-sets .link {
-  color: var(--ink);
 }
 
 /* Экран упавшего рендера. Тесно посередине, текст ошибки читаемым моноширинным
@@ -5683,20 +5678,6 @@ a.sl-pill {
 .sl-mini .sl-spot i {
   width: 6px;
   height: 6px;
-}
-
-/* Счётчик на вкладке админки: сколько ждут решения. */
-.ad-count {
-  display: inline-block;
-  min-width: 18px;
-  margin-left: 6px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: #e0381c;
-  color: #fff;
-  font-size: 0.6875rem;
-  line-height: 18px;
-  text-align: center;
 }
 
 .sl-state.declined i {

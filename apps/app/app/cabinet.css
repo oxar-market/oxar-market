@@ -145,18 +145,3 @@
     min-height: 0;
   }
 }
-
-/* Админка: что ждёт решения - наверху, одним списком. */
-.ad-inbox {
-  margin-bottom: 1rem;
-}
-
-.ad-inbox-head {
-  display: block;
-  padding: 0.75rem 1rem 0.25rem;
-  color: var(--red, #e0381c);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}

@@ -9,7 +9,7 @@ import { mono } from "./mono.ts";
  * Шапка всего сайта - два пункта: How it works и кошелёк.
  *
  * Не вошёл - [ Connect wallet ]. Вошёл - кошелёк, по нажатию меню: баланс,
- * Profile, List a spot, Copy address, Disconnect. List a spot живёт в меню, а
+ * Profile, List a spot, Admin (только админам), Copy address, Disconnect. List a spot живёт в меню, а
  * не в шапке: без кошелька выставить вещь всё равно нельзя, а на телефоне
  * третий пункт в строку уже не помещался.
  *
@@ -90,6 +90,11 @@ export function Header({ account, className = "" }: { account?: Account; classNa
                 <a role="menuitem" href="/sell">
                   List a spot <span>&rarr;</span>
                 </a>
+                {me.admin && (
+                  <a role="menuitem" href="/admin">
+                    Admin <span>&rarr;</span>
+                  </a>
+                )}
                 {me.wallet && (
                   <button
                     type="button"

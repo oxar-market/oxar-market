@@ -9,8 +9,10 @@ import type { CSSProperties } from "react";
  * img - своя картинка профиля, если загружена: тогда вместо буквы она.
  * wallet - адрес кошелька: шапка показывает его и читает по нему баланс.
  * Адрес публичный, как и в сети, - секретом он не является.
+ * admin - база сказала, что это админ: шапка показывает пункт Admin. Только
+ * подсказка для меню - права держит база, а не этот флаг.
  */
-export type Me = { letter: string; seed: string; img?: string | null; wallet?: string | null };
+export type Me = { letter: string; seed: string; img?: string | null; wallet?: string | null; admin?: boolean };
 
 const KEY = "oxar.me";
 
@@ -22,7 +24,8 @@ export function readMe(): Me | null {
       typeof me.letter === "string" &&
       typeof me.seed === "string" &&
       (me.img == null || typeof me.img === "string") &&
-      (me.wallet == null || typeof me.wallet === "string")
+      (me.wallet == null || typeof me.wallet === "string") &&
+      (me.admin == null || typeof me.admin === "boolean")
       ? me
       : null;
   } catch {

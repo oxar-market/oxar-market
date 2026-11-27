@@ -33,8 +33,6 @@ import { db } from "@/lib/session";
 import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
 import { myApplication } from "@/lib/applications";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
-import { amIAdmin } from "@/lib/admin";
-import { Admin } from "./admin/admin.tsx";
 import { SellerApply } from "./seller/apply.tsx";
 import { NoEmailHint, WinCard, useWins, winWord } from "./wins.tsx";
 import { Notifications } from "./notify.tsx";
@@ -160,16 +158,13 @@ export function You({
   // уходил ещё со старой сессией админа, и вкладка Admin держалась у чужого
   // кошелька до перезагрузки (нашли на живом торге 3 октября 2026).
   const [seller, setSeller] = useState(false);
-  const [admin, setAdmin] = useState(false);
   const [applied, setApplied] = useState(false);
   useEffect(() => {
     setSeller(false);
-    setAdmin(false);
     setApplied(false);
     if (!linked) return;
     let live = true;
     void amISeller().then((yes) => live && setSeller(yes));
-    void amIAdmin().then((yes) => live && setAdmin(yes));
     void myApplication().then((mine) => live && setApplied(mine !== null));
     return () => {
       live = false;
@@ -277,7 +272,6 @@ export function You({
     { id: "board", label: "Leaderboard" },
     ...(sales ? [{ id: "sales" as const, label: "Sales" }] : []),
     { id: "settings", label: "Settings" },
-    ...(admin ? [{ id: "admin" as const, label: "Admin" }] : []),
   ];
   const current: Tab = tabs.some((one) => one.id === tab) ? tab : "wins";
 
@@ -636,12 +630,6 @@ export function You({
             </p>
           </div>
         )}
-
-        {current === "admin" && admin && (
-          <div className="ym-legacy">
-            <Admin />
-          </div>
-        )}
       </div>
 
       {open === "share" && (
@@ -670,8 +658,8 @@ export function You({
   );
 }
 
-type Tab = "wins" | "bids" | "board" | "sales" | "settings" | "admin";
-const TABS: Tab[] = ["wins", "bids", "board", "sales", "settings", "admin"];
+type Tab = "wins" | "bids" | "board" | "sales" | "settings";
+const TABS: Tab[] = ["wins", "bids", "board", "sales", "settings"];
 
 /** Вкладка из ссылки: ?tab=sales и прочие; незнакомая - победы. */
 function firstTab(): Tab {

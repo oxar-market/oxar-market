@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { reviewState } from "./thing-review.ts";
+import { awaitsReview, reviewState } from "./thing-review.ts";
 
 const base = { active: false, hidden: false, declinedReason: null, published: false, house: false };
 
@@ -23,4 +23,16 @@ test("спрятана после одобрения - не ждёт одобр�
 
 test("отклонена", () => {
   assert.equal(reviewState({ ...base, declinedReason: "blurry photos", published: true }), "declined");
+});
+
+test("ждёт решения админа: только опубликованная вещь продавца без решения", () => {
+  assert.equal(awaitsReview({ ...base, published: true }), true);
+  // Черновик одобрить нельзя - во входящих ему не место.
+  assert.equal(awaitsReview(base), false);
+  // Нашу вещь не одобряют: карточки решения у неё нет.
+  assert.equal(awaitsReview({ ...base, house: true }), false);
+  assert.equal(awaitsReview({ ...base, house: true, published: true }), false);
+  assert.equal(awaitsReview({ ...base, published: true, active: true }), false);
+  assert.equal(awaitsReview({ ...base, published: true, hidden: true }), false);
+  assert.equal(awaitsReview({ ...base, published: true, declinedReason: "no" }), false);
 });

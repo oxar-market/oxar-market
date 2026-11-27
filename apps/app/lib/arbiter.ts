@@ -162,26 +162,31 @@ export async function decideDispute(dispute: Dispute, sellerBps: number) {
   return result;
 }
 
-export type AwaitingProof = { sale: PublicKey; thing: string; chain: ChainSale };
+export type AwaitingProof = { sale: PublicKey; thing: string; thingId: string; chain: ChainSale };
 
 /** Торги с победителями, у которых ещё нет пруфа: им можно отодвинуть срок. */
 export async function loadAwaitingProof(): Promise<AwaitingProof[]> {
   if (!db) return [];
   const { data: lots } = await db
     .from("lots")
-    .select("chain_sale, things:thing_id(title)")
+    .select("chain_sale, thing_id, things:thing_id(title)")
     .eq("status", "won")
     .not("chain_sale", "is", null);
   if (!lots || lots.length === 0) return [];
-  const bySale = new Map<string, string>();
-  for (const lot of lots) bySale.set(lot.chain_sale as string, (lot.things as { title?: string } | null)?.title ?? "");
+  const bySale = new Map<string, { thing: string; thingId: string }>();
+  for (const lot of lots) {
+    bySale.set(lot.chain_sale as string, {
+      thing: (lot.things as { title?: string } | null)?.title ?? "",
+      thingId: lot.thing_id as string,
+    });
+  }
   const { data: proofs } = await db.from("proofs").select("sale").in("sale", [...bySale.keys()]);
   const proved = new Set((proofs ?? []).map((one) => one.sale));
   const out: AwaitingProof[] = [];
-  for (const [sale, thing] of bySale) {
+  for (const [sale, { thing, thingId }] of bySale) {
     if (proved.has(sale)) continue;
     const chain = await readSale(new PublicKey(sale)).catch(() => null);
-    if (chain && hasBuyerProtection(chain) && chain.provedAt === 0) out.push({ sale: new PublicKey(sale), thing, chain });
+    if (chain && hasBuyerProtection(chain) && chain.provedAt === 0) out.push({ sale: new PublicKey(sale), thing, thingId, chain });
   }
   return out;
 }

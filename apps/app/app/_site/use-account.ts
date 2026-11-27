@@ -23,12 +23,15 @@ export function usePrivyAccount(): Account {
   // Своя картинка профиля - из подсказки, если она того же человека: читать
   // профиль из базы ради кружка в шапке незачем.
   const img = hint && hint.seed === seed ? (hint.img ?? null) : null;
-  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed), img, wallet } : null;
+  // Пункт Admin - так же из подсказки того же человека: is_admin спрашивают
+  // кабинет и админка, шапке хватает их ответа.
+  const admin = hint && hint.seed === seed ? hint.admin : undefined;
+  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed), img, wallet, admin } : null;
 
   useEffect(() => {
     if (ready) saveMe(me);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, me?.seed, me?.wallet]);
+  }, [ready, me?.seed, me?.wallet, me?.admin]);
 
   return { me: me ?? (!ready ? hint : null), onConnect: login, onDisconnect: () => void logout() };
 }

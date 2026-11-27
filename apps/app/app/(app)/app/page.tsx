@@ -8,6 +8,7 @@ import { loadAuction } from "../../_site/data.ts";
 import { loadOnAir } from "@/lib/auction";
 import { isShirt } from "@/lib/shape";
 import { faceUrl, loadMyProfile } from "@/lib/profile";
+import { amIAdmin } from "@/lib/admin";
 import { avatarLetter } from "@oxar/core";
 import { Top, type Account } from "../../_site/landing.tsx";
 import { mono } from "../../_site/mono.ts";
@@ -24,7 +25,7 @@ import { Auction } from "../../auction/auction.tsx";
  *
  * ?thing=<id> - торг вещи, иначе - кабинет. Старые ссылки из писем и постов
  * ведут сюда же: ?tab=market - на /auctions, ?tab=auction - на идущий или
- * ближайший торг.
+ * ближайший торг, ?tab=admin - на /admin.
  *
  * Торг виден до входа: гость должен увидеть, за что идёт борьба, раньше чем у
  * него спросят кто он. Вход возникает в момент ставки, а не на пороге.
@@ -64,6 +65,8 @@ export default function Home() {
       });
     } else if (opened === "market") {
       window.location.replace("/auctions");
+    } else if (opened === "admin") {
+      window.location.replace("/admin");
     } else if (opened === "auction") {
       // Идущий торг, а нет его - ближайший назначенный; нет и того - все торги.
       void loadOnAir().then((air) => {
@@ -102,8 +105,20 @@ export default function Home() {
     window.addEventListener("oxar:face", saved);
     return () => window.removeEventListener("oxar:face", saved);
   }, []);
+  // Админ ли - для пункта Admin в меню шапки. Спрашиваем заново, как только
+  // сессия базы выписана на этого человека: иначе пункт остался бы от прежнего.
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    setAdmin(false);
+    if (linked !== "ready") return;
+    let live = true;
+    void amIAdmin().then((yes) => live && setAdmin(yes));
+    return () => {
+      live = false;
+    };
+  }, [linked]);
   const wallet = user?.wallet?.address ?? null;
-  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed), img, wallet } : null;
+  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed), img, wallet, admin } : null;
   // Пока Privy поднимается, верим подсказке с прошлого входа: иначе по
   // нажатию на аватар на миг мелькал «Log in».
   const [hint, setHint] = useState<Me | null>(null);
@@ -115,7 +130,7 @@ export default function Home() {
     if (!ready) return;
     saveMe(me);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, me?.seed, me?.letter, me?.img, me?.wallet]);
+  }, [ready, me?.seed, me?.letter, me?.img, me?.wallet, me?.admin]);
 
   // Disconnect из шапки витрины: там Privy нет, она ведёт сюда с ?signout=1.
   // Выходим и возвращаем на главную.
