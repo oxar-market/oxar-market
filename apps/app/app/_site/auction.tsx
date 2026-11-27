@@ -4,15 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { perThousandCents, rankBidders, shortWallet, topBids } from "@oxar/core";
 import { SHIRT, ThingView, houseShape, isShirt } from "@oxar/stage";
 import "./auction.css";
-import { APP_URL, day, loadAuction, localCopy, usd, type AuctionPage, type Bid } from "./data.ts";
+import { day, loadAuction, localCopy, usd, type AuctionPage, type Bid } from "./data.ts";
 import { Header } from "./header.tsx";
+import { LiveAuction } from "./live.tsx";
 import { mono } from "./mono.ts";
+import { usePrivyAccount } from "./use-account.ts";
 
 /**
- * Страница закрытого торга и пилота: вещь крупно живой моделью с логотипами
- * победителей, справа таблица итогов и переключатель [ Spots ] [ Who bid ].
- * Идущий торг здесь не показываем - ставки делаются в приложении, туда и
- * отправляем.
+ * Страница торга: вещь крупно живой моделью, справа таблица и переключатель
+ * [ Spots ] [ Who bid ]. Закрытый торг и пилот - итоги; идущий - LiveAuction,
+ * там ставки.
  */
 export function AuctionView() {
   const [page, setPage] = useState<AuctionPage | null | "missing">(null);
@@ -25,16 +26,17 @@ export function AuctionView() {
     const id = new URLSearchParams(window.location.search).get("thing");
     if (!id || !/^[0-9a-f-]{36}$/.test(id)) return setPage("missing");
     void loadAuction(id).then((one) => {
-      if (one?.status === "live") return window.location.replace(`${APP_URL}?thing=${one.id}`);
       setPage(one ?? "missing");
     });
   }, []);
 
-  const view = useMemo(() => (page && page !== "missing" ? build(page) : null), [page]);
+  const view = useMemo(() => (page && page !== "missing" && page.status !== "live" ? build(page) : null), [page]);
+  const account = usePrivyAccount();
 
   return (
     <div className={`auc ${mono.className}`}>
-      <Header />
+      <Header account={account} />
+      {page && page !== "missing" && page.status === "live" && <LiveAuction page={page} />}
       {page === "missing" && (
         <p className="auc-empty">
           This auction is not here. <a href="/">[ Back to all ]</a>

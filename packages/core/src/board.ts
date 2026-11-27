@@ -18,6 +18,13 @@ export type Bidder = {
   bids: number;
   /** Самая большая ставка человека - и выигравшая, и перебитая. */
   bestCents: number;
+  /**
+   * На скольких местах его ставка сейчас старшая и на какую сумму - в идущем
+   * торге это «ведёт», в закрытом совпадает с выигранным. Пока торг идёт,
+   * paidCents пуст: платит только закрытый торг.
+   */
+  leads: number;
+  leadCents: number;
   /** Вернулось: перебили, или поднимал сам. */
   backCents: number;
   brands: string[];
@@ -43,7 +50,7 @@ export function rankBidders(lots: BoardLot[], bids: BoardBid[]): Bidder[] {
   for (const bid of real) {
     let one = out.get(bid.bidder_wallet);
     if (!one) {
-      one = { wallet: bid.bidder_wallet, joined: [], won: [], spots: 0, paidCents: 0, bids: 0, bestCents: 0, backCents: 0, brands: [], since: Infinity };
+      one = { wallet: bid.bidder_wallet, joined: [], won: [], spots: 0, paidCents: 0, bids: 0, bestCents: 0, leads: 0, leadCents: 0, backCents: 0, brands: [], since: Infinity };
       out.set(bid.bidder_wallet, one);
     }
     const lot = byLot.get(bid.lot_id)!;
@@ -53,6 +60,10 @@ export function rankBidders(lots: BoardLot[], bids: BoardBid[]): Bidder[] {
     if (!one.joined.includes(lot.thing_id)) one.joined.push(lot.thing_id);
     const brand = (bid.brand ?? "").trim();
     if (brand && !one.brands.some((name) => name.toLowerCase() === brand.toLowerCase())) one.brands.push(brand);
+    if (top.get(bid.lot_id) === bid) {
+      one.leads += 1;
+      one.leadCents += bid.amount_cents;
+    }
     if (top.get(bid.lot_id) === bid && lot.status === "won") {
       one.spots += 1;
       one.paidCents += bid.amount_cents;

@@ -80,3 +80,20 @@ test("у участника видна его старшая ставка, да�
   // Выиграл L2 за 300, но его старшая ставка - перебитые 450 на L1.
   assert.equal(b!.bestCents, 45000);
 });
+
+test("в идущем торге видно, кто сейчас ведёт и на какую сумму", () => {
+  const ranked = rankBidders(lots, [
+    bid("L3", 20000, "B", "2026-11-01"),
+    bid("L3", 25000, "A", "2026-11-02"),
+    bid("L3", 15000, "A", "2026-10-30"),
+  ]);
+  const a = ranked.find((one) => one.wallet === "A")!;
+  const b = ranked.find((one) => one.wallet === "B")!;
+  assert.deepEqual([a.leads, a.leadCents, a.paidCents], [1, 25000, 0]);
+  assert.deepEqual([b.leads, b.leadCents, b.bestCents], [0, 0, 20000]);
+});
+
+test("ведёт и на проданном месте - тот, кто его выиграл", () => {
+  const [a] = rankBidders(lots, [bid("L1", 50000, "A", "2026-10-02")]);
+  assert.deepEqual([a!.leads, a!.leadCents, a!.paidCents], [1, 50000, 50000]);
+});

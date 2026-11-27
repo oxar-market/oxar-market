@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useIdentityToken, useLogin, usePrivy } from "@privy-io/react-auth";
-import { db, exchange, syncContact } from "@/lib/session";
+import { syncContact } from "@/lib/session";
+import { useDbSession } from "@/lib/use-session";
+import { loadAuction } from "../../_site/data.ts";
 import { loadOnAir } from "@/lib/auction";
 import { isShirt } from "@/lib/shape";
 import { faceUrl, loadMyProfile } from "@/lib/profile";
@@ -37,9 +39,7 @@ export default function Home() {
     // Через адрес, а не состояние: ссылкой можно поделиться, «назад» ведёт в кабинет.
     window.location.assign(thingId ? `/app?thing=${thingId}` : "/app?tab=auction");
   }
-  const [linked, setLinked] = useState<"idle" | "linking" | "ready" | "failed">(
-    "idle",
-  );
+  const linked = useDbSession();
 
   // Телефон пришёл по QR с десктопа: сразу камера, без входа - в ссылке
   // секрет сессии съёмки, он и есть допуск.
@@ -53,7 +53,13 @@ export default function Home() {
       setCapture(secret);
       setView("you");
     } else if (thing && /^[0-9a-f-]{36}$/.test(thing)) {
-      setView({ thing });
+      // Торг, итог и пилот теперь на /auction: старые ссылки ведут туда. Вещь,
+      // где торга ещё не было (готовится, голограмма), остаётся здесь.
+      void loadAuction(thing).then((one) => {
+        const there = one && (one.status !== "pilot" || Object.keys(one.placed).length > 0);
+        if (there) window.location.replace(`/auction?thing=${thing}`);
+        else setView({ thing });
+      });
     } else if (opened === "market") {
       window.location.replace("/auctions");
     } else if (opened === "auction") {
@@ -68,32 +74,6 @@ export default function Home() {
       setView("you");
     }
   }, []);
-
-  // Вышел из Privy - выходит и из базы. Раньше сессия Supabase переживала
-  // выход: следующий вошедший до конца обмена читал базу от имени прежнего,
-  // и у чужого кошелька оставалась вкладка Admin. Только эта вкладка
-  // (scope local): глобальный выход выкинул бы человека и с телефона.
-  useEffect(() => {
-    if (!ready || !db) return;
-    if (!authenticated) {
-      setLinked("idle");
-      void db.auth.signOut({ scope: "local" });
-      return;
-    }
-
-    let live = true;
-    (async () => {
-      setLinked("linking");
-      const token = await getAccessToken();
-      if (!token) return live && setLinked("failed");
-      const result = await exchange(token);
-      if (live) setLinked(result.ok ? "ready" : "failed");
-    })();
-
-    return () => {
-      live = false;
-    };
-  }, [ready, authenticated, user?.id, getAccessToken]);
 
   // Почта для писем: identity-токен меняется при входе и при привязке почты,
   // тогда и сообщаем серверу. Строку настроек заводит обмен, поэтому - после него.

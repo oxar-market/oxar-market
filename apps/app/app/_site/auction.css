@@ -10,6 +10,11 @@
   font-size: 13px;
   line-height: 1.45;
 }
+/* Страница живёт в группе приложения ради Privy, а там низ экрана гаснет под
+   нижнее меню. Меню здесь нет - и затухания не нужно. */
+body:has(.auc)::after {
+  display: none;
+}
 .auc a,
 .auc button {
   color: inherit;
