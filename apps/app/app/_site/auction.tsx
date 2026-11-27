@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { perThousandCents, rankBidders, shortWallet, topBids } from "@oxar/core";
 import { SHIRT, ThingView, houseShape, isShirt } from "@oxar/stage";
 import "./auction.css";
+import { isVideo, proofCopy } from "@/lib/media";
 import { day, loadAuction, localCopy, usd, type AuctionPage, type Bid } from "./data.ts";
 import { Header } from "./header.tsx";
 import { LiveAuction } from "./live.tsx";
@@ -63,6 +64,8 @@ export function AuctionView() {
                 </div>
               ))}
             </dl>
+
+            {page.proof.length > 0 && <Proof urls={page.proof} />}
 
             {view.people.length > 0 ? (
               <div className="auc-tabs" role="tablist">
@@ -203,6 +206,58 @@ function build(page: AuctionPage) {
       : []),
   ];
   return { shape, model, logos, spots, people, rows };
+}
+
+/**
+ * Пруф: вещь в деле с логотипами - сразу под таблицей, а не во вкладке, это
+ * главное, что ищут на закрытом торге. Нажал - во весь экран. Сначала копия
+ * из сборки сайта, нет её - оригинал из хранилища.
+ */
+function Proof({ urls }: { urls: string[] }) {
+  const [big, setBig] = useState<string | null>(null);
+  useEffect(() => {
+    if (!big) return;
+    const close = (event: KeyboardEvent) => event.key === "Escape" && setBig(null);
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [big]);
+  return (
+    <div className="auc-proof">
+      <p className="auc-label">Proof · {urls.length}</p>
+      <div className="auc-proof-grid">
+        {urls.map((url) => (
+          <button key={url} type="button" onClick={() => setBig(url)} aria-label={isVideo(url) ? "Play the video" : "Open the photo"}>
+            <Media url={url} thumb />
+            {isVideo(url) && <span className="auc-play" aria-hidden />}
+          </button>
+        ))}
+      </div>
+      {big && (
+        <div className="auc-shade" role="dialog" aria-modal="true" onClick={() => setBig(null)}>
+          <div onClick={(event) => event.stopPropagation()}>
+            <Media url={big} />
+          </div>
+          <button type="button" className="auc-shut" onClick={() => setBig(null)}>
+            [ Close ]
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Media({ url, thumb = false }: { url: string; thumb?: boolean }) {
+  const copy = proofCopy(url);
+  const [src, setSrc] = useState(copy ?? url);
+  const back = () => src !== url && setSrc(url);
+  if (isVideo(url)) {
+    return thumb ? (
+      <video src={`${src}#t=0.1`} muted playsInline preload="metadata" onError={back} />
+    ) : (
+      <video src={src} controls autoPlay playsInline onError={back} />
+    );
+  }
+  return <img src={src} alt="" loading="lazy" onError={back} />;
 }
 
 /**

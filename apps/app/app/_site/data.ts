@@ -184,12 +184,14 @@ export type AuctionPage = {
   reach: { people: number; estimated: boolean } | null;
   /** Те же лоты и ставки - для rankBidders из core: кто ставил и что взял. */
   board: { lots: BoardLot[]; bids: BoardBid[] };
+  /** Фото и видео итогов: вещь в деле с логотипами. Адреса оригиналов в хранилище. */
+  proof: string[];
 };
 
 export async function loadAuction(id: string): Promise<AuctionPage | null> {
   const [things, lots, placed] = await Promise.all([
-    rest<{ id: string; slug: string; title: string; worn_where: string | null; model_url: string | null; post_reach: number | null; post_reach_checked_at: string | null; refunded_at: string | null }[]>(
-      `things?id=eq.${encodeURIComponent(id)}&active=eq.true&hidden=eq.false&select=id,slug,title,worn_where,model_url,post_reach,post_reach_checked_at,refunded_at`,
+    rest<{ id: string; slug: string; title: string; worn_where: string | null; model_url: string | null; post_reach: number | null; post_reach_checked_at: string | null; refunded_at: string | null; proof_photos: string[] | null }[]>(
+      `things?id=eq.${encodeURIComponent(id)}&active=eq.true&hidden=eq.false&select=id,slug,title,worn_where,model_url,post_reach,post_reach_checked_at,refunded_at,proof_photos`,
     ),
     rest<{ id: string; status: string; closes_at: string; rehearsal: boolean; thing_spots: { code: string; label: string } | null }[]>(
       `lots?thing_id=eq.${encodeURIComponent(id)}&rehearsal=eq.false&select=id,status,closes_at,rehearsal,thing_spots:spot_id(code,label)`,
@@ -226,6 +228,7 @@ export async function loadAuction(id: string): Promise<AuctionPage | null> {
       .map((bid) => ({ code: codeOf.get(bid.lot_id)!, brand: bid.brand ?? "", cents: bid.amount_cents, at: Date.parse(bid.created_at), url: bid.media_url, wallet: bid.bidder_wallet })),
     placed: Object.fromEntries(placed.map((one) => [one.code, { url: one.media_url, brand: one.brand }])),
     reach: thing.post_reach ? { people: thing.post_reach, estimated: !thing.post_reach_checked_at } : null,
+    proof: (thing.proof_photos ?? []).map((path) => `${SUPABASE}/storage/v1/object/public/things/${path}`),
     board: {
       lots: lots.map((lot) => ({ id: lot.id, status: lot.status, rehearsal: lot.rehearsal, thing_id: thing.id, refunded: thing.refunded_at !== null })),
       bids: raw.map((bid) => ({ lot_id: bid.lot_id, amount_cents: bid.amount_cents, bidder_wallet: bid.bidder_wallet, brand: bid.brand, created_at: bid.created_at })),
