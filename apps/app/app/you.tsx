@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useExportWallet } from "@privy-io/react-auth/solana";
 import { PublicKey } from "@solana/web3.js";
 import {
   avatarLetter,
+  BRAND_MAX,
+  cleanProfile,
   formatUsd,
+  HANDLE_MAX,
+  NAME_MAX,
   passReach,
   shortWallet,
   spotName,
   unitsToCents,
   type Bidder,
+  type MyBidState,
   type Score,
 } from "@oxar/core";
 import { connection, walletUnits } from "@/lib/chain";
@@ -24,6 +29,8 @@ import {
   loadMyHistory,
   loadMyProfile,
   loadReach,
+  saveProfile,
+  uploadFace,
   type Face,
   type MyBidRow,
   type Profile,
@@ -35,6 +42,7 @@ import { myApplication } from "@/lib/applications";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
 import { SellerApply } from "./seller/apply.tsx";
 import { NoEmailHint, WinCard, useWins, winWord } from "./wins.tsx";
+import type { Win } from "@/lib/wins";
 import { Notifications } from "./notify.tsx";
 import { loadScoreOf } from "@/lib/reviews";
 import { signedInWith } from "@/lib/identity";
@@ -42,7 +50,7 @@ import { load, type Data } from "./_site/data.ts";
 import { mono } from "./_site/mono.ts";
 import { Copy } from "./cabinet.tsx";
 import { avatar } from "./_site/me.ts";
-import { EditModal, ShareModal } from "./modals.tsx";
+import { ShareModal } from "./modals.tsx";
 import { ReachPass, PassCard, type PassLine } from "./pass.tsx";
 import "./you.css";
 
@@ -68,7 +76,7 @@ export function You({
    */
   linked: boolean;
 }) {
-  const { user, logout } = usePrivy();
+  const { user } = usePrivy();
   const wallet = user?.wallet?.address;
   const signIn = signedInWith(user);
   // Privy помечает свой встроенный кошелёк; всё прочее - внешний, и ключ
@@ -77,7 +85,7 @@ export function You({
 
   // Балансы из цепочки: USDC - чем ставят, SOL - чем платят комиссию сети.
   // null - ещё не прочитали; показываем прочерк, а не врём нулём.
-  const [usdc, setUsdc] = useState<number | null>(null);
+  const [usdc, setUsdc] = useState<number | null>(null); // центы
   const [sol, setSol] = useState<number | null>(null);
   // Чтение упало - говорим об этом и даём повторить. Раньше любая ошибка
   // глоталась и оставляла прочерк, а прочерк на телефоне читался как «денег
@@ -119,7 +127,7 @@ export function You({
       const mint = data?.[0]?.mint;
       if (!mint) return;
       const units = await walletUnits(new PublicKey(mint), owner);
-      if (live) setUsdc(unitsToCents(units) / 100);
+      if (live) setUsdc(unitsToCents(units));
     })().catch(() => {
       if (live) setFailed(true);
     });
@@ -204,16 +212,16 @@ export function You({
   useEffect(() => {
     if (linked) void loadMyProfile().then(setProfile);
   }, [linked]);
-  const [open, setOpen] = useState<"share" | "edit" | null>(null);
+  const [open, setOpen] = useState<"share" | null>(null);
 
   const me = wallet ? (bidders.find((one) => one.wallet === wallet) ?? null) : null;
   // Тот же аватар, что в шапке: зерно - кошелёк, без него почта.
   const seed = wallet ?? user?.email?.address ?? "you";
   const rank = me ? bidders.indexOf(me) + 1 : 0;
+  const wonSpots = (me?.spots ?? 0) + (me?.refundedSpots ?? 0);
   const name = profile.display_name ?? (wallet ? shortWallet(wallet) : "You");
   const brands = profile.brand ?? me?.brands.join(", ") ?? "";
   const picture = faceUrl(profile.avatar_path);
-  const ownerOf = (thingId: string) => data?.auctions.find((one) => one.id === thingId)?.owner ?? "The seller";
 
   // Ставки - только по лотам, что есть в кабинете: прогоны до открытия мимо.
   const shownLots = new Set(stands.map((one) => one.lotId));
@@ -238,6 +246,40 @@ export function You({
             : { word: "Won", red: false };
       return { stand, refundedAt, win, status };
     });
+
+  // Активность: торг - заголовком, под ним по строке на место - моя старшая
+  // ставка и чем она кончилась. Слово ставки - из core (myBidStates), здесь
+  // только подписи.
+  const groups = new Map<string, MyStand[]>();
+  for (const stand of stands) groups.set(stand.thingId, [...(groups.get(stand.thingId) ?? []), stand]);
+  const activity = [...groups.entries()]
+    .map(([thingId, spots]) => ({
+      thingId,
+      title: spots[0]!.thing,
+      open: spots.some((one) => one.open),
+      closes: Math.max(...spots.map((one) => Date.parse(one.closesAt))),
+      refundedAt: bids.find((one) => one.thingId === thingId && one.refundedAt)?.refundedAt ?? null,
+      spots: spots
+        .sort((a, b) => a.spot.localeCompare(b.spot, "en", { numeric: true }))
+        .map((stand) => {
+          const mine = bids.filter((one) => one.lotId === stand.lotId);
+          return {
+            stand,
+            count: mine.length,
+            state: mine.find((one) => one.cents === stand.mineCents)?.state ?? null,
+            win: wins?.find((one) => one.lotId === stand.lotId) ?? null,
+          };
+        }),
+    }))
+    .sort((a, b) => Number(b.open) - Number(a.open) || b.closes - a.closes);
+  const liveNow = data?.auctions.find((one) => one.status === "live") ?? null;
+  // Имя хозяина вещи, если оно есть; без него витрина подставляет название.
+  const ownerName = (thingId: string) => {
+    const one = data?.auctions.find((auction) => auction.id === thingId);
+    return one && one.owner !== one.title ? one.owner : null;
+  };
+  const titleOf = (thingId: string) =>
+    data?.auctions.find((one) => one.id === thingId)?.title ?? reach[thingId]?.title ?? null;
 
   // Пропуск - сумма охватов торгов, где стоял логотип человека.
   const pass = passReach(me?.won ?? [], reach);
@@ -267,13 +309,12 @@ export function You({
 
   const sales = seller || applied || asked === "sales";
   const tabs: { id: Tab; label: string }[] = [
-    { id: "wins", label: "Wins" },
-    { id: "bids", label: "Bids" },
+    { id: "activity", label: "Activity" },
     { id: "board", label: "Leaderboard" },
     ...(sales ? [{ id: "sales" as const, label: "Sales" }] : []),
     { id: "settings", label: "Settings" },
   ];
-  const current: Tab = tabs.some((one) => one.id === tab) ? tab : "wins";
+  const current: Tab = tabs.some((one) => one.id === tab) ? tab : "activity";
 
   // Оценка сделки - после всех хуков: ранний return выше них менял число
   // хуков между рендерами, и React падал, стоило нажать «Rate».
@@ -315,47 +356,35 @@ export function You({
             {wallet && <Copy text={wallet} />}
           </h1>
           <p className="yo-mute yo-sub">
-            {[wallet ? shortWallet(wallet) : null, me ? `bidding since ${day(me.since)}` : "no bids yet"]
+            {[
+              wallet ? shortWallet(wallet) : null,
+              me ? `bidding since ${day(me.since)}` : "no bids yet",
+              buyerScore?.rating != null ? `★ ${buyerScore.rating.toFixed(1)} from sellers` : null,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </p>
 
-          <dl className="yo-t yo-meta">
+          {/* Три цифры строкой. Выигранное - вместе с выигрышами, деньги за
+              которые вернули: ставка была настоящей. Баланс - в меню кошелька
+              в шапке и в Settings. */}
+          <div className="yo-stats">
             <div>
-              <dt>Rank</dt>
-              <dd>{rank ? `#${rank} of ${bidders.length}` : "-"}</dd>
+              <b>{rank ? `#${rank}` : "-"}</b>
+              <span>{rank ? `of ${bidders.length} bidders` : "Not ranked yet"}</span>
             </div>
             <div>
-              <dt>Spots won</dt>
-              <dd>
-                {me?.spots ?? 0}, {formatUsd(me?.paidCents ?? 0)}
-              </dd>
+              <b>{formatUsd((me?.paidCents ?? 0) + (me?.refundedCents ?? 0))}</b>
+              <span>
+                {wonSpots ? `${wonSpots} ${wonSpots === 1 ? "spot" : "spots"} won` : "No spots yet"}
+                {me?.refundedSpots ? " · refunded" : ""}
+              </span>
             </div>
             <div>
-              <dt>Bids</dt>
-              <dd>
-                {me ? `${me.bids} on ${me.joined.length} ${me.joined.length === 1 ? "auction" : "auctions"}` : "0"}
-              </dd>
+              <b>{pass.total ? `${pass.estimated ? "~" : ""}${compact(pass.total)}` : "0"}</b>
+              <span>People saw your logo</span>
             </div>
-            <div>
-              <dt>Seen by</dt>
-              <dd>
-                {pass.total
-                  ? `${pass.estimated ? "~" : ""}${pass.total.toLocaleString("en-US")}${pass.estimated ? ", estimated" : ""}`
-                  : "-"}
-              </dd>
-            </div>
-            {buyerScore?.rating != null && (
-              <div>
-                <dt>Rating from sellers</dt>
-                <dd>★ {buyerScore.rating.toFixed(1)}</dd>
-              </div>
-            )}
-            <div>
-              <dt>Balance</dt>
-              <dd>{money(usdc)} USDC</dd>
-            </div>
-          </dl>
+          </div>
 
           {outbid ? (
             <div className="yo-act">
@@ -383,7 +412,7 @@ export function You({
                 type="button"
                 className="yo-link"
                 onClick={() => {
-                  setTab("wins");
+                  setTab("activity");
                   setOpened(check.stand.lotId);
                 }}
               >
@@ -412,123 +441,168 @@ export function You({
               className={current === one.id ? "on" : ""}
               onClick={() => setTab(one.id)}
             >
-              [ <span>{one.label}</span> ]
+              {one.label}
+              {one.id === "activity" && stands.length > 0 && <sup>{stands.length}</sup>}
             </button>
           ))}
         </div>
 
-        {current === "wins" && (
-          <div className="yo-list">
+        {current === "activity" && (
+          <div className="yo-pane">
             {wins?.some((one) => one.lot) && (
               <NoEmailHint text="Proof arrives on its own schedule, and you have 72 hours to check it. Add an email so the window does not pass silently." />
             )}
-            {won.length === 0 && (
-              <p className="yo-mute yo-empty">
-                No wins yet.{" "}
-                <a className="yo-link" href="/?grid">
-                  Pick a spot
-                </a>{" "}
-                and bid.
-              </p>
-            )}
-            {won.map(({ stand, refundedAt, win, status }) => (
-              <div key={stand.lotId} className={opened === stand.lotId ? "yo-win open" : "yo-win"}>
-                <button
-                  type="button"
-                  className="yo-row"
-                  onClick={() => setOpened(opened === stand.lotId ? null : stand.lotId)}
-                >
-                  <Thumb src={imageOf(stand)} />
-                  <span>
-                    <b>{spotName(stand.spot)}</b>
-                    <span className="yo-mute">{stand.thing}</span>
-                  </span>
-                  <span className="yo-st">
-                    {formatUsd(stand.mineCents)}
-                    <em className={status.red ? "red" : undefined}>{status.word}</em>
-                  </span>
-                </button>
-                {opened === stand.lotId && (
-                  <div className="yo-more">
-                    {refundedAt ? (
-                      <>
-                        <div className="yo-steps">
-                          <span className="done">Won</span>
-                          <span className="off">Trip off</span>
-                          <span className="done">Refunded</span>
-                        </div>
-                        <p className="yo-mute">
-                          {ownerOf(stand.thingId)} sent your {formatUsd(stand.mineCents)} back on{" "}
-                          {day(Date.parse(refundedAt))}.
-                        </p>
-                      </>
-                    ) : win ? (
-                      <div className="ym-legacy">
-                        <WinCard win={win} winner={winner} sign={sign} onDone={reload} />
-                      </div>
-                    ) : (
-                      <p className="yo-mute">
-                        {stand.refunded
-                          ? "Your bid came back to your wallet."
-                          : `Won on ${day(Date.parse(stand.closesAt))}.`}
-                      </p>
-                    )}
+            {activity.length === 0 && (
+              <div className="yo-empty">
+                <b>No bids yet.</b>
+                <p className="yo-mute">
+                  Your bids and wins show up here, with the logo you sent. Outbid money goes back to your wallet
+                  right away.
+                </p>
+                {liveNow ? (
+                  <div className="yo-next">
+                    <span>
+                      <span className="yo-mute yo-up">Live now</span>
+                      <br />
+                      {liveNow.title}
+                      <br />
+                      <span className="yo-mute">
+                        {liveNow.spots} {liveNow.spots === 1 ? "spot" : "spots"} · {liveNow.owner}
+                      </span>
+                    </span>
+                    <a className="yo-btn" href={`/auction?thing=${liveNow.id}`}>
+                      Bid
+                    </a>
                   </div>
+                ) : (
+                  <p>
+                    Nothing is live right now.{" "}
+                    <a className="yo-link" href="/">
+                      See the auctions
+                    </a>
+                  </p>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-
-        {current === "bids" && (
-          <div className="yo-list">
-            {bids.length === 0 && (
-              <p className="yo-mute yo-empty">
-                No bids yet.{" "}
-                <a className="yo-link" href="/?grid">
-                  Pick a spot
-                </a>{" "}
-                and it shows up here.
-              </p>
             )}
-            {bids.map((one, at) => (
-              <div key={`${one.lotId}-${one.at}-${at}`} className="yo-row">
-                <Thumb src={one.mediaUrl} />
-                <span>
-                  <b>{spotName(one.spot)}</b>
-                  <span className="yo-mute">
-                    {one.thing} · {day(Date.parse(one.at))}
-                  </span>
-                </span>
-                <span className="yo-st">
-                  {formatUsd(one.cents)}
-                  <em className={one.state === "outbid" ? "red" : undefined}>{BID_WORDS[one.state]}</em>
-                </span>
-              </div>
-            ))}
+            {activity.map((auction) => {
+              const owner = ownerName(auction.thingId);
+              return (
+                <div key={auction.thingId} className="yo-auc">
+                  <div className="yo-auc-h">
+                    <span>{auction.title}</span>
+                    <span className="yo-mute yo-up">
+                      {auction.open ? `Live, closes ${moment(auction.closes)}` : `Ended ${day(auction.closes)}`}
+                      {auction.refundedAt && (
+                        <>
+                          {" · "}
+                          <span className="yo-red">Refunded</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  {auction.spots.map(({ stand, count, state, win }) => {
+                    // Победа с эскроу раскрывается в карточку: фото, выплата, спор.
+                    const opens = !!win && !auction.refundedAt;
+                    const word = state ? stateWord(state, stand.open, auction.refundedAt ? null : win) : null;
+                    const row = (
+                      <>
+                        <Thumb src={imageOf(stand)} />
+                        <span>
+                          <b>{spotName(stand.spot)}</b>
+                          <span className="yo-mute">
+                            {count} {count === 1 ? "bid" : "bids"}
+                          </span>
+                        </span>
+                        <span className="yo-st">
+                          {formatUsd(stand.mineCents)}
+                          {word && (
+                            <em className={word.red ? "red" : undefined}>
+                              {word.tag && <span className="yo-tag">Won</span>}
+                              {word.tag && word.text ? " " : ""}
+                              {word.text}
+                            </em>
+                          )}
+                        </span>
+                      </>
+                    );
+                    return (
+                      <div key={stand.lotId} className={opened === stand.lotId ? "yo-win open" : "yo-win"}>
+                        {opens ? (
+                          <button
+                            type="button"
+                            className="yo-row"
+                            aria-expanded={opened === stand.lotId}
+                            onClick={() => setOpened(opened === stand.lotId ? null : stand.lotId)}
+                          >
+                            {row}
+                          </button>
+                        ) : (
+                          <div className="yo-row">{row}</div>
+                        )}
+                        {opens && opened === stand.lotId && (
+                          <div className="yo-more ym-legacy">
+                            <WinCard win={win!} winner={winner} sign={sign} onDone={reload} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {auction.refundedAt && (
+                    <p className="yo-note-box yo-mute">
+                      {auction.title} did not go out.{" "}
+                      {owner
+                        ? `${owner} sent every winning bid back on ${day(Date.parse(auction.refundedAt))}.`
+                        : `Every winning bid was sent back on ${day(Date.parse(auction.refundedAt))}.`}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
         {current === "board" && (
-          <>
+          <div className="yo-pane">
             <div className="yo-board">
-              {bidders.map((one, at) => (
-                <div key={one.wallet} className={one === me ? "me" : undefined}>
-                  <span className="yo-mute">{String(at + 1).padStart(2, "0")}</span>
-                  <span className="yo-who">
-                    {faces[one.wallet]?.display_name ?? shortWallet(one.wallet)}
-                    {one === me && " (you)"}
-                    <small>{faces[one.wallet]?.brand ?? one.brands.join(", ")}</small>
-                  </span>
-                  <span className="yo-mute">
-                    {one.spots} {one.spots === 1 ? "spot" : "spots"}
-                  </span>
-                  <span>{formatUsd(one.paidCents)}</span>
-                </div>
-              ))}
+              <div className="yo-board-h yo-up">
+                <span>#</span>
+                <span>Bidder</span>
+                <span className="yo-n">Spots</span>
+                <span className="yo-sum">Won</span>
+              </div>
+              {bidders.map((one, at) => {
+                const face = faces[one.wallet];
+                const spots = one.spots + one.refundedSpots;
+                const first = one.joined[0] ? titleOf(one.joined[0]) : null;
+                return (
+                  <div key={one.wallet} className={one === me ? "me" : undefined}>
+                    <span className="yo-mute">{String(at + 1).padStart(2, "0")}</span>
+                    <span className="yo-who">
+                      {face?.display_name ?? face?.brand ?? one.brands[0] ?? shortWallet(one.wallet)}
+                      {one === me && " (you)"}
+                      <small>{[shortWallet(one.wallet), first].filter(Boolean).join(" · ")}</small>
+                    </span>
+                    <span className="yo-n yo-mute">{spots || "-"}</span>
+                    <span className="yo-sum">
+                      {spots ? (
+                        formatUsd(one.paidCents + one.refundedCents)
+                      ) : (
+                        <span className="yo-mute">{formatUsd(one.bestCents)} bid</span>
+                      )}
+                      {one.refundedCents > 0 && (
+                        <small className="yo-up">
+                          {one.paidCents ? `${formatUsd(one.refundedCents)} of it refunded` : "refunded"}
+                        </small>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-            <p className="yo-mute yo-foot">Wallets by what they paid for spots they won.</p>
-          </>
+            <p className="yo-mute yo-foot">
+              By spots won, paid first. A refunded win still counts: the bid was real, the thing did not go out.
+            </p>
+          </div>
         )}
 
         {current === "sales" && (
@@ -543,91 +617,82 @@ export function You({
 
         {current === "settings" && (
           <div className="yo-settings">
-            <h3>Wallet</h3>
-            <dl className="yo-t">
+            <section className="yo-grp">
+              <h3>
+                Profile<small>How you show up on the board and on the pass</small>
+              </h3>
+              <ProfileForm
+                key={JSON.stringify(profile)}
+                profile={profile}
+                avatarStyle={avatar(seed)}
+                onSaved={(next) => {
+                  setProfile(next);
+                  // Шапка тоже показывает аватар - пусть узнает о новом сразу.
+                  window.dispatchEvent(new CustomEvent("oxar:face", { detail: faceUrl(next.avatar_path) }));
+                  void loadFaces().then(setFaces);
+                }}
+              />
+            </section>
+
+            <section className="yo-grp">
+              <h3>
+                Wallet<small>Yours, not ours. Only you can move the money</small>
+              </h3>
               <div>
-                <dt>Address</dt>
-                <dd>
-                  {wallet ? shortWallet(wallet) : "-"}
-                  {wallet && <Copy text={wallet} />}
-                </dd>
-              </div>
-              <div>
-                <dt>USDC</dt>
-                <dd>{money(usdc)}</dd>
-              </div>
-              <div>
-                <dt>For network fees</dt>
-                <dd>{sol === null ? "-" : `${sol.toFixed(3)} SOL`}</dd>
-              </div>
-              {signIn?.by === "email" && (
-                <div>
-                  <dt>Signed in with</dt>
-                  <dd>{signIn.email}</dd>
+                <div className="yo-kv">
+                  <span className="yo-mute">Address</span>
+                  <span>{wallet ? shortWallet(wallet) : "-"}</span>
+                  {wallet ? <Copy text={wallet} /> : <span />}
                 </div>
-              )}
-            </dl>
-            {failed && (
-              <p className="yo-bad">
-                Could not read the balance from the network.{" "}
-                <button type="button" className="yo-link" onClick={() => setTries((was) => was + 1)}>
-                  Try again
-                </button>
-              </p>
-            )}
-            <p className="yo-mute yo-note">This wallet is yours, not ours. Only you can move the money.</p>
-            {embedded && wallet && (
-              <p className="yo-acts">
-                <button
-                  type="button"
-                  className="yo-link"
-                  onClick={() => {
-                    setExportFailed(false);
-                    exportWallet({ address: wallet }).catch(() => setExportFailed(true));
-                  }}
-                >
-                  [ Export key ]
-                </button>
-              </p>
-            )}
-            {exportFailed && <p className="yo-bad">Could not open the export window. Sign in again and retry.</p>}
+                <div className="yo-kv">
+                  <span className="yo-mute">USDC</span>
+                  <span>{usdc === null ? "-" : formatUsd(usdc)}</span>
+                  <span />
+                </div>
+                <div className="yo-kv">
+                  <span className="yo-mute">For fees</span>
+                  <span>{sol === null ? "-" : `${sol.toFixed(3)} SOL`}</span>
+                  <span />
+                </div>
+                {signIn?.by === "email" && (
+                  <div className="yo-kv">
+                    <span className="yo-mute">Signed in with</span>
+                    <span className="yo-cut">{signIn.email}</span>
+                    <span />
+                  </div>
+                )}
+                {failed && (
+                  <p className="yo-bad">
+                    Could not read the balance from the network.{" "}
+                    <button type="button" className="yo-link" onClick={() => setTries((was) => was + 1)}>
+                      Try again
+                    </button>
+                  </p>
+                )}
+                {embedded && wallet && (
+                  <p className="yo-acts">
+                    <button
+                      type="button"
+                      className="yo-link"
+                      onClick={() => {
+                        setExportFailed(false);
+                        exportWallet({ address: wallet }).catch(() => setExportFailed(true));
+                      }}
+                    >
+                      [ Export key ]
+                    </button>
+                  </p>
+                )}
+                {exportFailed && <p className="yo-bad">Could not open the export window. Sign in again and retry.</p>}
+              </div>
+            </section>
 
-            <h3>Notifications</h3>
-            <div className="ym-legacy">
+            <section className="yo-grp">
+              <h3>
+                Alerts<small>Outbid, won, proof is up</small>
+              </h3>
               <Notifications />
-            </div>
-
-            <h3>Profile</h3>
-            <dl className="yo-t">
-              <div>
-                <dt>Name</dt>
-                <dd>{profile.display_name ?? "-"}</dd>
-              </div>
-              <div>
-                <dt>Brand</dt>
-                <dd>{profile.brand ?? "-"}</dd>
-              </div>
-              <div>
-                <dt>X</dt>
-                <dd>{profile.x_handle ? `@${profile.x_handle}` : "-"}</dd>
-              </div>
-              <div>
-                <dt>Picture and logo</dt>
-                <dd>
-                  {[profile.avatar_path && "Picture", profile.logo_path && "Logo"].filter(Boolean).join(", ") || "-"}
-                </dd>
-              </div>
-            </dl>
-            <p className="yo-acts">
-              {wallet && (
-                <button type="button" className="yo-link" onClick={() => setOpen("edit")}>
-                  [ Edit profile ]
-                </button>
-              )}
-              <button type="button" className="yo-link" onClick={logout}>
-                [ Sign out ]
-              </button>
-            </p>
+            </section>
           </div>
         )}
       </div>
@@ -640,51 +705,150 @@ export function You({
           <PassCard {...passProps} />
         </ShareModal>
       )}
-      {open === "edit" && wallet && (
-        <EditModal
-          profile={profile}
-          wallet={wallet}
-          avatarStyle={avatar(seed)}
-          onSaved={(next) => {
-            setProfile(next);
-            // Шапка тоже показывает аватар - пусть узнает о новом сразу.
-            window.dispatchEvent(new CustomEvent("oxar:face", { detail: faceUrl(next.avatar_path) }));
-            void loadFaces().then(setFaces);
-          }}
-          onClose={() => setOpen(null)}
-        />
-      )}
     </div>
   );
 }
 
-type Tab = "wins" | "bids" | "board" | "sales" | "settings";
-const TABS: Tab[] = ["wins", "bids", "board", "sales", "settings"];
+type Tab = "activity" | "board" | "sales" | "settings";
+const TABS: Tab[] = ["activity", "board", "sales", "settings"];
 
-/** Вкладка из ссылки: ?tab=sales и прочие; незнакомая - победы. */
+/** Вкладка из ссылки: ?tab=sales и прочие; прежние wins и bids - активность, незнакомая - тоже. */
 function firstTab(): Tab {
   const asked = new URLSearchParams(window.location.search).get("tab");
-  return TABS.find((one) => one === asked) ?? "wins";
+  return TABS.find((one) => one === asked) ?? "activity";
 }
 
-const BID_WORDS: Record<MyBidRow["state"], string> = {
-  leading: "Leading",
-  won: "Won",
-  refunded: "Won, refunded",
-  raised: "You raised it",
-  outbid: "Outbid, came back",
-};
+/**
+ * Чем кончилась моя старшая ставка на месте - подписью строки. tag - метка
+ * «Won»; у победы с эскроу рядом её стадия, red - ждёт действия.
+ */
+function stateWord(
+  state: MyBidState,
+  open: boolean,
+  win: Win | null,
+): { tag: boolean; text: string; red: boolean } {
+  if (state === "leading") return { tag: false, text: "Leading", red: false };
+  if (state === "raised") return { tag: false, text: "You raised it", red: false };
+  if (state === "outbid") return { tag: false, text: "Outbid, money back", red: open };
+  if (state === "refunded") return { tag: true, text: "money back", red: false };
+  const word = win ? winWord(win) : null;
+  return { tag: true, text: word?.word ?? "", red: word?.red ?? false };
+}
+
+/**
+ * Профиль на месте, без окна: поля правятся сразу, «Save» появляется, когда
+ * что-то поменялось. Правила полей - cleanProfile в core, запись - как в
+ * прежнем окне: картинки грузятся сразу, в профиль попадают по Save.
+ */
+function ProfileForm({
+  profile,
+  avatarStyle,
+  onSaved,
+}: {
+  profile: Profile;
+  avatarStyle: CSSProperties;
+  onSaved: (next: Profile) => void;
+}) {
+  const [name, setName] = useState(profile.display_name ?? "");
+  const [brand, setBrand] = useState(profile.brand ?? "");
+  const [x, setX] = useState(profile.x_handle ? `@${profile.x_handle}` : "");
+  const [picture, setPicture] = useState(profile.avatar_path);
+  const [logo, setLogo] = useState(profile.logo_path);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const changed =
+    name !== (profile.display_name ?? "") ||
+    brand !== (profile.brand ?? "") ||
+    x !== (profile.x_handle ? `@${profile.x_handle}` : "") ||
+    picture !== profile.avatar_path ||
+    logo !== profile.logo_path;
+
+  async function pick(list: FileList | null, kind: "avatar" | "logo") {
+    const file = list?.[0];
+    if (!file) return;
+    setError("");
+    setBusy(true);
+    const result = await uploadFace(file, kind);
+    setBusy(false);
+    if ("error" in result) return setError(result.error);
+    if (kind === "avatar") setPicture(result.path);
+    else setLogo(result.path);
+  }
+
+  async function save() {
+    const clean = cleanProfile({ name, brand, x });
+    if (!clean.ok) return setError(clean.error);
+    const next: Profile = { ...clean.value, avatar_path: picture, logo_path: logo };
+    setBusy(true);
+    const failed = await saveProfile(next);
+    setBusy(false);
+    if (failed) return setError(failed);
+    onSaved(next);
+  }
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+    >
+      <div className="yo-pics">
+        <label className="yo-pic">
+          <i className="round" style={picture ? undefined : avatarStyle}>
+            {picture && <img src={faceUrl(picture) ?? ""} alt="" />}
+          </i>
+          <span className="yo-link yo-up">Picture</span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => void pick(event.target.files, "avatar")} />
+        </label>
+        <label className="yo-pic">
+          <i>{logo ? <img src={faceUrl(logo) ?? ""} alt="" /> : "Logo"}</i>
+          <span className="yo-link yo-up">Brand logo</span>
+          <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(event) => void pick(event.target.files, "logo")} />
+        </label>
+      </div>
+      <label className="yo-kv">
+        <span className="yo-mute">Name</span>
+        <input value={name} maxLength={NAME_MAX} onChange={(event) => setName(event.target.value)} placeholder="Shown instead of your wallet" />
+      </label>
+      <label className="yo-kv">
+        <span className="yo-mute">Brand</span>
+        <input value={brand} maxLength={BRAND_MAX} onChange={(event) => setBrand(event.target.value)} placeholder="Shown next to your name" />
+      </label>
+      <label className="yo-kv">
+        <span className="yo-mute">X</span>
+        <input value={x} maxLength={HANDLE_MAX + 1} onChange={(event) => setX(event.target.value)} placeholder="@handle" />
+      </label>
+      {(changed || error) && (
+        <div className="yo-save yo-up">
+          <span>{error || (busy ? "Saving…" : "Profile changed")}</span>
+          <button type="submit" className="yo-link" disabled={busy || !changed}>
+            [ Save ]
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
 
 /** Картинка ставки; нет её - пустой квадрат того же размера. */
 function Thumb({ src }: { src?: string }) {
   return <span className="yo-thumb">{src && <img src={src} alt="" loading="lazy" />}</span>;
 }
 
+/** «Oct 30»; год - только если не нынешний. */
 function day(ms: number): string {
-  return new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const date = new Date(ms);
+  const year = date.getFullYear() === new Date().getFullYear() ? undefined : "numeric";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year });
 }
 
-/** Деньги на балансе: прочерк, пока не прочитали, а не ноль. */
-function money(usd: number | null): string {
-  return usd === null ? "-" : `$${usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/** Когда закрывается идущий торг: день и время. */
+function moment(ms: number): string {
+  return new Date(ms).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+/** Охват крупной цифрой: 50K, а не 50,000. */
+function compact(people: number): string {
+  return people >= 1000 ? `${Math.round(people / 1000)}K` : String(people);
 }
