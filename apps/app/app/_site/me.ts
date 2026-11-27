@@ -5,8 +5,12 @@ import type { CSSProperties } from "react";
  * входа оставляет здесь букву и зерно цвета аватара, а при выходе стирает.
  * Это только подсказка для шапки: ни ключей, ни сессии в ней нет.
  */
-/** img - своя картинка профиля, если загружена: тогда вместо буквы она. */
-export type Me = { letter: string; seed: string; img?: string | null };
+/**
+ * img - своя картинка профиля, если загружена: тогда вместо буквы она.
+ * wallet - адрес кошелька: шапка показывает его и читает по нему баланс.
+ * Адрес публичный, как и в сети, - секретом он не является.
+ */
+export type Me = { letter: string; seed: string; img?: string | null; wallet?: string | null };
 
 const KEY = "oxar.me";
 
@@ -14,7 +18,13 @@ export function readMe(): Me | null {
   try {
     const raw = window.localStorage.getItem(KEY);
     const me = raw ? (JSON.parse(raw) as Me) : null;
-    return me && typeof me.letter === "string" && typeof me.seed === "string" && (me.img == null || typeof me.img === "string") ? me : null;
+    return me &&
+      typeof me.letter === "string" &&
+      typeof me.seed === "string" &&
+      (me.img == null || typeof me.img === "string") &&
+      (me.wallet == null || typeof me.wallet === "string")
+      ? me
+      : null;
   } catch {
     return null;
   }

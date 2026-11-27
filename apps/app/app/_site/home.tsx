@@ -5,13 +5,11 @@ import { Globe, SHIRT, houseShape, isShirt, type GlobeThing } from "@oxar/stage"
 import "@oxar/stage/globe.css";
 import "./home.css";
 import { APP_URL, load, loadPilots, localCopy, usd, type Auction, type Pilot } from "./data.ts";
-import { avatar, readMe, type Me } from "./me.ts";
+import { Header } from "./header.tsx";
 import { mono } from "./mono.ts";
 
 /** Знак - тот же файл, что в шапке: в него собираются точки загрузки. */
 const MARK = "/site/oxar-mark.webp";
-/** Вход - вкладка You в приложении: там Privy и предлагает войти. */
-const LOGIN = `${APP_URL}?tab=you`;
 
 /** Торг - вещь для витрины: модель, места и картинки победителей. */
 function thingOf(one: Auction): GlobeThing {
@@ -51,29 +49,6 @@ function pilotOf(one: Pilot): GlobeThing {
   };
 }
 
-/** Шапка витрины: знак, How it works, List a spot и вход. На главной её показывают, когда знак загрузки долетел. */
-export function Top({ me }: { me: Me | null }) {
-  return (
-    <header className="home-top">
-      <a className="home-mark" href="/">
-        <img src={MARK} alt="" data-mark />
-        OXAR
-      </a>
-      <nav>
-        <a href="/how-it-works">How it works</a>
-        <a href="/sell">List a spot</a>
-        {me ? (
-          <a className="home-me" href="/app" aria-label="Your profile" style={me.img ? undefined : avatar(me.seed)}>
-            {me.img ? <img src={me.img} alt="" /> : me.letter}
-          </a>
-        ) : (
-          <a href={LOGIN}>Log in</a>
-        )}
-      </nav>
-    </header>
-  );
-}
-
 /**
  * Главная: глобус с нашими вещами, по прокрутке - поле мест. Шапка
  * появляется, когда знак загрузки долетел до её логотипа.
@@ -81,10 +56,8 @@ export function Top({ me }: { me: Me | null }) {
 export function Home() {
   const [things, setThings] = useState<GlobeThing[] | null>(null);
   const [ready, setReady] = useState(false);
-  const [me, setMe] = useState<Me | null>(null);
 
   useEffect(() => {
-    setMe(readMe());
     // Сначала торги, пилоты - после: они не торг, а прогон идеи.
     void Promise.all([load(), loadPilots()]).then(([data, pilots]) =>
       setThings([...(data?.auctions ?? []).map(thingOf), ...pilots.map(pilotOf)]),
@@ -93,7 +66,7 @@ export function Home() {
 
   return (
     <div className={`home ${mono.className}${ready ? " home-ready" : ""}`}>
-      <Top me={me} />
+      <Header />
       {things && (
         <Globe
           things={things}

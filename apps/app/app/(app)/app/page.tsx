@@ -29,7 +29,7 @@ import { Auction } from "../../auction/auction.tsx";
  * часа, а сессия Supabase обновляется сама.
  */
 export default function Home() {
-  const { ready, authenticated, user, getAccessToken } = usePrivy();
+  const { ready, authenticated, user, getAccessToken, logout } = usePrivy();
   const { login } = useLogin();
   // Что на странице: торг вещи, наша футболка своим экраном или кабинет.
   const [view, setView] = useState<{ thing: string } | "shirt" | "you" | null>(null);
@@ -120,19 +120,28 @@ export default function Home() {
     window.addEventListener("oxar:face", saved);
     return () => window.removeEventListener("oxar:face", saved);
   }, []);
-  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed), img } : null;
+  const wallet = user?.wallet?.address ?? null;
+  const me: Me | null = ready && authenticated && seed ? { seed, letter: avatarLetter(seed), img, wallet } : null;
   // Пока Privy поднимается, верим подсказке с прошлого входа: иначе по
   // нажатию на аватар на миг мелькал «Log in».
   const [hint, setHint] = useState<Me | null>(null);
   useEffect(() => setHint(readMe()), []);
   const shown = me ?? (!ready ? hint : null);
-  const account: Account = shown ? { label: "Profile", href: "/app", me: shown } : { label: "Log in", onClick: login };
+  const account: Account = { me: shown, onConnect: login, onDisconnect: () => void logout() };
   // Подсказка для шапки лендинга: там Privy нет, и без неё был бы «Log in».
   useEffect(() => {
     if (!ready) return;
     saveMe(me);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, me?.seed, me?.letter, me?.img]);
+  }, [ready, me?.seed, me?.letter, me?.img, me?.wallet]);
+
+  // Disconnect из шапки витрины: там Privy нет, она ведёт сюда с ?signout=1.
+  // Выходим и возвращаем на главную.
+  useEffect(() => {
+    if (!ready || !new URLSearchParams(window.location.search).has("signout")) return;
+    saveMe(null);
+    void (authenticated ? logout() : Promise.resolve()).finally(() => window.location.replace("/"));
+  }, [ready, authenticated, logout]);
   const thing = view && typeof view === "object" ? view.thing : null;
 
   return (
