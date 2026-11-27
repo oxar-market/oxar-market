@@ -256,3 +256,68 @@ body:has(.auc)::after {
     grid-column: 2;
   }
 }
+
+/* Пруф: квадраты под таблицей, по нажатию во весь экран. */
+.auc-proof {
+  margin: 0 0 32px;
+}
+.auc-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+.auc-proof-grid button {
+  all: unset;
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #efede8;
+  cursor: zoom-in;
+}
+.auc-proof-grid img,
+.auc-proof-grid video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.auc-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  margin: -10px 0 0 -6px;
+  border-style: solid;
+  border-width: 10px 0 10px 16px;
+  border-color: transparent transparent transparent #fff;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+.auc-shade {
+  position: fixed;
+  inset: 0;
+  /* Выше шапки сайта: она тоже fixed. */
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 56px 18px 18px;
+  background: rgba(17, 17, 17, 0.92);
+}
+.auc-shade img,
+.auc-shade video {
+  display: block;
+  max-width: min(92vw, 1200px);
+  max-height: calc(100vh - 90px);
+  object-fit: contain;
+}
+.auc-shut {
+  all: unset;
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  color: #fafaf9;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
