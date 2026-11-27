@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import { Header } from "../../_site/header.tsx";
+import { mono } from "../../_site/mono.ts";
+import "../../_site/home.css";
+import "../../_site/terms.css";
 
 /**
  * Условия словами, которыми говорит сам продукт, а не юридическим туманом.
@@ -17,8 +21,9 @@ export const metadata: Metadata = {
 
 export default function Terms() {
   return (
-    <main className="app">
-      <section className="screen">
+    <main className={`terms home-ready ${mono.className}`}>
+      <Header />
+      <section>
         <h1>Terms</h1>
         <p className="muted">
           Short and in plain words, because this is how the product itself
@@ -112,12 +117,9 @@ export default function Terms() {
         </p>
 
         <p className="muted">
-          Step by step: <a href="/how">how it works</a>. Questions: <a href="mailto:support@oxar.app">support@oxar.app</a>
+          Step by step: <a href="/how-it-works">how it works</a>. Questions: <a href="mailto:support@oxar.app">support@oxar.app</a>
         </p>
 
-        <a className="ghost" href="/app">
-          Back to the auction
-        </a>
       </section>
     </main>
   );

@@ -1,0 +1,56 @@
+/* Условия: тот же моноширинный текст, что на главной и в How it works. */
+.terms {
+  min-height: 100vh;
+  background: #fafaf9;
+  color: #111;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.terms section {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 110px 26px 120px;
+}
+.terms h1 {
+  font: inherit;
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.terms h2 {
+  font: inherit;
+  margin: 44px 0 10px;
+  color: #8d8a84;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.terms .muted {
+  margin: 10px 0 0;
+  color: #8d8a84;
+}
+.terms .rules {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+}
+.terms .rules li {
+  padding: 14px 0;
+  border-top: 1px solid #e8e6e1;
+}
+.terms .rules li:last-child {
+  border-bottom: 1px solid #e8e6e1;
+}
+.terms strong {
+  font-weight: 500;
+}
+.terms section a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (max-width: 600px) {
+  .terms section {
+    padding: 90px 18px 90px;
+  }
+}

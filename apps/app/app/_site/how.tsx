@@ -53,7 +53,7 @@ function Text({ at }: { at: number }) {
       {at === LAST && (
         <>
           <p className="how-cta">
-            <a className="how-go" href="/auctions">
+            <a className="how-go" href="/?grid">
               [ See the auctions ]
             </a>
             <a className="how-go" href="/sell">
