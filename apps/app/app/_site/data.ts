@@ -34,6 +34,8 @@ export type Auction = {
   model: string | null;
   /** Код места - кто его выиграл и за сколько. */
   won: Record<string, { url: string; brand: string; cents: number }>;
+  /** Деньги вернули победителям мимо программы: вещь не вышла. */
+  refunded: boolean;
 };
 
 export type Data = {
@@ -59,8 +61,8 @@ async function rest<T>(path: string): Promise<T | null> {
 export async function load(): Promise<Data | null> {
   const [things, lots, bids] = await Promise.all([
     rest<
-      { id: string; slug: string; title: string; house: boolean; prepared: boolean; worn_where: string | null; model_url: string | null }[]
-    >("things?active=eq.true&hidden=eq.false&select=id,slug,title,house,prepared,worn_where,model_url"),
+      { id: string; slug: string; title: string; house: boolean; prepared: boolean; worn_where: string | null; model_url: string | null; refunded_at: string | null }[]
+    >("things?active=eq.true&hidden=eq.false&select=id,slug,title,house,prepared,worn_where,model_url,refunded_at"),
     rest<{ id: string; thing_id: string; status: string; closes_at: string; rehearsal: boolean; thing_spots: { code: string } | null }[]>(
       "lots?select=id,thing_id,status,closes_at,rehearsal,thing_spots:spot_id(code)",
     ),
@@ -111,6 +113,7 @@ export async function load(): Promise<Data | null> {
       closedAt: Math.max(...shown.map((lot) => Date.parse(lot.closes_at))),
       model: thing.model_url,
       won: winners,
+      refunded: thing.refunded_at !== null,
     });
   }
   auctions.sort((a, b) => (a.status === "live" ? -1 : 0) - (b.status === "live" ? -1 : 0) || b.closedAt - a.closedAt);

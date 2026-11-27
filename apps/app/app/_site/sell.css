@@ -1,0 +1,243 @@
+/* /sell: слева зачем, справа заявка. Моноширинный вид сайта - тонкие линии,
+   подписи капсом, без карточек и скруглений, как профиль и админка. */
+
+.lsp {
+  --ink: #111;
+  --mute: #8d8a84;
+  --bg: #fafaf9;
+  --line: #e8e6e1;
+  --red: #d9472b;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+/* Страница в группе приложения, а нижнего меню здесь нет - и затухания тоже. */
+body:has(.lsp)::after {
+  display: none;
+}
+.lsp .home-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 26px;
+  z-index: 50;
+  visibility: visible;
+  background: rgba(250, 250, 249, 0.92);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.lsp a {
+  color: inherit;
+  text-decoration: none;
+}
+.lsp :is(button, input, textarea) {
+  font: inherit;
+  color: inherit;
+}
+
+.lsp-up {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.lsp-mute {
+  color: var(--mute);
+}
+.lsp-red {
+  color: var(--red);
+}
+.lsp .lsp-link {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.lsp-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 6vw;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 120px 26px 120px;
+}
+.lsp h1 {
+  margin: 10px 0 18px;
+  font: inherit;
+  font-size: clamp(24px, 2.8vw, 38px);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.lsp-lead {
+  max-width: 480px;
+  margin: 0;
+}
+
+.lsp-steps {
+  margin-top: 36px;
+  border-top: 1px solid var(--ink);
+}
+.lsp-steps > div {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.lsp-steps b {
+  display: block;
+  font-weight: 400;
+}
+
+.lsp-facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 30px;
+}
+.lsp-facts div {
+  padding-right: 14px;
+}
+.lsp-facts div + div {
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+.lsp-facts b {
+  display: block;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.lsp-facts span {
+  display: block;
+  margin-top: 6px;
+}
+
+.lsp-done {
+  margin-top: 36px;
+}
+.lsp-done-r {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.lsp-done > span + .lsp-done-r {
+  margin-top: 10px;
+}
+.lsp-done-r:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.lsp-pic {
+  display: block;
+  width: 56px;
+  height: 56px;
+  background: #efede8;
+}
+.lsp-pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Форма - липкой карточкой справа. */
+.lsp-form {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+  padding: 26px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.lsp-form h2 {
+  margin: 0 0 4px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+}
+.lsp-form p {
+  margin: 0;
+}
+.lsp-fld {
+  display: block;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.lsp-fld > span {
+  display: block;
+  margin-bottom: 6px;
+}
+.lsp-fld :is(input, textarea) {
+  display: block;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: none;
+  resize: none;
+}
+.lsp-fld ::placeholder {
+  color: #bdb9b1;
+}
+.lsp .lsp-btn {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--bg);
+  text-align: center;
+  cursor: pointer;
+}
+.lsp .lsp-btn:disabled {
+  background: #d6d3cc;
+  cursor: default;
+}
+.lsp-form .lsp-note {
+  margin-top: 12px;
+}
+.lsp-sent {
+  display: block;
+  margin: 10px 0 8px;
+  font-size: 16px;
+  font-weight: 400;
+}
+.lsp-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px dashed var(--line);
+}
+.lsp-kv > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .lsp .home-top {
+    padding: 16px 18px;
+  }
+  .lsp-main {
+    grid-template-columns: 1fr;
+    gap: 34px;
+    padding: 90px 18px 110px;
+  }
+  .lsp-form {
+    position: static;
+    padding: 20px;
+  }
+  .lsp-facts b {
+    font-size: 18px;
+  }
+}

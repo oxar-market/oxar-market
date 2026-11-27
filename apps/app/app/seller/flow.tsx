@@ -18,7 +18,6 @@ import {
   describeThing,
   renameThing,
   loadPricingThing,
-  loadSellerRequests,
   loadSellerScore,
   loadSellerThings,
   openCapture,
@@ -79,7 +78,6 @@ export function SellerFlow({
     void db?.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
   }, []);
   const [things, setThings] = useState<SellerThing[]>([]);
-  const [requests, setRequests] = useState<SellerRequest[]>([]);
   const [toRate, setToRate] = useState<DealToRate[]>([]);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -95,7 +93,6 @@ export function SellerFlow({
   const reload = useCallback(() => {
     void loadSellerScore().then(setScore);
     void loadSellerThings().then(setThings);
-    void loadSellerRequests().then(setRequests);
     void loadDealsToRate("seller").then(setToRate);
   }, []);
 
@@ -161,6 +158,22 @@ export function SellerFlow({
   const onPhotos = useCallback(
     (photos: (Blob | string)[], previews: string[]) => go({ name: "mark", photos, previews }),
     [],
+  );
+
+  /** Пруф вещи кошельком продавца: он и подписывает. */
+  const proofPanel = (thingId: string) => (
+    <ProofPanel
+      thingId={thingId}
+      seller={wallet ? new PublicKey(wallet.address) : null}
+      sign={async (transaction) => {
+        const { signedTransaction } = await signTransaction({
+          transaction: transaction.serialize(),
+          wallet,
+          chain: WALLET_CHAIN,
+        });
+        return signedTransaction;
+      }}
+    />
   );
 
   // Шаги со своей шапкой живут колонкой, как экран QR на десктопе: на
@@ -311,20 +324,7 @@ export function SellerFlow({
         />,
       );
     case "winners": {
-      const proof = (
-        <ProofPanel
-          thingId={view.thing.id}
-          seller={wallet ? new PublicKey(wallet.address) : null}
-          sign={async (transaction) => {
-            const { signedTransaction } = await signTransaction({
-              transaction: transaction.serialize(),
-              wallet,
-              chain: WALLET_CHAIN,
-            });
-            return signedTransaction;
-          }}
-        />
-      );
+      const proof = proofPanel(view.thing.id);
       // Пруф ещё ждут - он первым, над логотипами: под ними его не находили.
       const due = view.thing.state === "proof";
       return column(
@@ -351,31 +351,22 @@ export function SellerFlow({
           {reviews && me && (
             <Reviews seller={me} name="Your reviews" score={score} onClose={() => setReviews(false)} />
           )}
+          {/* Своей вещи продавец больше не заводит и заявок на аренду не
+              разбирает: входы в эти шаги убраны, сами шаги пока на месте. */}
           <SellerHome
             onReviews={() => setReviews(true)}
-            onWinners={(thing) => go({ name: "winners", thing })}
-            onDeclined={(thing) => go({ name: "declined", thing })}
             score={score}
-            requests={requests}
             toRate={toRate}
             things={things}
             now={now}
-            onRequest={(request) => go({ name: "request", request })}
             onRate={(deal) => go({ name: "rate", deal })}
             onOpen={onOpen}
-            onSetup={async (thingId) => {
+            onSign={async (thingId) => {
               const thing = await loadPricingThing(thingId);
-              // Подготовленную админом вещь продавец не размечает заново:
-              // проверяет цены и публикует.
-              if (thing) go({ name: thing.prepared ? "prepared" : "setup", thing });
+              // Подготовленную нами вещь продавец проверяет и публикует.
+              if (thing?.prepared) go({ name: "prepared", thing });
             }}
-            onAdd={() =>
-              // Телефон снимает сам; у ноутбука камера смотрит на человека,
-              // поэтому с него снимки приходят через QR.
-              go({
-                name: window.matchMedia("(pointer: coarse)").matches ? "camera" : "desktop",
-              })
-            }
+            proof={(thing) => proofPanel(thing.id)}
           />
           </>
       );
