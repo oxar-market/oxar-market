@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
-import { formatUsd, shortWallet } from "@oxar/core";
+import { shortWallet } from "@oxar/core";
 import { applyAsSeller, myApplication, type Application } from "@/lib/applications";
 import { amISeller } from "@/lib/seller";
 import { useDbSession } from "@/lib/use-session";
-import { FOLLOW, load, localCopy, type Auction } from "./data.ts";
+import { FOLLOW, load } from "./data.ts";
 import { Header } from "./header.tsx";
 import { mono } from "./mono.ts";
 import { FEE } from "./pitch.tsx";
@@ -43,10 +43,11 @@ export function Sell() {
   const linked = useDbSession();
   const wallet = user?.wallet?.address ?? null;
 
-  // Сделанное - только закрытые торги, где деньги дошли: вернувшиеся не в счёт.
-  const [done, setDone] = useState<Auction[]>([]);
+  // Крючок: сколько всего поставили, перебитые и вернувшиеся тоже - это
+  // «поставили», а не «заплатили». Прогоны не в счёт (их отсекает load).
+  const [stat, setStat] = useState<{ cents: number; bidders: number } | null>(null);
   useEffect(() => {
-    void load().then((data) => setDone((data?.auctions ?? []).filter((one) => one.status === "sold" && !one.refunded)));
+    void load().then((data) => data && setStat({ cents: data.totalCents, bidders: data.bidders }));
   }, []);
 
   // undefined - ещё не знаем (не вошёл или база не ответила).
@@ -106,6 +107,13 @@ export function Sell() {
             auction with you, brands bid on the spots, and you get paid once the photo with their logos is up.
           </p>
 
+          {stat && stat.cents >= 100000 && (
+            <p className="lsp-hook">
+              <b>${Math.floor(stat.cents / 100000)}K+</b>
+              <span className="lsp-mute">bid on spots so far, by {stat.bidders} bidders</span>
+            </p>
+          )}
+
           <div className="lsp-steps">
             {STEPS.map(([title, text], at) => (
               <div key={title}>
@@ -133,29 +141,6 @@ export function Sell() {
             </div>
           </div>
 
-          {done.length > 0 && (
-            <div className="lsp-done">
-              <span className="lsp-up lsp-mute">Done so far</span>
-              {done.map((one) => {
-                const logo = Object.values(one.won)[0];
-                return (
-                  <a key={one.id} className="lsp-done-r" href={`/auction?thing=${one.id}`}>
-                    <span className="lsp-pic">
-                      {logo && <img src={localCopy(logo.url) ?? logo.url} alt="" loading="lazy" />}
-                    </span>
-                    <span>
-                      {one.title}
-                      <br />
-                      <span className="lsp-mute">
-                        {one.owner} · {one.spots} {one.spots === 1 ? "spot" : "spots"}
-                      </span>
-                    </span>
-                    <span>{formatUsd(one.raisedCents)}</span>
-                  </a>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         <div className="lsp-form">
