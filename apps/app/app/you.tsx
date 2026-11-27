@@ -38,9 +38,8 @@ import {
 } from "@/lib/profile";
 import { db } from "@/lib/session";
 import { amISeller, loadDealsToRate, type DealToRate } from "@/lib/seller";
-import { myApplication } from "@/lib/applications";
+import { myApplication, type Application } from "@/lib/applications";
 import { BuyerRating, SellerFlow } from "./seller/flow.tsx";
-import { SellerApply } from "./seller/apply.tsx";
 import { NoEmailHint, WinCard, useWins, winWord } from "./wins.tsx";
 import type { Win } from "@/lib/wins";
 import { Notifications } from "./notify.tsx";
@@ -166,14 +165,15 @@ export function You({
   // уходил ещё со старой сессией админа, и вкладка Admin держалась у чужого
   // кошелька до перезагрузки (нашли на живом торге 3 октября 2026).
   const [seller, setSeller] = useState(false);
-  const [applied, setApplied] = useState(false);
+  const [application, setApplication] = useState<Application | null>(null);
+  const applied = application !== null;
   useEffect(() => {
     setSeller(false);
-    setApplied(false);
+    setApplication(null);
     if (!linked) return;
     let live = true;
     void amISeller().then((yes) => live && setSeller(yes));
-    void myApplication().then((mine) => live && setApplied(mine !== null));
+    void myApplication().then((mine) => live && setApplication(mine));
     return () => {
       live = false;
     };
@@ -610,7 +610,26 @@ export function You({
             {seller ? (
               <SellerFlow onView={setSellerView} onOpen={onOpenAuction} />
             ) : (
-              <SellerApply wallet={wallet ?? null} />
+              // Заявка теперь подаётся на /sell; здесь - что с ней.
+              <div className="yo-empty">
+                <b>
+                  {application?.status === "waiting"
+                    ? `Request sent ${day(Date.parse(application.createdAt))}.`
+                    : application?.status === "declined"
+                      ? "Your request was not approved this time."
+                      : "Not selling yet."}
+                </b>
+                <p className="yo-mute">
+                  {application?.status === "waiting"
+                    ? "We usually reply within a day. Your auctions show up here once we set them up with you."
+                    : "Got something people look at? Tell us what it is, and we set up the auction with you."}
+                </p>
+                {application?.status !== "waiting" && (
+                  <a className="yo-btn" href="/sell">
+                    List a spot
+                  </a>
+                )}
+              </div>
             )}
           </div>
         )}

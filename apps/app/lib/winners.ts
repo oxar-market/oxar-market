@@ -116,48 +116,6 @@ export async function loadBidPhotos(thingId: string): Promise<BidPhoto[]> {
 }
 
 /**
- * Наши вещи (футболка и другие): что печатать. Видит их тот, на кого они
- * записаны, - во вкладке продавца, рядом со своими вещами. Печатаем мы, и
- * логотипы нужны тому, кто печатает.
- */
-export type HouseThing = {
-  id: string;
-  title: string;
-  cover: string | null;
-  /** Последний срок закрытия её торгов - по нему свежие наверху. */
-  closesAt: string;
-  /** Торг ещё идёт - в списке лидеры, а не победители. */
-  open: boolean;
-};
-
-export async function loadHouseThings(): Promise<HouseThing[]> {
-  if (!db) return [];
-  const { data: auth } = await db.auth.getUser();
-  if (!auth.user) return [];
-  const { data } = await db
-    .from("things")
-    .select("id, title, photos, lots(status, closes_at, rehearsal)")
-    .eq("house", true)
-    .eq("seller", auth.user.id);
-  return (data ?? [])
-    .map((one) => {
-      // Прогоны до первого настоящего торга печатать не нужно.
-      const lots = ((one.lots ?? []) as { status: string; closes_at: string; rehearsal: boolean }[])
-        .filter((lot) => !lot.rehearsal && (lot.status === "open" || lot.status === "won"));
-      const photos = (one.photos as string[] | null) ?? [];
-      return {
-        id: one.id,
-        title: one.title,
-        cover: photos[0] ? photoUrl(photos[0]) : null,
-        closesAt: lots.map((lot) => lot.closes_at).sort().at(-1) ?? "",
-        open: lots.some((lot) => lot.status === "open"),
-      };
-    })
-    .filter((one) => one.closesAt)
-    .sort((a, b) => b.closesAt.localeCompare(a.closesAt));
-}
-
-/**
  * Все логотипы вещи одним архивом. Имя файла - номер места и бренд, чтобы в
  * типографии не путали, что куда. Файлы качаются по очереди: их десяток, и
  * параллельность здесь ничего не решает.

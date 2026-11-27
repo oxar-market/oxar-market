@@ -41,6 +41,22 @@ export type SellerThing = {
   proofBy: string | null;
   /** До какого дня тянется самая поздняя аренда. */
   rentedUntil: string | null;
+  /** Мы подготовили торг и завели черновики лотов: осталось подписать. */
+  drafts: boolean;
+  /** Когда откроется подготовленный торг; null - сразу после подписи. */
+  opensAt: string | null;
+  /** Сумма выигравших ставок. */
+  raisedCents: number;
+  /** Закрытие выигранных мест - по нему логотипы своего торга. */
+  wonAt: string | null;
+  /** Выигранные места под защитой покупателя: выплата после пруфа. */
+  lockup: boolean;
+  /** Пруф по выигранным местам прислан. */
+  proved: boolean;
+  /** Каждое выигранное место разобрано в программе. */
+  settled: boolean;
+  /** Деньги вернули победителям мимо программы. */
+  refunded: boolean;
 };
 
 export type SellerRequest = {
@@ -108,30 +124,40 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
   const { data: auth } = await db.auth.getUser();
   if (!auth.user) return [];
 
-  const { data: things } = await db
+  const { data } = await db
     .from("things")
-    .select("id, title, stage, active, declined_reason, photos, created_at, thing_spots(id), lots(id, status, closes_at, proof_by, chain_sale)")
+    .select("id, title, stage, active, prepared, declined_reason, photos, created_at, refunded_at, thing_spots(id), lots(id, status, opens_at, closes_at, proof_by, chain_sale, settle_signature, rehearsal)")
     .eq("seller", auth.user.id)
     // Наши вещи (футболка) записаны на владельца площадки ради оценок, но
     // ведутся миграциями и скриптами, а не кабинетом.
     .eq("house", false)
     .order("created_at", { ascending: true });
-  if (!things) return [];
+  if (!data) return [];
+  type Lot = {
+    id: string; status: string; opens_at: string | null; closes_at: string; proof_by: string | null;
+    chain_sale: string | null; settle_signature: string | null; rehearsal: boolean;
+  };
+  // Прогоны - наши тесты, а не торги продавца: вещь из одних прогонов не показываем.
+  const things = data
+    .map((one) => {
+      const all = (one.lots as Lot[] | null) ?? [];
+      return { ...one, all, lots: all.filter((lot) => !lot.rehearsal) };
+    })
+    .filter((one) => one.all.length === 0 || one.lots.length > 0);
 
   const spotIds = things.flatMap((one) =>
     ((one.thing_spots as { id: string }[] | null) ?? []).map((spot) => spot.id),
   );
-  const openLots = things.flatMap((one) =>
-    ((one.lots as { id: string; status: string }[] | null) ?? [])
-      .filter((lot) => lot.status === "open")
-      .map((lot) => lot.id),
+  // Ставки открытых лотов - есть ли они; выигранных - сколько собрано.
+  const bidLotIds = things.flatMap((one) =>
+    one.lots.filter((lot) => lot.status === "open" || lot.status === "won").map((lot) => lot.id),
   );
 
   // Торги с выигранными местами под защитой покупателя: прислан ли пруф.
   const wonSales = [
     ...new Set(
       things.flatMap((one) =>
-        ((one.lots as { status: string; chain_sale: string | null }[] | null) ?? [])
+        one.lots
           .filter((lot) => lot.status === "won" && lot.chain_sale)
           .map((lot) => lot.chain_sale as string),
       ),
@@ -148,21 +174,20 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
           .eq("status", "approved")
           .gte("ends_on", today)
       : Promise.resolve({ data: [] as { spot_id: string; ends_on: string; starts_on: string }[] }),
-    openLots.length
-      ? db.from("lot_bids").select("lot_id").in("lot_id", openLots)
-      : Promise.resolve({ data: [] as { lot_id: string }[] }),
+    bidLotIds.length
+      ? db.from("lot_bids").select("lot_id, amount_cents").in("lot_id", bidLotIds)
+      : Promise.resolve({ data: [] as { lot_id: string; amount_cents: number }[] }),
     wonSales.length
       ? db.from("proofs").select("sale").in("sale", wonSales)
       : Promise.resolve({ data: [] as { sale: string }[] }),
   ]);
-  const bidLots = new Set((bids ?? []).map((one) => one.lot_id));
+  const top = new Map<string, number>();
+  for (const bid of bids ?? []) top.set(bid.lot_id, Math.max(top.get(bid.lot_id) ?? 0, bid.amount_cents));
   const proved = new Set((proofs ?? []).map((one) => one.sale));
 
   return things.map((one) => {
     const spots = (one.thing_spots as { id: string }[] | null) ?? [];
-    const lots = (one.lots as {
-      id: string; status: string; closes_at: string; proof_by: string | null; chain_sale: string | null;
-    }[] | null) ?? [];
+    const lots = one.lots;
     const open = lots.filter((lot) => lot.status === "open");
     const closed = lots.filter((lot) => lot.status === "won" || lot.status === "unsold" || lot.status === "refunded");
     const mine = new Set(spots.map((spot) => spot.id));
@@ -186,6 +211,8 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
       now,
     );
     const proofBy = proofDue(states, now);
+    const won = lots.filter((lot) => lot.status === "won");
+    const drafts = lots.filter((lot) => lot.status === "draft");
     return {
       id: one.id,
       title: one.title,
@@ -194,7 +221,7 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
       wonSpots: closed.filter((lot) => lot.status === "won").length,
       declinedReason: one.declined_reason ?? null,
       spots: spots.length,
-      bidSpots: open.filter((lot) => bidLots.has(lot.id)).length,
+      bidSpots: open.filter((lot) => top.has(lot.id)).length,
       rentedSpots: new Set(rented.map((rent) => rent.spot_id)).size,
       closesAt: open.length
         ? open.map((lot) => lot.closes_at).sort()[0]
@@ -203,6 +230,14 @@ export async function loadSellerThings(): Promise<SellerThing[]> {
       rentedUntil: rented.length
         ? rented.map((rent) => rent.ends_on).sort().at(-1) ?? null
         : null,
+      drafts: one.prepared === true && drafts.length > 0,
+      opensAt: drafts.map((lot) => lot.opens_at).find(Boolean) ?? null,
+      raisedCents: won.reduce((sum, lot) => sum + (top.get(lot.id) ?? 0), 0),
+      wonAt: won.map((lot) => lot.closes_at).sort().at(-1) ?? null,
+      lockup: won.some((lot) => lot.proof_by !== null),
+      proved: won.length > 0 && won.every((lot) => lot.chain_sale !== null && proved.has(lot.chain_sale)),
+      settled: won.length > 0 && won.every((lot) => lot.settle_signature !== null),
+      refunded: one.refunded_at !== null,
     };
   });
 }

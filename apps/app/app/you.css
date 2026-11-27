@@ -636,3 +636,234 @@
     display: none;
   }
 }
+
+/* Продажи: сверху дела продавца, ниже его торги строками. Строка
+   раскрывается в шаг из пяти с одной кнопкой. */
+.yo .yo-sale .yo-btn {
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.yo .yo-sale .yo-btn.ghost {
+  padding: 9px 15px;
+  border: 1px solid var(--yo-ink);
+  background: none;
+  color: var(--yo-ink);
+}
+
+.yo .yo-sale .yo-btn:disabled {
+  background: #d6d3cc;
+  cursor: default;
+}
+
+.yo-todo {
+  margin-top: 20px;
+}
+
+.yo-todo > span {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.yo-todo-r {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 14px 0;
+  border-top: 1px solid var(--yo-line);
+}
+
+.yo-todo-r:last-child {
+  border-bottom: 1px solid var(--yo-line);
+}
+
+.yo-todo-r i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--yo-red);
+}
+
+.yo-todo-r b {
+  display: block;
+  font-weight: 400;
+}
+
+.yo-todo-r .yo-btn {
+  align-self: center;
+}
+
+.yo-list {
+  margin-top: 20px;
+}
+
+.yo-todo + .yo-list {
+  margin-top: 40px;
+}
+
+.yo-list-h,
+.yo .yo-it-r {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 90px;
+  gap: 14px;
+}
+
+.yo-list-h {
+  padding-bottom: 8px;
+}
+
+.yo-list-empty {
+  margin: 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--yo-line);
+}
+
+.yo-it {
+  border-top: 1px solid var(--yo-line);
+}
+
+.yo-it:last-child {
+  border-bottom: 1px solid var(--yo-line);
+}
+
+.yo .yo-it-r {
+  align-items: baseline;
+  width: 100%;
+  padding: 14px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.yo-it.open .yo-it-r {
+  padding-bottom: 8px;
+}
+
+.yo-it-r small {
+  display: block;
+  color: var(--yo-mute);
+  font-size: 12px;
+}
+
+.yo-r {
+  text-align: right;
+}
+
+.yo-it-more {
+  padding: 0 0 18px;
+}
+
+.yo-it-more p {
+  margin: 0;
+}
+
+.yo-it-more .yo-step {
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.yo-bar {
+  height: 2px;
+  margin-bottom: 14px;
+  background: #e2dfd8;
+}
+
+.yo-bar i {
+  display: block;
+  height: 100%;
+  background: var(--yo-ink);
+}
+
+.yo-it-more .yo-acts {
+  margin: 14px 0 10px;
+}
+
+.yo-logos {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.yo-logos img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--yo-line);
+  background: #fff;
+  object-fit: contain;
+}
+
+.yo-sale-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 22px 0 0;
+}
+
+/* Форма пруфа - прежняя, в тонких линиях вместо карточки. */
+.yo .yo-proof {
+  margin-top: 14px;
+}
+
+.yo .yo-proof .sl-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.yo .yo-proof .sl-plan-head h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.yo .yo-proof :is(.sl-input, .sl-btn, input, textarea) {
+  border-radius: 0;
+}
+
+.yo .yo-proof .sl-btn.dark {
+  padding: 10px 16px;
+  background: var(--yo-ink);
+  color: #fafaf9;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 860px) {
+  .yo-todo-r {
+    grid-template-columns: 10px minmax(0, 1fr);
+  }
+
+  .yo-todo-r .yo-btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .yo-list-h,
+  .yo .yo-it-r {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .yo-list-h span:nth-child(n + 2),
+  .yo-it-r > span:nth-child(3) {
+    display: none;
+  }
+
+  .yo-logos {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

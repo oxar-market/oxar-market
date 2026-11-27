@@ -41,7 +41,18 @@ export { outlineInBox, type Box, type Point } from "./outline.ts";
 
 export { ACCOUNT_OVERHEAD, LOTS_PER_TX, publishCost, spotsPerSale, type PublishCost } from "./publish.ts";
 
-export { proofDue, rentDays, rentTotalCents, thingState, type ThingLot, type ThingState } from "./seller.ts";
+export {
+  proofDue,
+  rentDays,
+  rentTotalCents,
+  SALE_STEPS,
+  saleStage,
+  thingState,
+  type SaleAction,
+  type SaleFacts,
+  type ThingLot,
+  type ThingState,
+} from "./seller.ts";
 
 export {
   APPEAL_SECONDS,
