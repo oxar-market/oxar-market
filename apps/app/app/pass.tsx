@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type RefObject } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import "./pass.css";
 
 /**
@@ -24,6 +24,8 @@ type Card = {
   picture: string | null;
   avatar: CSSProperties;
   letter: string;
+  /** Вместо охвата - действие: у гостя охват всегда 0, на его месте кнопка входа. */
+  action?: ReactNode;
 };
 
 /** Сама карточка: на ленте в кабинете и без ленты в окне «поделиться». */
@@ -36,6 +38,7 @@ export function PassCard({
   picture,
   avatar,
   letter,
+  action,
 }: Card & { card?: RefObject<HTMLDivElement | null> }) {
   return (
     <div className="lp-card" ref={card}>
@@ -61,14 +64,16 @@ export function PassCard({
             <span className="lp-name">{holder}</span>
           </div>
         </div>
-        <div className="lp-seen">
-          <span className="lp-label">Seen by</span>
-          <b>
-            {estimated && "~"}
-            {reach.toLocaleString("en-US")}
-          </b>
-          <span className="lp-mute">people saw your logo{estimated && " · estimated"}</span>
-        </div>
+        {action ?? (
+          <div className="lp-seen">
+            <span className="lp-label">Seen by</span>
+            <b>
+              {estimated && "~"}
+              {reach.toLocaleString("en-US")}
+            </b>
+            <span className="lp-mute">people saw your logo{estimated && " · estimated"}</span>
+          </div>
+        )}
       </div>
       <div className="lp-tear" aria-hidden />
       <div className="lp-stub">
@@ -196,7 +201,8 @@ export function ReachPass(props: Card) {
       return { x: event.clientX - r.left, y: event.clientY - r.top };
     };
     const down = (event: PointerEvent) => {
-      if (still) return;
+      // Нажали кнопку на карточке - это нажатие, а не захват: иначе захват указателя съест клик.
+      if (still || (event.target as Element).closest("button")) return;
       const m = local(event);
       // Хватаем за ближнюю точку карточки со смещением: карточка не прыгает к курсору.
       const near = corners.reduce((a, b) =>

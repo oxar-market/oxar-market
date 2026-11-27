@@ -412,7 +412,8 @@ export function Globe({
         if (introBox.current) introBox.current.style.opacity = String(loading ? 0 : clamp(1 - P * 2.5) * clamp(since / 0.8));
         // Подсказка - под шаром, проявляется позже текста и уходит с первым движением вниз.
         if (hint.current) {
-          hint.current.style.top = `${g.y + Rpx + 18}px`;
+          // На телефоне точки шара крупнее и вылезают за радиус - подсказку ниже, чтобы не ложилась на них.
+          hint.current.style.top = `${g.y + Rpx + (innerWidth < 600 ? 48 : 18)}px`;
           hint.current.style.opacity = String(loading ? 0 : clamp(1 - P * 6) * clamp((since - 1.6) / 0.8));
         }
 

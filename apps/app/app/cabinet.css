@@ -115,9 +115,11 @@
 .ym-guest li:last-child {
   border-bottom: 1px solid #e8e6e1;
 }
+/* Кнопка входа на самом пропуске, на месте охвата: у гостя он всё равно 0. */
 .ym-guest-go {
-  display: inline-block;
-  padding: 12px 20px;
+  display: block;
+  width: 100%;
+  padding: 14px 20px;
   border: 0;
   background: #111;
   color: #fafaf9;
@@ -128,7 +130,6 @@
 }
 .ym-guest-note {
   display: block;
-  margin-top: 12px;
   color: #8d8a84;
 }
 
