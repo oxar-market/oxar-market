@@ -5,16 +5,24 @@ import "./home.css";
 import "./how.css";
 import { Header } from "./header.tsx";
 import { mono } from "./mono.ts";
+import { FEE } from "./pitch.tsx";
 
 /**
  * Как это работает - историей на прокрутке: слева шаги, справа схема,
  * которая на каждом шаге встаёт в следующее положение. Числа - те же, что в
- * программе эскроу: комиссия 10%, 72 часа на спор. На телефоне схема
+ * программе эскроу: 72 часа на спор; комиссия - та же константа FEE, что
+ * на странице продавца, поменялась там - поменялась и здесь. На телефоне схема
  * закреплена сверху, а текст шага стоит внизу и меняется на месте: секции
  * становятся невидимыми отрезками прокрутки, поверх схемы ничего не едет.
  */
 
 type Step = { head: string; body: string; aside?: string };
+
+/** Пример на схеме: ставка, комиссия с неё и что остаётся сообществу, в долларах. */
+const BID = 500;
+const CUT = Math.round(BID * FEE * 100) / 100;
+const PCT = Math.round(FEE * 100);
+const dollars = (value: number) => `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
 
 const STEPS: Step[] = [
   { head: "Your money waits until the photo is up.", body: "Six steps from a spot on a thing to a community getting paid. Scroll." },
@@ -27,7 +35,7 @@ const STEPS: Step[] = [
   },
   { head: "The logo goes on", body: "The community prints your logo and has a deadline to show it.", aside: "No photo by the deadline? Full refund, automatic." },
   { head: "The photo is up", body: "The community posts the proof. You have 72 hours to check it and dispute if something is wrong." },
-  { head: "The community gets paid", body: "The winning bid goes to the community, minus our 10% fee. Nothing to pay us upfront." },
+  { head: "The community gets paid", body: `The winning bid goes to the community, minus our ${PCT}% fee. Nothing to pay us upfront.` },
 ];
 const LAST = STEPS.length - 1;
 
@@ -124,11 +132,11 @@ function Diagram({ n }: { n: number }) {
       <g className={hide(n === 2)}>
         <rect className="how-barb" x="40" y="372" width="70" height="10" rx="2" />
         <text className="how-sub" x="116" y="381">
-          Brand A $420
+          Brand A {dollars(BID - 40)}
         </text>
         <rect className="how-barf" x="40" y="392" width="76" height="10" rx="2" />
         <text className="how-sub" x="122" y="401" fill="#111">
-          You $450
+          You {dollars(BID)}
         </text>
       </g>
       <g className={hide(n === 3)}>
@@ -145,16 +153,16 @@ function Diagram({ n }: { n: number }) {
       </g>
       <g className={hide(n === LAST)}>
         <text className="how-sub" x="470" y="400" textAnchor="middle">
-          OXAR fee 10%
+          OXAR fee {PCT}%
         </text>
       </g>
       <g className={`how-coin ${hide(n === LAST)}`} style={move(n === LAST ? 470 : 300, n === LAST ? 420 : 470, n === LAST ? 1 : 0.001)}>
         <circle r="15" />
-        <text style={{ fontSize: 11 }}>$45</text>
+        <text style={{ fontSize: 11 }}>{dollars(CUT)}</text>
       </g>
       <g className="how-coin how-t" style={move(at[0], at[1], n === 0 ? 0.001 : 1)}>
         <circle r="27" />
-        <text>{n === LAST ? "$405" : "$450"}</text>
+        <text>{dollars(n === LAST ? BID - CUT : BID)}</text>
       </g>
     </svg>
   );
