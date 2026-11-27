@@ -71,7 +71,7 @@ export { normalizeProof, proofPayload, type ProofParts } from "./proof-payload.t
 
 export { PREVIEW_SIDE, imageExt, isCreativeUrl, needsPreview, originalUrl, previewPath, previewSize } from "./preview.ts";
 
-export { rankBidders, topBids, type Bidder, type BoardBid, type BoardLot } from "./board.ts";
+export { myBidStates, rankBidders, topBids, type Bidder, type BoardBid, type BoardLot, type MyBidState, type MyLot } from "./board.ts";
 
 export { myLogos } from "./logos.ts";
 

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rankBidders, topBids } from "./board.ts";
+import { myBidStates, rankBidders, topBids } from "./board.ts";
 
 const lots = [
   { id: "L1", status: "won", rehearsal: false, thing_id: "van" },
@@ -96,4 +96,34 @@ test("в идущем торге видно, кто сейчас ведёт и �
 test("ведёт и на проданном месте - тот, кто его выиграл", () => {
   const [a] = rankBidders(lots, [bid("L1", 50000, "A", "2026-10-02")]);
   assert.deepEqual([a!.leads, a!.leadCents, a!.paidCents], [1, 50000, 50000]);
+});
+
+test("статус каждой своей ставки: веду, выиграл, вернули, поднял сам, перебили", () => {
+  const mine = [
+    { lot_id: "A", amount_cents: 70000 },
+    { lot_id: "B", amount_cents: 75000 },
+    { lot_id: "B", amount_cents: 95000 },
+    { lot_id: "C", amount_cents: 75000 },
+    { lot_id: "D", amount_cents: 1000 },
+    { lot_id: "E", amount_cents: 500 },
+  ];
+  const lots = {
+    A: { open: false, status: "won", refunded: false, topWallet: "X" },
+    B: { open: false, status: "won", refunded: true, topWallet: "ME" },
+    C: { open: false, status: "won", refunded: false, topWallet: "ME" },
+    D: { open: true, status: "open", refunded: false, topWallet: "ME" },
+    E: { open: false, status: "cancelled", refunded: false, topWallet: "ME" },
+  };
+  assert.deepEqual(myBidStates(mine, lots, "ME"), ["outbid", "raised", "refunded", "won", "leading", "refunded"]);
+});
+
+test("место на вещи, деньги за которую вернули, не оплачено: сумма ушла назад", () => {
+  const back = [
+    { id: "V1", status: "won", rehearsal: false, thing_id: "van", refunded: true },
+    { id: "T1", status: "won", rehearsal: false, thing_id: "tie" },
+  ];
+  const [a, b] = rankBidders(back, [bid("V1", 95000, "A", "2026-10-27"), bid("T1", 27500, "B", "2026-10-17")]);
+  // Заплатил по-настоящему только B - он первый.
+  assert.deepEqual([a!.wallet, a!.paidCents, a!.spots, a!.won], ["B", 27500, 1, ["tie"]]);
+  assert.deepEqual([b!.wallet, b!.paidCents, b!.spots, b!.backCents, b!.won], ["A", 0, 0, 95000, []]);
 });

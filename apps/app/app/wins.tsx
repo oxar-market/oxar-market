@@ -15,42 +15,49 @@ import type { MyStand } from "@/lib/auction";
  * Выигранные места под защитой покупателя. Деньги держит программа, пока
  * продавец не покажет вещь в деле; дальше у победителя 72 часа сказать «да»
  * (выплата сразу) или «нет» (решает OXAR). Молчание - тоже «да», после окна.
+ * Список и строки рисует кабинет; здесь - загрузка, слово статуса и карточка
+ * места с кнопками.
  */
-export function YourWins({ stands }: { stands: MyStand[] }) {
+export function useWins(stands: MyStand[]) {
   const [wins, setWins] = useState<Win[] | null>(null);
   const { wallets } = useConnectedStandardWallets();
   const { signTransaction } = useStandardSignTransaction();
   const wallet = wallets[0];
   const reload = () => void loadMyWins(stands).then(setWins);
   useEffect(reload, [stands]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!wins || wins.length === 0) return null;
   const sign = async (transaction: import("@solana/web3.js").VersionedTransaction) => {
     const { signedTransaction } = await signTransaction({ transaction: transaction.serialize(), wallet: wallet!, chain: WALLET_CHAIN });
     return signedTransaction;
   };
-  return (
-    <>
-      <div className="bids-head">
-        <span className="hist-title">Your wins</span>
-      </div>
-      <NoEmailHint text="Proof arrives on its own schedule, and you have 72 hours to check it. Add an email so the window does not pass silently." />
-      <div className="wins">
-        {wins.map((win) => (
-          <WinCard
-            key={win.lotId}
-            win={win}
-            winner={wallet ? new PublicKey(wallet.address) : null}
-            sign={sign}
-            onDone={reload}
-          />
-        ))}
-      </div>
-    </>
-  );
+  return { wins, reload, sign, winner: wallet ? new PublicKey(wallet.address) : null };
 }
 
-function WinCard({
+/** Что сейчас с местом - одним словом для строки; red - ждёт действия победителя. */
+export function winWord(win: Win, now = Math.floor(Date.now() / 1000)): { word: string; red: boolean } {
+  if (!win.lot || !win.sale) {
+    const outcome = settledOutcome({
+      protection: win.sale ? hasBuyerProtection(win.sale) : true,
+      sellerBps: win.dispute?.sellerBps ?? null,
+      proved: win.proof !== null,
+      refunded: win.refunded,
+    });
+    return { word: outcome === "paid" ? "Paid out" : outcome === "refunded" ? "Refunded" : "Split", red: false };
+  }
+  const stage = spotStage(win.sale, win.lot, now);
+  const words: Record<string, { word: string; red: boolean }> = {
+    awaiting_proof: { word: "Waiting for photo", red: false },
+    proof_missed: { word: "Coming back", red: false },
+    disputed: { word: "Disputed", red: false },
+    dispute_lapsed: { word: "Coming back", red: false },
+    payable: { word: "Paying out", red: false },
+    appeal: { word: "Check the photo", red: true },
+  };
+  return words[stage] ?? { word: "In escrow", red: false };
+}
+
+export { NoEmailHint };
+
+export function WinCard({
   win,
   winner,
   sign,

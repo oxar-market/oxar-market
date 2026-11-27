@@ -1,356 +1,245 @@
-/* Пропуск охвата на ленте и окна кабинета: поделиться и профиль. */
+/* Пропуск охвата на двух лентах и окна кабинета: поделиться и профиль. */
 
-.ym-icons {
-  position: absolute;
-  top: 0.625rem;
-  right: 0.625rem;
-  display: flex;
-  gap: 0.375rem;
-}
-
-.ym-icons button {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-
-.ym-icons svg {
-  width: 0.9375rem;
-  height: 0.9375rem;
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-
-.ym-pad {
-  padding: 1rem 1.25rem 0.75rem;
-}
-
-/* Охват - пропуск на ленте. Лента - SVG-кривая, пропуск висит на её конце;
-   оба двигаются из JS, тут только вид. */
-.ym-pass-wrap {
+.lp-host {
   position: relative;
-  z-index: 3;
-  /* Вертикально - прокрутка страницы, горизонтально - качание пропуска. */
-  touch-action: pan-y;
-  display: flex;
-  justify-content: center;
-  padding-bottom: 0.5rem;
-  perspective: 900px;
-  touch-action: pan-y;
+  flex: 1;
+  min-height: 0;
 }
 
-.ym-strap {
+.lp-host svg {
   position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: visible;
   pointer-events: none;
 }
 
-.ym-strap-shadow {
+.lp-shadow {
   fill: none;
   stroke: rgba(0, 0, 0, 0.12);
-  stroke-width: 22;
-  transform: translate(2px, 3px);
+  stroke-width: 15;
+  stroke-linecap: round;
+  transform: translate(2px, 4px);
   filter: blur(2px);
 }
 
-/* Прострочка: пунктир чуть шире тела - из-под него видны края. */
-.ym-strap-stitch {
+.lp-band {
   fill: none;
-  stroke: rgba(255, 235, 228, 0.85);
-  stroke-width: 19;
-  stroke-dasharray: 2.5 2;
+  stroke: #d9472b;
+  stroke-width: 13;
+  stroke-linecap: round;
 }
 
-.ym-strap-body {
+.lp-stitch {
   fill: none;
-  stroke-width: 16;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  stroke-linecap: round;
 }
 
-.ym-strap-line {
+.lp-ring {
   fill: none;
-  stroke: none;
+  stroke: #8e9096;
+  stroke-width: 2.5;
 }
 
-.ym-strap-text {
-  fill: rgba(255, 255, 255, 0.92);
-  font-size: 6.5px;
-  font-weight: 800;
-  letter-spacing: 0.32em;
-  dominant-baseline: middle;
-}
-
-.ym-hook {
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
-}
-
-/* Сам пропуск: плотный пластик, свет сверху, мягкая тень под ним. */
-.ym-pass {
-  --gx: 50%;
-  --gy: 30%;
+.lp-card {
   position: relative;
-  width: 15.5rem;
-  margin-top: 2.375rem;
+  width: 310px;
   overflow: hidden;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #ffffff, #fbfaf7);
-  box-shadow:
-    0 0 0 1px rgba(22, 24, 29, 0.06),
-    0 1px 1px rgba(0, 0, 0, 0.04),
-    0 24px 40px -22px rgba(30, 10, 5, 0.45),
-    0 6px 14px -8px rgba(0, 0, 0, 0.18);
-  transform-origin: 50% -2.375rem;
+  border: 1px solid #e6e3dd;
+  border-radius: 16px;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.35), 0 2px 0 rgba(0, 0, 0, 0.03);
+  user-select: none;
+  text-align: left;
+}
+
+/* На ленте карточку двигает физика; палец по ней - не прокрутка страницы. */
+.lp-host .lp-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  cursor: grab;
+  touch-action: none;
   will-change: transform;
 }
 
-/* Блик за курсором - по пластику, поверх всего. */
-.ym-pass-glare {
+.lp-host .lp-card.held {
+  cursor: grabbing;
+}
+
+.lp-holes i {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(200px circle at var(--gx) var(--gy), rgba(255, 255, 255, 0.4), transparent 65%);
-  mix-blend-mode: soft-light;
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
+  top: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fafaf9;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
-.ym-pass-wrap:hover .ym-pass-glare {
-  opacity: 1;
+.lp-holes i:first-child {
+  left: 20px;
 }
 
-/* Прорезь под хлястик - с утолщением по краю, как у настоящего бейджа. */
-.ym-slot {
-  position: absolute;
-  top: 0.625rem;
-  left: 50%;
-  z-index: 3;
-  width: 2.25rem;
-  height: 0.4375rem;
-  transform: translateX(-50%);
-  border-radius: 4px;
-  background: #f4f4f1;
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.35),
-    0 0 0 2px rgba(255, 255, 255, 0.55);
+.lp-holes i:last-child {
+  right: 20px;
 }
 
-.ym-pass-cover {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 8rem;
-  padding: 1.5rem 1rem 0.875rem;
-  overflow: hidden;
+.lp-cover {
+  padding: 34px 20px 18px;
+  background: linear-gradient(160deg, #e5553a, #c9381f);
   color: #fff;
-  background:
-    radial-gradient(75% 95% at 88% 8%, #ffbd4a 0%, #ff7a1a 22%, transparent 58%),
-    radial-gradient(70% 90% at 8% 100%, #7a1f66 0%, transparent 65%),
-    radial-gradient(60% 80% at 50% 120%, #ff5a2a 0%, transparent 70%),
-    #d2361f;
 }
 
-/* Зерно, чтобы градиент не был пластиково-гладким. */
-.ym-pass-grain {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
-  pointer-events: none;
-}
-
-.ym-pass-cover-top {
-  position: relative;
+.lp-cover-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.ym-pass-cover-top img {
-  height: 1.5rem;
+.lp-cover-top img {
+  height: 20px;
   filter: brightness(0) invert(1);
 }
 
-.ym-pass-cover-top span {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.625rem;
-  letter-spacing: 0.12em;
-  opacity: 0.85;
-}
-
-.ym-pass-cover-name {
-  position: relative;
-}
-
-.ym-pass-cover-name span {
+.lp-cover b {
   display: block;
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  margin-top: 26px;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.lp-cover-top span,
+.lp-cover-sub,
+.lp-label {
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  opacity: 0.85;
 }
 
-.ym-pass-cover-name b {
-  display: block;
-  margin-top: 0.125rem;
-  font-size: 1.1875rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
+.lp-cover-sub {
+  opacity: 0.75;
 }
 
-.ym-pass-body {
-  padding: 0.875rem 1rem 1rem;
+.lp-body {
+  padding: 18px 20px;
 }
 
-.ym-pass-label {
-  display: block;
-  font-size: 0.5625rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #9a9aa0;
-}
-
-.ym-pass-holder {
+.lp-holder {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #efeee9;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
-.ym-pass-holder .ym-ava {
-  width: 2rem;
-  height: 2rem;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #efeee9;
-}
-
-.ym-pass-holder div {
+.lp-holder > div {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.ym-pass-holder b {
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.ym-pass-holder div > span:last-child {
-  overflow: hidden;
-  font-size: 0.625rem;
-  color: var(--mut);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ym-pass-reach {
-  padding-top: 0.75rem;
-}
-
-.ym-pass-reach b {
-  display: block;
-  margin-top: 0.125rem;
-  font-size: 2rem;
-  font-weight: 600;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.ym-pass-reach p {
-  margin: 0.3125rem 0 0;
-  font-size: 0.625rem;
-  line-height: 1.4;
-  color: var(--mut);
-}
-
-/* Линия отрыва: пунктир и вырезы по бокам в цвет колонки. */
-.ym-tear {
-  position: relative;
-  height: 1px;
-  margin: 0 0.875rem;
-  background: repeating-linear-gradient(90deg, #d9d8d2 0 4px, transparent 4px 8px);
-}
-
-.ym-tear::before,
-.ym-tear::after {
-  content: "";
-  position: absolute;
-  top: -0.5rem;
-  width: 1rem;
-  height: 1rem;
-  border-radius: 50%;
-  background: #f4f4f1;
-  box-shadow: inset 0 0 0 1px rgba(22, 24, 29, 0.05);
-}
-
-.ym-tear::before {
-  left: -1.375rem;
-}
-
-.ym-tear::after {
-  right: -1.375rem;
-}
-
-.ym-pass-stub {
-  padding: 0.625rem 1rem 0.875rem;
-}
-
-.ym-pass-row {
-  display: grid;
-  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3125rem 0;
-  font-size: 0.6875rem;
-}
-
-.ym-pass-row span:not(.ym-pass-thumb) {
+.lp-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ym-pass-row b {
-  font-variant-numeric: tabular-nums;
-}
-
-.ym-pass-thumb {
+.lp-ava {
   display: grid;
   place-items: center;
-  width: 1.75rem;
-  height: 1.25rem;
+  flex: none;
+  width: 40px;
+  height: 40px;
   overflow: hidden;
-  border-radius: 4px;
-  background: #f1f0eb;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 16px;
 }
 
-.ym-pass-thumb img {
+.lp-ava img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* Венок у места в статистике: число в центре, ветви по бокам. */
+.lp-label,
+.lp-mute,
+.lp-stub small {
+  color: #8d8a84;
+}
 
-.ym-avatar img {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  object-fit: cover;
+.lp-seen b {
+  display: block;
+  margin: 6px 0;
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.lp-tear {
+  position: relative;
+  margin: 0 12px;
+  border-top: 1px dashed #d8d5cf;
+}
+
+.lp-tear::before,
+.lp-tear::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fafaf9;
+}
+
+.lp-tear::before {
+  left: -19px;
+}
+
+.lp-tear::after {
+  right: -19px;
+}
+
+.lp-stub {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 20px 18px;
+}
+
+.lp-line div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lp-stub small {
+  display: block;
+  font-size: inherit;
+}
+
+.lp-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.5) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: var(--g, 50%) 0;
+  mix-blend-mode: soft-light;
+}
+
+@media (max-width: 860px) {
+  .lp-host .lp-card {
+    width: 270px;
+  }
 }
 
 .ym-modal-wrap {
@@ -439,9 +328,11 @@
   stroke: none;
 }
 
-/* Пропуск в окне - на сером, с лентой, качается так же. */
+/* Пропуск в окне - на сером, без лент. */
 .ym-share-stage {
-  padding: 0 0 1rem;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 0;
   border-radius: 8px;
   background: #f2f2ef;
 }
@@ -610,18 +501,6 @@
   .ym-form-two {
     grid-template-columns: 1fr;
   }
-}
-
-.ym-ava img {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  object-fit: cover;
-}
-
-.ym-pass-reach em {
-  font-style: normal;
-  color: var(--mut);
 }
 
 .ym-form-error {
