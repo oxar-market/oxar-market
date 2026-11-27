@@ -64,14 +64,14 @@ export default function Home() {
         else setView({ thing });
       });
     } else if (opened === "market") {
-      window.location.replace("/auctions");
+      window.location.replace("/");
     } else if (opened === "admin") {
       window.location.replace("/admin");
     } else if (opened === "auction") {
       // Идущий торг, а нет его - ближайший назначенный; нет и того - все торги.
       void loadOnAir().then((air) => {
         const first = air[0];
-        if (!first) return window.location.replace("/auctions");
+        if (!first) return window.location.replace("/");
         if (first.house && isShirt(first.model)) setView("shirt");
         else setView({ thing: first.thingId });
       });
@@ -154,7 +154,7 @@ export default function Home() {
         {/* Пока не ясно, что показывать, место под содержимое держим: иначе
             подвал вставал сразу под шапкой и мигал второй шапкой. */}
         {view === null && <div className="ym-wait" />}
-        {thing && <ListingAuction thingId={thing} onBack={() => window.location.assign("/auctions")} />}
+        {thing && <ListingAuction thingId={thing} onBack={() => window.location.assign("/")} />}
         {view === "shirt" && <Auction />}
         {view === "you" &&
           (capture ? (

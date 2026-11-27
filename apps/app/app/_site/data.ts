@@ -8,19 +8,6 @@ export const APP_URL = "/app";
 /** Куда ведёт «следить за следующим»: формы подписки пока нет, анонсы - в X. */
 export const FOLLOW = "https://x.com/oxar_app";
 
-/**
- * Объявленный, но ещё не открытый торг. Его нет в базе, пока торг не открыт,
- * поэтому он здесь. Откроется - убрать, он придёт из базы как идущий.
- */
-export type Next = { owner: string; title: string; when: string };
-
-/** Сколько мест и где они - с Ecosystem Call ещё не договорились, поэтому не пишем. */
-export const NEXT: Next | null = {
-  owner: "Ecosystem Call",
-  title: "Holiday edition. Logo spots on the set, live on air.",
-  when: "December",
-};
-
 const SUPABASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -30,13 +17,6 @@ const OWNERS: Record<string, string> = {
   "shirt-xx": "Ecosystem Call",
   "superteam-ua-tee": "Superteam Ukraine",
   "delora-suitcases": "Delora",
-};
-
-/** Тон карточки - под хозяина вещи. */
-export const TONES: Record<string, "dark" | "warm" | "light"> = {
-  "the-van": "dark",
-  "shirt-xx": "warm",
-  "superteam-ua-tee": "light",
 };
 
 export type Auction = {
