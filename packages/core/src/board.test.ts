@@ -127,3 +127,31 @@ test("место на вещи, деньги за которую вернули,
   assert.deepEqual([a!.wallet, a!.paidCents, a!.spots, a!.won], ["B", 27500, 1, ["tie"]]);
   assert.deepEqual([b!.wallet, b!.paidCents, b!.spots, b!.backCents, b!.won], ["A", 0, 0, 95000, []]);
 });
+
+test("выигрыш с возвратом виден суммой и стоит после оплаченных, но выше тех, кто не выиграл", () => {
+  const back = [
+    { id: "V1", status: "won", rehearsal: false, thing_id: "van", refunded: true },
+    { id: "V2", status: "won", rehearsal: false, thing_id: "van", refunded: true },
+    { id: "T1", status: "won", rehearsal: false, thing_id: "tie" },
+  ];
+  const ranked = rankBidders(back, [
+    bid("V1", 95000, "big", "2026-10-27"),
+    bid("V1", 85000, "lost", "2026-10-26"),
+    bid("V2", 30000, "small", "2026-10-27"),
+    bid("T1", 1500, "paid", "2026-10-17"),
+  ]);
+  assert.deepEqual(ranked.map((one) => one.wallet), ["paid", "big", "small", "lost"]);
+  const big = ranked[1]!;
+  assert.deepEqual([big.refundedSpots, big.refundedCents, big.paidCents], [1, 95000, 0]);
+  // Перебитая ставка - не выигрыш с возвратом.
+  assert.deepEqual([ranked[3]!.refundedSpots, ranked[3]!.refundedCents], [0, 0]);
+});
+
+test("кто не выиграл ничего, стоит по своей старшей ставке", () => {
+  const ranked = rankBidders(lots, [
+    bid("L1", 50000, "W", "2026-10-02"),
+    bid("L1", 10000, "low", "2026-10-01"),
+    bid("L1", 40000, "high", "2026-10-03"),
+  ]);
+  assert.deepEqual(ranked.map((one) => one.wallet), ["W", "high", "low"]);
+});
