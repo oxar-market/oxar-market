@@ -19,3 +19,12 @@ export function reviewState(thing: {
   // черновиком не бывает: её торги заводим мы сами.
   return thing.published || thing.house ? "awaiting" : "draft";
 }
+
+/**
+ * Ждёт решения админа - и только тогда стоит во входящих. Черновик одобрить
+ * нельзя, пока продавец не опубликовал торг, а нашу вещь не одобряют вовсе:
+ * раньше и то и другое висело во входящих делом, которое не сделать.
+ */
+export function awaitsReview(thing: Parameters<typeof reviewState>[0]): boolean {
+  return !thing.house && thing.published && reviewState(thing) === "awaiting";
+}

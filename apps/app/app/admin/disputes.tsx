@@ -142,7 +142,7 @@ function DisputeCard({ dispute, onDone }: { dispute: Dispute; onDone: () => void
   );
 }
 
-function MoveCard({ sale, onDone }: { sale: AwaitingProof; onDone: () => void }) {
+export function MoveCard({ sale, onDone }: { sale: AwaitingProof; onDone: () => void }) {
   const current = new Date(sale.chain.proofDeadline * 1000);
   const [day, setDay] = useState("");
   const [busy, setBusy] = useState(false);

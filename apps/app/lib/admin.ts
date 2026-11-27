@@ -8,7 +8,9 @@ import type { Application } from "./applications.ts";
 import { db } from "./session.ts";
 import { listedSpots, SPOT_COLUMNS, type ListedSpot } from "./listing.ts";
 import { photoUrl } from "./seller.ts";
-import { reviewState } from "./thing-review.ts";
+import { summarizeLots, type LotSummary } from "./admin-things.ts";
+
+export { awaitsReview } from "./thing-review.ts";
 
 /**
  * Админка: мы сами. Проверяем присланные вещи, даём им имя, прикладываем
@@ -18,8 +20,10 @@ import { reviewState } from "./thing-review.ts";
  * вошедший увидит пустой список и получит отказ на запись.
  */
 
-export type AdminThing = {
+export type AdminThing = LotSummary & {
   id: string;
+  /** Адрес вещи в ссылках; тестовые вещи узнаются и по нему. */
+  slug: string;
   title: string;
   tagline: string | null;
   active: boolean;
@@ -61,6 +65,8 @@ export type AdminThing = {
   /** Охват постов о торге; reachChecked - внесён из статистики, а не оценка. */
   reach: number | null;
   reachChecked: boolean;
+  /** Деньги победителям вернули мимо программы: итогов и охвата не ждём. */
+  refunded: boolean;
   /** Кто носит, где, когда и в чём особенность - как написал продавец. Пусто - не написано. */
   worn: { by: string; where: string; when: string; about: string };
 };
@@ -79,10 +85,15 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
   if (!db) return [];
   const { data } = await db
     .from("things")
-    .select(`id, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, permit_sale, prepared, seller_wallet, sticker_sheet, opens_at, proof_photos, post_reach, post_reach_checked_at, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at), thing_spots(${SPOT_COLUMNS})`)
+    .select(`id, slug, title, tagline, active, hidden, declined_reason, photos, model_url, created_at, house, permit_sale, prepared, seller_wallet, sticker_sheet, opens_at, proof_photos, post_reach, post_reach_checked_at, refunded_at, worn_by, worn_where, worn_when, worn_about, lots(id, status, spot_id, reserve_cents, min_step_cents, opens_at, closes_at, rehearsal), thing_spots(${SPOT_COLUMNS})`)
     .order("created_at", { ascending: false });
+  // Ставки публичные - сколько собрано и картинка победителя в списке вещей.
+  const { data: bids } = await db.from("lot_bids").select("lot_id, amount_cents, media_url");
+  const now = Date.now();
   return (data ?? []).map((row) => ({
+    ...summarizeLots((row.lots ?? []) as Parameters<typeof summarizeLots>[0], bids ?? [], now),
     id: row.id,
+    slug: row.slug as string,
     title: row.title,
     tagline: row.tagline,
     active: row.active,
@@ -130,6 +141,7 @@ export async function loadAdminThings(): Promise<AdminThing[]> {
     proof: (row.proof_photos as string[] | null) ?? [],
     reach: (row.post_reach as number | null) ?? null,
     reachChecked: row.post_reach_checked_at !== null,
+    refunded: row.refunded_at != null,
     worn: {
       by: (row.worn_by as string | null) ?? "",
       where: (row.worn_where as string | null) ?? "",
@@ -390,12 +402,6 @@ export async function prepareThing(input: {
     })),
   );
   return lotError ? null : id;
-}
-
-/** Ждёт решения: не одобрена, не спрятана после одобрения и не отклонена. */
-export function awaitsReview(thing: AdminThing): boolean {
-  const state = reviewState(thing);
-  return state === "draft" || state === "awaiting";
 }
 
 /** Модель уезжает в публичное хранилище models; в вещь пишется её адрес. */
