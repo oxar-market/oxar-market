@@ -1,5 +1,6 @@
 /**
- * Рейтинг кошельков кабинета - по деньгам, отданным за выигранные места.
+ * Рейтинг кошельков кабинета - по деньгам, отданным за выигранные места;
+ * выигрыши, деньги за которые вернули, - после оплаченных, с суммой.
  * Платит только старшая ставка на проданном месте; всё остальное, что
  * человек ставил, к нему вернулось. Прогоны (rehearsal) - наша репетиция, в
  * рейтинг они не идут.
@@ -28,6 +29,9 @@ export type Bidder = {
   leadCents: number;
   /** Вернулось: перебили, или поднимал сам. */
   backCents: number;
+  /** Выиграл, но деньги за вещь вернули (вещь не поехала): места и сумма. */
+  refundedSpots: number;
+  refundedCents: number;
   brands: string[];
   since: number;
 };
@@ -51,7 +55,7 @@ export function rankBidders(lots: BoardLot[], bids: BoardBid[]): Bidder[] {
   for (const bid of real) {
     let one = out.get(bid.bidder_wallet);
     if (!one) {
-      one = { wallet: bid.bidder_wallet, joined: [], won: [], spots: 0, paidCents: 0, bids: 0, bestCents: 0, leads: 0, leadCents: 0, backCents: 0, brands: [], since: Infinity };
+      one = { wallet: bid.bidder_wallet, joined: [], won: [], spots: 0, paidCents: 0, bids: 0, bestCents: 0, leads: 0, leadCents: 0, backCents: 0, refundedSpots: 0, refundedCents: 0, brands: [], since: Infinity };
       out.set(bid.bidder_wallet, one);
     }
     const lot = byLot.get(bid.lot_id)!;
@@ -71,9 +75,22 @@ export function rankBidders(lots: BoardLot[], bids: BoardBid[]): Bidder[] {
       if (!one.won.includes(lot.thing_id)) one.won.push(lot.thing_id);
     } else {
       one.backCents += bid.amount_cents;
+      if (top.get(bid.lot_id) === bid && lot.status === "won") {
+        one.refundedSpots += 1;
+        one.refundedCents += bid.amount_cents;
+      }
     }
   }
-  return [...out.values()].sort((a, b) => b.paidCents - a.paidCents || b.spots - a.spots || a.since - b.since);
+  // Сначала оплаченное, за ним выигрыши с возвратом - ставка была настоящей,
+  // вещь не поехала не по вине покупателя, - потом остальные по старшей ставке.
+  return [...out.values()].sort(
+    (a, b) =>
+      b.paidCents - a.paidCents ||
+      b.spots - a.spots ||
+      b.refundedCents - a.refundedCents ||
+      b.bestCents - a.bestCents ||
+      a.since - b.since,
+  );
 }
 
 /**
