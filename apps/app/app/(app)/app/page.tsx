@@ -9,7 +9,7 @@ import { loadOnAir } from "@/lib/auction";
 import { isShirt } from "@/lib/shape";
 import { faceUrl, loadMyProfile } from "@/lib/profile";
 import { avatarLetter } from "@oxar/core";
-import { Foot, Top, type Account } from "../../_site/landing.tsx";
+import { Top, type Account } from "../../_site/landing.tsx";
 import { readMe, saveMe, type Me } from "../../_site/me.ts";
 import { You } from "../../you";
 import { PhoneCapture } from "../../seller/flow.tsx";
@@ -159,7 +159,6 @@ export default function Home() {
           ) : (
             <Guest onSignIn={login} />
           ))}
-        <Foot />
       </div>
     </main>
   );
