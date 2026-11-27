@@ -20,6 +20,21 @@ export type Dressed = {
   view: [number, number, number];
   /** Сколько от центра до низа вещи, в тех же единицах: на эту высоту она встаёт над землёй. */
   foot: number;
+  /**
+   * Где лежит каждое место - и проданное, и пустое: точка на поверхности,
+   * нормаль и «верх» логотипа, в координатах root. По ним страница торга
+   * поворачивает вещь к месту и снимает его кадр.
+   */
+  spots: Record<string, SpotAnchor>;
+};
+
+export type SpotAnchor = {
+  point: [number, number, number];
+  normal: [number, number, number];
+  up: [number, number, number];
+  /** Больший размер места, в долях радиуса вещи. */
+  size: number;
+  top: boolean;
 };
 
 /** Картинка по первому адресу, что откроется: своя копия, потом оригинал. */
@@ -110,11 +125,8 @@ export async function dress(
 
   const ray = new THREE.Raycaster();
   const anchor = new THREE.Object3D();
+  const found: Record<string, { point: InstanceType<Three["Vector3"]>; normal: InstanceType<Three["Vector3"]>; up: InstanceType<Three["Vector3"]>; size: number; top: boolean }> = {};
   for (const spot of shape?.spots ?? []) {
-    const urls = logos[spot.code];
-    if (!urls?.length) continue;
-    const img = await image(urls);
-    if (!img) continue;
     const angle = (spot.azimuth * Math.PI) / 180;
     const dir = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
     if (spot.top) ray.set(new THREE.Vector3(spot.shift ?? 0, low + tall + 1, 0), new THREE.Vector3(0, -1, 0));
@@ -130,9 +142,16 @@ export async function dress(
     const named = meshes.filter((mesh) => !spot.parts || spot.parts.some((part) => mesh.name.startsWith(part)));
     const hit = ray.intersectObjects(named.length ? named : meshes, false)[0];
     if (!hit?.face) continue;
+    const normal = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
     anchor.position.copy(hit.point);
     anchor.up.set(spot.top ? -1 : 0, spot.top ? 0 : 1, 0);
-    anchor.lookAt(hit.point.clone().add(hit.face.normal.clone().transformDirection(hit.object.matrixWorld)));
+    anchor.lookAt(hit.point.clone().add(normal));
+    found[spot.code] = { point: hit.point.clone(), normal, up: anchor.up.clone(), size: Math.max(spot.size[0], spot.size[1]), top: Boolean(spot.top) };
+    // Место без картинки - только точка, без печати.
+    const urls = logos[spot.code];
+    if (!urls?.length) continue;
+    const img = await image(urls);
+    if (!img) continue;
     const depth = spot.reach ?? (spot.wrap ? Math.min(shape!.depth, spot.top ? 0.02 : 0.03) : shape!.depth);
     const geometry = new DecalGeometry(hit.object as Mesh, hit.point, anchor.rotation, new THREE.Vector3(spot.size[0], spot.size[1], depth));
     if (!geometry.getAttribute("position")?.count) continue;
@@ -158,5 +177,17 @@ export async function dress(
   root.updateMatrixWorld(true);
   const foot = -new THREE.Box3().setFromObject(root).min.y;
   const view = shape ? facing(shape.spots, (code) => Boolean(logos[code]?.length)) : facing([], () => false);
-  return { root, view, foot };
+  // Точки мест - в те же координаты, что и вещь: сдвиг центра и масштаб шара.
+  const spots: Record<string, SpotAnchor> = {};
+  for (const [code, one] of Object.entries(found)) {
+    const point = one.point.clone().sub(sphere.center).divideScalar(sphere.radius);
+    spots[code] = {
+      point: [point.x, point.y, point.z],
+      normal: [one.normal.x, one.normal.y, one.normal.z],
+      up: [one.up.x, one.up.y, one.up.z],
+      size: one.size / sphere.radius,
+      top: one.top,
+    };
+  }
+  return { root, view, foot, spots };
 }

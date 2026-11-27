@@ -259,6 +259,8 @@ export function Globe({
         locked = true;
         setCls("globe-grid", true);
       };
+      // Вернулись со страницы торга ([ All auctions ]) - сразу в поле, без глобуса.
+      if (new URLSearchParams(window.location.search).has("grid")) lock();
 
       // ---------- Ввод ----------
       const ray = new THREE.Raycaster();

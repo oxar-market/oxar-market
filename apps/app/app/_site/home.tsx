@@ -23,7 +23,8 @@ function thingOf(one: Auction): GlobeThing {
   const live = one.status === "live";
   return {
     id: one.id,
-    href: `${APP_URL}?thing=${one.id}`,
+    // Идущий - в приложение, там ставки; закрытый - на страницу итогов.
+    href: live ? `${APP_URL}?thing=${one.id}` : `/auction?thing=${one.id}`,
     title: one.title,
     caption: [one.title, live ? "Live" : usd(one.raisedCents), one.owner].join(" · "),
     live,
@@ -38,7 +39,7 @@ function pilotOf(one: Pilot): GlobeThing {
   const shape = houseShape(one.model) ?? (isShirt(one.model) ? SHIRT : undefined);
   return {
     id: one.id,
-    href: `${APP_URL}?thing=${one.id}`,
+    href: `/auction?thing=${one.id}`,
     title: one.title,
     caption: [one.title, "Pilot", one.owner].join(" · "),
     live: false,

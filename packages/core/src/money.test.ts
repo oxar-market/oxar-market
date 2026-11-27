@@ -8,6 +8,7 @@ import {
   formatUsd,
   formatUsdFull,
   parseUsd,
+  perThousandCents,
   payoutSplit,
   percentToBps,
   unitsToCents,
@@ -124,3 +125,10 @@ test("на комиссию сети нужен SOL: без него ставк�
   assert.equal(hasFeeSol(20_000_000n), true);
 });
 
+
+test("цена тысячи просмотров - в центах, с округлением", () => {
+  assert.equal(perThousandCents(600_100, 50_000), 12_002);
+  assert.equal(perThousandCents(27_500, 18_000), 1_528);
+  assert.equal(perThousandCents(100, 0), null);
+  assert.equal(perThousandCents(0, 1_000), 0);
+});

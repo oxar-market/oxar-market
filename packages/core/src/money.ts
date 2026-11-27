@@ -116,3 +116,12 @@ function assertWholeNonNegative(value: number, name: string): void {
     throw new Error(`${name} must be a whole number of units, zero or more`);
   }
 }
+
+/**
+ * Сколько стоила тысяча просмотров: сумма торга на охват, в центах. Охвата
+ * нет - и цены нет: делить на ноль значит выдумать цифру.
+ */
+export function perThousandCents(totalCents: number, people: number): number | null {
+  if (!(people > 0)) return null;
+  return Math.round((totalCents * 1000) / people);
+}
