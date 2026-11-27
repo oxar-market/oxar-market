@@ -27,6 +27,7 @@ const OWNERS: Record<string, string> = {
   "the-van": "Superteam Georgia",
   "shirt-xx": "Ecosystem Call",
   "superteam-ua-tee": "Superteam Ukraine",
+  "delora-suitcases": "Delora",
 };
 
 /** Тон карточки - под хозяина вещи. */
@@ -138,6 +139,43 @@ export async function load(): Promise<Data | null> {
     bids: counted.length,
     bidders: new Set(counted.map((bid) => bid.bidder_wallet)).size,
   };
+}
+
+/**
+ * Пилот - вещь, где логотипы партнёров поставили без торга, чтобы проверить
+ * саму идею (Delora на TOKEN2049). Ставок нет, в суммы торгов он не входит,
+ * места и бренды лежат в placements, картинки - в /cases, рядом с сайтом.
+ */
+export type Pilot = {
+  id: string;
+  title: string;
+  owner: string;
+  model: string | null;
+  /** Код места - бренд и картинка. */
+  placed: Record<string, { url: string; brand: string }>;
+};
+
+export async function loadPilots(): Promise<Pilot[]> {
+  const [things, placed] = await Promise.all([
+    rest<{ id: string; slug: string; title: string; model_url: string | null }[]>(
+      "things?active=eq.true&hidden=eq.false&house=eq.true&select=id,slug,title,model_url",
+    ),
+    rest<{ thing_id: string; code: string; brand: string; media_url: string }[]>(
+      "placements?select=thing_id,code,brand,media_url&order=sort",
+    ),
+  ]);
+  if (!things || !placed) return [];
+  return things.flatMap((thing) => {
+    const mine = placed.filter((one) => one.thing_id === thing.id);
+    if (mine.length === 0) return [];
+    return [{
+      id: thing.id,
+      title: thing.title,
+      owner: OWNERS[thing.slug] ?? thing.title,
+      model: thing.model_url,
+      placed: Object.fromEntries(mine.map((one) => [one.code, { url: one.media_url, brand: one.brand }])),
+    }];
+  });
 }
 
 /**

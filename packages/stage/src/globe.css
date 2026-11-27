@@ -68,6 +68,12 @@ body.globe-drag .globe {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+.globe-tag {
+  font-style: normal;
+  color: #8d8a84;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 .globe-box {
   display: block;
   width: var(--t);
