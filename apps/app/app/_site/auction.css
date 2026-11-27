@@ -175,12 +175,36 @@
 }
 .auc-hist div {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 32px 1fr auto auto;
+  align-items: center;
   gap: 14px;
   padding: 3px 0;
 }
 .auc-out {
   color: var(--mute);
+}
+.auc-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+  /* Серая подложка, не белая: белый логотип на белом пропадал. */
+  background: #c9c6be;
+  padding: 2px;
+  box-sizing: border-box;
+}
+.auc-out .auc-logo {
+  opacity: 0.55;
+}
+.auc-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.auc-logos .auc-logo {
+  width: 28px;
+  height: 28px;
 }
 
 .auc-who > div {
