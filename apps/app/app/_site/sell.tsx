@@ -73,7 +73,8 @@ export function Sell() {
   const [state, setState] = useState<"idle" | "sending" | "failed">("idle");
   // Нажал «Sign in and send»: отправим, как только вход дойдёт до базы.
   const [pending, setPending] = useState(false);
-  const { login } = useLogin({ onError: () => setPending(false) });
+  // Без колбэков: useLogin с onError падает на сборке, где ключа Privy нет (CI).
+  const { login } = useLogin();
 
   useEffect(() => {
     if (!pending || linked !== "ready" || mine === undefined) return;
@@ -90,7 +91,8 @@ export function Sell() {
   }, [pending, linked, mine, seller, contact, look, when, wallet]);
 
   const filled = look.trim() !== "" && when.trim() !== "" && contact.trim() !== "";
-  const busy = pending || state === "sending";
+  // Закрыл окно входа, не войдя, - кнопка снова доступна; вошёл - ждём отправки.
+  const busy = (pending && authenticated) || state === "sending";
 
   return (
     <div className={`lsp ${mono.className}`}>
