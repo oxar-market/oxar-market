@@ -101,6 +101,7 @@ export function AuctionView() {
                       <div className="auc-hist">
                         {spot.bids.map((bid, at) => (
                           <div key={at} className={at === 0 ? undefined : "auc-out"}>
+                            <Logo url={bid.url} />
                             <span>
                               {bid.brand || shortWallet(bid.wallet)}
                               {at > 0 && ", outbid"}
@@ -122,6 +123,12 @@ export function AuctionView() {
                     <span>
                       {one.brands.join(", ") || shortWallet(one.wallet)}
                       <small>{shortWallet(one.wallet)}</small>
+                      {/* С какими картинками ставил: у одного кошелька их бывает несколько. */}
+                      <span className="auc-logos">
+                        {[...new Set(page.bids.filter((bid) => bid.wallet === one.wallet).map((bid) => bid.url))].map((url) => (
+                          <Logo key={url} url={url} />
+                        ))}
+                      </span>
                     </span>
                     <span className="auc-mute">{one.bids === 1 ? "1 bid" : `${one.bids} bids`}</span>
                     <span className={one.spots ? undefined : "auc-mute"}>
@@ -194,6 +201,16 @@ function build(page: AuctionPage) {
       : []),
   ];
   return { shape, model, logos, spots, people, rows };
+}
+
+/**
+ * Картинка ставки. Закрытый торг лежит копией в /site/won - с неё и
+ * начинаем, чтобы не тратить трафик хранилища; копии нет - оригинал.
+ */
+function Logo({ url }: { url: string }) {
+  const copy = localCopy(url);
+  const [src, setSrc] = useState(copy ?? url);
+  return <img className="auc-logo" src={src} alt="" loading="lazy" onError={() => src !== url && setSrc(url)} />;
 }
 
 function when(at: number): string {
