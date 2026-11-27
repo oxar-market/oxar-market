@@ -71,6 +71,11 @@
   margin-top: 16px !important;
   color: var(--mute) !important;
 }
+.how-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 22px;
+}
 .how-go {
   display: inline-block;
   margin-top: 18px;

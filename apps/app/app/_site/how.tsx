@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import "./home.css";
 import "./how.css";
-import { Top } from "./home.tsx";
-import { readMe, type Me } from "./me.ts";
+import { Header } from "./header.tsx";
 import { mono } from "./mono.ts";
 
 /**
@@ -44,9 +43,17 @@ function Text({ at }: { at: number }) {
       <p className={at === 0 ? "how-mute" : undefined}>{step.body}</p>
       {step.aside && <p className="how-aside">{step.aside}</p>}
       {at === LAST && (
-        <a className="how-go" href="/auctions">
-          [ See the auctions ]
-        </a>
+        <>
+          <p className="how-cta">
+            <a className="how-go" href="/auctions">
+              [ See the auctions ]
+            </a>
+            <a className="how-go" href="/sell">
+              [ List a spot ]
+            </a>
+          </p>
+          <p className="how-aside">Got a crowd? List a spot and we run the auction.</p>
+        </>
       )}
     </>
   );
@@ -154,14 +161,11 @@ function Diagram({ n }: { n: number }) {
 }
 
 export function How() {
-  const [me, setMe] = useState<Me | null>(null);
   const [step, setStep] = useState(0);
   // Текст на телефоне меняется с коротким переходом: сначала гаснет старый.
   const [shown, setShown] = useState(0);
   const [swap, setSwap] = useState(false);
   const sections = useRef<(HTMLElement | null)[]>([]);
-
-  useEffect(() => setMe(readMe()), []);
 
   useEffect(() => {
     // Шаг - тот, чья секция пересекает середину экрана.
@@ -187,7 +191,7 @@ export function How() {
 
   return (
     <div className={`how home-ready ${mono.className}`}>
-      <Top me={me} />
+      <Header />
       <div className="how-wrap">
         <div className="how-steps">
           {STEPS.map((_, at) => (

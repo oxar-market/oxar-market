@@ -1,0 +1,123 @@
+/* Шапка сайта (header.tsx): знак слева, справа How it works и кошелёк. */
+
+.site-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #111;
+}
+.site-top a,
+.site-top button {
+  all: unset;
+  cursor: pointer;
+}
+.site-top nav {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+}
+.site-top .home-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Знак выше, чем шире (179 на 256): задаём только высоту. */
+.site-top .home-mark img {
+  height: 18px;
+  width: auto;
+  display: block;
+}
+.site-short {
+  display: none;
+}
+
+.site-wallet {
+  position: relative;
+}
+.site-wallet > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.site-ava {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: block;
+}
+.site-ava img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.site-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  min-width: 230px;
+  background: #fafaf9;
+  border: 1px solid #111;
+  padding: 6px 0;
+  z-index: 60;
+}
+.site-menu a,
+.site-menu button {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 14px;
+}
+.site-menu a:hover,
+.site-menu button:hover {
+  background: #111;
+  color: #fafaf9;
+}
+.site-balance {
+  padding: 8px 14px 10px;
+  border-bottom: 1px solid #e8e6e1;
+  margin-bottom: 4px;
+}
+.site-balance span {
+  color: #8d8a84;
+}
+.site-balance b {
+  display: block;
+  font-weight: 400;
+  font-size: 15px;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-top: 2px;
+}
+.site-sep {
+  display: block;
+  border-top: 1px solid #e8e6e1;
+  margin: 4px 0;
+}
+
+/* На страницах приложения шапка в потоке колонки и липнет к верху. */
+.v2 .site-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 1.25rem 0;
+  background: var(--bg, #fafaf9);
+}
+
+@media (max-width: 600px) {
+  .site-top nav {
+    gap: 16px;
+  }
+  .site-long {
+    display: none;
+  }
+  .site-short {
+    display: inline;
+  }
+}
